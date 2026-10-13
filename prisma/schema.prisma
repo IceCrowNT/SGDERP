@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// CORE & TENANT (Công ty)
+// -----------------------------------------------------------------------------
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  taxCode   String?  @unique
+  address   String?
+  isActive  Boolean  @default(true)
+  
+  users        User[]
+  departments  Department[]
+  roles        Role[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// HR & ORGANIZATION (Nhân sự & Tổ chức)
+// -----------------------------------------------------------------------------
+model Department {
+  id          String   @id @default(uuid())
+  name        String
+  code        String
+  description String?
+  
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  
+  users       User[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([companyId, code])
+}
+
+model User {
+  id          String   @id @default(uuid())
+  username    String   @unique // Tên đăng nhập
+  email       String?  @unique // Có thể null nếu đăng nhập bằng Username/Phone
+  phone       String?  @unique // Đăng nhập bằng SĐT
+  password    String   // Hashed password
+  isActive    Boolean  @default(true)
+  
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  
+  // Liên kết Profile chi tiết 1-1
+  profile     EmployeeProfile?
+  
+  // Liên kết Role (RBAC) nhiều-nhiều
+  roles       UserRole[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EmployeeProfile {
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  fullName       String
+  employeeCode   String    @unique // Mã nhân viên nội bộ
+  position       String?   // Chức vụ (Giám đốc, Trưởng phòng, Nhân viên...)
+  dateOfBirth    DateTime?
+  joinDate       DateTime?
+  avatarUrl      String?
+  address        String?
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// RBAC (Role-Based Access Control)
+// Quản lý Quyền & Khả năng truy cập các Module
+// -----------------------------------------------------------------------------
+model Role {
+  id          String   @id @default(uuid())
+  name        String   // VD: "Quản trị viên", "Trưởng phòng", "Nhân sự"
+  code        String   // VD: "ADMIN", "MANAGER", "HR"
+  description String?
+  
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, code])
+}
+
+// Danh mục Quyền - Gắn với các tính năng tương lai (Quản lý công việc, v.v.)
+model Permission {
+  id          String   @id @default(uuid())
+  module      String   // VD: "TASK_MANAGEMENT", "HR", "FINANCE"
+  action      String   // VD: "CREATE", "READ", "UPDATE", "DELETE", "MANAGE"
+  description String?
+  
+  roles       RolePermission[]
+
+  @@unique([module, action])
+}
+
+// Bảng trung gian Role - Permission
+model RolePermission {
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+// Bảng trung gian User - Role
+model UserRole {
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  roleId String
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
