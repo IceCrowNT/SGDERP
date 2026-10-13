@@ -8,34 +8,43 @@ datasource db {
 }
 
 // -----------------------------------------------------------------------------
-// CORE & TENANT (Công ty)
+// VAI TRÒ HỆ THỐNG (Static RBAC cho SME)
 // -----------------------------------------------------------------------------
-model Company {
-  id        String   @id @default(uuid())
-  name      String
-  taxCode   String?  @unique
-  address   String?
-  isActive  Boolean  @default(true)
-  
-  users        User[]
-  departments  Department[]
-  roles        Role[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum RoleCode {
+  ADMIN   // Toàn quyền hệ thống (Ban Giám Đốc, IT Quản trị)
+  MANAGER // Quản lý / Trưởng bộ phận (Duyệt dữ liệu, theo dõi phòng ban)
+  HR      // Chuyên viên Nhân sự (Quản lý hồ sơ, tài khoản cán bộ nhân viên)
+  STAFF   // Nhân viên (Truy cập dữ liệu cá nhân, gửi yêu cầu, nhận việc)
 }
 
 // -----------------------------------------------------------------------------
-// HR & ORGANIZATION (Nhân sự & Tổ chức)
+// CORE & TENANT (Công ty thành viên / Chi nhánh trong Tập đoàn)
+// -----------------------------------------------------------------------------
+model Company {
+  id          String       @id @default(uuid())
+  name        String       @db.VarChar(255)
+  taxCode     String?      @unique @db.VarChar(50)
+  address     String?      @db.Text
+  isActive    Boolean      @default(true)
+  
+  users       User[]
+  departments Department[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// ORGANIZATION (Phòng ban / Đơn vị trực thuộc)
 // -----------------------------------------------------------------------------
 model Department {
   id          String   @id @default(uuid())
-  name        String
-  code        String
-  description String?
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
   
   companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
   
   users       User[]
 
@@ -45,99 +54,43 @@ model Department {
   @@unique([companyId, code])
 }
 
+// -----------------------------------------------------------------------------
+// IDENTITY & HR PROFILE (Gộp Tài khoản đăng nhập & Hồ sơ nhân sự)
+// -----------------------------------------------------------------------------
 model User {
-  id          String   @id @default(uuid())
-  username    String   @unique // Tên đăng nhập
-  email       String?  @unique // Có thể null nếu đăng nhập bằng Username/Phone
-  phone       String?  @unique // Đăng nhập bằng SĐT
-  password    String   // Hashed password
-  isActive    Boolean  @default(true)
+  id           String      @id @default(uuid())
   
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
+  // Thông tin định danh & đăng nhập
+  username     String      @unique @db.VarChar(100)
+  password     String      @db.VarChar(255) // Hashed password
+  
+  // Thông tin liên hệ
+  email        String?     @unique @db.VarChar(255)
+  phone        String?     @unique @db.VarChar(20)
+  
+  // Thông tin hồ sơ cán bộ nhân viên
+  employeeCode String      @unique @db.VarChar(50)
+  fullName     String      @db.VarChar(255)
+  position     String?     @db.VarChar(100) // Chức vụ (VD: Trưởng phòng Kỹ thuật, Kế toán viên)
+  dateOfBirth  DateTime?   @db.Date
+  joinDate     DateTime?   @db.Date
+  avatarUrl    String?     @db.Text
+  address      String?     @db.Text
+  
+  // Phân quyền & Trạng thái hoạt động
+  role         RoleCode    @default(STAFF)
+  isActive     Boolean     @default(true)
+  
+  // Quan hệ Tổ chức
+  companyId    String
+  company      Company     @relation(fields: [companyId], references: [id], onDelete: Restrict)
   
   departmentId String?
-  department   Department? @relation(fields: [departmentId], references: [id])
-  
-  // Liên kết Profile chi tiết 1-1
-  profile     EmployeeProfile?
-  
-  // Liên kết Role (RBAC) nhiều-nhiều
-  roles       UserRole[]
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-model EmployeeProfile {
-  id             String    @id @default(uuid())
-  userId         String    @unique
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  fullName       String
-  employeeCode   String    @unique // Mã nhân viên nội bộ
-  position       String?   // Chức vụ (Giám đốc, Trưởng phòng, Nhân viên...)
-  dateOfBirth    DateTime?
-  joinDate       DateTime?
-  avatarUrl      String?
-  address        String?
-  
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-}
-
-// -----------------------------------------------------------------------------
-// RBAC (Role-Based Access Control)
-// Quản lý Quyền & Khả năng truy cập các Module
-// -----------------------------------------------------------------------------
-model Role {
-  id          String   @id @default(uuid())
-  name        String   // VD: "Quản trị viên", "Trưởng phòng", "Nhân sự"
-  code        String   // VD: "ADMIN", "MANAGER", "HR"
-  description String?
-  
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
-
-  permissions RolePermission[]
-  users       UserRole[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([companyId, code])
-}
-
-// Danh mục Quyền - Gắn với các tính năng tương lai (Quản lý công việc, v.v.)
-model Permission {
-  id          String   @id @default(uuid())
-  module      String   // VD: "TASK_MANAGEMENT", "HR", "FINANCE"
-  action      String   // VD: "CREATE", "READ", "UPDATE", "DELETE", "MANAGE"
-  description String?
-  
-  roles       RolePermission[]
-
-  @@unique([module, action])
-}
-
-// Bảng trung gian Role - Permission
-model RolePermission {
-  roleId       String
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  
-  permissionId String
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-
-  @@id([roleId, permissionId])
-}
-
-// Bảng trung gian User - Role
-model UserRole {
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  roleId String
-  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
-  @@id([userId, roleId])
+  @@index([companyId, departmentId])
+  @@index([role, isActive])
 }
