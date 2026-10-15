@@ -1,6 +1,6 @@
-# QUY CHUẨN FRONTEND & THIẾT KẾ GIAO DIỆN (FRONTEND & UI THEME RULES)
+# QUY CHUẨN FRONTEND & THIẾT KẾ GIAO DIỆN (FRONTEND, UI THEME & RESPONSIVE RULES)
 
-Tệp quy tắc này là **Nguồn sự thật duy nhất (Single Source of Truth)** cho toàn bộ giao diện người dùng (UI/UX), kiến trúc mã nguồn Frontend và nhận diện thương hiệu của Sao Đỏ Group (SDG). Mọi AI Agent và lập trình viên bắt buộc phải tuân thủ nghiêm ngặt.
+Tệp quy tắc này là **Nguồn sự thật duy nhất (Single Source of Truth)** cho toàn bộ giao diện người dùng (UI/UX), kiến trúc mã nguồn Frontend, nhận diện thương hiệu và thiết kế đáp ứng đa thiết bị của Sao Đỏ Group (SDG). Mọi AI Agent và lập trình viên bắt buộc phải tuân thủ nghiêm ngặt.
 
 ---
 
@@ -35,7 +35,43 @@ Hệ màu đã được cấu hình trong `src/app/globals.css`. Tuyệt đối 
 
 ---
 
-## 3. Kiến Trúc Next.js App Router (Server vs Client Component)
+## 3. Thiết Kế Đáp Ứng & Trải Nghiệm Di Động (Responsive & Mobile-First)
+
+Mọi màn hình và tính năng mới được tạo ra BẮT BUỘC phải tương thích hoàn hảo trên cả điện thoại (Mobile), máy tính bảng (Tablet) và máy tính (Desktop):
+
+- **Bố cục Khung & Navigation:**
+  - Trên Desktop (`lg:` trở lên): Sidebar cố định bên trái (Fixed/Sticky Sidebar).
+  - Trên Mobile / Tablet (`< 1024px`): Sidebar tự động ẩn và chuyển thành Menu Hamburger; khi bấm sẽ mở ra dưới dạng Mobile Drawer (`Sheet` từ `@/components/ui/sheet`).
+  - Luôn sử dụng độ rộng co giãn: `w-full max-w-...`. **CẤM** gán chiều rộng cố định bằng pixel (như `w-[800px]`, `min-w-[1000px]` ngoài vùng cuộn) gây tràn ngang màn hình điện thoại.
+- **Xử lý Bảng Dữ Liệu (Data Grid) trên Mobile:**
+  - **Ưu tiên:** Tự động chuyển đổi dạng dòng của Bảng thành Thẻ thông tin (Card View) ở màn hình nhỏ (`block md:hidden`) và hiển thị dạng Bảng ở màn hình lớn (`hidden md:table`).
+  - **Dự phòng:** Bắt buộc bọc bảng trong container cuộn ngang an toàn (`overflow-x-auto relative w-full`).
+- **Form & Modal Popups:**
+  - Bố cục Form luôn hiển thị 1 cột trên điện thoại (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3`).
+  - Hộp thoại Dialog trên điện thoại phải chiếm `w-[95vw]` và có giới hạn chiều cao `max-h-[85vh] overflow-y-auto` để không bị bàn phím ảo che mất nút Lưu.
+- **Kích thước vùng chạm cảm ứng (Touch Targets):**
+  - Mọi nút bấm, icon thao tác (sửa, xóa, xem) trên mobile phải có kích thước tối thiểu `40x40px` (`h-10 min-w-10`) để người dùng dễ bấm chính xác bằng ngón tay.
+  - Font-size ô input tối thiểu `text-sm` (14px) để tránh việc trình duyệt tự động zoom màn hình trên điện thoại.
+
+---
+
+## 4. Giao Diện Tích Hợp Phân Quyền (Permission-Based UI Rendering)
+
+Khi xây dựng các tính năng mới (Quản lý công việc, Phê duyệt, Nhân sự...):
+- **Hiển thị Nút bấm có Điều kiện:**
+  - Tuyệt đối KHÔNG hiển thị các nút hành động nhạy cảm (như "Thêm mới", "Sửa", "Xóa", "Duyệt", "Giao việc") nếu người dùng không sở hữu quyền tương ứng.
+  - Sử dụng helper kiểm tra quyền:
+    ```tsx
+    {hasPermission(session, "TASK", "CREATE") && (
+      <Button className="bg-primary">Tạo công việc</Button>
+    )}
+    ```
+- **Chặn Truy cập Giao diện (Route Guard):**
+  - Nếu người dùng truy cập trực tiếp vào đường dẫn không có quyền (ví dụ `/settings` hoặc `/roles`): Phải chuyển hướng hoặc hiển thị màn hình thông báo "Không có quyền truy cập" (403 Forbidden Component).
+
+---
+
+## 5. Kiến Trúc Next.js App Router (Server vs Client Component)
 
 - **Default Server Components:** Mặc định toàn bộ Page (`page.tsx`) và Layout (`layout.tsx`) phải là Server Components để tối ưu hóa SEO và tải dữ liệu trực tiếp trên Server.
 - **Client Components cấp lá (Leaf Nodes):**
@@ -44,16 +80,13 @@ Hệ màu đã được cấu hình trong `src/app/globals.css`. Tuyệt đối 
 
 ---
 
-## 4. Tiêu Chuẩn Thành Phần & Biểu Mẫu (Shadcn/UI & Forms)
+## 6. Tiêu Chuẩn Thành Phần & Biểu Mẫu (Shadcn/UI & Forms)
 
 - **100% Sử dụng Shadcn/UI:**
   - Mọi thành phần giao diện cơ bản (Button, Input, Select, Dialog, Sheet, DropdownMenu, Checkbox, Switch, Tabs...) **BẮT BUỘC** import từ `@/components/ui/`.
   - **CẤM** sử dụng thẻ HTML thô sơ như `<input>`, `<select>`, `<button>` trực tiếp trong code.
-  - Nếu thiếu component nào, chạy lệnh `npx shadcn@latest add <component-name>` để bổ sung.
 - **Quản lý Form Nghiệp vụ:**
-  - Với các form nhập liệu nghiệp vụ (Quản lý hồ sơ nhân sự, phân quyền, cấu hình phòng ban): Bắt buộc sử dụng combo **`React Hook Form`** + **`Zod Resolver`** (`@hookform/resolvers/zod`).
+  - Form nghiệp vụ bắt buộc sử dụng combo **`React Hook Form`** + **`Zod Resolver`** (`@hookform/resolvers/zod`).
   - Hiển thị lỗi validation rõ ràng ngay dưới từng trường dữ liệu với `<FormMessage />`.
-- **Bảng dữ liệu (Data Grid):**
-  - Các bảng danh sách có chức năng Phân trang (Pagination), Tìm kiếm/Lọc (Filter), Sắp xếp (Sort) phải được xây dựng dựa trên **`TanStack Table v8`** kết hợp với `@/components/ui/table`.
 - **Hợp nhất Class an toàn:**
   - Luôn sử dụng hàm helper `cn()` (Tailwind-merge + Clsx) khi truyền hoặc mở rộng `className` để tránh lỗi xung đột CSS specificity.

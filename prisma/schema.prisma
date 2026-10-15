@@ -8,16 +8,6 @@ datasource db {
 }
 
 // -----------------------------------------------------------------------------
-// VAI TRÒ HỆ THỐNG (Static RBAC cho SME)
-// -----------------------------------------------------------------------------
-enum RoleCode {
-  ADMIN   // Toàn quyền hệ thống (Ban Giám Đốc, IT Quản trị)
-  MANAGER // Quản lý / Trưởng bộ phận (Duyệt dữ liệu, theo dõi phòng ban)
-  HR      // Chuyên viên Nhân sự (Quản lý hồ sơ, tài khoản cán bộ nhân viên)
-  STAFF   // Nhân viên (Truy cập dữ liệu cá nhân, gửi yêu cầu, nhận việc)
-}
-
-// -----------------------------------------------------------------------------
 // CORE & TENANT (Công ty thành viên / Chi nhánh trong Tập đoàn)
 // -----------------------------------------------------------------------------
 model Company {
@@ -29,13 +19,14 @@ model Company {
   
   users       User[]
   departments Department[]
+  roles       Role[]
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }
 
 // -----------------------------------------------------------------------------
-// ORGANIZATION (Phòng ban / Đơn vị trực thuộc)
+// ORGANIZATION (Phòng ban / Ban QLDA / Bộ phận trực thuộc)
 // -----------------------------------------------------------------------------
 model Department {
   id          String   @id @default(uuid())
@@ -55,7 +46,7 @@ model Department {
 }
 
 // -----------------------------------------------------------------------------
-// IDENTITY & HR PROFILE (Gộp Tài khoản đăng nhập & Hồ sơ nhân sự)
+// IDENTITY & HR PROFILE (Định danh tài khoản & Hồ sơ nhân sự)
 // -----------------------------------------------------------------------------
 model User {
   id           String      @id @default(uuid())
@@ -71,14 +62,13 @@ model User {
   // Thông tin hồ sơ cán bộ nhân viên
   employeeCode String      @unique @db.VarChar(50)
   fullName     String      @db.VarChar(255)
-  position     String?     @db.VarChar(100) // Chức vụ (VD: Trưởng phòng Kỹ thuật, Kế toán viên)
+  position     String?     @db.VarChar(100) // Chức vụ (VD: Trưởng phòng Kế toán, Kỹ sư, Tổng Giám Đốc)
   dateOfBirth  DateTime?   @db.Date
   joinDate     DateTime?   @db.Date
   avatarUrl    String?     @db.Text
   address      String?     @db.Text
   
-  // Phân quyền & Trạng thái hoạt động
-  role         RoleCode    @default(STAFF)
+  // Trạng thái hoạt động
   isActive     Boolean     @default(true)
   
   // Quan hệ Tổ chức
@@ -88,9 +78,85 @@ model User {
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
+  // Phân quyền đa vai trò & kiêm nhiệm (RBAC)
+  roles        UserRole[]
+
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
   @@index([companyId, departmentId])
-  @@index([role, isActive])
+  @@index([isActive])
+}
+
+// -----------------------------------------------------------------------------
+// RBAC - NHÓM VAI TRÒ (Roles)
+// -----------------------------------------------------------------------------
+model Role {
+  id          String           @id @default(uuid())
+  code        String           @db.VarChar(50)  // VD: "ADMIN", "DIRECTOR", "DEPT_HEAD", "HR", "ACCOUNTANT", "STAFF"
+  name        String           @db.VarChar(255) // VD: "Ban Giám Đốc", "Trưởng Phòng / Bộ Phận", "Nhân Sự", "Nhân Viên"
+  description String?          @db.Text
+  isSystem    Boolean          @default(false) // Vai trò mặc định hệ thống không thể xóa
+  
+  companyId   String
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([companyId, code])
+}
+
+// -----------------------------------------------------------------------------
+// RBAC - DANH MỤC QUYỀN THEO PHÂN HỆ (Module Permissions)
+// -----------------------------------------------------------------------------
+model Permission {
+  id          String           @id @default(uuid())
+  module      String           @db.VarChar(50)  // VD: "HR", "TASK", "SYSTEM", "REPORT"
+  action      String           @db.VarChar(50)  // VD: "VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "ASSIGN", "MANAGE"
+  name        String           @db.VarChar(255) // Tên hiển thị (VD: "Xem danh bạ nhân sự", "Giao việc phòng ban")
+  description String?          @db.Text
+  scope       String           @default("ALL") @db.VarChar(20) // "ALL" (Toàn công ty), "DEPARTMENT" (Nội bộ phòng), "PERSONAL" (Cá nhân)
+
+  roles       RolePermission[]
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([module, action])
+  @@index([module])
+}
+
+// -----------------------------------------------------------------------------
+// RBAC - LIÊN KẾT VAI TRÒ & QUYỀN HẠN (Role - Permission Matrix)
+// -----------------------------------------------------------------------------
+model RolePermission {
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  assignedAt   DateTime   @default(now())
+
+  @@id([roleId, permissionId])
+}
+
+// -----------------------------------------------------------------------------
+// RBAC - LIÊN KẾT NGƯỜI DÙNG & VAI TRÒ (User - Role & Kiêm nhiệm)
+// -----------------------------------------------------------------------------
+model UserRole {
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  isPrimary  Boolean  @default(false) // Vai trò chính hoặc vai trò kiêm nhiệm
+  assignedAt DateTime @default(now())
+
+  @@id([userId, roleId])
 }
