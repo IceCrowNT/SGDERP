@@ -23,7 +23,7 @@ export default function LoginPage() {
       if (result?.error) {
         setError(result.error);
       } else if (result?.success) {
-        router.push("/");
+        window.location.href = "/";
       }
     });
   };
@@ -40,7 +40,7 @@ export default function LoginPage() {
             ERP nội bộ Tập đoàn Sao Đỏ
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} method="post" action="#">
           <CardContent className="space-y-4">
             {error && (
               <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md border border-destructive/20">

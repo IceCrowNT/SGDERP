@@ -180,6 +180,43 @@ async function main() {
   }
   console.log(`✅ Đã gán ma trận quyền hạn cho các vai trò.`);
 
+  // 4.1 Khởi tạo tài khoản Quản trị viên tối cao (Super Admin)
+  const adminPassword = await bcrypt.hash("123456", 10);
+  const adminUser = await prisma.user.upsert({
+    where: { username: "admin" },
+    update: {
+      password: adminPassword,
+    },
+    create: {
+      username: "admin",
+      password: adminPassword,
+      fullName: "Quản trị viên Hệ thống",
+      employeeCode: "SDG-ADMIN",
+      position: "Quản trị viên Hệ thống",
+      isActive: true,
+      companyId: company.id,
+    },
+  });
+
+  const adminRoleId = roleMap["ADMIN"];
+  if (adminRoleId) {
+    await prisma.userRole.upsert({
+      where: {
+        userId_roleId: {
+          userId: adminUser.id,
+          roleId: adminRoleId,
+        },
+      },
+      update: { isPrimary: true },
+      create: {
+        userId: adminUser.id,
+        roleId: adminRoleId,
+        isPrimary: true,
+      },
+    });
+  }
+  console.log(`✅ Đã khởi tạo tài khoản Quản trị viên mặc định: admin / 123456`);
+
   // 5. Đọc tệp Excel và Nạp Phòng ban & Nhân sự thực tế
   const excelPath = path.join(
     process.cwd(),
