@@ -1,0 +1,4 @@
+# Ignore tool and linter configuration files from GitHub language statistics
+eslint.config.mjs linguist-vendored
+postcss.config.mjs linguist-vendored
+*.mjs linguist-vendored

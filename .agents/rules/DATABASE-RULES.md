@@ -15,13 +15,13 @@ Tệp quy tắc này định hướng mọi hoạt động liên quan đến Pri
   updatedAt DateTime @updatedAt
   ```
 - **Naming Conventions:**
-  - `Model`: PascalCase, Danh từ số ít (Ví dụ: `EmployeeProfile`, `Department`).
+  - `Model`: PascalCase, Danh từ số ít (Ví dụ: `User`, `Task`, `Department`).
   - `Field`: camelCase (Ví dụ: `companyId`, `dateOfBirth`).
   - `Relation Field`: Số nhiều cho quan hệ 1-N (Ví dụ: `users User[]`), Số ít cho quan hệ 1-1/N-1 (Ví dụ: `company Company`).
 
 ## 3. Quản lý Chỉ mục & Ràng buộc (Indexes & Constraints)
 - Bắt buộc khai báo `@unique` cho các mã nghiệp vụ (Ví dụ: `employeeCode`, `taxCode`).
-- Các Foreign Key phải khai báo rõ `onDelete: Cascade` hoặc `Restrict` tùy theo luồng nghiệp vụ. Mặc định dùng Cascade cho các bảng con trực thuộc (ví dụ User bị xóa thì EmployeeProfile bị Cascade theo).
+- Các Foreign Key phải khai báo rõ `onDelete: Cascade` hoặc `Restrict` tùy theo luồng nghiệp vụ. Mặc định dùng Cascade cho các bảng con trực thuộc (ví dụ Task bị xóa thì TaskChecklist bị Cascade theo).
 
 ## 4. Bảo mật kết nối
 - Chuỗi kết nối Database `DATABASE_URL` bắt buộc phải đặt trong tệp `.env`.

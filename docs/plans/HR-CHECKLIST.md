@@ -107,24 +107,21 @@
 
 ---
 
-### GIAI ĐOẠN 4: MA TRẬN PHÂN QUYỀN ĐỘNG & BẢO VỆ PHÂN HỆ (RBAC MATRIX)
-> *Mục tiêu: Cho phép người quản trị tự do tạo Role mới, sinh cột ma trận trên giao diện web và tích chọn quyền theo Module/Scope.*
+### GIAI ĐOẠN 4: MA TRẬN PHÂN QUYỀN ĐỘNG 3 CẤP ĐỘ & BẢO VỆ PHÂN HỆ (SIMPLIFIED RBAC)
+> *Mục tiêu: Quản lý ma trận phân quyền 3 cấp độ (NONE, VIEW, MANAGE) cho từng Phân hệ (HR, TASK, SYSTEM...), nạp vào Session để kiểm tra tức thì (0ms) ở Server Action và Giao diện.*
 
-- [ ] **Bước 4.1: Xây dựng Thư viện Auth & Permission Guard (`src/lib/permissions.ts`)**
-  - [ ] `hasPermission(session, module, action)`: Kiểm tra quyền tức thì từ Session (0ms, không query DB).
-  - [ ] `requirePermission(session, module, action)`: Ném lỗi 403 nếu không đủ quyền.
-  - [ ] Hỗ trợ Data Scope: `ALL` (Toàn công ty), `DEPARTMENT` (Nội bộ phòng), `PERSONAL` (Cá nhân).
-
+- [ ] **Bước 4.1: Xây dựng Thư viện Auth & Session Guard (`src/lib/auth.ts`)**
+  - [ ] Khởi tạo Session chứa danh tính người dùng và quyền phân hệ: `{ HR: "NONE" | "VIEW" | "MANAGE", TASK: "NONE" | "VIEW" | "MANAGE" }`.
+  - [ ] Helper `hasPermission(session, module, level)` kiểm tra trực tiếp từ session không cần query DB.
 - [ ] **Bước 4.2: Xây dựng Server Actions Phân Quyền (`src/actions/role.ts`)**
-  - [ ] `getRolesWithPermissions`: Lấy danh sách các vai trò và toàn bộ danh mục quyền theo từng Module (`HR`, `TASK`, `SYSTEM`).
-  - [ ] `createRole`: Tạo thêm Nhóm vai trò mới trực tiếp trên UI (tự sinh cột mới trên bảng ma trận).
-  - [ ] `updateRolePermissions`: Cập nhật ma trận quyền hạn cho một vai trò bằng cách tích/bỏ tích checkbox.
-  - [ ] `assignRolesToUser`: Gán/gỡ vai trò chính và vai trò kiêm nhiệm cho nhân viên.
-
+  - [ ] `getRolesWithPermissions`: Lấy danh sách các vai trò và cấp độ quyền tương ứng theo phân hệ.
+  - [ ] `createRole`: Tạo thêm Nhóm vai trò mới trực tiếp trên UI.
+  - [ ] `updateRolePermissions`: Cập nhật cấp độ quyền cho vai trò theo từng phân hệ.
+  - [ ] `assignRolesToUser`: Gán/gỡ vai trò chính và vai trò kiêm nhiệm cho nhân sự.
 - [ ] **Bước 4.3: Xây dựng Giao diện Ma trận Phân quyền (`src/app/(dashboard)/roles/page.tsx`)**
-  - [ ] Bảng Ma trận Checkbox tương tác thời gian thực: Dòng là các Quyền theo Phân hệ, Cột là các Vai trò.
-  - [ ] Nút "Thêm vai trò mới" -> Tự sinh ngay 1 cột mới trên bảng để tích chọn quyền.
-  - [ ] AJAX phản hồi tức thì với hiệu ứng lưu ngầm không reload trang.
+  - [ ] Bảng Ma trận trực quan: Cột là các Vai trò, Dòng là các Phân hệ với các tùy chọn cấp độ (`NONE` / `VIEW` / `MANAGE`).
+  - [ ] Nút "Thêm vai trò mới" tạo nhanh role mới và cập nhật phân quyền tức thì.
+  - [ ] AJAX phản hồi tức thì với toast Sonner, không reload trang.
 
 ---
 

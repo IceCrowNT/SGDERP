@@ -239,8 +239,51 @@ async function main() {
   }
   console.log(`✅ Đã đồng bộ ${Object.keys(departmentMap).length} Phòng ban / Ban QLDA thực tế.`);
 
-  // 5.2 Mật khẩu mặc định băm sẵn
-  const defaultPassword = await bcrypt.hash("Sdg@123456", 10);
+  // 5.2 Mật khẩu mặc định băm sẵn (đơn giản hoá 123456 cho nội bộ)
+  const defaultPassword = await bcrypt.hash("123456", 10);
+
+  // 5.2.1 Tạo tài khoản Quản trị viên tối cao (Master Admin full quyền)
+  const adminUser = await prisma.user.upsert({
+    where: { username: "admin" },
+    update: {
+      password: defaultPassword,
+      fullName: "Quản Trị Viên Hệ Thống",
+      employeeCode: "SDG-ADMIN",
+      position: "Quản trị hệ thống",
+      isActive: true,
+      companyId: company.id,
+    },
+    create: {
+      username: "admin",
+      password: defaultPassword,
+      fullName: "Quản Trị Viên Hệ Thống",
+      employeeCode: "SDG-ADMIN",
+      position: "Quản trị hệ thống",
+      email: "admin@saodogroup.com",
+      phone: "0900000000",
+      isActive: true,
+      companyId: company.id,
+    },
+  });
+
+  const adminRoleId = roleMap["ADMIN"];
+  if (adminRoleId) {
+    await prisma.userRole.upsert({
+      where: {
+        userId_roleId: {
+          userId: adminUser.id,
+          roleId: adminRoleId,
+        },
+      },
+      update: { isPrimary: true },
+      create: {
+        userId: adminUser.id,
+        roleId: adminRoleId,
+        isPrimary: true,
+      },
+    });
+  }
+  console.log(`✅ Đã đồng bộ tài khoản Master Admin (username: admin / Sdg@123456).`);
 
   // 5.3 Nạp từng Nhân sự
   let insertedUsers = 0;
@@ -301,6 +344,7 @@ async function main() {
     const user = await prisma.user.upsert({
       where: { username },
       update: {
+        password: defaultPassword,
         fullName,
         employeeCode,
         phone: rawPhone,
@@ -350,7 +394,7 @@ async function main() {
   }
 
   console.log(`\n🎉 HOÀN THÀNH: Đã nạp thành công ${insertedUsers} cán bộ nhân viên vào hệ thống!`);
-  console.log(`🔑 Mật khẩu mặc định cho tất cả tài khoản: Sdg@123456`);
+  console.log(`🔑 Mật khẩu mặc định cho tất cả tài khoản: 123456`);
 }
 
 main()

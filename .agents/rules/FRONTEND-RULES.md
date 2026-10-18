@@ -60,10 +60,10 @@ Mọi màn hình và tính năng mới được tạo ra BẮT BUỘC phải tư
 Khi xây dựng các tính năng mới (Quản lý công việc, Phê duyệt, Nhân sự...):
 - **Hiển thị Nút bấm có Điều kiện:**
   - Tuyệt đối KHÔNG hiển thị các nút hành động nhạy cảm (như "Thêm mới", "Sửa", "Xóa", "Duyệt", "Giao việc") nếu người dùng không sở hữu quyền tương ứng.
-  - Sử dụng helper kiểm tra quyền:
+  - Sử dụng kiểm tra quyền trực tiếp từ Session truyền xuống:
     ```tsx
-    {hasPermission(session, "TASK", "CREATE") && (
-      <Button className="bg-primary">Tạo công việc</Button>
+    {session.permissions.HR === "MANAGE" && (
+      <Button className="bg-primary">Thêm nhân sự</Button>
     )}
     ```
 - **Chặn Truy cập Giao diện (Route Guard):**

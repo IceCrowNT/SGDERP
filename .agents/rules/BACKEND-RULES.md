@@ -22,23 +22,13 @@ Tệp này quản lý cách thức xây dựng Logic Backend và Bảo mật Ph�
 
 ---
 
-## 3. RÀNG BUỘC BẮT BUỘC VỀ PHÂN QUYỀN (RBAC GUARDS CHO MỌI TÍNH NĂNG MỚI)
-Mọi tính năng được phát triển mới trong tương lai (Quản lý công việc `TASK`, Phê duyệt `APPROVAL`, Kho vận, Tài chính...) **BẮT BUỘC** phải tuân theo chuẩn phân quyền hệ thống:
-
-1. **Khai báo Permission chuẩn:** Mọi quyền hạn mới phải theo cấu trúc:
-   - `module`: Mã phân hệ viết hoa (VD: `HR`, `TASK`, `APPROVAL`, `REPORT`, `SYSTEM`).
-   - `action`: Hành động viết hoa (VD: `VIEW`, `CREATE`, `UPDATE`, `DELETE`, `ASSIGN`, `APPROVE`, `MANAGE`).
-   - `scope`: Phạm vi tác động (`ALL` - Toàn tập đoàn, `DEPARTMENT` - Nội bộ phòng ban, `PERSONAL` - Chỉ cá nhân).
-2. **Bắt buộc Kiểm tra Quyền ở đầu Server Action (Auth Guard):**
-   - Trước khi thực thi bất kỳ logic ghi hoặc đọc nhạy cảm nào, BẮT BUỘC gọi:
-     ```typescript
-     await requirePermission(session, "MODULE_NAME", "ACTION_NAME");
-     ```
-   - Nếu không đủ quyền, trả về ngay `{ success: false, message: "Bạn không có quyền thực hiện thao tác này." }`.
-3. **Lọc Dữ liệu theo Phạm vi (Data Scope Filtering):**
-   - **Scope ALL:** Query toàn bộ dữ liệu thuộc `companyId`.
-   - **Scope DEPARTMENT:** Ép buộc thêm điều kiện `departmentId: session.departmentId`.
-   - **Scope PERSONAL:** Ép buộc thêm điều kiện `userId: session.userId` hoặc `createdBy: session.userId`.
+## 3. RÀNG BUỘC BẮT BUỘC VỀ PHÂN QUYỀN (SIMPLIFIED JSON RBAC)
+1. **Cấu trúc Quyền trong Session:** Quyền của người dùng được nạp sẵn vào Session từ cột JSON `permissions` của bảng `Role` theo định dạng: `{ HR: "NONE" | "VIEW" | "MANAGE", TASK: "NONE" | "VIEW" | "MANAGE" }`.
+2. **Kiểm tra Quyền ở đầu Server Action:**
+   - Với thao tác Đọc dữ liệu nhạy cảm: Bắt buộc kiểm tra quyền khác `"NONE"` (tức là có `"VIEW"` hoặc `"MANAGE"`).
+   - Với thao tác Ghi (Create/Update/Delete): Bắt buộc kiểm tra `session.permissions[MODULE] === "MANAGE"` (trừ phân hệ TASK cho phép nhân viên cập nhật trạng thái công việc được giao trực tiếp cho mình).
+3. **Lọc Dữ liệu (Data Filtering):**
+   - Luôn luôn có điều kiện `companyId: session.companyId` trong mọi câu lệnh Prisma.
 
 ---
 
@@ -52,7 +42,6 @@ Khi tạo một Server Action mới, Agent BẮT BUỘC áp dụng khung mẫu s
 import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { requirePermission } from "@/lib/permissions";
 
 const CreateTaskSchema = z.object({
   title: z.string().min(1, "Tiêu đề không được để trống"),
@@ -68,8 +57,10 @@ export async function createTask(formData: any) {
       return { success: false, message: "Phiên đăng nhập hết hạn." };
     }
 
-    // 2. RBAC Guard: Bắt buộc kiểm tra quyền theo module và hành động
-    await requirePermission(session, "TASK", "CREATE");
+    // 2. RBAC Guard: Kiểm tra cấp độ quyền trực tiếp từ Session
+    if (session.permissions?.TASK !== "MANAGE") {
+      return { success: false, message: "Bạn không có quyền thực hiện thao tác này." };
+    }
 
     // 3. Validation với Zod
     const parsed = CreateTaskSchema.safeParse(formData);
@@ -77,7 +68,7 @@ export async function createTask(formData: any) {
       return { success: false, errors: parsed.error.flatten().fieldErrors };
     }
 
-    // 4. Thực thi Transaction CSDL an toàn
+    // 4. Thực thi CSDL an toàn kèm Multi-tenancy CompanyId
     const task = await prisma.task.create({
       data: {
         ...parsed.data,
