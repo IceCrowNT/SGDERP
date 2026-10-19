@@ -4,6 +4,7 @@ import { useTheme } from "next-themes"
 import { Moon, Sun, Bell, Search, LogOut, Menu, Shield } from "lucide-react"
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { logoutAction } from "@/actions/auth"
 import { SessionUser } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
@@ -60,8 +61,14 @@ export function Header({ session }: { session?: SessionUser | null }) {
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-72 flex flex-col bg-background">
             <SheetHeader className="h-16 px-6 border-b border-border/50 flex flex-row items-center justify-start gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-black text-sm">
-                SDG
+              <div className="h-8 w-auto flex items-center justify-center">
+                <Image
+                  src="/logo.png"
+                  alt="Tập đoàn Sao Đỏ"
+                  width={124}
+                  height={75}
+                  className="h-7 w-auto object-contain"
+                />
               </div>
               <SheetTitle className="text-base font-bold bg-gradient-to-r from-primary to-blue-900 bg-clip-text text-transparent">
                 SAO ĐỎ GROUP
@@ -76,6 +83,13 @@ export function Header({ session }: { session?: SessionUser | null }) {
 
         {/* Brand on Mobile */}
         <Link href="/" className="flex items-center gap-2 lg:hidden">
+          <Image
+            src="/logo.png"
+            alt="Tập đoàn Sao Đỏ"
+            width={124}
+            height={75}
+            className="h-6 w-auto object-contain"
+          />
           <span className="font-bold text-sm tracking-tight bg-gradient-to-r from-primary to-blue-900 bg-clip-text text-transparent">
             SDG ERP
           </span>

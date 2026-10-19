@@ -4,14 +4,14 @@ import { cookies } from "next/headers";
 export type PermissionLevel = "NONE" | "VIEW" | "MANAGE";
 
 export interface SessionUser {
-  userId: string;
+  userId: number;
   username: string;
   fullName: string;
   employeeCode: string;
   position?: string | null;
   avatarUrl?: string | null;
-  companyId: string;
-  departmentId?: string | null;
+  companyId: number;
+  departmentId?: number | null;
   departmentName?: string | null;
   roleCodes: string[];
   permissions: Record<string, PermissionLevel>;

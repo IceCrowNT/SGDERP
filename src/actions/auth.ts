@@ -82,7 +82,7 @@ export async function loginAction(formData: FormData | LoginInput) {
         companyId: user.companyId,
         action: "LOGIN_FAILED",
         module: "AUTH",
-        targetId: user.id,
+        targetId: String(user.id),
         targetName: user.fullName,
         description: `Đăng nhập thất bại: Tài khoản "${user.username}" đang bị khoá.`,
       });
@@ -102,7 +102,7 @@ export async function loginAction(formData: FormData | LoginInput) {
         companyId: user.companyId,
         action: "LOGIN_FAILED",
         module: "AUTH",
-        targetId: user.id,
+        targetId: String(user.id),
         targetName: user.fullName,
         description: `Đăng nhập thất bại: Sai mật khẩu cho tài khoản "${user.username}".`,
       });
@@ -171,7 +171,7 @@ export async function loginAction(formData: FormData | LoginInput) {
       companyId: user.companyId,
       action: "LOGIN",
       module: "AUTH",
-      targetId: user.id,
+      targetId: String(user.id),
       targetName: user.fullName,
       description: `Đăng nhập thành công vào hệ thống (Chức vụ: ${user.position || "Cán bộ nhân viên"})`,
     });
@@ -196,7 +196,7 @@ export async function logoutAction() {
       companyId: session.companyId,
       action: "LOGOUT",
       module: "AUTH",
-      targetId: session.userId,
+      targetId: String(session.userId),
       targetName: session.fullName,
       description: "Đăng xuất an toàn khỏi hệ thống",
     });

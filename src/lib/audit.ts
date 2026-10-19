@@ -21,10 +21,10 @@ export type AuditModule =
   | "SYSTEM";
 
 export interface LogActivityParams {
-  userId?: string | null;
+  userId?: number | null;
   username?: string;
   fullName?: string;
-  companyId?: string;
+  companyId?: number;
   action: AuditAction;
   module: AuditModule;
   targetId?: string | null;
@@ -56,7 +56,7 @@ export async function logActivity(params: LogActivityParams) {
     // Nếu vẫn không có companyId (ví dụ sự kiện login thất bại), lấy default company
     if (!companyId) {
       const defaultCompany = await db.company.findFirst({ select: { id: true } });
-      companyId = defaultCompany?.id || "system";
+      companyId = defaultCompany?.id || 1;
     }
 
     // Trích xuất IP và User-Agent từ Header

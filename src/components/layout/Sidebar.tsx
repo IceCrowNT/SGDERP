@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { SessionUser } from "@/lib/auth"
@@ -253,12 +254,19 @@ export function Sidebar({ session }: { session?: SessionUser | null }) {
     <aside className="hidden lg:flex w-64 border-r border-border/50 bg-background/80 backdrop-blur-xl h-screen sticky top-0 flex-col shrink-0 z-30 transition-all duration-300">
       {/* Brand Header */}
       <div className="h-16 flex items-center px-6 border-b border-border/50">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-black text-sm shadow-sm group-hover:scale-105 transition-transform">
-            SDG
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="h-8 w-auto flex items-center justify-center group-hover:scale-105 transition-transform">
+            <Image
+              src="/logo.png"
+              alt="Tập đoàn Sao Đỏ"
+              width={124}
+              height={75}
+              className="h-8 w-auto object-contain"
+              priority
+            />
           </div>
           <div className="flex flex-col">
-            <span className="text-base font-bold bg-gradient-to-r from-primary to-blue-900 bg-clip-text text-transparent">
+            <span className="text-sm font-bold bg-gradient-to-r from-primary to-blue-900 bg-clip-text text-transparent">
               SAO ĐỎ GROUP
             </span>
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold -mt-1">

@@ -1,8 +1,8 @@
 -- CreateTable
 CREATE TABLE "Company" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "taxCode" TEXT,
+    "id" SERIAL NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
+    "taxCode" VARCHAR(50),
     "address" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -13,11 +13,11 @@ CREATE TABLE "Company" (
 
 -- CreateTable
 CREATE TABLE "Department" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "code" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "code" VARCHAR(50) NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
     "description" TEXT,
-    "companyId" TEXT NOT NULL,
+    "companyId" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -26,14 +26,21 @@ CREATE TABLE "Department" (
 
 -- CreateTable
 CREATE TABLE "User" (
-    "id" TEXT NOT NULL,
-    "username" TEXT NOT NULL,
-    "email" TEXT,
-    "phone" TEXT,
-    "password" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "username" VARCHAR(100) NOT NULL,
+    "password" VARCHAR(255) NOT NULL,
+    "email" VARCHAR(255),
+    "phone" VARCHAR(20),
+    "employeeCode" VARCHAR(50) NOT NULL,
+    "fullName" VARCHAR(255) NOT NULL,
+    "position" VARCHAR(100),
+    "dateOfBirth" DATE,
+    "joinDate" DATE,
+    "avatarUrl" TEXT,
+    "address" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "companyId" TEXT NOT NULL,
-    "departmentId" TEXT,
+    "companyId" INTEGER NOT NULL,
+    "departmentId" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -41,29 +48,13 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
-CREATE TABLE "EmployeeProfile" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "fullName" TEXT NOT NULL,
-    "employeeCode" TEXT NOT NULL,
-    "position" TEXT,
-    "dateOfBirth" TIMESTAMP(3),
-    "joinDate" TIMESTAMP(3),
-    "avatarUrl" TEXT,
-    "address" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "EmployeeProfile_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Role" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "code" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "code" VARCHAR(50) NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
     "description" TEXT,
-    "companyId" TEXT NOT NULL,
+    "isSystem" BOOLEAN NOT NULL DEFAULT false,
+    "companyId" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -72,28 +63,56 @@ CREATE TABLE "Role" (
 
 -- CreateTable
 CREATE TABLE "Permission" (
-    "id" TEXT NOT NULL,
-    "module" TEXT NOT NULL,
-    "action" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "module" VARCHAR(50) NOT NULL,
+    "action" VARCHAR(50) NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
     "description" TEXT,
+    "scope" VARCHAR(20) NOT NULL DEFAULT 'ALL',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Permission_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "RolePermission" (
-    "roleId" TEXT NOT NULL,
-    "permissionId" TEXT NOT NULL,
+    "roleId" INTEGER NOT NULL,
+    "permissionId" INTEGER NOT NULL,
+    "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "RolePermission_pkey" PRIMARY KEY ("roleId","permissionId")
 );
 
 -- CreateTable
 CREATE TABLE "UserRole" (
-    "userId" TEXT NOT NULL,
-    "roleId" TEXT NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "roleId" INTEGER NOT NULL,
+    "isPrimary" BOOLEAN NOT NULL DEFAULT false,
+    "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "UserRole_pkey" PRIMARY KEY ("userId","roleId")
+);
+
+-- CreateTable
+CREATE TABLE "AuditLog" (
+    "id" SERIAL NOT NULL,
+    "userId" INTEGER,
+    "username" VARCHAR(100) NOT NULL,
+    "fullName" VARCHAR(255) NOT NULL,
+    "action" VARCHAR(50) NOT NULL,
+    "module" VARCHAR(50) NOT NULL,
+    "targetId" VARCHAR(100),
+    "targetName" VARCHAR(255),
+    "description" TEXT NOT NULL,
+    "oldData" JSONB,
+    "newData" JSONB,
+    "ipAddress" VARCHAR(50),
+    "userAgent" TEXT,
+    "companyId" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -112,16 +131,28 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 CREATE UNIQUE INDEX "User_phone_key" ON "User"("phone");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "EmployeeProfile_userId_key" ON "EmployeeProfile"("userId");
+CREATE UNIQUE INDEX "User_employeeCode_key" ON "User"("employeeCode");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "EmployeeProfile_employeeCode_key" ON "EmployeeProfile"("employeeCode");
+CREATE INDEX "User_companyId_departmentId_idx" ON "User"("companyId", "departmentId");
+
+-- CreateIndex
+CREATE INDEX "User_isActive_idx" ON "User"("isActive");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Role_companyId_code_key" ON "Role"("companyId", "code");
 
 -- CreateIndex
+CREATE INDEX "Permission_module_idx" ON "Permission"("module");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Permission_module_action_key" ON "Permission"("module", "action");
+
+-- CreateIndex
+CREATE INDEX "AuditLog_companyId_module_createdAt_idx" ON "AuditLog"("companyId", "module", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "AuditLog_userId_idx" ON "AuditLog"("userId");
 
 -- AddForeignKey
 ALTER TABLE "Department" ADD CONSTRAINT "Department_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -131,9 +162,6 @@ ALTER TABLE "User" ADD CONSTRAINT "User_companyId_fkey" FOREIGN KEY ("companyId"
 
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "Department"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "EmployeeProfile" ADD CONSTRAINT "EmployeeProfile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Role" ADD CONSTRAINT "Role_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -149,3 +177,9 @@ ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_userId_fkey" FOREIGN KEY ("userI
 
 -- AddForeignKey
 ALTER TABLE "UserRole" ADD CONSTRAINT "UserRole_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;

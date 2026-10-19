@@ -8,7 +8,7 @@ Tệp quy tắc này định hướng mọi hoạt động liên quan đến Pri
 - Khóa cứng Prisma Version ở v6.x (Hiện tại là `6.19.3`). Tuyệt đối không tự ý nâng cấp lên Prisma 7/8.
 
 ## 2. Tiêu chuẩn Thiết kế Lược đồ (Prisma Schema)
-- **Primary Key:** Mọi bảng phải sử dụng `id String @id @default(uuid())`. Không dùng auto-increment integer trừ khi có yêu cầu nghiệp vụ bắt buộc.
+- **Primary Key:** Mọi bảng sử dụng số nguyên tự tăng `id Int @id @default(autoincrement())` để tối ưu trực quan khi rà soát dữ liệu CSDL nội bộ, giảm dung lượng chỉ mục và tăng tốc độ JOIN.
 - **Audit Columns:** Mọi bảng Dữ liệu nghiệp vụ (Master & Transactional Data) đều bắt buộc phải có:
   ```prisma
   createdAt DateTime @default(now())

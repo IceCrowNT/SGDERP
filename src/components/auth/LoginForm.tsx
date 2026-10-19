@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Lock, User, Loader2, ArrowRight } from "lucide-react";
 import { z } from "zod";
+import Image from "next/image";
 import { loginAction } from "@/actions/auth";
 
 const LoginSchema = z.object({
@@ -75,8 +76,15 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md shadow-xl border-border/50 bg-card/95 backdrop-blur-md rounded-2xl overflow-hidden">
       <CardHeader className="space-y-3 text-center pt-8 pb-6 border-b border-border/40 bg-muted/20">
-        <div className="mx-auto bg-gradient-to-tr from-primary to-blue-900 w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-105 transition-transform duration-300">
-          <span className="text-primary-foreground font-black text-xl tracking-wider">SDG</span>
+        <div className="mx-auto h-16 flex items-center justify-center hover:scale-105 transition-transform duration-300">
+          <Image
+            src="/logo.png"
+            alt="Tập đoàn Sao Đỏ"
+            width={124}
+            height={75}
+            className="h-14 w-auto object-contain drop-shadow-sm"
+            priority
+          />
         </div>
         <div>
           <CardTitle className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary via-blue-900 to-primary bg-clip-text text-transparent">

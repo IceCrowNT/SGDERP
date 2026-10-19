@@ -11,7 +11,7 @@ datasource db {
 // CORE & TENANT (Công ty thành viên / Chi nhánh trong Tập đoàn)
 // -----------------------------------------------------------------------------
 model Company {
-  id          String       @id @default(uuid())
+  id          Int          @id @default(autoincrement())
   name        String       @db.VarChar(255)
   taxCode     String?      @unique @db.VarChar(50)
   address     String?      @db.Text
@@ -30,12 +30,12 @@ model Company {
 // ORGANIZATION (Phòng ban / Ban QLDA / Bộ phận trực thuộc)
 // -----------------------------------------------------------------------------
 model Department {
-  id          String   @id @default(uuid())
+  id          Int      @id @default(autoincrement())
   code        String   @db.VarChar(50)
   name        String   @db.VarChar(255)
   description String?  @db.Text
   
-  companyId   String
+  companyId   Int
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
   
   users       User[]
@@ -50,7 +50,7 @@ model Department {
 // IDENTITY & HR PROFILE (Định danh tài khoản & Hồ sơ nhân sự)
 // -----------------------------------------------------------------------------
 model User {
-  id           String      @id @default(uuid())
+  id           Int         @id @default(autoincrement())
   
   // Thông tin định danh & đăng nhập
   username     String      @unique @db.VarChar(100)
@@ -73,10 +73,10 @@ model User {
   isActive     Boolean     @default(true)
   
   // Quan hệ Tổ chức
-  companyId    String
+  companyId    Int
   company      Company     @relation(fields: [companyId], references: [id], onDelete: Restrict)
   
-  departmentId String?
+  departmentId Int?
   department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
   // Phân quyền đa vai trò & kiêm nhiệm (RBAC)
@@ -94,13 +94,13 @@ model User {
 // RBAC - NHÓM VAI TRÒ (Roles)
 // -----------------------------------------------------------------------------
 model Role {
-  id          String           @id @default(uuid())
+  id          Int              @id @default(autoincrement())
   code        String           @db.VarChar(50)  // VD: "ADMIN", "DIRECTOR", "DEPT_HEAD", "HR", "ACCOUNTANT", "STAFF"
   name        String           @db.VarChar(255) // VD: "Ban Giám Đốc", "Trưởng Phòng / Bộ Phận", "Nhân Sự", "Nhân Viên"
   description String?          @db.Text
   isSystem    Boolean          @default(false) // Vai trò mặc định hệ thống không thể xóa
   
-  companyId   String
+  companyId   Int
   company     Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
 
   permissions RolePermission[]
@@ -116,7 +116,7 @@ model Role {
 // RBAC - DANH MỤC QUYỀN THEO PHÂN HỆ (Module Permissions)
 // -----------------------------------------------------------------------------
 model Permission {
-  id          String           @id @default(uuid())
+  id          Int              @id @default(autoincrement())
   module      String           @db.VarChar(50)  // VD: "HR", "TASK", "SYSTEM", "REPORT"
   action      String           @db.VarChar(50)  // VD: "VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "ASSIGN", "MANAGE"
   name        String           @db.VarChar(255) // Tên hiển thị (VD: "Xem danh bạ nhân sự", "Giao việc phòng ban")
@@ -136,10 +136,10 @@ model Permission {
 // RBAC - LIÊN KẾT VAI TRÒ & QUYỀN HẠN (Role - Permission Matrix)
 // -----------------------------------------------------------------------------
 model RolePermission {
-  roleId       String
+  roleId       Int
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   
-  permissionId String
+  permissionId Int
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   assignedAt   DateTime   @default(now())
@@ -151,10 +151,10 @@ model RolePermission {
 // RBAC - LIÊN KẾT NGƯỜI DÙNG & VAI TRÒ (User - Role & Kiêm nhiệm)
 // -----------------------------------------------------------------------------
 model UserRole {
-  userId     String
+  userId     Int
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  roleId     String
+  roleId     Int
   role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   isPrimary  Boolean  @default(false) // Vai trò chính hoặc vai trò kiêm nhiệm
@@ -167,10 +167,10 @@ model UserRole {
 // AUDIT LOG - NHẬT KÝ KIỂM TOÁN VÀ LỊCH SỬ HOẠT ĐỘNG TOÀN HỆ THỐNG
 // -----------------------------------------------------------------------------
 model AuditLog {
-  id          String   @id @default(uuid())
+  id          Int      @id @default(autoincrement())
   
   // Định danh người thực hiện
-  userId      String?
+  userId      Int?
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   username    String   @db.VarChar(100)
   fullName    String   @db.VarChar(255)
@@ -191,7 +191,7 @@ model AuditLog {
   userAgent   String?  @db.Text
   
   // Multi-tenancy
-  companyId   String
+  companyId   Int
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   
   createdAt   DateTime @default(now())
@@ -199,4 +199,3 @@ model AuditLog {
   @@index([companyId, module, createdAt])
   @@index([userId])
 }
-

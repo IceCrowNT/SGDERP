@@ -94,7 +94,7 @@ async function main() {
     },
   ];
 
-  const roleMap: Record<string, string> = {};
+  const roleMap: Record<string, number> = {};
   for (const r of roleDefs) {
     const role = await prisma.role.upsert({
       where: {
@@ -127,7 +127,7 @@ async function main() {
     { module: "SYSTEM", action: "MANAGE", name: "Cấu hình hệ thống & phân quyền", scope: "ALL" },
   ];
 
-  const permMap: Record<string, string> = {};
+  const permMap: Record<string, number> = {};
   for (const p of permissionDefs) {
     const perm = await prisma.permission.upsert({
       where: {
@@ -208,7 +208,7 @@ async function main() {
   const idxTrangThai = colIdx("Trạng thái");
 
   // 5.1 Tạo danh sách Phòng ban trước
-  const departmentMap: Record<string, string> = {};
+  const departmentMap: Record<string, number> = {};
   const deptsSet = new Set<string>();
 
   for (let r = 1; r < rawData.length; r++) {

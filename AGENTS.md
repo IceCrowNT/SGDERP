@@ -31,6 +31,7 @@ Khi nhận bất kỳ yêu cầu nào, AI Agent BẮT BUỘC tra cứu bảng đ
 1. **Direct-to-DB:** Mọi Server Action tương tác trực tiếp với Prisma Client. Không tạo các tầng trừu tượng trung gian rườm rà (Repository, Service Interface).
 2. **Single Source of Truth:** Không khai báo chi tiết mã màu, tokens hay cấu trúc code cụ thể tại file Router này. Mọi quy tắc kỹ thuật chi tiết phải nằm trong các tệp tương ứng thuộc thư mục `.agents/rules/`.
 3. **Tính Toàn Vẹn Dữ Liệu:** Không bao giờ tự ý chạy các lệnh xóa cột (`drop column`), reset CSDL làm mất dữ liệu của người dùng mà không có xác nhận.
+4. **Đồng Bộ Kế Hoạch Bắt Buộc (Mandatory Checklist Sync):** Mỗi khi thực thi một lệnh, hoàn thành một bước hoặc có bất kỳ sửa đổi kỹ thuật/kiến trúc nào, AI Agent **BẮT BUỘC** phải cập nhật ngay vào tệp Checklist tương ứng (`docs/plans/<TEN-PHAN-HE>-CHECKLIST.md`), đánh dấu `[x]` các việc đã xong và ghi nhận các quyết định kiến trúc mới.
 
 ---
 
