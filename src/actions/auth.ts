@@ -114,7 +114,7 @@ export async function loginAction(formData: FormData | LoginInput) {
 
     // Trích xuất vai trò và tính toán ma trận quyền 3 cấp độ (NONE, VIEW, MANAGE)
     const roleCodes = user.roles.map((ur) => ur.role.code);
-    const isAdmin = roleCodes.includes("ADMIN");
+    const isAdmin = roleCodes.includes("ADMIN") || roleCodes.includes("IT_ADMIN");
 
     const permissions: Record<string, PermissionLevel> = {
       HR: "NONE",

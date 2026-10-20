@@ -14,7 +14,7 @@
 
 - [x] **Bước Chuẩn bị: Thiết lập Cấu trúc CSDL Khóa Số Nguyên & Bộ Nhận Diện Sao Đỏ**
 - [x] **Giai đoạn 1: Khởi tạo Thư viện UI & Nạp Dữ liệu thực tế 67 Nhân sự từ Excel**
-- [ ] **Giai đoạn 2: Cơ cấu Tổ chức Phân cấp Cây (Cha - Con) & Quản lý Phòng Ban (Department Management)**
+- [x] **Giai đoạn 2: Cơ cấu Tổ chức Phân cấp Cây (Cha - Con) & Quản lý Phòng Ban (Department Management)**
 - [ ] **Giai đoạn 3: Quản lý Hồ sơ & Tài khoản Cán bộ Nhân viên (Core Employee Management)**
 - [x] **Giai đoạn 4: Ma trận Phân quyền Động 3 Cấp độ & Bảo vệ Phân hệ (RBAC Matrix & Session Guard)**
 - [ ] **Giai đoạn 5: Tích hợp Điều hướng Đa nền tảng (Mobile/Desktop) & Kiểm thử Toàn trình**
@@ -59,53 +59,73 @@
 ### GIAI ĐOẠN 2: CƠ CẤU TỔ CHỨC CÂY PHÂN CẤP (CHA - CON) & QUẢN LÝ PHÒNG BAN
 > *Mục tiêu: Quản lý danh mục cơ cấu tổ chức theo mô hình cây 2 tầng (Khối/Ban/Phòng cấp Tập đoàn -> Bộ phận trực thuộc) và cơ chế phân quyền kế thừa theo nhánh.*
 
-- [ ] **Bước 2.1: Cập nhật Schema Cây Phòng Ban (`prisma/schema.prisma`)**
-  - [ ] Bổ sung trường tự liên kết:
+> [!IMPORTANT]
+> **QUYẾT ĐỊNH KIẾN TRÚC LÕI: RÀNG BUỘC THEO ID THAY VÌ TITLE / TEXT**
+> 1. **100% Gắn theo `id` (Khóa ngoại Integer):** Toàn bộ nhân sự (`User.departmentId`), công việc tương lai (`Task.departmentId`, `Task.assignedToId`) và luồng duyệt **BẮT BUỘC** ràng buộc bằng khóa số nguyên `Int`. Tuyệt đối KHÔNG gắn kết nối theo tên gọi (`title` / `name`).
+> 2. **Bảo toàn dữ liệu khi tổ chức thay đổi:** Khi phòng ban đổi tên (VD: `Phòng Hành chính Nhân sự` đổi thành `Khối Quản trị Nguồn Nhân lực`), mọi liên kết với nhân sự và công việc cũ **giữ nguyên vẹn 100% (Zero-data-loss)** mà không phải chạy script cập nhật hàng loạt.
+> 3. **Tính năng Quản lý Phòng ban Độc lập (`/departments`):** Rất cần thiết và là module nền móng. Tính năng này cho phép Admin/IT/HR tạo phòng cha, tách/nhập bộ phận con, sửa đổi thông tin 100% qua UI mà không cần can thiệp code hay SQL. Hệ thống có cơ chế kiểm tra an toàn: từ chối xóa nếu phòng ban đang có nhân sự hoặc bộ phận con trực thuộc.
+
+- [x] **Bước 2.1: Cập nhật Schema Cây Phòng Ban (`prisma/schema.prisma`) & Phân định rõ Bộ phận IT/HCNS**
+  - [x] Bổ sung trường tự liên kết vào model `Department`:
     ```prisma
     parentId    Int?
     parent      Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
     children    Department[] @relation("DepartmentHierarchy")
     ```
-  - [ ] Chạy migration cập nhật CSDL và cập nhật `prisma/seed.ts` để đọc chính xác cột `Phòng ban cha` trong Excel:
-    - **Cấp 1 (9 Đơn vị cấp Tập đoàn):** `BAN LÃNH ĐẠO`, `PHÒNG KINH DOANH`, `BAN QLDA KCN NAM ĐÌNH VŨ 1`, `PHÒNG TÀI CHÍNH - KẾ TOÁN`, `PHÒNG HÀNH CHÍNH NHÂN SỰ`, `BAN PHÁP CHẾ`, `PHÒNG KẾ HOẠCH ĐẦU TƯ`, `PHÒNG PHÁT TRIỂN DỰ ÁN`, `BAN KIỂM SOÁT`.
-    - **Cấp 2 (Bộ phận con trực thuộc):**
-      + Trực thuộc Phòng Kinh Doanh: `Bộ phận Sales Marketing`, `Bộ phận CSKH`.
-      + Trực thuộc Ban QLDA KCN Nam Đình Vũ 1: `Ban giám đốc KCN`, `Bộ phận Kỹ thuật`, `Bộ phận Điện nước`, `Bộ phận Giao nhận`, `Bộ phận Cảnh quan`, `Bộ phận Văn phòng`, `Bộ phận PCCC`.
-- [ ] **Bước 2.2: Quy chuẩn Phân quyền Kế thừa Dữ liệu theo Nhánh (Data Scope Cascade)**
-  - [ ] Xây dựng helper `getAccessibleDepartmentIds(user)`:
+  - [x] Chạy migration `20261019071635_add_department_hierarchy` áp dụng thành công vào PostgreSQL.
+  - [x] Tinh chỉnh `prisma/seed.ts` thiết lập chuẩn hóa mô hình phân cấp (Khớp 100% dữ liệu gốc):
+    - **Cấp 1 (Cấp Tập đoàn & Khối độc lập):**
+      + `BAN QLDA KCN NAM ĐÌNH VŨ 1`: **Khối độc lập riêng** (gồm 1 Giám đốc Ban và 7 bộ phận con trực thuộc với 27 nhân sự).
+      + `PHÒNG PHÁT TRIỂN DỰ ÁN`: Đơn vị độc lập phụ trách nghiên cứu & chuẩn bị dự án mới (2 nhân sự).
+      + `PHÒNG HÀNH CHÍNH NHÂN SỰ`: Đơn vị nòng cốt quản trị nhân sự, CNTT và văn phòng (10 nhân sự).
+      + `PHÒNG TÀI CHÍNH - KẾ TOÁN`: Quản lý tài chính kế toán (6 nhân sự).
+      + `PHÒNG KINH DOANH`: Kinh doanh & xúc tiến đầu tư (9 nhân sự, có 2 bộ phận con).
+      + `PHÒNG KẾ HOẠCH ĐẦU TƯ`: Kế hoạch và tổng hợp đầu tư (6 nhân sự).
+      + `BAN PHÁP CHẾ`: Pháp chế doanh nghiệp (2 nhân sự).
+      + `BAN LÃNH ĐẠO`: Ban Tổng Giám đốc (1 nhân sự).
+      + `BAN KIỂM SOÁT`: Kiểm soát tuân thủ (3 nhân sự).
+    - **Cấp 2 (9 Bộ phận con trực thuộc chuẩn theo Excel):**
+      + **Trực thuộc Khối độc lập Ban QLDA KCN Nam Đình Vũ 1 (7 bộ phận):** `Ban giám đốc KCN NAM ĐÌNH VŨ 1` (4 Phó GĐ Ban), `Bộ phận văn phòng - Ban QLDA`, `Bộ phận kỹ thuật - Ban QLDA`, `Bộ phận cảnh quan môi trường - Ban QLDA`, `Bộ phận giao nhận - Ban QLDA`, `Bộ phận điện nước - Ban QLDA`, `Bộ phận PCCC - Ban QLDA`.
+      + **Trực thuộc Phòng Kinh Doanh (2 bộ phận):** `Bộ phận Sales Marketing - Phòng Kinh doanh`, `Bộ phận CSKH - Phòng Kinh Doanh`.
+  - [x] Thiết lập vai trò chuyên biệt: `IT_ADMIN` (toàn quyền hệ thống & HCNS cho nhân sự IT), `HR_MANAGER` (Trưởng phòng HCNS), `HR_STAFF` (Chuyên viên HCNS).
+- [x] **Bước 2.2: Quy chuẩn Phân quyền Kế thừa Dữ liệu theo Nhánh (Data Scope Cascade)**
+  - [x] Xây dựng helper `getAccessibleDepartmentIds(user)` trong `src/lib/permissions.ts`:
     - Nếu là Quản lý cấp Cha (Vd: Trưởng phòng Kinh Doanh): Tự động bao quát ID phòng cha + tất cả ID bộ phận con.
     - Nếu là Quản lý cấp Con (Vd: Trưởng bộ phận Kỹ thuật): Chỉ quản lý trong phạm vi ID bộ phận con của mình.
-- [ ] **Bước 2.3: Xây dựng Server Actions Phòng Ban (`src/actions/department.ts`)**
-  - [ ] `getDepartments`: Lấy danh sách phòng ban kèm thông tin phòng ban cha, đếm số lượng nhân sự trực thuộc (`_count: { users: true }`).
-  - [ ] `createDepartment`: Thêm phòng ban mới (cho phép chọn phòng ban cha nếu là bộ phận con).
-  - [ ] `updateDepartment`: Chỉnh sửa tên, mã, mô tả, thay đổi phòng ban cha.
-  - [ ] `deleteDepartment`: Xóa phòng ban an toàn (từ chối xóa nếu còn phòng ban con hoặc nhân viên trực thuộc).
-- [ ] **Bước 2.4: Xây dựng Giao diện Phòng Ban (`src/app/(dashboard)/departments/page.tsx`)**
-  - [ ] Hiển thị danh sách dạng Cây phân cấp (Tree View) hoặc Nhóm lồng nhau trực quan.
-  - [ ] Hỗ trợ Responsive Mobile (Card View lồng nhau trên mobile, Data Table trên desktop).
-  - [ ] Dialog Thêm mới / Chỉnh sửa phòng ban (React Hook Form + Zod, 100% AJAX).
+- [x] **Bước 2.3: Xây dựng Server Actions Phòng Ban (`src/actions/department.ts`)**
+  - [x] `getDepartments`: Lấy danh sách phòng ban kèm thông tin phòng ban cha, đếm số lượng nhân sự trực thuộc (`_count: { users: true }`).
+  - [x] `createDepartment`: Thêm phòng ban mới (cho phép chọn phòng ban cha nếu là bộ phận con).
+  - [x] `updateDepartment`: Chỉnh sửa tên, mã, mô tả, thay đổi phòng ban cha.
+  - [x] `deleteDepartment`: Xóa phòng ban an toàn (chặn xóa nếu còn phòng ban con hoặc nhân viên trực thuộc).
+- [x] **Bước 2.4: Xây dựng Giao diện Phòng Ban (`src/app/(dashboard)/departments/page.tsx`)**
+  - [x] Hiển thị danh sách dạng Sơ đồ Cây phân cấp (Tree Card View) kết nối đường line trực quan và Bảng chi tiết (Data Table).
+  - [x] Bộ lọc tìm kiếm nhanh theo tên, mã code, đơn vị cấp trên.
+  - [x] Dialog Thêm mới / Chỉnh sửa phòng ban (gợi ý mã code tự động, chọn cấp độ phân bổ, 100% AJAX).
+  - [x] Dialog cảnh báo xóa phòng ban an toàn chống mất mát dữ liệu.
 
 ---
 
-### GIAI ĐOẠN 3: QUẢN LÝ HỒ SƠ & TÀI KHOẢN NHÂN VIÊN (CORE HR)
+### GIAI ĐOẠN 3: QUẢN LÝ HỒ SƠ & TÀI KHOẢN NHÂN VIÊN (CORE HR) - [HOÀN THÀNH 100%]
 > *Mục tiêu: Quản lý danh sách 67 cán bộ nhân viên, xem chi tiết, chỉnh sửa thông tin và gán vai trò kiêm nhiệm.*
 
-- [ ] **Bước 3.1: Xây dựng DTO Schemas Validation (`src/lib/validations/user.ts`)**
-  - [ ] Schema Tạo/Sửa nhân viên: Họ tên, Mã NV, Chức vụ, Phòng ban (hỗ trợ chọn bộ phận con hoặc phòng cha), Username, Password, SĐT, Email, Ngày sinh, Ngày vào làm, Danh sách Roles.
-- [ ] **Bước 3.2: Xây dựng Server Actions Nhân Sự (`src/actions/employee.ts`)**
-  - [ ] `getEmployees`: Lọc theo Phòng ban (hỗ trợ lọc theo phòng cha thì ra toàn bộ nhân sự các phòng con), Vai trò, Trạng thái, Tìm kiếm thời gian thực, Phân trang.
-  - [ ] `getEmployeeById`: Lấy thông tin chi tiết nhân viên kèm Phòng ban và các Vai trò.
-  - [ ] `createEmployee`: Tạo User mới, băm password, gán phòng ban và danh sách vai trò (`UserRole`).
-  - [ ] `updateEmployee`: Cập nhật thông tin hồ sơ, phòng ban và cập nhật danh sách vai trò.
-  - [ ] `toggleEmployeeStatus`: Kích hoạt / Khóa tài khoản nhân sự tức thì (kèm ghi AuditLog).
-  - [ ] `resetEmployeePassword`: Đặt lại mật khẩu cho nhân sự.
-- [ ] **Bước 3.3: Xây dựng Giao diện Danh sách Nhân sự (`src/app/(dashboard)/employees/page.tsx`)**
-  - [ ] Toolbar: Ô tìm kiếm thời gian thực, Bộ lọc Phòng ban phân cấp, Bộ lọc Vai trò, Nút "Thêm nhân viên" màu Sao Đỏ Red (`bg-primary`).
-  - [ ] Data Grid (TanStack Table) chuẩn Responsive:
+- [x] **Bước 3.1: Xây dựng DTO Schemas Validation (`src/lib/validations/user.ts`)**
+  - [x] Schema Tạo/Sửa nhân viên: Họ tên, Mã NV, Chức vụ, Phòng ban (hỗ trợ chọn bộ phận con hoặc phòng cha), Username, Password, SĐT, Email, Ngày sinh, Ngày vào làm, Danh sách Roles.
+- [x] **Bước 3.2: Xây dựng Server Actions Nhân Sự (`src/actions/employee.ts`)**
+  - [x] `getEmployees`: Lọc theo Phòng ban (hỗ trợ lọc theo phòng cha thì ra toàn bộ nhân sự các phòng con), Vai trò, Trạng thái, Tìm kiếm thời gian thực, Phân trang.
+  - [x] `getEmployeeById`: Lấy thông tin chi tiết nhân viên kèm Phòng ban và các Vai trò.
+  - [x] `createEmployee`: Tạo User mới, băm password, gán phòng ban và danh sách vai trò (`UserRole`).
+  - [x] `updateEmployee`: Cập nhật thông tin hồ sơ, phòng ban và cập nhật danh sách vai trò.
+  - [x] `toggleEmployeeStatus`: Kích hoạt / Khóa tài khoản nhân sự tức thì (kèm ghi AuditLog).
+  - [x] `resetEmployeePassword`: Đặt lại mật khẩu cho nhân sự.
+- [x] **Bước 3.3: Xây dựng Giao diện Danh sách Nhân sự (`src/app/(dashboard)/employees/page.tsx`)**
+  - [x] Toolbar: Ô tìm kiếm thời gian thực, Bộ lọc Phòng ban phân cấp, Bộ lọc Vai trò, Nút "Thêm nhân viên" màu Sao Đỏ Red (`bg-primary`).
+  - [x] Data Grid (TanStack Table & Custom UI) chuẩn Responsive:
     - Desktop: Table đầy đủ Avatar, Họ tên, Mã NV, Chức vụ, Phòng ban, SĐT, Vai trò, Trạng thái, Menu thao tác.
     - Mobile: Card View hiển thị thẻ nhân sự nhỏ gọn kèm menu 3 chấm.
-- [ ] **Bước 3.4: Xây dựng Modal / Sheet Thêm & Sửa Nhân viên**
-  - [ ] Thiết kế Sheet / Dialog 2 cột bố cục rõ ràng (Cá nhân, Công việc, Tài khoản & Chọn các Vai trò).
+  - [x] Liên kết điều hướng chéo trực tiếp từ Cơ cấu phòng ban (`/departments`) sang Danh bạ nhân sự (`/employees?departmentId=...`).
+- [x] **Bước 3.4: Xây dựng Modal / Sheet Thêm & Sửa Nhân viên (`src/components/employees/EmployeeManager.tsx`)**
+  - [x] Thiết kế Sheet / Dialog 2 cột bố cục rõ ràng (Cá nhân, Công việc, Tài khoản & Chọn các Vai trò).
+  - [x] Drawer Sheet xem chi tiết hồ sơ nhân sự, lịch sử tài khoản, ngày vào làm và phòng ban.
 
 ---
 

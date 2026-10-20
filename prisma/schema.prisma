@@ -30,18 +30,23 @@ model Company {
 // ORGANIZATION (Phòng ban / Ban QLDA / Bộ phận trực thuộc)
 // -----------------------------------------------------------------------------
 model Department {
-  id          Int      @id @default(autoincrement())
-  code        String   @db.VarChar(50)
-  name        String   @db.VarChar(255)
-  description String?  @db.Text
+  id          Int          @id @default(autoincrement())
+  code        String       @db.VarChar(50)
+  name        String       @db.VarChar(255)
+  description String?      @db.Text
   
+  // Cấu trúc phân cấp Cây Phòng Ban (Cha - Con)
+  parentId    Int?
+  parent      Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Department[] @relation("DepartmentHierarchy")
+
   companyId   Int
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
   
   users       User[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   
   @@unique([companyId, code])
 }
