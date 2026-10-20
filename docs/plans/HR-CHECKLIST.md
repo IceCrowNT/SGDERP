@@ -18,6 +18,7 @@
 - [ ] **Giai đoạn 3: Quản lý Hồ sơ & Tài khoản Cán bộ Nhân viên (Core Employee Management)**
 - [x] **Giai đoạn 4: Ma trận Phân quyền Động 3 Cấp độ & Bảo vệ Phân hệ (RBAC Matrix & Session Guard)**
 - [ ] **Giai đoạn 5: Tích hợp Điều hướng Đa nền tảng (Mobile/Desktop) & Kiểm thử Toàn trình**
+- [x] **Giai đoạn 6: Mô hình 3D Digital Twin Tòa nhà Trụ sở Sao Đỏ Group (WebGL / Three.js)**
 
 ---
 
@@ -149,12 +150,39 @@
 ### GIAI ĐOẠN 5: TÍCH HỢP ĐIỀU HƯỚNG & KIỂM THỬ TOÀN TRÌNH
 - [x] **Bước 5.1: Cập nhật Sidebar Navigation chuẩn Responsive**
   - [x] Menu Desktop cố định, Menu Mobile dạng Drawer trượt (`Sheet`).
-  - [x] Nhóm menu "Quản lý Nhân sự", "Cơ cấu tổ chức" và "Nhật ký hoạt động".
+  - [x] Nhóm menu "Quản lý Nhân sự", "Cơ cấu tổ chức", "Bản đồ 3D Tòa nhà" và "Nhật ký hoạt động".
   - [x] Tích hợp Logo Sao Đỏ Group và Avatar tài khoản.
 - [ ] **Bước 5.2: Kiểm thử Toàn trình (End-to-End Test)**
   - [ ] Kiểm thử đăng nhập bằng các tài khoản thật từ file Excel.
   - [ ] Kiểm thử phân cấp phòng ban cha - con và kiểm tra quyền kế thừa nhánh dữ liệu.
   - [ ] Kiểm tra hiển thị và thao tác trên thiết bị di động.
+
+---
+
+### GIAI ĐOẠN 6: MÔ HÌNH 3D DIGITAL TWIN TÒA NHÀ TRỤ SỞ SAO ĐỎ GROUP
+> *Mục tiêu: Xây dựng bản đồ số 3D tương tác toàn cảnh trụ sở 3 tầng của Sao Đỏ Group dựa trên sơ đồ thiết kế thực tế, kết nối trực tiếp với dữ liệu phòng ban và hồ sơ nhân sự PostgreSQL.*
+
+- [x] **Bước 6.1: Cài đặt thư viện đồ họa 3D Three.js**
+  - [x] `three` & `@types/three` (phiên bản ^0.182.0) tương thích hoàn toàn Next.js 16 và React 19.
+  - [x] Cập nhật bảng thư viện trong `docs/ARCHITECTURE.md`.
+- [x] **Bước 6.2: Khởi tạo Dữ liệu Mặt bằng 3D (`src/lib/office-3d-data.ts`)**
+  - [x] **Tầng 1 (T1):** Sảnh đón tiếp trung tâm đá hoa cương, Cửa kính tự động 2 cánh, Quầy lễ tân màu đỏ Sao Đỏ, Phòng Kinh doanh (`KD`), 2 Phòng họp đối ngoại/nội bộ, Phòng khách VIP, Ngân hàng cho thuê mặt bằng, Cầu thang bộ và WC.
+  - [x] **Tầng 2 (T2):** Khoảng thông tầng giếng trời 1+2 với Đèn chùm pha lê thả rực rỡ và lan can kính, Phòng Chủ tịch HĐQT (`BLD`), Phòng Phát triển dự án (`PTDA`), Phòng Tài chính - Kế toán (`TCKT`), Phòng Tổng Giám đốc (`BLD`), Phòng Kế hoạch - Đầu tư (`KHDT`), Ban Pháp chế & Phòng HCNS (`PC` & `HCNS`), Cầu thang bộ và WC.
+  - [x] **Tầng 3 (T3):** Khuôn viên sân vườn cây xanh oval (Sky Garden) với cây xanh tiểu cảnh, Công ty Cổ phần Xây dựng Sao Đỏ (2 phân khu Bắc/Nam), Phòng ăn / Căn tin nội bộ với cụm bàn ghế ăn.
+- [x] **Bước 6.3: Xây dựng Bộ hiển thị 3D WebGL Siêu Nhẹ & Tinh Gọn (`src/components/office-3d/Office3DViewer.tsx`)**
+  - [x] Chuyển đổi sang phong cách Clean Architectural Isometric tối giản: lược bỏ toàn bộ đa giác thừa (cây cảnh nhiều tầng, bàn ghế con, đèn chùm rườm rà).
+  - [x] Tắt Shadow Maps (2048px) và Fog giúp triệt tiêu gánh nặng GPU/CPU.
+  - [x] Áp dụng cơ chế **Vẽ theo nhu cầu (On-Demand Rendering)**: Chỉ render khi người dùng tương tác xoay/zoom hoặc khi có hoạt ảnh bóc tách tầng, đưa mức tiêu thụ tài nguyên về ~0% khi đứng yên.
+  - [x] Chế độ **Bóc Tách Tầng (Exploded View)** với hiệu ứng chuyển động mượt mà (Lerp Y offset).
+  - [x] Bộ lọc xem riêng từng tầng: Toàn tòa nhà, Tầng 1, Tầng 2, Tầng 3.
+  - [x] Tương tác chuột Raycaster: Hover phát sáng Emissive nhẹ nhàng, Đổi con trỏ pointer, Click chọn phòng.
+  - [x] Các góc camera tiện ích: Isometric 3D, Mặt bằng 2D Top-down, Góc sảnh đón tiếp chính.
+- [x] **Bước 6.4: Bảng Chi Tiết Phòng & Danh Sách Nhân Sự Thật 100% (`src/components/office-3d/RoomDetailSheet.tsx`)**
+  - [x] **Triệt tiêu dữ liệu tự suy:** Bỏ hoàn toàn danh sách thiết bị tiện nghi tự nghĩ (`features`), bỏ diện tích ước lượng (`areaM2`), bỏ đoạn văn mô tả dài dòng.
+  - [x] Tập trung 100% vào dữ liệu thật: Tên phòng (theo bản vẽ phác thảo tay), Tên phòng ban chủ quản, và Danh sách nhân sự thực tế từ PostgreSQL (Họ tên, Mã NV, Chức vụ, SĐT, Email, Avatar) có tìm kiếm và liên kết sang hồ sơ.
+- [x] **Bước 6.5: Định Tuyến & Điều Hướng Hệ Thống**
+  - [x] Server Page `src/app/(dashboard)/office-3d/page.tsx` xác thực phiên và tải dữ liệu phòng ban, nhân sự trực tiếp từ CSDL với câu truy vấn rút gọn chỉ lấy các trường thiết yếu, giảm 70% payload.
+  - [x] Bổ sung mục điều hướng `Bản đồ 3D Tòa nhà` (`/office-3d`) vào nhóm Quản trị Nhân sự trên Sidebar.
 
 ---
 

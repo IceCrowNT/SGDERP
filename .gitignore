@@ -45,3 +45,5 @@ docs/HR_danhsachnhanvien/
 *.xlsx
 *.xls
 
+# internal docs(SDG)
+docs/SDGSources

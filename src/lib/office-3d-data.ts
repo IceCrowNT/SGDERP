@@ -1,0 +1,332 @@
+export interface Room3D {
+  id: string
+  name: string
+  floor: 1 | 2 | 3
+  deptCode?: string // Khớp với Department.code trong DB
+  deptName?: string
+  roomType: "office" | "meeting" | "executive" | "utility" | "lobby" | "garden" | "dining" | "tenant"
+  color: string
+  // Tọa độ 3D không gian: tâm [x, z], kích thước [width, depth, height]
+  x: number
+  z: number
+  width: number
+  depth: number
+  height: number
+  areaM2?: number // Chỉ hiển thị khi có số liệu đo đạc thực tế
+}
+
+export interface FloorMeta {
+  floor: 1 | 2 | 3
+  name: string
+  label: string
+}
+
+export const FLOORS_CONFIG: FloorMeta[] = [
+  {
+    floor: 1,
+    name: "Tầng 1",
+    label: "T1: Sảnh Đón Tiếp & Kinh Doanh",
+  },
+  {
+    floor: 2,
+    name: "Tầng 2",
+    label: "T2: Khối Điều Hành & Nghiệp Vụ",
+  },
+  {
+    floor: 3,
+    name: "Tầng 3",
+    label: "T3: Cây Xanh & Tiện Ích",
+  },
+]
+
+export const BUILDING_ROOMS: Room3D[] = [
+  // ==========================================
+  // TẦNG 1: THEO SƠ ĐỒ THỰC TẾ
+  // ==========================================
+  {
+    id: "t1_kd",
+    name: "Phòng Kinh Doanh",
+    floor: 1,
+    deptCode: "KD",
+    deptName: "PHÒNG KINH DOANH",
+    roomType: "office",
+    color: "#2563eb",
+    x: -14,
+    z: -12,
+    width: 14,
+    depth: 9.5,
+    height: 2.8,
+  },
+  {
+    id: "t1_hop1",
+    name: "Phòng Họp 1",
+    floor: 1,
+    roomType: "meeting",
+    color: "#4f46e5",
+    x: -0.5,
+    z: -12,
+    width: 11,
+    depth: 9.5,
+    height: 2.8,
+  },
+  {
+    id: "t1_hop2",
+    name: "Phòng Họp 2",
+    floor: 1,
+    roomType: "meeting",
+    color: "#7c3aed",
+    x: 12.5,
+    z: -12,
+    width: 13,
+    depth: 9.5,
+    height: 2.8,
+  },
+  {
+    id: "t1_sanh",
+    name: "Sảnh",
+    floor: 1,
+    roomType: "lobby",
+    color: "#475569",
+    x: -7,
+    z: 0.5,
+    width: 20,
+    depth: 13.5,
+    height: 0.2,
+  },
+  {
+    id: "t1_letan",
+    name: "Lễ Tân",
+    floor: 1,
+    roomType: "utility",
+    color: "#da241b", // Đỏ nhận diện Sao Đỏ
+    x: 4.5,
+    z: -1.5,
+    width: 2.2,
+    depth: 7,
+    height: 1.2,
+  },
+  {
+    id: "t1_khach",
+    name: "Phòng Khách",
+    floor: 1,
+    roomType: "executive",
+    color: "#d97706",
+    x: 14.5,
+    z: 0.5,
+    width: 9.5,
+    depth: 13.5,
+    height: 2.8,
+  },
+  {
+    id: "t1_bank",
+    name: "Ngân Hàng Cho Thuê",
+    floor: 1,
+    roomType: "tenant",
+    color: "#059669",
+    x: -9.5,
+    z: 12.5,
+    width: 23,
+    depth: 8.5,
+    height: 2.8,
+  },
+  {
+    id: "t1_thang",
+    name: "Thang Tầng 2",
+    floor: 1,
+    roomType: "utility",
+    color: "#64748b",
+    x: 4.5,
+    z: 12.5,
+    width: 4.8,
+    depth: 8.5,
+    height: 3.2,
+  },
+  {
+    id: "t1_wc",
+    name: "Khu Vệ Sinh (WC)",
+    floor: 1,
+    roomType: "utility",
+    color: "#94a3b8",
+    x: 14.5,
+    z: 12.5,
+    width: 9.5,
+    depth: 8.5,
+    height: 2.8,
+  },
+
+  // ==========================================
+  // TẦNG 2: THEO SƠ ĐỒ THỰC TẾ
+  // ==========================================
+  {
+    id: "t2_atrium",
+    name: "Thông Tầng Đèn Chùm 1+2",
+    floor: 2,
+    roomType: "lobby",
+    color: "#eab308",
+    x: -3,
+    z: 0.5,
+    width: 17,
+    depth: 12,
+    height: 0.1,
+  },
+  {
+    id: "t2_chutich",
+    name: "Phòng Chủ Tịch",
+    floor: 2,
+    deptCode: "BLD",
+    deptName: "BAN LÃNH ĐẠO",
+    roomType: "executive",
+    color: "#eab308",
+    x: -14,
+    z: -12,
+    width: 14,
+    depth: 9.5,
+    height: 2.8,
+  },
+  {
+    id: "t2_ptda",
+    name: "Phát Triển Dự Án",
+    floor: 2,
+    deptCode: "PTDA",
+    deptName: "PHÒNG PHÁT TRIỂN DỰ ÁN",
+    roomType: "office",
+    color: "#0284c7",
+    x: -0.5,
+    z: -12,
+    width: 11,
+    depth: 9.5,
+    height: 2.8,
+  },
+  {
+    id: "t2_tckt",
+    name: "Tài Chính Kế Toán",
+    floor: 2,
+    deptCode: "TCKT",
+    deptName: "PHÒNG TÀI CHÍNH - KẾ TOÁN",
+    roomType: "office",
+    color: "#0d9488",
+    x: 12.5,
+    z: -12,
+    width: 13,
+    depth: 9.5,
+    height: 2.8,
+  },
+  {
+    id: "t2_tonggd",
+    name: "Phòng Tổng GĐ",
+    floor: 2,
+    deptCode: "BLD",
+    deptName: "BAN LÃNH ĐẠO",
+    roomType: "executive",
+    color: "#ea580c",
+    x: 14.5,
+    z: 0.5,
+    width: 9.5,
+    depth: 13.5,
+    height: 2.8,
+  },
+  {
+    id: "t2_khdt",
+    name: "Kế Hoạch - Đầu Tư",
+    floor: 2,
+    deptCode: "KHDT",
+    deptName: "PHÒNG KẾ HOẠCH ĐẦU TƯ",
+    roomType: "office",
+    color: "#3b82f6",
+    x: -14,
+    z: 12.5,
+    width: 14,
+    depth: 8.5,
+    height: 2.8,
+  },
+  {
+    id: "t2_hcns_pc",
+    name: "Pháp Chế + Phòng HCNS",
+    floor: 2,
+    deptCode: "HCNS",
+    deptName: "PHÒNG HÀNH CHÍNH NHÂN SỰ & PHÁP CHẾ",
+    roomType: "office",
+    color: "#da241b",
+    x: -0.5,
+    z: 12.5,
+    width: 11,
+    depth: 8.5,
+    height: 2.8,
+  },
+  {
+    id: "t2_thang",
+    name: "Thang Tầng 3",
+    floor: 2,
+    roomType: "utility",
+    color: "#64748b",
+    x: 6.5,
+    z: 12.5,
+    width: 4.8,
+    depth: 8.5,
+    height: 3.2,
+  },
+  {
+    id: "t2_wc",
+    name: "Khu Vệ Sinh (WC)",
+    floor: 2,
+    roomType: "utility",
+    color: "#94a3b8",
+    x: 14.5,
+    z: 12.5,
+    width: 9.5,
+    depth: 8.5,
+    height: 2.8,
+  },
+
+  // ==========================================
+  // TẦNG 3: THEO SƠ ĐỒ THỰC TẾ
+  // ==========================================
+  {
+    id: "t3_cayxanh",
+    name: "Cây Xanh",
+    floor: 3,
+    roomType: "garden",
+    color: "#16a34a",
+    x: -2,
+    z: 0.5,
+    width: 17,
+    depth: 13,
+    height: 0.25,
+  },
+  {
+    id: "t3_xaydung_bac",
+    name: "Công Ty Xây Dựng (Phía Bắc)",
+    floor: 3,
+    roomType: "office",
+    color: "#0369a1",
+    x: -6,
+    z: -12,
+    width: 29.5,
+    depth: 9.5,
+    height: 2.8,
+  },
+  {
+    id: "t3_xaydung_nam",
+    name: "Công Ty Xây Dựng (Phía Nam)",
+    floor: 3,
+    roomType: "office",
+    color: "#0369a1",
+    x: -6,
+    z: 12.5,
+    width: 29.5,
+    depth: 8.5,
+    height: 2.8,
+  },
+  {
+    id: "t3_phongan",
+    name: "Phòng Ăn",
+    floor: 3,
+    roomType: "dining",
+    color: "#f59e0b",
+    x: 14.5,
+    z: 0.5,
+    width: 9.5,
+    depth: 21,
+    height: 2.8,
+  },
+]
