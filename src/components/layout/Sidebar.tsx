@@ -17,6 +17,7 @@ import {
   Settings,
   ChevronDown,
   Cuboid,
+  type LucideIcon,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -24,7 +25,7 @@ import { Badge } from "@/components/ui/badge"
 export interface SubMenuItem {
   label: string
   href: string
-  icon: any
+  icon: LucideIcon
   badge?: string
   requiredModule?: string
 }
@@ -32,7 +33,7 @@ export interface SubMenuItem {
 export interface MenuGroup {
   id: string
   title: string
-  icon: any
+  icon: LucideIcon
   requiredModule?: string
   defaultOpen?: boolean
   items: SubMenuItem[]
@@ -66,8 +67,8 @@ export const menuGroups: MenuGroup[] = [
     requiredModule: "TASK",
     defaultOpen: false,
     items: [
-      { label: "Công việc của tôi", href: "/tasks", icon: ListTodo },
-      { label: "Việc phòng ban & DA", href: "/tasks/department", icon: FolderKanban },
+      { label: "Công việc của tôi", href: "/tasks", icon: ListTodo, badge: "Sắp có" },
+      { label: "Việc phòng ban & DA", href: "/tasks/department", icon: FolderKanban, badge: "Sắp có" },
     ],
   },
   {
@@ -77,9 +78,9 @@ export const menuGroups: MenuGroup[] = [
     requiredModule: "SYSTEM",
     defaultOpen: true,
     items: [
-      { label: "Phân quyền vai trò", href: "/roles", icon: ShieldCheck },
+      { label: "Phân quyền vai trò", href: "/roles", icon: ShieldCheck, badge: "Sắp có" },
       { label: "Nhật ký hoạt động", href: "/audit-logs", icon: History },
-      { label: "Cài đặt chung", href: "/settings", icon: Settings },
+      { label: "Cài đặt chung", href: "/settings", icon: Settings, badge: "Sắp có" },
     ],
   },
 ]

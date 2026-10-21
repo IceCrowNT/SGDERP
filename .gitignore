@@ -12,6 +12,10 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.auth/
 
 # next.js
 /.next/
@@ -47,3 +51,8 @@ docs/HR_danhsachnhanvien/
 
 # internal docs(SDG)
 docs/SDGSources
+
+# 1Office exports explicitly retained as project source documents.
+# This exception is intentionally narrow because other HR workbooks remain ignored.
+!docs/1office-sources/exports/
+!docs/1office-sources/exports/**/*.xlsx

@@ -33,8 +33,9 @@ export default async function DepartmentsPage() {
   return (
     <div className="space-y-6">
       <DepartmentManager
-        initialDepartments={(res.data as any) || []}
-        canManage={res.canManage || false}
+        initialDepartments={res.data}
+        comparison={res.comparison}
+        canManage={res.canManage}
       />
     </div>
   );

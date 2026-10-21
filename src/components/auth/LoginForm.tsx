@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,6 +37,7 @@ import {
 
 export function LoginForm() {
   const router = useRouter();
+  const [isHydrated, setIsHydrated] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -47,6 +48,11 @@ export function LoginForm() {
       password: "",
     },
   });
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setIsHydrated(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   const onSubmit = (values: LoginInput) => {
     setServerError(null);
@@ -62,10 +68,11 @@ export function LoginForm() {
           toast.success("Đăng nhập thành công!", {
             description: "Đang chuyển hướng vào hệ thống ERP...",
           });
-          window.location.href = "/";
+          router.replace("/");
+          router.refresh();
         }
-      } catch (err: any) {
-        setServerError(err.message || "Lỗi kết nối máy chủ");
+      } catch (error: unknown) {
+        setServerError(error instanceof Error ? error.message : "Lỗi kết nối máy chủ");
         toast.error("Lỗi kết nối", {
           description: "Không thể kết nối đến máy chủ xác thực.",
         });
@@ -97,7 +104,7 @@ export function LoginForm() {
       </CardHeader>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form method="post" onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-4 pt-6">
             {serverError && (
               <div className="bg-destructive/15 text-destructive text-sm p-3.5 rounded-xl border border-destructive/20 animate-in fade-in duration-200">
@@ -111,17 +118,17 @@ export function LoginForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm font-medium">Tài khoản / Mã nhân viên</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <User className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <div className="relative">
+                    <User className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <FormControl>
                       <Input
                         placeholder="Nhập username (vd: admin, sdg_001...)"
                         {...field}
-                        disabled={isPending}
+                        disabled={!isHydrated || isPending}
                         className="pl-10 h-11 rounded-xl focus-visible:ring-primary/40 focus-visible:border-primary"
                       />
-                    </div>
-                  </FormControl>
+                    </FormControl>
+                  </div>
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}
@@ -135,18 +142,18 @@ export function LoginForm() {
                   <div className="flex items-center justify-between">
                     <FormLabel className="text-sm font-medium">Mật khẩu</FormLabel>
                   </div>
-                  <FormControl>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <FormControl>
                       <Input
                         type="password"
                         placeholder="Nhập mật khẩu"
                         {...field}
-                        disabled={isPending}
+                        disabled={!isHydrated || isPending}
                         className="pl-10 h-11 rounded-xl focus-visible:ring-primary/40 focus-visible:border-primary"
                       />
-                    </div>
-                  </FormControl>
+                    </FormControl>
+                  </div>
                   <FormMessage className="text-xs" />
                 </FormItem>
               )}
@@ -163,7 +170,7 @@ export function LoginForm() {
             <Button
               type="submit"
               className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/30 transition-all duration-200 cursor-pointer"
-              disabled={isPending}
+              disabled={!isHydrated || isPending}
             >
               {isPending ? (
                 <>

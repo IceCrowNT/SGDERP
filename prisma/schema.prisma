@@ -11,85 +11,115 @@ datasource db {
 // CORE & TENANT (Công ty thành viên / Chi nhánh trong Tập đoàn)
 // -----------------------------------------------------------------------------
 model Company {
-  id          Int          @id @default(autoincrement())
-  name        String       @db.VarChar(255)
-  taxCode     String?      @unique @db.VarChar(50)
-  address     String?      @db.Text
-  isActive    Boolean      @default(true)
-  
-  users       User[]
-  departments Department[]
-  roles       Role[]
-  auditLogs   AuditLog[]
+  id       Int     @id @default(autoincrement())
+  name     String  @db.VarChar(255)
+  taxCode  String? @unique @db.VarChar(50)
+  address  String? @db.Text
+  isActive Boolean @default(true)
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  users                   User[]
+  departments             Department[]
+  roles                   Role[]
+  auditLogs               AuditLog[]
+  assetCategories         AssetCategory[]
+  assets                  Asset[]
+  physicalLocations       PhysicalLocation[]
+  assetInventoryDocuments AssetInventoryDocument[]
+  assetInventoryLines     AssetInventoryLine[]
+  assetAssignments        AssetAssignment[]
+  assetLocationHistory    AssetLocationHistory[]
+  assetMaintenances       AssetMaintenance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // -----------------------------------------------------------------------------
 // ORGANIZATION (Phòng ban / Ban QLDA / Bộ phận trực thuộc)
 // -----------------------------------------------------------------------------
 model Department {
-  id          Int          @id @default(autoincrement())
-  code        String       @db.VarChar(50)
-  name        String       @db.VarChar(255)
-  description String?      @db.Text
-  
+  id          Int     @id @default(autoincrement())
+  code        String  @db.VarChar(50)
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+
+  // Snapshot/mapping nguồn chuẩn cơ cấu tổ chức (hiện tại: 1Office)
+  externalSystem         String?   @db.VarChar(50)
+  externalId             String?   @db.VarChar(100)
+  externalParentId       String?   @db.VarChar(100)
+  externalName           String?   @db.VarChar(255)
+  externalPath           String?   @db.Text
+  externalLevel          Int?
+  externalSupervisorName String?   @db.VarChar(255)
+  externalSnapshotAt     DateTime?
+
   // Cấu trúc phân cấp Cây Phòng Ban (Cha - Con)
-  parentId    Int?
-  parent      Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children    Department[] @relation("DepartmentHierarchy")
+  parentId Int?
+  parent   Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Department[] @relation("DepartmentHierarchy")
 
-  companyId   Int
-  company     Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  
-  users       User[]
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  
+  users             User[]
+  physicalLocations PhysicalLocation[]
+  currentAssets     Asset[]            @relation("AssetCurrentDepartment")
+  assetAssignments  AssetAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([companyId, code])
+  @@unique([companyId, externalSystem, externalId])
+  @@index([companyId, externalSystem])
+  @@index([externalParentId])
 }
 
 // -----------------------------------------------------------------------------
 // IDENTITY & HR PROFILE (Định danh tài khoản & Hồ sơ nhân sự)
 // -----------------------------------------------------------------------------
 model User {
-  id           Int         @id @default(autoincrement())
-  
+  id Int @id @default(autoincrement())
+
   // Thông tin định danh & đăng nhập
-  username     String      @unique @db.VarChar(100)
-  password     String      @db.VarChar(255) // Hashed password
-  
+  username String @unique @db.VarChar(100)
+  password String @db.VarChar(255) // Hashed password
+
   // Thông tin liên hệ
-  email        String?     @unique @db.VarChar(255)
-  phone        String?     @unique @db.VarChar(20)
-  
+  email String? @unique @db.VarChar(255)
+  phone String? @unique @db.VarChar(20)
+
   // Thông tin hồ sơ cán bộ nhân viên
-  employeeCode String      @unique @db.VarChar(50)
-  fullName     String      @db.VarChar(255)
-  position     String?     @db.VarChar(100) // Chức vụ (VD: Trưởng phòng Kế toán, Kỹ sư, Tổng Giám Đốc)
-  dateOfBirth  DateTime?   @db.Date
-  joinDate     DateTime?   @db.Date
-  avatarUrl    String?     @db.Text
-  address      String?     @db.Text
-  
+  employeeCode String    @unique @db.VarChar(50)
+  fullName     String    @db.VarChar(255)
+  position     String?   @db.VarChar(100) // Chức vụ (VD: Trưởng phòng Kế toán, Kỹ sư, Tổng Giám Đốc)
+  dateOfBirth  DateTime? @db.Date
+  joinDate     DateTime? @db.Date
+  avatarUrl    String?   @db.Text
+  address      String?   @db.Text
+
   // Trạng thái hoạt động
-  isActive     Boolean     @default(true)
-  
+  isActive Boolean @default(true)
+
   // Quan hệ Tổ chức
-  companyId    Int
-  company      Company     @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
   departmentId Int?
   department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
   // Phân quyền đa vai trò & kiêm nhiệm (RBAC)
-  roles        UserRole[]
-  auditLogs    AuditLog[]
+  roles                      UserRole[]
+  auditLogs                  AuditLog[]
+  currentCustodyAssets       Asset[]                @relation("AssetCurrentCustodian")
+  assignedAssets             AssetAssignment[]      @relation("AssetAssignmentAssignee")
+  assetAssignmentsCreated    AssetAssignment[]      @relation("AssetAssignmentCreator")
+  assetLocationChanges       AssetLocationHistory[] @relation("AssetLocationChangedBy")
+  assetMaintenancesRequested AssetMaintenance[]     @relation("AssetMaintenanceRequester")
+  assetMaintenancesHandled   AssetMaintenance[]     @relation("AssetMaintenanceTechnician")
 
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([companyId, departmentId])
   @@index([isActive])
@@ -99,20 +129,20 @@ model User {
 // RBAC - NHÓM VAI TRÒ (Roles)
 // -----------------------------------------------------------------------------
 model Role {
-  id          Int              @id @default(autoincrement())
-  code        String           @db.VarChar(50)  // VD: "ADMIN", "DIRECTOR", "DEPT_HEAD", "HR", "ACCOUNTANT", "STAFF"
-  name        String           @db.VarChar(255) // VD: "Ban Giám Đốc", "Trưởng Phòng / Bộ Phận", "Nhân Sự", "Nhân Viên"
-  description String?          @db.Text
-  isSystem    Boolean          @default(false) // Vai trò mặc định hệ thống không thể xóa
-  
-  companyId   Int
-  company     Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  id          Int     @id @default(autoincrement())
+  code        String  @db.VarChar(50) // VD: "ADMIN", "DIRECTOR", "DEPT_HEAD", "HR", "ACCOUNTANT", "STAFF"
+  name        String  @db.VarChar(255) // VD: "Ban Giám Đốc", "Trưởng Phòng / Bộ Phận", "Nhân Sự", "Nhân Viên"
+  description String? @db.Text
+  isSystem    Boolean @default(false) // Vai trò mặc định hệ thống không thể xóa
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
 
   permissions RolePermission[]
   users       UserRole[]
 
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([companyId, code])
 }
@@ -121,17 +151,17 @@ model Role {
 // RBAC - DANH MỤC QUYỀN THEO PHÂN HỆ (Module Permissions)
 // -----------------------------------------------------------------------------
 model Permission {
-  id          Int              @id @default(autoincrement())
-  module      String           @db.VarChar(50)  // VD: "HR", "TASK", "SYSTEM", "REPORT"
-  action      String           @db.VarChar(50)  // VD: "VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "ASSIGN", "MANAGE"
-  name        String           @db.VarChar(255) // Tên hiển thị (VD: "Xem danh bạ nhân sự", "Giao việc phòng ban")
-  description String?          @db.Text
-  scope       String           @default("ALL") @db.VarChar(20) // "ALL" (Toàn công ty), "DEPARTMENT" (Nội bộ phòng), "PERSONAL" (Cá nhân)
+  id          Int     @id @default(autoincrement())
+  module      String  @db.VarChar(50) // VD: "HR", "TASK", "SYSTEM", "REPORT"
+  action      String  @db.VarChar(50) // VD: "VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "ASSIGN", "MANAGE"
+  name        String  @db.VarChar(255) // Tên hiển thị (VD: "Xem danh bạ nhân sự", "Giao việc phòng ban")
+  description String? @db.Text
+  scope       String  @default("ALL") @db.VarChar(20) // "ALL" (Toàn công ty), "DEPARTMENT" (Nội bộ phòng), "PERSONAL" (Cá nhân)
 
-  roles       RolePermission[]
+  roles RolePermission[]
 
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([module, action])
   @@index([module])
@@ -141,13 +171,13 @@ model Permission {
 // RBAC - LIÊN KẾT VAI TRÒ & QUYỀN HẠN (Role - Permission Matrix)
 // -----------------------------------------------------------------------------
 model RolePermission {
-  roleId       Int
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  
+  roleId Int
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
   permissionId Int
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
-  assignedAt   DateTime   @default(now())
+  assignedAt DateTime @default(now())
 
   @@id([roleId, permissionId])
 }
@@ -156,11 +186,11 @@ model RolePermission {
 // RBAC - LIÊN KẾT NGƯỜI DÙNG & VAI TRÒ (User - Role & Kiêm nhiệm)
 // -----------------------------------------------------------------------------
 model UserRole {
-  userId     Int
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  roleId     Int
-  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  roleId Int
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   isPrimary  Boolean  @default(false) // Vai trò chính hoặc vai trò kiêm nhiệm
   assignedAt DateTime @default(now())
@@ -172,35 +202,357 @@ model UserRole {
 // AUDIT LOG - NHẬT KÝ KIỂM TOÁN VÀ LỊCH SỬ HOẠT ĐỘNG TOÀN HỆ THỐNG
 // -----------------------------------------------------------------------------
 model AuditLog {
-  id          Int      @id @default(autoincrement())
-  
+  id Int @id @default(autoincrement())
+
   // Định danh người thực hiện
-  userId      Int?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  username    String   @db.VarChar(100)
-  fullName    String   @db.VarChar(255)
-  
+  userId   Int?
+  user     User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  username String @db.VarChar(100)
+  fullName String @db.VarChar(255)
+
   // Chi tiết thao tác & Phân hệ
-  action      String   @db.VarChar(50)  // LOGIN, LOGOUT, LOGIN_FAILED, CREATE, UPDATE, DELETE, STATUS_CHANGE
-  module      String   @db.VarChar(50)  // AUTH, HR, DEPARTMENT, ROLE, TASK, SYSTEM
-  targetId    String?  @db.VarChar(100) // ID đối tượng bị tác động
-  targetName  String?  @db.VarChar(255) // Tên đối tượng (VD: "Nguyễn Văn A", "Phòng Kế toán")
-  
+  action     String  @db.VarChar(50) // LOGIN, LOGOUT, LOGIN_FAILED, CREATE, UPDATE, DELETE, STATUS_CHANGE
+  module     String  @db.VarChar(50) // AUTH, HR, DEPARTMENT, ROLE, TASK, SYSTEM
+  targetId   String? @db.VarChar(100) // ID đối tượng bị tác động
+  targetName String? @db.VarChar(255) // Tên đối tượng (VD: "Nguyễn Văn A", "Phòng Kế toán")
+
   // Diễn giải và snapshot dữ liệu
-  description String   @db.Text
+  description String @db.Text
   oldData     Json?
   newData     Json?
-  
+
   // Thông tin mạng
-  ipAddress   String?  @db.VarChar(50)
-  userAgent   String?  @db.Text
-  
+  ipAddress String? @db.VarChar(50)
+  userAgent String? @db.Text
+
   // Multi-tenancy
-  companyId   Int
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime @default(now())
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 
   @@index([companyId, module, createdAt])
   @@index([userId])
+}
+
+// -----------------------------------------------------------------------------
+// IT ASSET MANAGEMENT - DANH MỤC, KIỂM KÊ, VỊ TRÍ, BÀN GIAO & BẢO TRÌ
+// -----------------------------------------------------------------------------
+
+enum AssetTrackingMode {
+  INDIVIDUAL
+  QUANTITY
+}
+
+enum AssetStatus {
+  IN_STOCK
+  ASSIGNED
+  IN_USE
+  UNDER_MAINTENANCE
+  BROKEN
+  LOST
+  RETIRED
+}
+
+enum AssetCondition {
+  UNKNOWN
+  NEW
+  GOOD
+  FAIR
+  POOR
+  DAMAGED
+}
+
+enum PhysicalLocationType {
+  BUILDING
+  FLOOR
+  ROOM
+  ZONE
+  RACK
+  STORAGE
+}
+
+enum AssetInventoryDocumentStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+enum AssetAssignmentType {
+  USER
+  DEPARTMENT
+  SHARED
+}
+
+enum AssetMaintenanceType {
+  INSPECTION
+  PREVENTIVE
+  REPAIR
+  REPLACEMENT
+  UPGRADE
+  OTHER
+}
+
+enum AssetMaintenanceStatus {
+  REPORTED
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model AssetCategory {
+  id           Int               @id @default(autoincrement())
+  code         String            @db.VarChar(50)
+  name         String            @db.VarChar(255)
+  description  String?           @db.Text
+  trackingMode AssetTrackingMode @default(INDIVIDUAL)
+  isActive     Boolean           @default(true)
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  assets         Asset[]
+  inventoryLines AssetInventoryLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, code])
+  @@unique([companyId, name])
+  @@index([companyId, isActive])
+}
+
+model PhysicalLocation {
+  id          Int                  @id @default(autoincrement())
+  code        String               @db.VarChar(50)
+  name        String               @db.VarChar(255)
+  type        PhysicalLocationType
+  description String?              @db.Text
+  floorNumber Int?
+  threeDKey   String?              @db.VarChar(100)
+  positionX   Float?
+  positionY   Float?
+  positionZ   Float?
+  isActive    Boolean              @default(true)
+
+  parentId Int?
+  parent   PhysicalLocation?  @relation("PhysicalLocationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children PhysicalLocation[] @relation("PhysicalLocationHierarchy")
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  currentAssets   Asset[]                @relation("AssetCurrentLocation")
+  locationHistory AssetLocationHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, code])
+  @@unique([companyId, threeDKey])
+  @@index([companyId, type, isActive])
+  @@index([parentId])
+  @@index([departmentId])
+}
+
+model AssetInventoryDocument {
+  id                 Int                          @id @default(autoincrement())
+  documentNumber     String                       @db.VarChar(100)
+  documentDate       DateTime?                    @db.Date
+  title              String                       @db.VarChar(255)
+  transferorName     String?                      @db.VarChar(255)
+  transferorPosition String?                      @db.VarChar(100)
+  recipientName      String?                      @db.VarChar(255)
+  recipientPosition  String?                      @db.VarChar(100)
+  sourceFile         String?                      @db.Text
+  status             AssetInventoryDocumentStatus @default(DRAFT)
+  notes              String?                      @db.Text
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  lines AssetInventoryLine[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, documentNumber])
+  @@index([companyId, status, documentDate])
+}
+
+model AssetInventoryLine {
+  id         Int     @id @default(autoincrement())
+  lineNumber Int
+  itemName   String  @db.VarChar(255)
+  quantity   Int
+  unit       String  @default("Cái") @db.VarChar(50)
+  notes      String? @db.Text
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  documentId Int
+  document   AssetInventoryDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  categoryId Int?
+  category   AssetCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  assets Asset[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([documentId, lineNumber])
+  @@index([companyId, categoryId])
+}
+
+model Asset {
+  id              Int            @id @default(autoincrement())
+  assetCode       String         @db.VarChar(100)
+  name            String         @db.VarChar(255)
+  serialNumber    String?        @db.VarChar(255)
+  manufacturer    String?        @db.VarChar(255)
+  model           String?        @db.VarChar(255)
+  specifications  Json?
+  purchaseDate    DateTime?      @db.Date
+  warrantyEndDate DateTime?      @db.Date
+  originalValue   Decimal?       @db.Decimal(18, 2)
+  status          AssetStatus    @default(IN_STOCK)
+  condition       AssetCondition @default(UNKNOWN)
+  notes           String?        @db.Text
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  categoryId Int
+  category   AssetCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  sourceLineId Int?
+  sourceLine   AssetInventoryLine? @relation(fields: [sourceLineId], references: [id], onDelete: SetNull)
+
+  currentLocationId Int?
+  currentLocation   PhysicalLocation? @relation("AssetCurrentLocation", fields: [currentLocationId], references: [id], onDelete: SetNull)
+
+  currentCustodianId Int?
+  currentCustodian   User? @relation("AssetCurrentCustodian", fields: [currentCustodianId], references: [id], onDelete: SetNull)
+
+  currentDepartmentId Int?
+  currentDepartment   Department? @relation("AssetCurrentDepartment", fields: [currentDepartmentId], references: [id], onDelete: SetNull)
+
+  assignments     AssetAssignment[]
+  locationHistory AssetLocationHistory[]
+  maintenances    AssetMaintenance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, assetCode])
+  @@unique([companyId, serialNumber])
+  @@index([companyId, categoryId, status])
+  @@index([currentLocationId])
+  @@index([currentCustodianId])
+  @@index([currentDepartmentId])
+  @@index([sourceLineId])
+}
+
+model AssetAssignment {
+  id                Int                 @id @default(autoincrement())
+  assignmentType    AssetAssignmentType
+  assignedAt        DateTime            @default(now())
+  expectedReturnAt  DateTime?
+  returnedAt        DateTime?
+  conditionOnAssign AssetCondition      @default(UNKNOWN)
+  conditionOnReturn AssetCondition?
+  notes             String?             @db.Text
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  assignedToUserId Int?
+  assignedToUser   User? @relation("AssetAssignmentAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+
+  assignedToDepartmentId Int?
+  assignedToDepartment   Department? @relation(fields: [assignedToDepartmentId], references: [id], onDelete: SetNull)
+
+  assignedById Int?
+  assignedBy   User? @relation("AssetAssignmentCreator", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, assignedAt])
+  @@index([assetId, returnedAt])
+  @@index([assignedToUserId])
+  @@index([assignedToDepartmentId])
+}
+
+model AssetLocationHistory {
+  id        Int       @id @default(autoincrement())
+  placedAt  DateTime  @default(now())
+  removedAt DateTime?
+  notes     String?   @db.Text
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  locationId Int
+  location   PhysicalLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+
+  changedById Int?
+  changedBy   User? @relation("AssetLocationChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, placedAt])
+  @@index([assetId, removedAt])
+  @@index([locationId, removedAt])
+}
+
+model AssetMaintenance {
+  id                Int                    @id @default(autoincrement())
+  maintenanceCode   String                 @db.VarChar(100)
+  type              AssetMaintenanceType
+  status            AssetMaintenanceStatus @default(REPORTED)
+  title             String                 @db.VarChar(255)
+  description       String?                @db.Text
+  reportedAt        DateTime               @default(now())
+  scheduledAt       DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  vendorName        String?                @db.VarChar(255)
+  cost              Decimal?               @db.Decimal(18, 2)
+  result            String?                @db.Text
+  nextMaintenanceAt DateTime?
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  assetId Int
+  asset   Asset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  requestedById Int?
+  requestedBy   User? @relation("AssetMaintenanceRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+
+  technicianId Int?
+  technician   User? @relation("AssetMaintenanceTechnician", fields: [technicianId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, maintenanceCode])
+  @@index([companyId, status, scheduledAt])
+  @@index([assetId, reportedAt])
+  @@index([requestedById])
+  @@index([technicianId])
 }

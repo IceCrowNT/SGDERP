@@ -24,6 +24,11 @@ Khi nhận bất kỳ yêu cầu nào, AI Agent BẮT BUỘC tra cứu bảng đ
 | **Backend & Logic Nghiệp Vụ** | [.agents/rules/BACKEND-RULES.md](file:///Users/duonghoangnam/Desktop/SGDERP/.agents/rules/BACKEND-RULES.md) | Next.js Server Actions, Zod Validation, Session Auth, Prisma Transactions. |
 | **Giao diện & UI Theme** | [.agents/rules/FRONTEND-RULES.md](file:///Users/duonghoangnam/Desktop/SGDERP/.agents/rules/FRONTEND-RULES.md) | 100% Tailwind CSS & Shadcn/UI, Mobile-first Responsive, AJAX SPA. |
 | **Kế hoạch: Quản lý Nhân sự (HR)** | [docs/plans/HR-CHECKLIST.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/plans/HR-CHECKLIST.md) | Lộ trình từng bước triển khai phân hệ Quản lý Nhân sự & Phân quyền. |
+| **Chiến lược số hóa & Hiện trạng hệ thống** | [docs/strategy/CURRENT-STATE-AND-DIGITAL-TRANSFORMATION-DIRECTION.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/strategy/CURRENT-STATE-AND-DIGITAL-TRANSFORMATION-DIRECTION.md) | Vai trò của 1Office, phạm vi SDG ERP, rủi ro, nguyên tắc tích hợp và lộ trình 30–60–90 ngày. |
+| **Mô hình dữ liệu quản trị & Tích hợp 1Office** | [docs/strategy/1OFFICE-ADMIN-DATA-MODEL-AND-INTEGRATION.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/strategy/1OFFICE-ADMIN-DATA-MODEL-AND-INTEGRATION.md) | Cơ cấu, tài khoản, nhóm quyền, quy trình, tri thức ngầm, dữ liệu nguồn và ranh giới tích hợp 1Office–SDG ERP. |
+| **Master Data & RBAC SDG ERP–1Office** | [docs/strategy/MASTER-DATA-AND-RBAC-SYNCHRONIZATION.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/strategy/MASTER-DATA-AND-RBAC-SYNCHRONIZATION.md) | Đối chiếu dữ liệu nền, mapping đơn vị, phân lớp role, quyền sở hữu dữ liệu, quy tắc xung đột và luồng đồng bộ. |
+| **Kế hoạch: Chuyển đổi số** | [docs/plans/DIGITAL-TRANSFORMATION-CHECKLIST.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/plans/DIGITAL-TRANSFORMATION-CHECKLIST.md) | Checklist khảo sát, xác nhận dữ liệu, hardening, tích hợp, pilot và mở rộng. |
+| **Quản lý tài sản & Tích hợp 3D** | [.agents/rules/ASSET-MANAGEMENT-RULES.md](file:///Users/duonghoangnam/Desktop/SGDERP/.agents/rules/ASSET-MANAGEMENT-RULES.md), [docs/plans/ASSET-MANAGEMENT-CHECKLIST.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/plans/ASSET-MANAGEMENT-CHECKLIST.md), [docs/strategy/OFFICE-3D-ASSET-INTEGRATION-ASSESSMENT.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/strategy/OFFICE-3D-ASSET-INTEGRATION-ASSESSMENT.md) | Danh mục và vòng đời tài sản, chứng từ kiểm kê, vị trí vật lý, bảo trì, mapping Three.js và roadmap Digital Twin. |
 
 ---
 
@@ -34,6 +39,9 @@ Khi nhận bất kỳ yêu cầu nào, AI Agent BẮT BUỘC tra cứu bảng đ
 3. **Tính Toàn Vẹn Dữ Liệu:** Không bao giờ tự ý chạy các lệnh xóa cột (`drop column`), reset CSDL làm mất dữ liệu của người dùng mà không có xác nhận.
 4. **Đồng Bộ Kế Hoạch Bắt Buộc (Mandatory Checklist Sync):** Mỗi khi thực thi một lệnh, hoàn thành một bước hoặc có bất kỳ sửa đổi kỹ thuật/kiến trúc nào, AI Agent **BẮT BUỘC** phải cập nhật ngay vào tệp Checklist tương ứng (`docs/plans/<TEN-PHAN-HE>-CHECKLIST.md`), đánh dấu `[x]` các việc đã xong và ghi nhận các quyết định kiến trúc mới.
 5. **Đồng Bộ Kiến Trúc & Thư Viện Bắt Buộc (Mandatory Architecture & Dependency Sync):** Mỗi khi chạy lệnh cài đặt/gỡ bỏ thư viện (`package.json`), cập nhật biến môi trường (`.env`), hoặc thay đổi cấu trúc thư mục/hạ tầng, AI Agent **BẮT BUỘC** phải cập nhật ngay vào tệp [docs/ARCHITECTURE.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/ARCHITECTURE.md) (cập nhật bảng dependencies, cấu trúc thư mục hoặc hướng dẫn cài đặt).
+6. **Không tự truy cập 1Office:** Không dùng lại tài khoản, mật khẩu, cookie hoặc session 1Office từ lịch sử hội thoại hay lần khảo sát trước. Chỉ được truy cập khi người phụ trách cấp lại thông tin trong yêu cầu hiện tại và nêu rõ phạm vi; mặc định chỉ xem và export, tuyệt đối không tạo, sửa, duyệt, xóa, đổi quyền hoặc đổi cấu hình trên 1Office.
+7. **Không lưu thông tin đăng nhập 1Office:** Không ghi credential vào mã nguồn, tài liệu, script, log, file môi trường hoặc bộ nhớ dùng lại. Sau lần sử dụng, coi credential đã hết hiệu lực đối với Agent và yêu cầu người phụ trách cấp lại khi cần.
+8. **Trạng thái prototype:** Toàn bộ tính năng SDG ERP hiện có là bản nháp phục vụ khảo sát. Agent được phép đề xuất giữ, sửa lớn hoặc xây lại; báo cáo/phân tích không đồng nghĩa được duyệt triển khai. Không thực hiện thay đổi kiến trúc hoặc chức năng theo đề xuất trước khi có yêu cầu triển khai rõ ràng.
 
 ---
 
@@ -43,4 +51,3 @@ Khi dự án mở rộng thêm các phân hệ mới (ví dụ: `TASK`, `APPROVA
 1. **Kế hoạch triển khai:** BẮT BUỘC tạo tại thư mục `docs/plans/<TEN-PHAN-HE>-CHECKLIST.md`.
 2. **Quy tắc chuyên biệt (nếu có):** Tạo tại `.agents/rules/<TEN-PHAN-HE>-RULES.md`.
 3. **Đăng ký định tuyến:** Bổ sung các đường dẫn trên vào Bảng Định Tuyến (Mục 1) của tệp này để AI tự động nạp ngữ cảnh khi nhận việc.
-

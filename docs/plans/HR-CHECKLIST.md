@@ -58,6 +58,17 @@
 ---
 
 ### GIAI ĐOẠN 2: CƠ CẤU TỔ CHỨC CÂY PHÂN CẤP (CHA - CON) & QUẢN LÝ PHÒNG BAN
+
+#### Rà soát điều kiện chốt tính năng — 21/10/2026
+
+- [x] Đối chiếu độc lập trực tiếp PostgreSQL với workbook gốc: checksum nguồn đúng manifest; 19 ID nguồn duy nhất gồm 1 công ty và 18 đơn vị; ERP có đúng 18 đơn vị, khớp chính xác tên, external ID và quan hệ cha/con, không thiếu/thừa hoặc có parent khác công ty.
+- [x] Chốt kết luận kỹ thuật về dữ liệu: bản nền cơ cấu hiện tại khớp snapshot 1Office ngày 21/10/2026. Không đồng nghĩa xác minh dữ liệu sống hoặc xác nhận toàn bộ tuyến chỉ đạo trong cẩm nang.
+- [ ] Trước khi nghiệm thu toàn bộ: sửa quyền đọc `getDepartments` để từ chối cả permission thiếu/không hợp lệ (hiện chỉ chặn giá trị `NONE`); kiểm thử VIEW, MANAGE, NONE, thiếu quyền và phạm vi công ty.
+- [ ] Trước khi nghiệm thu toàn bộ: đối chiếu tập ID nguồn độc lập với tập đơn vị ERP. Bộ đếm `sourceRecords = linked + 1` hiện suy từ các bản ghi đã nhập, không thể tự phát hiện đơn vị nguồn bị thiếu trong ERP; UI hiện so sánh với snapshot trong DB, không đọc trực tiếp 1Office.
+- [ ] Trước khi nghiệm thu toàn bộ: xử lý liên kết 3D theo `Department.code` trước khi cho đổi mã tùy ý; `RoomDetailSheet` còn dùng mã HCNS/PC và `room.deptCode` nên đổi mã có thể làm mất liên kết hiển thị nhân sự theo phòng.
+- [ ] Xác định quy trình nhập snapshot tiếp theo: script hiện chuyên biệt cho file ngày 21/10 và mapping theo mã ERP ban đầu; chưa phải importer dùng chung có preview/diff hoặc xử lý đổi mã, thêm/bớt đơn vị.
+- [ ] Hoàn tất các mục trên rồi chốt nghiệm thu module. Phạm vi đã đạt hiện tại là danh mục cơ cấu theo snapshot + giao diện đối chiếu + sửa metadata trong pilot admin; chưa nghiệm thu đồng bộ tự động/RBAC đa vai trò.
+
 > *Mục tiêu: Quản lý danh mục cơ cấu tổ chức theo mô hình cây 2 tầng (Khối/Ban/Phòng cấp Tập đoàn -> Bộ phận trực thuộc) và cơ chế phân quyền kế thừa theo nhánh.*
 
 > [!IMPORTANT]
@@ -94,15 +105,22 @@
     - Nếu là Quản lý cấp Cha (Vd: Trưởng phòng Kinh Doanh): Tự động bao quát ID phòng cha + tất cả ID bộ phận con.
     - Nếu là Quản lý cấp Con (Vd: Trưởng bộ phận Kỹ thuật): Chỉ quản lý trong phạm vi ID bộ phận con của mình.
 - [x] **Bước 2.3: Xây dựng Server Actions Phòng Ban (`src/actions/department.ts`)**
-  - [x] `getDepartments`: Lấy danh sách phòng ban kèm thông tin phòng ban cha, đếm số lượng nhân sự trực thuộc (`_count: { users: true }`).
-  - [x] `createDepartment`: Thêm phòng ban mới (cho phép chọn phòng ban cha nếu là bộ phận con).
-  - [x] `updateDepartment`: Chỉnh sửa tên, mã, mô tả, thay đổi phòng ban cha.
-  - [x] `deleteDepartment`: Xóa phòng ban an toàn (chặn xóa nếu còn phòng ban con hoặc nhân viên trực thuộc).
+  - [x] `getDepartments`: Lấy danh sách phòng ban, cây cha/con, số nhân sự và trạng thái đối chiếu tên/cấp trên với snapshot 1Office.
+  - [x] `createDepartment`: Chặn tạo cơ cấu chính thức trực tiếp trong ERP; hướng người quản trị tạo tại nguồn chuẩn 1Office rồi nhập snapshot mới.
+  - [x] `updateDepartment`: Chỉ cho sửa mã/mô tả nội bộ; khóa tên và quan hệ cha/con của đơn vị đã liên kết 1Office.
+  - [x] `deleteDepartment`: Chặn xóa đơn vị đã liên kết 1Office; đơn vị cục bộ chưa liên kết vẫn phải không còn nhân sự/bộ phận con.
 - [x] **Bước 2.4: Xây dựng Giao diện Phòng Ban (`src/app/(dashboard)/departments/page.tsx`)**
-  - [x] Hiển thị danh sách dạng Sơ đồ Cây phân cấp (Tree Card View) kết nối đường line trực quan và Bảng chi tiết (Data Table).
-  - [x] Bộ lọc tìm kiếm nhanh theo tên, mã code, đơn vị cấp trên.
-  - [x] Dialog Thêm mới / Chỉnh sửa phòng ban (gợi ý mã code tự động, chọn cấp độ phân bổ, 100% AJAX).
-  - [x] Dialog cảnh báo xóa phòng ban an toàn chống mất mát dữ liệu.
+  - [x] Hiển thị cây tổ chức responsive và tab đối chiếu 1Office trên desktop/mobile.
+  - [x] Bộ lọc theo tên, mã ERP, ID 1Office, cấp trên và người giám sát.
+  - [x] Hiển thị 19 bản ghi nguồn = 1 nút công ty + 18 đơn vị; badge trạng thái khớp/lệch/chưa liên kết cho từng đơn vị.
+  - [x] Dialog React Hook Form + Zod chỉ sửa metadata ERP, không sửa trường do 1Office sở hữu.
+  - [x] Bổ sung `loading.tsx` với skeleton cho điều hướng App Router.
+- [x] **Bước 2.5: Lưu mapping và snapshot cơ cấu 1Office**
+  - [x] Thêm external ID, external parent ID, tên/path/cấp/người giám sát và thời điểm snapshot vào `Department`.
+  - [x] Tạo và áp dụng migration `20261021181500_add_department_oneoffice_snapshot`.
+  - [x] Tạo script `db:sync:oneoffice-departments`, nhập thành công 18 đơn vị từ export ngày 21/10/2026; nút công ty ID 23 ánh xạ ở cấp `Company`.
+  - [x] Đối chiếu sau nhập: 18/18 đơn vị khớp tên và quan hệ cha/con với 1Office.
+  - [x] Kiểm tra `prisma validate`, TypeScript, ESLint các file thay đổi và production build Next.js bằng webpack: đạt; build cần quyền kết nối PostgreSQL local khi prerender dashboard.
 
 ---
 
@@ -131,6 +149,8 @@
 ---
 
 ### GIAI ĐOẠN 4: MA TRẬN PHÂN QUYỀN ĐỘNG 3 CẤP ĐỘ & BẢO VỆ PHÂN HỆ (RBAC MATRIX)
+
+- [x] Bổ sung yêu cầu phân quyền tài sản/license theo đơn vị tự quản và theo người được chỉ định; menu theo quyền hiệu lực. Phương án role + phạm vi phòng ban đang được cân nhắc tại mục 4.5 của tài liệu Master Data/RBAC, chưa triển khai.
 > *Mục tiêu: Quản lý ma trận phân quyền 3 cấp độ (NONE, VIEW, MANAGE) cho từng Phân hệ (HR, TASK, SYSTEM...), nạp vào Session để kiểm tra tức thì (0ms) ở Server Action và Giao diện.*
 
 - [x] **Bước 4.1: Xây dựng Thư viện Auth & Session Guard (`src/lib/auth.ts`)**
@@ -153,9 +173,24 @@
   - [x] Nhóm menu "Quản lý Nhân sự", "Cơ cấu tổ chức", "Bản đồ 3D Tòa nhà" và "Nhật ký hoạt động".
   - [x] Tích hợp Logo Sao Đỏ Group và Avatar tài khoản.
 - [ ] **Bước 5.2: Kiểm thử Toàn trình (End-to-End Test)**
+  - [x] Cài `@playwright/test` 1.64.1 làm nền kiểm thử trình duyệt và khảo sát DOM chính thức của project.
+  - [x] Tạo `playwright.config.ts` và bộ test `tests/e2e/departments.spec.ts`; dùng Chrome hệ thống do Chromium đóng gói không hỗ trợ macOS 13, credential chỉ nhận qua biến môi trường.
+  - [x] Qua Playwright phát hiện và sửa race trước hydration của form đăng nhập: chặn submit sớm, dùng POST dự phòng để không lộ credential trên query string, liên kết label đúng với input và điều hướng bằng App Router.
+  - [x] Tắt log đối số Server Function trong Next.js development bằng `logging.serverFunctions: false`; ngăn action đăng nhập in mật khẩu/form data ra terminal trong lúc kiểm thử.
+  - [x] Kiểm chứng lại bằng Playwright sau khi đổi logging: test đăng nhập/đối chiếu đạt 1/1 và terminal chỉ còn request `POST /login`, không còn in đối số action. Một lần lọc test bằng chuỗi không khớp trả về `No tests found`, sau đó đã sửa đúng tên test và chạy đạt.
   - [ ] Kiểm thử đăng nhập bằng các tài khoản thật từ file Excel.
   - [ ] Kiểm thử phân cấp phòng ban cha - con và kiểm tra quyền kế thừa nhánh dữ liệu.
-  - [ ] Kiểm tra hiển thị và thao tác trên thiết bị di động.
+  - [x] Kiểm tra hiển thị và thao tác trang cơ cấu trên thiết bị di động.
+  - [x] Kiểm thử admin local ngày 21/10/2026 bằng luồng đăng nhập thật: truy cập `/departments`, hiển thị 18/18 đơn vị khớp snapshot 1Office, tìm `HCNS`, mở form metadata và xác nhận đủ 18 nút sửa.
+  - [x] Kiểm thử ghi/đọc lại metadata qua Server Action rồi hoàn tác: mô tả `BKS` đã trở về `Kiểm soát tuân thủ và kiểm toán nội bộ`; AuditLog ghi nhận đúng user `admin` và module `DEPARTMENT`.
+  - [x] Gọi trực tiếp Server Action bằng phiên admin và xác nhận cả ba guard đều chặn đúng: tạo đơn vị chính thức trong ERP, đổi tên đơn vị nguồn và xóa đơn vị đã liên kết 1Office.
+  - [x] Kiểm thử responsive tại viewport 390×844: 18 thẻ đối chiếu mobile, bảng desktop được ẩn, không có tràn ngang.
+  - [x] Chạy bộ Playwright đầy đủ với quyền ghi được bật ngày 21/10/2026: 5/5 test đạt trong 31,3 giây; dữ liệu metadata thử nghiệm đã được hoàn tác.
+  - [x] Xác minh kỹ thuật: Prisma schema hợp lệ, 4 migration đã áp dụng, TypeScript đạt, ESLint riêng các file cơ cấu đạt và production build Next.js webpack đạt.
+  - [x] Build production cuối sau khi thêm Playwright, sửa LoginForm và cập nhật tài liệu ngày 21/10/2026: Next.js 16.4.0 biên dịch, TypeScript, sinh 10 trang và route động đều đạt; còn cảnh báo chuyển convention `middleware` sang `proxy`.
+  - [x] Khởi động lại `next dev` sau build; ứng dụng sẵn sàng tại `http://localhost:4000`.
+  - [x] Vòng kiểm tra cuối: ESLint cho LoginForm/Next config/Playwright config/bộ E2E đạt, `tsc --noEmit` đạt, `git diff --check` đạt và liên kết báo cáo cẩm nang hợp lệ.
+  - [ ] Dọn lint toàn project: hiện còn 19 lỗi và 15 cảnh báo ở các phần có sẵn như seed, employee, auth, audit, Header và Office 3D; không phát sinh từ thay đổi cơ cấu phòng ban.
 
 ---
 
@@ -186,7 +221,34 @@
 
 ---
 
+## RÀ SOÁT RULES, THIẾT KẾ VÀ MÃ NGUỒN — 21/10/2026
+
+- [x] Xác nhận toàn bộ chức năng HR/RBAC hiện có là bản nháp; có thể đề xuất sửa lớn hoặc xây lại, nhưng chỉ triển khai khi có yêu cầu được duyệt.
+- [x] Áp dụng quy tắc không tái sử dụng credential 1Office và không thao tác thay đổi trên hệ thống nguồn; chỉ phân tích export đã lưu cho tới khi được cấp lại quyền xem/export.
+- [x] Đọc router, kiến trúc, ba bộ rules, schema, seed và các luồng HR/Auth/Audit/Office 3D; đối chiếu tĩnh với checklist. Chưa chạy ứng dụng, kiểm thử hoặc xác minh dữ liệu PostgreSQL thực tế; chưa sửa mã ứng dụng.
+- [ ] Đồng bộ thiết kế RBAC: rule mô tả JSON trên Role nhưng schema hiện dùng Permission/RolePermission; sửa boilerplate UUID và import Prisma không khớp mã nguồn.
+- [ ] Loại password hash khỏi DTO nhân sự và snapshot AuditLog; kiểm tra quyền đọc HR/SYSTEM và companyId tại mọi điểm truy cập tương ứng.
+- [ ] Kiểm tra phạm vi công ty và quyền gán đối với departmentId/roleIds; áp dụng data scope thực tế, kiểm soát cây phòng ban và quyền quản trị tài khoản.
+- [ ] Thống nhất SESSION_SECRET/JWT_SECRET, bỏ secret dự phòng cố định và bổ sung cơ chế vô hiệu hóa phiên khi khóa tài khoản, đổi mật khẩu hoặc thay quyền.
+- [ ] Tách seed khởi tạo khỏi đồng bộ dữ liệu: upsert hiện ghi đè mật khẩu cả tài khoản đã tồn tại.
+- [ ] Đối soát lại các mục đã đánh dấu hoàn thành: phân trang HR/TanStack Table, data scope, render 3D theo nhu cầu và liên kết hồ sơ từ phòng 3D. Vòng lặp hiện vẫn render liên tục; route /employees/[id] chưa có trong cây mã nguồn.
+- [ ] Làm rõ liên kết phòng 3D theo deptCode so với quy tắc ID, cập nhật dependency registry và tách checklist OFFICE-3D theo router khi chỉnh lý tài liệu.
+
 ## 🎯 QUY TRÌNH THỰC HIỆN BẮT BUỘC
+
+### Đầu vào từ nguồn chuẩn 1Office và xác nhận nghiệp vụ — rà soát ngày 21/10/2026
+- [x] Kiểm kê tài liệu tại docs/SDGSources; đọc các phần trách nhiệm/luồng xử lý liên quan trong QTHC12, QTHC15, QTHC18, quy trình hợp đồng BPC02, tài liệu kế toán/kinh doanh và bản phối hợp sửa đổi 6/2025 (bao gồm KHĐT–BQLDA). Phạm vi là xác định dữ liệu tổ chức, nhân sự và thẩm quyền; chưa kiểm định toàn bộ phụ lục hoặc hiệu lực hiện hành.
+- [x] Đọc trực quan đủ 21 trang cẩm nang hội nhập; ghi nhận tầng quản trị, chức năng sáu khối văn phòng, sáu bộ phận BQLDA, tuyến đầu mối phối hợp, quy tắc bảo mật/AI và ranh giới nghỉ phép trên 1Office tại `docs/strategy/ONBOARDING-HANDBOOK-ORGANIZATION-RECONCILIATION.md`.
+- [x] Dọn toàn bộ ảnh/contact sheet tạm sau khi kiểm tra trực quan; repository chỉ giữ PPTX nguồn và báo cáo đối chiếu có checksum.
+- [ ] Xin HCNS/BQLDA xác nhận quan hệ Ban Giám đốc QLDA–sáu bộ phận, cách phân loại Ban Kiểm soát và ngày hiệu lực của cẩm nang trước khi đổi master data.
+- [x] Đề xuất bộ trường cần HCNS xác nhận: đơn vị và cấp trên; vị trí/chức vụ; mã nhân viên và quản lý trực tiếp; phân công chính/kiêm nhiệm; trách nhiệm, phạm vi phê duyệt và ủy quyền; ngày hiệu lực và người xác nhận bản chốt. Soạn lời nhắn trong hội thoại, chưa gửi.
+- [x] Dùng snapshot/export 1Office ngày 21/10/2026 làm base cơ cấu hiện tại cho ERP; dữ liệu nhân sự sống, danh mục quy trình và thẩm quyền vẫn cần đối soát khi triển khai đồng bộ tiếp theo.
+- [x] Đối chiếu file 67 hồ sơ với export tài khoản 1Office: 66 người có tài khoản khớp mã/username, phòng ban và vị trí; hồ sơ Vũ Văn Khoa mã 71 chưa có tài khoản.
+- [x] Xác định 18 đơn vị trong seed khớp 18 đơn vị nghiệp vụ 1Office; nút công ty ID 23 không phải phòng ban; lập mapping code SDG–ID 1Office trong tài liệu chiến lược.
+- [x] Đánh giá role seed với 11 nhóm 1Office và ghi nhận không được đồng bộ 1–1; nhóm ngoài chỉ dùng làm external membership/reference.
+- [ ] Tìm hiểu lý do 11 tài khoản khóa và hồ sơ mã 71 chưa có tài khoản khi có đầu mối phù hợp; giữ nguyên nguyên tắc trạng thái account không thay thế trạng thái employment.
+- [ ] Chủ phân hệ xác nhận danh bạ chung, trường HR nhạy cảm, quản lý đơn vị, role nghiệp vụ và phạm vi dữ liệu.
+- [ ] Thay cơ chế suy role bằng đề xuất + phê duyệt; tách role quản trị kỹ thuật khỏi quyền điều hành/nghiệp vụ.
 
 Mỗi khi thực hiện một câu lệnh hoặc có sửa đổi kỹ thuật:
 1. AI Agent **BẮT BUỘC** cập nhật trạng thái tiến độ vào tệp Checklist này.
