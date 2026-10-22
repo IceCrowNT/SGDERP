@@ -2,6 +2,9 @@
 
 ## Giai đoạn 0 — Tiếp nhận nguồn và thiết kế dữ liệu
 
+- [x] Bổ sung quy ước tên PostgreSQL tiếng Việt không dấu: các model tài sản ánh xạ bằng `@@map`/`@map`; xem `docs/DATABASE-DICTIONARY.md`. Không đổi trạng thái hoặc tạo thêm tài sản từ dữ liệu tham khảo.
+- [x] Migration rename ngày 22/10/2026 đã áp dụng; kiểm tra nội dung toàn bộ bảng không đổi, các quan hệ Prisma và dữ liệu kiểm kê vẫn đọc được. Build/TypeScript và 5 test E2E cơ cấu đạt sau thay đổi.
+
 - [x] Đọc ảnh biên bản BMHC 0501 và ghi nhận 11 nhóm, tổng 90 thiết bị phần cứng.
 - [x] Xác định ảnh chưa có ngày bàn giao, bên nhận, mã tài sản cá thể, serial và tình trạng thiết bị.
 - [x] Thiết kế tách chứng từ/số lượng tổng hợp khỏi tài sản cá thể; không tạo 90 tài sản giả.
@@ -21,7 +24,7 @@
 ## Giai đoạn 1 — Xây tính năng và chuẩn bị kiểm kê thực tế
 
 - [x] Ghi nhận phòng ban tự quản lý license/tài sản do mình đề xuất mua; IT thuộc HCNS và không mặc định quản lý toàn bộ tài sản công ty.
-- [x] Phân tích hai phương án người phụ trách đưa ra và phương án kết hợp tại mục 4.5 của `docs/strategy/MASTER-DATA-AND-RBAC-SYNCHRONIZATION.md`; cập nhật tài liệu bối cảnh. Đây là đề xuất, chưa triển khai quyền/schema/menu.
+- [x] Phân tích hai phương án người phụ trách đưa ra và phương án kết hợp tại mục 4.5 của `docs/strategy/DONG-BO-DU-LIEU-NEN-VA-PHAN-QUYEN.md`; cập nhật tài liệu bối cảnh. Đây là đề xuất, chưa triển khai quyền/schema/menu.
 - [ ] Chốt phạm vi pilot, người được quản lý, quyền xem tổng hợp và cách quản lý tài sản/license dùng chung.
 - [ ] Phân biệt đơn vị chịu trách nhiệm quản lý với đơn vị đề xuất mua, người/đơn vị sử dụng và vị trí; đánh giá bổ sung schema sau khi phương án được duyệt.
 

@@ -57,7 +57,11 @@ Phân hệ tài sản tách ba lớp: chứng từ/số lượng kiểm kê (`As
 
 Ảnh BMHC 0501 chỉ là dữ liệu tham khảo tạm gồm 11 nhóm, tổng 90 thiết bị và được giữ ở trạng thái `DRAFT`. Không tự tạo 90 tài sản thật từ ảnh. Sau khi có giao diện, dữ liệu kiểm kê thực tế sẽ tạo một hồ sơ `Asset` cho từng thiết bị; mã nội bộ, loại và tình trạng là tối thiểu, các trường chi tiết được bổ sung dần.
 
-### Nguồn dữ liệu nhân sự và cơ cấu
+### Quy ước tên vật lý PostgreSQL — 22/10/2026
+
+16 bảng nghiệp vụ và 194 cột được ánh xạ sang tên tiếng Việt không dấu bằng `@@map`/`@map` trong Prisma. Ví dụ `Company` → `cong_ty`, `Department` → `phong_ban`, `User` → `nguoi_dung`, `Asset` → `tai_san`; `companyId` → `dinh_danh_cong_ty`. API Prisma/TypeScript giữ nguyên để các action, seed và giao diện tiếp tục hoạt động. Danh mục đầy đủ tại [DATABASE-DICTIONARY.md](./DATABASE-DICTIONARY.md); quy tắc bắt buộc tại [DATABASE-RULES.md](../.agents/rules/DATABASE-RULES.md). Migration chỉ đổi tên, không chuyển đổi dữ liệu nghiệp vụ.
+
+### Nguồn cơ cấu và cách ánh xạ
 
 1Office là nguồn chuẩn cho hồ sơ nhân sự và cây cơ cấu tổ chức. SDG ERP nhận snapshot/export hoặc API một chiều, giữ external ID và bảng mapping, sau đó cung cấp bản đọc cho các nghiệp vụ nội bộ. Không sửa cơ cấu độc lập trong ERP theo cách tạo ra một phiên bản cạnh tranh với 1Office. Trạng thái con người, quan hệ làm việc và tài khoản đăng nhập phải được tách riêng để tài khoản khóa hoặc chưa được cấp không làm mất hồ sơ nhân sự.
 
@@ -66,6 +70,8 @@ Phân hệ tài sản tách ba lớp: chứng từ/số lượng kiểm kê (`As
 ---
 
 ## 2. BẢN ĐỒ CẤU TRÚC THƯ MỤC DỰ ÁN
+
+Tài liệu trong `docs/strategy` dùng tên tiếng Việt không dấu, viết hoa và phân cách bằng dấu gạch ngang. File bối cảnh chính là [BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md](./strategy/BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md). Khi đổi tên phải cập nhật các liên kết trong router, checklist và tài liệu liên quan.
 
 ```
 SGDERP/

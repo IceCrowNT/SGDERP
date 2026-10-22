@@ -56,6 +56,6 @@ Các phát hiện trực tiếp từ file:
 
 ## Tài liệu phân tích
 
-- [Mô hình dữ liệu quản trị và định hướng tích hợp 1Office](../strategy/1OFFICE-ADMIN-DATA-MODEL-AND-INTEGRATION.md)
-- [Thiết kế đồng bộ Master Data và phân quyền SDG ERP–1Office](../strategy/MASTER-DATA-AND-RBAC-SYNCHRONIZATION.md)
-- [Bối cảnh hiện tại và định hướng số hóa](../strategy/CURRENT-STATE-AND-DIGITAL-TRANSFORMATION-DIRECTION.md)
+- [Mô hình dữ liệu quản trị và định hướng tích hợp 1Office](../strategy/MO-HINH-DU-LIEU-QUAN-TRI-VA-TICH-HOP-1OFFICE.md)
+- [Thiết kế đồng bộ Master Data và phân quyền SDG ERP–1Office](../strategy/DONG-BO-DU-LIEU-NEN-VA-PHAN-QUYEN.md)
+- [Bối cảnh hiện tại và định hướng số hóa](../strategy/BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md)

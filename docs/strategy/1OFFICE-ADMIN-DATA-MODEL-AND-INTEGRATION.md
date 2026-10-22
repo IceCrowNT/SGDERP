@@ -1,7 +1,7 @@
 # Mô hình dữ liệu quản trị và định hướng tích hợp 1Office
 
-**Trạng thái:** Khảo sát kỹ thuật ban đầu, cần chủ sở hữu nghiệp vụ xác nhận  
-**Ngày quan sát:** 21/10/2026  
+**Trạng thái:** Khảo sát kỹ thuật ban đầu, cần chủ sở hữu nghiệp vụ xác nhận
+**Ngày quan sát:** 21/10/2026
 **Mục tiêu:** dùng 1Office làm nền tảng vận hành hiện hữu và phát triển SDG ERP cho dữ liệu chuẩn, phân tích hợp nhất và nghiệp vụ đặc thù của Sao Đỏ Group
 
 **Giới hạn truy cập hiện hành:** báo cáo chỉ được tiếp tục từ tài liệu/export đã lưu. Không truy cập lại 1Office bằng credential cũ. Chỉ khi người phụ trách cấp lại tài khoản cho một yêu cầu cụ thể mới được xem hoặc export; không được thay đổi dữ liệu, quyền, mật khẩu hay cấu hình 1Office.
@@ -28,13 +28,13 @@ Các trường `Mã`, `Khối nghiệp vụ` và `Loại phòng ban` gần như 
 
 ### 2.2 Tài khoản và hồ sơ nhân sự
 
-| Trạng thái quan sát | Số lượng |
-| :--- | ---: |
-| Tài khoản đang hoạt động | 56 |
-| Tài khoản đã khóa | 11 |
-| Hồ sơ chưa kích hoạt | 1 |
-| Tài khoản chờ kích hoạt | 0 |
-| Bản ghi xác thực thiết bị | 84 |
+| Trạng thái quan sát         | Số lượng |
+| :----------------------------- | ----------: |
+| Tài khoản đang hoạt động |          56 |
+| Tài khoản đã khóa         |          11 |
+| Hồ sơ chưa kích hoạt      |           1 |
+| Tài khoản chờ kích hoạt   |           0 |
+| Bản ghi xác thực thiết bị |          84 |
 
 Bảng tài khoản liên kết các trường: tài khoản đăng nhập, nhóm quyền, mã nhân sự, họ tên, phòng ban, trạng thái chữ ký số, ngày tạo, ngày kích hoạt và gói ứng dụng. Phần lớn tài khoản có cùng ngày tạo/kích hoạt 23/12/2025, cho thấy đã có một đợt khởi tạo hoặc chuyển dữ liệu hàng loạt.
 
@@ -59,19 +59,19 @@ Không xóa hoặc vô hiệu hóa một đối tượng chỉ vì trạng thái
 
 Hệ thống có 11 nhóm:
 
-| Nhóm | Tài khoản hoạt động | Nhận xét |
-| :--- | ---: | :--- |
-| Nhân viên | 29 | Có thêm 11 tài khoản khóa và một số thành viên đã xóa trong trang chi tiết |
-| Quản lý | 11 | Quyền quản lý công việc, timesheet và hồ sơ ký số theo phòng ban |
-| Quản lý Nhân sự | 0 | Nhóm chuyên trách đang không được gán người |
-| Nhân viên Nhân sự | 0 | Nhóm chuyên trách đang không được gán người |
-| Quản trị hệ thống | 1 | Nhóm duy nhất có cờ quản trị hệ thống |
-| Quản lý Chi nhánh | 0 | Chưa được gán người |
-| Nhân viên Hành chính | 1 | Nhóm nghiệp vụ riêng |
-| TP HCNS | 1 | Có quyền HR và xem quy trình tự động |
-| Ban lãnh đạo - CRM | 3 | Gói Enterprise, phạm vi CRM rộng |
-| Nhân viên - CRM | 6 | Gói Enterprise, quyền CRM rộng |
-| Quản lý không thuộc KD - CRM | 3 | Xem CRM, quản lý công việc theo phòng ban |
+| Nhóm                            | Tài khoản hoạt động | Nhận xét                                                                               |
+| :------------------------------- | -----------------------: | :--------------------------------------------------------------------------------------- |
+| Nhân viên                      |                       29 | Có thêm 11 tài khoản khóa và một số thành viên đã xóa trong trang chi tiết |
+| Quản lý                        |                       11 | Quyền quản lý công việc, timesheet và hồ sơ ký số theo phòng ban              |
+| Quản lý Nhân sự              |                        0 | Nhóm chuyên trách đang không được gán người                                   |
+| Nhân viên Nhân sự            |                        0 | Nhóm chuyên trách đang không được gán người                                   |
+| Quản trị hệ thống            |                        1 | Nhóm duy nhất có cờ quản trị hệ thống                                            |
+| Quản lý Chi nhánh             |                        0 | Chưa được gán người                                                               |
+| Nhân viên Hành chính         |                        1 | Nhóm nghiệp vụ riêng                                                                 |
+| TP HCNS                          |                        1 | Có quyền HR và xem quy trình tự động                                              |
+| Ban lãnh đạo - CRM            |                        3 | Gói Enterprise, phạm vi CRM rộng                                                      |
+| Nhân viên - CRM                |                        6 | Gói Enterprise, quyền CRM rộng                                                        |
+| Quản lý không thuộc KD - CRM |                        3 | Xem CRM, quản lý công việc theo phòng ban                                           |
 
 Phát hiện cần xử lý ngay về quản trị quyền:
 
@@ -96,30 +96,30 @@ Phát hiện cần xử lý ngay về quản trị quyền:
 
 1Office đang vận hành ổn định và có dữ liệu sử dụng thực tế. Các phát hiện trong báo cáo không chứng minh hệ thống đang có sự cố hoặc cần thay thế. Chúng chủ yếu ảnh hưởng tới bảo mật thông tin, quản trị dữ liệu, độ tin cậy của báo cáo và khả năng tích hợp SDG ERP.
 
-| Phát hiện | Ảnh hưởng tới vận hành hiện tại | Ảnh hưởng nếu không xử lý | Mức ưu tiên |
-| :--- | :--- | :--- | :--- |
-| Nhóm Nhân viên và Quản lý có quyền `Xem tất cả` hồ sơ nhân sự | Chưa thấy làm gián đoạn công việc | Có khả năng lộ hồ sơ vượt nhu cầu công việc. Mức ảnh hưởng thực tế phụ thuộc trường nào được hiển thị và cơ chế che dữ liệu của 1Office | **Cao, cần xác minh** |
-| Hai nhóm HR chuyên trách không có thành viên | Thấp; HCNS vẫn đang làm việc qua các nhóm khác | Khó giải thích ai có quyền HR chính thức; dễ cấp quyền sai khi tiếp nhận nhân sự mới | Trung bình |
-| Tài khoản khóa/đã xóa vẫn xuất hiện trong nhóm | Thấp nếu trạng thái khóa chặn hoàn toàn đăng nhập và phiên cũ | Sai báo cáo thành viên/quyền; có rủi ro nếu phiên hoặc token cũ chưa bị thu hồi | **Cao, cần kiểm thử** |
-| 3 tài khoản hoạt động thiếu phòng ban, 1 thiếu nhóm | Có thể không ảnh hưởng nếu các tài khoản là tài khoản kỹ thuật | Có thể sai phạm vi xem, người duyệt, báo cáo theo đơn vị hoặc bỏ sót thông báo | Cao đối với các tài khoản người thật |
-| 19/19 đơn vị chưa có mã | Hầu như không ảnh hưởng giao diện hiện tại vì 1Office dùng ID nội bộ | Dễ ánh xạ sai khi import/export, đổi tên hoặc đồng bộ sang SDG ERP | Cao trước khi tích hợp; thấp trong vận hành hiện tại |
-| Tổng trạng thái quan sát là 68, file HR hiện có là 67 | Không đủ bằng chứng về lỗi vận hành | Sai headcount, cấp tài khoản, giấy phép và báo cáo nếu coi tài khoản là nhân sự | Trung bình–cao |
-| Chỉ 3/56 tài khoản hoạt động có email | Thấp nếu công ty không dùng email làm kênh định danh/thông báo | Hạn chế SSO, khôi phục tài khoản, thông báo và tích hợp danh tính | Trung bình |
-| 52/56 có chức vụ, 53/56 có vị trí | Thấp với các quy trình chọn người cụ thể | Quy trình dựa trên vị trí/chức vụ có thể định tuyến sai hoặc cần cấu hình ngoại lệ | Trung bình |
-| HCNS01 có 68 phiên bản, PC01 có 44 phiên bản | Đây là dấu hiệu hệ thống đang được điều chỉnh theo thực tế, không phải lỗi | Tích hợp hoặc báo cáo sẽ sai nếu chỉ lưu mã quy trình mà không lưu phiên bản của hồ sơ | Cao trước khi tích hợp |
-| Sáu mẫu quy trình tạm dừng, trong đó có mẫu test | Không ảnh hưởng mẫu đang hoạt động | Gây nhiễu danh mục, nhầm mẫu khi báo cáo hoặc cấu hình nếu trạng thái không được lọc | Thấp |
-| Chưa có cấu hình Open API, SSO hoặc OIDC quan sát được | Không ảnh hưởng cách đăng nhập/vận hành hiện tại | Tăng thao tác thủ công, phụ thuộc tài khoản riêng và cản trở đồng bộ an toàn | Trung bình về dài hạn |
+| Phát hiện                                                                   | Ảnh hưởng tới vận hành hiện tại                                                       | Ảnh hưởng nếu không xử lý                                                                                                                                         | Mức ưu tiên                                                |
+| :---------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------ |
+| Nhóm Nhân viên và Quản lý có quyền `Xem tất cả` hồ sơ nhân sự | Chưa thấy làm gián đoạn công việc                                                     | Có khả năng lộ hồ sơ vượt nhu cầu công việc. Mức ảnh hưởng thực tế phụ thuộc trường nào được hiển thị và cơ chế che dữ liệu của 1Office | **Cao, cần xác minh**                                 |
+| Hai nhóm HR chuyên trách không có thành viên                           | Thấp; HCNS vẫn đang làm việc qua các nhóm khác                                        | Khó giải thích ai có quyền HR chính thức; dễ cấp quyền sai khi tiếp nhận nhân sự mới                                                                      | Trung bình                                                   |
+| Tài khoản khóa/đã xóa vẫn xuất hiện trong nhóm                      | Thấp nếu trạng thái khóa chặn hoàn toàn đăng nhập và phiên cũ                   | Sai báo cáo thành viên/quyền; có rủi ro nếu phiên hoặc token cũ chưa bị thu hồi                                                                            | **Cao, cần kiểm thử**                                |
+| 3 tài khoản hoạt động thiếu phòng ban, 1 thiếu nhóm                  | Có thể không ảnh hưởng nếu các tài khoản là tài khoản kỹ thuật                 | Có thể sai phạm vi xem, người duyệt, báo cáo theo đơn vị hoặc bỏ sót thông báo                                                                           | Cao đối với các tài khoản người thật                 |
+| 19/19 đơn vị chưa có mã                                                 | Hầu như không ảnh hưởng giao diện hiện tại vì 1Office dùng ID nội bộ             | Dễ ánh xạ sai khi import/export, đổi tên hoặc đồng bộ sang SDG ERP                                                                                             | Cao trước khi tích hợp; thấp trong vận hành hiện tại |
+| Tổng trạng thái quan sát là 68, file HR hiện có là 67                 | Không đủ bằng chứng về lỗi vận hành                                                  | Sai headcount, cấp tài khoản, giấy phép và báo cáo nếu coi tài khoản là nhân sự                                                                            | Trung bình–cao                                              |
+| Chỉ 3/56 tài khoản hoạt động có email                                  | Thấp nếu công ty không dùng email làm kênh định danh/thông báo                     | Hạn chế SSO, khôi phục tài khoản, thông báo và tích hợp danh tính                                                                                            | Trung bình                                                   |
+| 52/56 có chức vụ, 53/56 có vị trí                                       | Thấp với các quy trình chọn người cụ thể                                             | Quy trình dựa trên vị trí/chức vụ có thể định tuyến sai hoặc cần cấu hình ngoại lệ                                                                     | Trung bình                                                   |
+| HCNS01 có 68 phiên bản, PC01 có 44 phiên bản                            | Đây là dấu hiệu hệ thống đang được điều chỉnh theo thực tế, không phải lỗi | Tích hợp hoặc báo cáo sẽ sai nếu chỉ lưu mã quy trình mà không lưu phiên bản của hồ sơ                                                                | Cao trước khi tích hợp                                    |
+| Sáu mẫu quy trình tạm dừng, trong đó có mẫu test                     | Không ảnh hưởng mẫu đang hoạt động                                                   | Gây nhiễu danh mục, nhầm mẫu khi báo cáo hoặc cấu hình nếu trạng thái không được lọc                                                                   | Thấp                                                         |
+| Chưa có cấu hình Open API, SSO hoặc OIDC quan sát được               | Không ảnh hưởng cách đăng nhập/vận hành hiện tại                                  | Tăng thao tác thủ công, phụ thuộc tài khoản riêng và cản trở đồng bộ an toàn                                                                             | Trung bình về dài hạn                                     |
 
 Đánh giá theo nhóm tác động:
 
-| Nhóm tác động | Mức hiện tại | Nhận định |
-| :--- | :--- | :--- |
-| Tính sẵn sàng và liên tục vận hành | Thấp | Không phát hiện vấn đề làm 1Office ngừng hoặc cản trở quy trình đang chạy |
-| Hiệu quả xử lý công việc | Thấp–trung bình | Các hạn chế chủ yếu nằm ở báo cáo quá hạn, mobile và một số luồng nhiều người |
-| Bảo mật và riêng tư | Trung bình–cao, chưa kết luận | Quyền xem toàn bộ hồ sơ nhân sự cần kiểm tra bằng tài khoản thường và theo từng trường dữ liệu |
-| Toàn vẹn dữ liệu và báo cáo | Trung bình | Chênh lệch trạng thái người/tài khoản và trường tổ chức bị thiếu có thể làm sai báo cáo |
-| Khả năng tích hợp SDG ERP | Cao | Thiếu mã nghiệp vụ, API và mapping phiên bản là trở ngại trực tiếp trước khi đồng bộ |
-| Chi phí bảo trì tương lai | Trung bình–cao | Nhiều ngoại lệ và phiên bản quy trình đòi hỏi quản trị thay đổi rõ ràng |
+| Nhóm tác động                          | Mức hiện tại                    | Nhận định                                                                                                       |
+| :----------------------------------------- | :--------------------------------- | :----------------------------------------------------------------------------------------------------------------- |
+| Tính sẵn sàng và liên tục vận hành | Thấp                              | Không phát hiện vấn đề làm 1Office ngừng hoặc cản trở quy trình đang chạy                            |
+| Hiệu quả xử lý công việc             | Thấp–trung bình                 | Các hạn chế chủ yếu nằm ở báo cáo quá hạn, mobile và một số luồng nhiều người                    |
+| Bảo mật và riêng tư                   | Trung bình–cao, chưa kết luận | Quyền xem toàn bộ hồ sơ nhân sự cần kiểm tra bằng tài khoản thường và theo từng trường dữ liệu |
+| Toàn vẹn dữ liệu và báo cáo         | Trung bình                        | Chênh lệch trạng thái người/tài khoản và trường tổ chức bị thiếu có thể làm sai báo cáo        |
+| Khả năng tích hợp SDG ERP              | Cao                                | Thiếu mã nghiệp vụ, API và mapping phiên bản là trở ngại trực tiếp trước khi đồng bộ              |
+| Chi phí bảo trì tương lai             | Trung bình–cao                   | Nhiều ngoại lệ và phiên bản quy trình đòi hỏi quản trị thay đổi rõ ràng                            |
 
 Không nên sửa hàng loạt cấu hình trên hệ thống đang chạy ổn chỉ dựa trên khảo sát này. Cách xử lý phù hợp là kiểm tra có mục tiêu, chụp lại cấu hình trước thay đổi, có chủ sở hữu nghiệp vụ xác nhận và thử trên tài khoản/phạm vi nhỏ.
 
@@ -135,42 +135,42 @@ Thứ tự kiểm tra đề xuất:
 
 Hệ thống có 34 mẫu, gồm 28 mẫu hoạt động và 6 mẫu tạm dừng. Tổng lượt chạy hiển thị ở các mẫu có số liệu là 1.111; 5 mẫu hiển thị `--`, nên con số này là mức tối thiểu, không phải tổng chính thức.
 
-| Mã | Tên | Trạng thái | Lượt chạy |
-| :--- | :--- | :--- | ---: |
-| -- | QT HD - Bàn giao đất | Hoạt động | -- |
-| BQL XLKN | Xử lý khiếu nại khách hàng | Hoạt động | 0 |
-| KT02 | Quy trình xử lý công nợ khách hàng | Hoạt động | -- |
-| BQL14 | Luân chuyển hồ sơ nhà thầu | Hoạt động | 16 |
-| -- | [TEST] Soạn thảo, thẩm định, quản lý hợp đồng | Tạm dừng | -- |
-| -- | {TEST VỚI BQLDA} Trình ký đề xuất và phối hợp triển khai | Tạm dừng | 2 |
-| -- | {TEST VỚI BQLDA} Soạn thảo, thẩm định, quản lý hợp đồng | Tạm dừng | 0 |
-| -- | {Test ký số} Soạn thảo, thẩm định, quản lý hợp đồng | Tạm dừng | 1 |
-| -- | {Test ký số} Trình ký đề xuất và phối hợp triển khai | Tạm dừng | 5 |
-| HCNS08 | Báo hỏng xe ô tô | Hoạt động | 15 |
-| HCNS07 | Xử lý công văn đến | Hoạt động | 42 |
-| NP02 | Nghỉ phép trưởng phòng | Hoạt động | 20 |
-| HCNS06 | Ký số token | Hoạt động | 13 |
-| HCNS05 | Gọi xe taxi | Hoạt động | 56 |
-| HCNS04 | Đặt hoa - quà tiếp khách | Hoạt động | 49 |
-| HCNS03 | Công tác | Hoạt động | 1 |
-| VPP03 | Cấp phát văn phòng phẩm bổ sung cho HCNS | Hoạt động | 1 |
-| VPP02 | Cấp phát văn phòng phẩm bổ sung cho phòng ban khác | Hoạt động | 3 |
-| HCNS02 | Gửi chuyển phát nhanh | Hoạt động | 328 |
-| BQL11.2 | Quản lý khách hàng KCN - quản lý xây dựng | Hoạt động | 5 |
-| BQL16 | Xử lý, khắc phục sự cố hạ tầng KCN | Hoạt động | 4 |
-| BQL11.1 | Quản lý khách hàng KCN - bàn giao đất | Hoạt động | 5 |
-| BQL13 | Cấp phát bảo hộ lao động | Hoạt động | 3 |
-| KHĐT01 | Phối hợp Phòng KHĐT và Ban QLDA | Hoạt động | 1 |
-| KHĐT03 | Lựa chọn nhà thầu | Hoạt động | 1 |
-| KHĐT02 | Quản lý dự án | Hoạt động | -- |
-| KHĐT06 | Đàm phán, thương thảo và ký kết hợp đồng | Hoạt động | 19 |
-| KHĐT05 | Giải quyết sự không phù hợp trong thi công | Hoạt động | -- |
-| VPP01 | Cấp phát văn phòng phẩm | Hoạt động | 11 |
-| NP01 | Nghỉ phép phó phòng và nhân viên | Hoạt động | 174 |
-| CSKH01 | Chăm sóc khách hàng | Hoạt động | 3 |
-| PC01 | Soạn thảo, thẩm định, quản lý hợp đồng | Hoạt động | 184 |
-| QTTT | Thanh toán | Tạm dừng | 1 |
-| HCNS01 | Trình ký đề xuất và phối hợp triển khai | Hoạt động | 148 |
+| Mã      | Tên                                                               | Trạng thái | Lượt chạy |
+| :------- | :----------------------------------------------------------------- | :----------- | -----------: |
+| --       | QT HD - Bàn giao đất                                            | Hoạt động |           -- |
+| BQL XLKN | Xử lý khiếu nại khách hàng                                   | Hoạt động |            0 |
+| KT02     | Quy trình xử lý công nợ khách hàng                          | Hoạt động |           -- |
+| BQL14    | Luân chuyển hồ sơ nhà thầu                                   | Hoạt động |           16 |
+| --       | [TEST] Soạn thảo, thẩm định, quản lý hợp đồng            | Tạm dừng   |           -- |
+| --       | {TEST VỚI BQLDA} Trình ký đề xuất và phối hợp triển khai | Tạm dừng   |            2 |
+| --       | {TEST VỚI BQLDA} Soạn thảo, thẩm định, quản lý hợp đồng | Tạm dừng   |            0 |
+| --       | {Test ký số} Soạn thảo, thẩm định, quản lý hợp đồng    | Tạm dừng   |            1 |
+| --       | {Test ký số} Trình ký đề xuất và phối hợp triển khai    | Tạm dừng   |            5 |
+| HCNS08   | Báo hỏng xe ô tô                                               | Hoạt động |           15 |
+| HCNS07   | Xử lý công văn đến                                           | Hoạt động |           42 |
+| NP02     | Nghỉ phép trưởng phòng                                        | Hoạt động |           20 |
+| HCNS06   | Ký số token                                                      | Hoạt động |           13 |
+| HCNS05   | Gọi xe taxi                                                       | Hoạt động |           56 |
+| HCNS04   | Đặt hoa - quà tiếp khách                                      | Hoạt động |           49 |
+| HCNS03   | Công tác                                                         | Hoạt động |            1 |
+| VPP03    | Cấp phát văn phòng phẩm bổ sung cho HCNS                     | Hoạt động |            1 |
+| VPP02    | Cấp phát văn phòng phẩm bổ sung cho phòng ban khác         | Hoạt động |            3 |
+| HCNS02   | Gửi chuyển phát nhanh                                           | Hoạt động |          328 |
+| BQL11.2  | Quản lý khách hàng KCN - quản lý xây dựng                  | Hoạt động |            5 |
+| BQL16    | Xử lý, khắc phục sự cố hạ tầng KCN                         | Hoạt động |            4 |
+| BQL11.1  | Quản lý khách hàng KCN - bàn giao đất                       | Hoạt động |            5 |
+| BQL13    | Cấp phát bảo hộ lao động                                     | Hoạt động |            3 |
+| KHĐT01  | Phối hợp Phòng KHĐT và Ban QLDA                               | Hoạt động |            1 |
+| KHĐT03  | Lựa chọn nhà thầu                                              | Hoạt động |            1 |
+| KHĐT02  | Quản lý dự án                                                  | Hoạt động |           -- |
+| KHĐT06  | Đàm phán, thương thảo và ký kết hợp đồng               | Hoạt động |           19 |
+| KHĐT05  | Giải quyết sự không phù hợp trong thi công                  | Hoạt động |           -- |
+| VPP01    | Cấp phát văn phòng phẩm                                       | Hoạt động |           11 |
+| NP01     | Nghỉ phép phó phòng và nhân viên                            | Hoạt động |          174 |
+| CSKH01   | Chăm sóc khách hàng                                            | Hoạt động |            3 |
+| PC01     | Soạn thảo, thẩm định, quản lý hợp đồng                   | Hoạt động |          184 |
+| QTTT     | Thanh toán                                                        | Tạm dừng   |            1 |
+| HCNS01   | Trình ký đề xuất và phối hợp triển khai                   | Hoạt động |          148 |
 
 ## 4. Cấu trúc sâu và tri thức ngầm trong quy trình
 
@@ -196,23 +196,23 @@ Trình duyệt chỉ kết xuất đầy đủ node cho một phần sơ đồ �
 
 ## 5. Mô hình dữ liệu tích hợp đề xuất
 
-| Thực thể SDG ERP | Trường khóa tối thiểu | Nguồn/chủ sở hữu |
-| :--- | :--- | :--- |
-| `OrganizationUnit` | `id`, `code`, `name`, `parentId`, `type`, `status`, `effectiveFrom/To` | HCNS chốt; mapping sang ID 1Office |
-| `Person` | mã nhân sự ổn định, họ tên, trạng thái | HCNS |
-| `Employment` | người, công ty, đơn vị, vị trí, quản lý, hiệu lực | HCNS + trưởng đơn vị |
-| `ExternalAccount` | hệ thống, external ID, username, trạng thái, person ID | 1Office/IT |
-| `PermissionGroup` | external ID, tên, gói ứng dụng, trạng thái | 1Office/IT |
-| `GroupMembership` | account ID, group ID, hiệu lực | 1Office/IT |
-| `AuthorityAssignment` | phạm vi, hành động, hạn mức, người/nhóm, hiệu lực | Lãnh đạo + chủ quy trình |
-| `WorkflowDefinition` | external ID, code, name, owner, status | 1Office |
-| `WorkflowVersion` | definition ID, version, publishedAt, status | 1Office |
-| `WorkflowNode` | version ID, external node ID, type, name, SLA | 1Office |
-| `WorkflowTransition` | from/to node, action, condition | 1Office |
-| `WorkflowFormField` | version/node, key, label, type, required, sensitivity | 1Office + chủ quy trình |
-| `WorkflowInstanceRef` | external ID, definition/version, status, deep link | 1Office; SDG ERP chỉ tham chiếu |
-| `ExternalMapping` | system, entity type, external ID, internal ID | SDG ERP |
-| `SyncRun`/`SyncError` | nguồn, mốc thời gian, checksum, kết quả, lỗi | SDG ERP/IT |
+| Thực thể SDG ERP        | Trường khóa tối thiểu                                                           | Nguồn/chủ sở hữu                |
+| :------------------------ | :----------------------------------------------------------------------------------- | :---------------------------------- |
+| `OrganizationUnit`      | `id`, `code`, `name`, `parentId`, `type`, `status`, `effectiveFrom/To` | HCNS chốt; mapping sang ID 1Office |
+| `Person`                | mã nhân sự ổn định, họ tên, trạng thái                                     | HCNS                                |
+| `Employment`            | người, công ty, đơn vị, vị trí, quản lý, hiệu lực                        | HCNS + trưởng đơn vị           |
+| `ExternalAccount`       | hệ thống, external ID, username, trạng thái, person ID                           | 1Office/IT                          |
+| `PermissionGroup`       | external ID, tên, gói ứng dụng, trạng thái                                     | 1Office/IT                          |
+| `GroupMembership`       | account ID, group ID, hiệu lực                                                     | 1Office/IT                          |
+| `AuthorityAssignment`   | phạm vi, hành động, hạn mức, người/nhóm, hiệu lực                         | Lãnh đạo + chủ quy trình       |
+| `WorkflowDefinition`    | external ID, code, name, owner, status                                               | 1Office                             |
+| `WorkflowVersion`       | definition ID, version, publishedAt, status                                          | 1Office                             |
+| `WorkflowNode`          | version ID, external node ID, type, name, SLA                                        | 1Office                             |
+| `WorkflowTransition`    | from/to node, action, condition                                                      | 1Office                             |
+| `WorkflowFormField`     | version/node, key, label, type, required, sensitivity                                | 1Office + chủ quy trình           |
+| `WorkflowInstanceRef`   | external ID, definition/version, status, deep link                                   | 1Office; SDG ERP chỉ tham chiếu   |
+| `ExternalMapping`       | system, entity type, external ID, internal ID                                        | SDG ERP                             |
+| `SyncRun`/`SyncError` | nguồn, mốc thời gian, checksum, kết quả, lỗi                                   | SDG ERP/IT                          |
 
 SDG ERP chỉ nên lưu bản sao cần thiết cho tìm kiếm, đối soát và báo cáo. Nội dung hồ sơ, phê duyệt, chữ ký và lịch sử quy trình tiếp tục thuộc 1Office, trừ khi công ty có quyết định thay đổi hệ thống nguồn.
 
@@ -243,34 +243,34 @@ SDG ERP chỉ nên lưu bản sao cần thiết cho tìm kiếm, đối soát v�
 
 Không nên bật một phân hệ chỉ vì đã có trong gói dịch vụ. Mỗi phân hệ chỉ nên được đưa vào sử dụng khi có chủ sở hữu, dữ liệu nguồn, quy trình vận hành và tiêu chí nghiệm thu.
 
-| Tính năng | Khuyến nghị | Phạm vi phù hợp | Điều kiện trước khi triển khai |
-| :--- | :--- | :--- | :--- |
-| Tài liệu công ty | **Nên triển khai sớm** | Quy chế, quy trình, biểu mẫu chuẩn, quyết định đang hiệu lực | Phân loại tài liệu, chủ sở hữu, phiên bản, ngày hiệu lực và quyền xem |
-| Văn bản đến | **Nên kết hợp với HCNS07** | Sổ văn bản, số đến, nơi gửi, hạn xử lý và lưu bản gốc | Chọn một điểm nhập duy nhất; không nhập lại cả module và form quy trình |
-| Báo cáo/Dashboard | **Nên mở rộng** | Quá hạn theo bước, khối lượng theo đơn vị, vòng trả lại, SLA | Chuẩn hóa chỉ số; xác nhận API/export và người được xem |
-| Tài sản | **Nên pilot cho tài sản văn phòng phổ thông** | Máy tính, màn hình, máy in, thiết bị văn phòng, bàn giao người sử dụng | So sánh trường dữ liệu, QR, lịch sử bàn giao và khả năng export/API |
-| Tuyển dụng | **Có thể dùng thay vì xây mới** | Yêu cầu tuyển, ứng viên, phỏng vấn, offer | HCNS xác nhận nhu cầu và quy trình hiện tại; chạy pilot một vị trí |
-| Đào tạo | **Có thể dùng** | Kế hoạch, khóa học, học viên và kết quả hoàn thành | Chốt danh mục năng lực/chứng chỉ và nhu cầu báo cáo |
-| Đánh giá/KPI/OKR | **Đánh giá trước khi bật** | Chu kỳ mục tiêu và đánh giá nếu lãnh đạo có phương pháp thống nhất | Không triển khai khi chưa có khung chỉ tiêu và chủ sở hữu; tránh số hóa một quy trình chưa chốt |
-| CRM | **Nên đánh giá khai thác sâu hơn** | Khách hàng, nhà đầu tư, liên hệ, cơ hội và lịch sử chăm sóc | Xác định nguồn khách hàng chính, chống trùng và phân quyền thương mại |
-| SSO/OIDC | **Nên làm việc với 1Office để kích hoạt** | Đăng nhập tập trung và vòng đời tài khoản | Có nhà cung cấp danh tính, MFA, quy trình khóa tài khoản và môi trường test |
-| Open API/Webhook | **Ưu tiên cao cho tích hợp** | Đồng bộ danh mục, deep link và báo cáo | Tài liệu chính thức, phạm vi quyền tối thiểu, rate limit, sandbox và log |
-| Tri thức/1Assistant | **Chỉ pilot sau khi có kho tài liệu sạch** | Tra cứu quy chế và hướng dẫn nội bộ | Phân quyền theo tài liệu, kiểm soát dữ liệu nhạy cảm và đánh giá câu trả lời |
+| Tính năng          | Khuyến nghị                                              | Phạm vi phù hợp                                                                   | Điều kiện trước khi triển khai                                                                             |
+| :------------------- | :--------------------------------------------------------- | :----------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| Tài liệu công ty  | **Nên triển khai sớm**                            | Quy chế, quy trình, biểu mẫu chuẩn, quyết định đang hiệu lực              | Phân loại tài liệu, chủ sở hữu, phiên bản, ngày hiệu lực và quyền xem                              |
+| Văn bản đến      | **Nên kết hợp với HCNS07**                       | Sổ văn bản, số đến, nơi gửi, hạn xử lý và lưu bản gốc                 | Chọn một điểm nhập duy nhất; không nhập lại cả module và form quy trình                              |
+| Báo cáo/Dashboard  | **Nên mở rộng**                                   | Quá hạn theo bước, khối lượng theo đơn vị, vòng trả lại, SLA            | Chuẩn hóa chỉ số; xác nhận API/export và người được xem                                              |
+| Tài sản            | **Nên pilot cho tài sản văn phòng phổ thông** | Máy tính, màn hình, máy in, thiết bị văn phòng, bàn giao người sử dụng | So sánh trường dữ liệu, QR, lịch sử bàn giao và khả năng export/API                                   |
+| Tuyển dụng         | **Có thể dùng thay vì xây mới**                | Yêu cầu tuyển, ứng viên, phỏng vấn, offer                                     | HCNS xác nhận nhu cầu và quy trình hiện tại; chạy pilot một vị trí                                    |
+| Đào tạo           | **Có thể dùng**                                   | Kế hoạch, khóa học, học viên và kết quả hoàn thành                        | Chốt danh mục năng lực/chứng chỉ và nhu cầu báo cáo                                                    |
+| Đánh giá/KPI/OKR  | **Đánh giá trước khi bật**                     | Chu kỳ mục tiêu và đánh giá nếu lãnh đạo có phương pháp thống nhất  | Không triển khai khi chưa có khung chỉ tiêu và chủ sở hữu; tránh số hóa một quy trình chưa chốt |
+| CRM                  | **Nên đánh giá khai thác sâu hơn**            | Khách hàng, nhà đầu tư, liên hệ, cơ hội và lịch sử chăm sóc           | Xác định nguồn khách hàng chính, chống trùng và phân quyền thương mại                             |
+| SSO/OIDC             | **Nên làm việc với 1Office để kích hoạt**    | Đăng nhập tập trung và vòng đời tài khoản                                  | Có nhà cung cấp danh tính, MFA, quy trình khóa tài khoản và môi trường test                          |
+| Open API/Webhook     | **Ưu tiên cao cho tích hợp**                     | Đồng bộ danh mục, deep link và báo cáo                                        | Tài liệu chính thức, phạm vi quyền tối thiểu, rate limit, sandbox và log                                |
+| Tri thức/1Assistant | **Chỉ pilot sau khi có kho tài liệu sạch**      | Tra cứu quy chế và hướng dẫn nội bộ                                          | Phân quyền theo tài liệu, kiểm soát dữ liệu nhạy cảm và đánh giá câu trả lời                    |
 
 Các module bảng lương, tài chính, mua hàng và kho hàng không nên triển khai chỉ để lấp chỗ trống. Trước tiên phải xác nhận công ty đang dùng phần mềm kế toán/kho nào, nghĩa vụ pháp lý, khả năng đối soát và chi phí chuyển đổi.
 
 ### 6.2 Tính năng và cấu hình nên rút gọn
 
-| Phạm vi | Hiện trạng | Phương án rút gọn |
-| :--- | :--- | :--- |
-| Mẫu test hợp đồng/đề xuất | Nhiều bản `[TEST]`, `{Test ký số}`, `{TEST VỚI BQLDA}` đang tạm dừng | Chuyển vào nhóm lưu trữ/test, ẩn khỏi danh sách khởi tạo mới; giữ lịch sử |
-| Nghỉ phép NP01 và NP02 | Tách nhân viên/phó phòng và trưởng phòng | Xem xét một mẫu có nhánh theo cấp quản lý; chỉ hợp nhất nếu SLA, người duyệt và chính sách giống nhau |
-| Văn phòng phẩm VPP01/VPP02/VPP03 | Ba mẫu cho cấp phát thường, bổ sung HCNS và bổ sung đơn vị khác | Dùng một form có loại yêu cầu và nhánh phòng ban nếu biểu mẫu/chứng từ không khác đáng kể |
-| Văn bản đến | Có quy trình HCNS07 trong khi module Văn bản đến đang trống | Module giữ sổ và metadata; workflow chỉ luân chuyển xử lý. Một văn bản chỉ nhập một lần |
-| Nghỉ phép/đề xuất | Quy trình tự động đang có dữ liệu, module Đơn từ/Phê duyệt trống | Tiếp tục dùng quy trình hiện hữu; không bật thêm module cho cùng loại hồ sơ nếu chưa có kế hoạch migration |
-| Nhóm HR | Hai nhóm chuyên trách không có thành viên, quyền HR lại nằm ở nhóm khác | Thiết kế lại ma trận quyền, chọn nhóm chính thức rồi ngừng cấp mới vào nhóm dư; chưa xóa vì còn lịch sử |
-| Nhóm/tài khoản cũ | Thành viên khóa hoặc đã xóa còn xuất hiện trong nhóm | Tách quyền hiện hành khỏi lịch sử; báo cáo mặc định chỉ tính tài khoản hiệu lực |
-| Báo cáo tùy biến | Nhiều nhu cầu đang giải quyết bằng export thủ công | Chuẩn hóa một bộ KPI và bộ lọc dùng chung thay vì tạo nhiều báo cáo gần giống nhau |
+| Phạm vi                            | Hiện trạng                                                                         | Phương án rút gọn                                                                                                        |
+| :---------------------------------- | :----------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- |
+| Mẫu test hợp đồng/đề xuất    | Nhiều bản `[TEST]`, `{Test ký số}`, `{TEST VỚI BQLDA}` đang tạm dừng   | Chuyển vào nhóm lưu trữ/test, ẩn khỏi danh sách khởi tạo mới; giữ lịch sử                                       |
+| Nghỉ phép NP01 và NP02           | Tách nhân viên/phó phòng và trưởng phòng                                    | Xem xét một mẫu có nhánh theo cấp quản lý; chỉ hợp nhất nếu SLA, người duyệt và chính sách giống nhau      |
+| Văn phòng phẩm VPP01/VPP02/VPP03 | Ba mẫu cho cấp phát thường, bổ sung HCNS và bổ sung đơn vị khác          | Dùng một form có loại yêu cầu và nhánh phòng ban nếu biểu mẫu/chứng từ không khác đáng kể                  |
+| Văn bản đến                     | Có quy trình HCNS07 trong khi module Văn bản đến đang trống                  | Module giữ sổ và metadata; workflow chỉ luân chuyển xử lý. Một văn bản chỉ nhập một lần                        |
+| Nghỉ phép/đề xuất              | Quy trình tự động đang có dữ liệu, module Đơn từ/Phê duyệt trống       | Tiếp tục dùng quy trình hiện hữu; không bật thêm module cho cùng loại hồ sơ nếu chưa có kế hoạch migration  |
+| Nhóm HR                            | Hai nhóm chuyên trách không có thành viên, quyền HR lại nằm ở nhóm khác | Thiết kế lại ma trận quyền, chọn nhóm chính thức rồi ngừng cấp mới vào nhóm dư; chưa xóa vì còn lịch sử |
+| Nhóm/tài khoản cũ               | Thành viên khóa hoặc đã xóa còn xuất hiện trong nhóm                      | Tách quyền hiện hành khỏi lịch sử; báo cáo mặc định chỉ tính tài khoản hiệu lực                             |
+| Báo cáo tùy biến                | Nhiều nhu cầu đang giải quyết bằng export thủ công                           | Chuẩn hóa một bộ KPI và bộ lọc dùng chung thay vì tạo nhiều báo cáo gần giống nhau                             |
 
 Việc hợp nhất quy trình phải dựa trên so sánh node, điều kiện, form, SLA và người duyệt. Tên gần giống nhau chưa đủ để kết luận hai mẫu là thừa.
 
@@ -288,49 +288,49 @@ Những phần dưới đây không nhất thiết sai, nhưng đang tạo hoặ
 
 ### 6.4 Tính năng nên giao cho SDG ERP
 
-| Tính năng | Vì sao phù hợp với SDG ERP | Quan hệ với 1Office |
-| :--- | :--- | :--- |
-| Danh mục chuẩn và mapping ID | 1Office thiếu mã nghiệp vụ; SDG cần đối chiếu nhiều nguồn | Chỉ đọc ID 1Office, không đổi ID nguồn |
-| Dashboard chất lượng dữ liệu | Cần phát hiện thiếu mã, trùng người, tài khoản mồ côi và sai trạng thái | Nhận export/API định kỳ, trả báo cáo cho IT/HCNS |
-| Bản đồ 3D văn phòng | Đặc thù không gian của dự án hiện tại | Deep link tới hồ sơ 1Office, không sao chép dữ liệu nhạy cảm |
-| GIS hạ tầng KCN | Quản lý tuyến điện, nước, thoát nước, PCCC, đường, cây xanh và mốc giới | Sự cố/đề xuất tạo hoặc liên kết quy trình 1Office |
-| Tài sản hạ tầng và IoT | Cần tọa độ, topology, thông số kỹ thuật, cảm biến và lịch bảo trì chuyên ngành | 1Office xử lý giao việc/phê duyệt; SDG giữ hồ sơ kỹ thuật |
-| Biên bản hiện trường | Cần ảnh, vị trí bản đồ, đối tượng hạ tầng và lịch sử khắc phục | Liên kết BQL16 hoặc quy trình liên quan |
-| Quản trị tích hợp | Mapping, checksum, sync run, lỗi, thử lại và đối soát | Kết nối API/webhook chính thức của 1Office |
-| Phân tích quy trình liên hệ thống | Tổng hợp SLA, nút thắt, vòng trả lại và công việc con quá hạn | Chỉ đọc dữ liệu quy trình; người dùng xử lý tại 1Office |
-| Danh mục quyền và chiến dịch xác nhận quyền | So sánh quyền giữa hệ thống và lưu bằng chứng xác nhận định kỳ | Không tự ghi quyền ngược khi chưa được phê duyệt |
+| Tính năng                                         | Vì sao phù hợp với SDG ERP                                                                 | Quan hệ với 1Office                                                 |
+| :-------------------------------------------------- | :--------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------- |
+| Danh mục chuẩn và mapping ID                     | 1Office thiếu mã nghiệp vụ; SDG cần đối chiếu nhiều nguồn                            | Chỉ đọc ID 1Office, không đổi ID nguồn                         |
+| Dashboard chất lượng dữ liệu                   | Cần phát hiện thiếu mã, trùng người, tài khoản mồ côi và sai trạng thái         | Nhận export/API định kỳ, trả báo cáo cho IT/HCNS               |
+| Bản đồ 3D văn phòng                            | Đặc thù không gian của dự án hiện tại                                                 | Deep link tới hồ sơ 1Office, không sao chép dữ liệu nhạy cảm |
+| GIS hạ tầng KCN                                   | Quản lý tuyến điện, nước, thoát nước, PCCC, đường, cây xanh và mốc giới       | Sự cố/đề xuất tạo hoặc liên kết quy trình 1Office           |
+| Tài sản hạ tầng và IoT                         | Cần tọa độ, topology, thông số kỹ thuật, cảm biến và lịch bảo trì chuyên ngành | 1Office xử lý giao việc/phê duyệt; SDG giữ hồ sơ kỹ thuật   |
+| Biên bản hiện trường                           | Cần ảnh, vị trí bản đồ, đối tượng hạ tầng và lịch sử khắc phục               | Liên kết BQL16 hoặc quy trình liên quan                          |
+| Quản trị tích hợp                               | Mapping, checksum, sync run, lỗi, thử lại và đối soát                                   | Kết nối API/webhook chính thức của 1Office                       |
+| Phân tích quy trình liên hệ thống             | Tổng hợp SLA, nút thắt, vòng trả lại và công việc con quá hạn                      | Chỉ đọc dữ liệu quy trình; người dùng xử lý tại 1Office   |
+| Danh mục quyền và chiến dịch xác nhận quyền | So sánh quyền giữa hệ thống và lưu bằng chứng xác nhận định kỳ                   | Không tự ghi quyền ngược khi chưa được phê duyệt           |
 
 Tài sản văn phòng là vùng cần chọn một hệ thống duy nhất sau pilot. Nếu module Tài sản 1Office đáp ứng mã tài sản, bàn giao, QR, bảo hành và API thì dùng 1Office. SDG ERP chỉ quản lý tài sản chuyên ngành có bản đồ, quan hệ mạng hoặc dữ liệu cảm biến.
 
 ### 6.5 Danh mục quyết định đề xuất
 
-| Quyết định | Phân hệ |
-| :--- | :--- |
-| **Giữ nguyên và khai thác sâu** | Công việc, dự án, quy trình, ký số, lịch, hồ sơ nhân sự, CRM hiện hữu |
-| **Kích hoạt có pilot** | Tài liệu công ty, Văn bản đến, Báo cáo, Tài sản văn phòng, Tuyển dụng, Đào tạo |
-| **Chờ phương pháp/chủ sở hữu** | KPI, OKR, Đánh giá, Tri thức/AI |
-| **Chờ đánh giá hệ thống chuyên ngành** | Bảng lương, Tài chính, Mua hàng, Kho |
-| **Rút gọn/ẩn khỏi vận hành mới** | Mẫu test tạm dừng, quy trình VPP/nghỉ phép trùng sau khi đối chiếu |
-| **Phát triển tại SDG ERP** | Master data/mapping, data quality, 3D, GIS, hạ tầng/IoT, hiện trường, tích hợp và phân tích hợp nhất |
+| Quyết định                                        | Phân hệ                                                                                                        |
+| :--------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| **Giữ nguyên và khai thác sâu**           | Công việc, dự án, quy trình, ký số, lịch, hồ sơ nhân sự, CRM hiện hữu                              |
+| **Kích hoạt có pilot**                      | Tài liệu công ty, Văn bản đến, Báo cáo, Tài sản văn phòng, Tuyển dụng, Đào tạo                 |
+| **Chờ phương pháp/chủ sở hữu**          | KPI, OKR, Đánh giá, Tri thức/AI                                                                              |
+| **Chờ đánh giá hệ thống chuyên ngành** | Bảng lương, Tài chính, Mua hàng, Kho                                                                       |
+| **Rút gọn/ẩn khỏi vận hành mới**        | Mẫu test tạm dừng, quy trình VPP/nghỉ phép trùng sau khi đối chiếu                                     |
+| **Phát triển tại SDG ERP**                  | Master data/mapping, data quality, 3D, GIS, hạ tầng/IoT, hiện trường, tích hợp và phân tích hợp nhất |
 
 ### 6.6 Đánh giá độ chắc chắn của danh sách
 
 Danh sách trên là bản phân loại chiến lược ban đầu, không phải quyết định triển khai cuối cùng. Mức độ chắc chắn được đánh giá như sau:
 
-| Nhóm đề xuất | Độ chắc chắn | Cơ sở | Việc còn phải xác minh |
-| :--- | :--- | :--- | :--- |
-| Giữ Công việc, Dự án, Quy trình, Ký số và Lịch trên 1Office | **Cao** | Có người dùng, dữ liệu và lịch sử vận hành thực tế | SLA, pain point và chi phí theo từng phòng ban |
-| Không xây workflow/ký số thứ hai trong SDG ERP | **Cao** | Sẽ tạo hai nơi xử lý và hai lịch sử pháp lý/nghiệp vụ | Cơ chế deep link, API và báo cáo liên hệ thống |
-| SDG ERP phát triển 3D, GIS và vận hành hạ tầng KCN | **Cao** | Là nghiệp vụ không gian và kỹ thuật chuyên ngành, chưa thấy năng lực tương đương trên 1Office | Phạm vi tài sản, bản đồ nền, chủ sở hữu và dữ liệu đầu vào |
-| SDG ERP quản lý mapping và chất lượng dữ liệu | **Cao** | Dữ liệu hiện có thiếu mã và có chênh lệch giữa hồ sơ/tài khoản | Hệ thống nguồn cuối cùng và chu kỳ đồng bộ |
-| Dùng Tài liệu công ty và Báo cáo của 1Office | **Trung bình–cao** | Module sẵn có, phù hợp với dữ liệu và quy trình đã chạy | Quyền, versioning, tìm kiếm và khả năng export |
-| Kết hợp Văn bản đến với HCNS07 | **Trung bình** | Có workflow hoạt động nhưng module sổ văn bản đang trống | Khả năng liên kết một bản ghi với workflow mà không nhập hai lần |
-| Dùng 1Office cho tài sản văn phòng | **Trung bình** | Module có sẵn nhưng chưa có dữ liệu để chứng minh mức đáp ứng | QR, bàn giao, bảo hành, lịch sử, API và báo cáo |
-| Dùng 1Office cho tuyển dụng và đào tạo | **Trung bình** | Phù hợp chức năng chuẩn, chưa có dữ liệu sử dụng | Quy trình thật, giấy tờ, báo cáo và nhu cầu tích hợp |
-| Khai thác CRM sâu hơn | **Trung bình** | Có nhóm Enterprise và quyền CRM nhưng dữ liệu quan sát còn ít | Đội ngũ sử dụng, nguồn khách hàng và quy trình bán hàng thực tế |
-| Hợp nhất NP01/NP02 và VPP01/VPP02/VPP03 | **Thấp–trung bình** | Tên và mục đích gần nhau | Phải so sánh node, form, SLA, chứng từ và người duyệt trước khi quyết định |
-| Bật KPI, OKR, Đánh giá hoặc AI/Tri thức | **Thấp ở thời điểm hiện tại** | Chưa thấy dữ liệu và chưa có bằng chứng về phương pháp quản trị đã chốt | Chủ sở hữu, quy chế, dữ liệu sạch, quyền và tiêu chí thành công |
-| Dùng 1Office cho lương, tài chính, mua hàng và kho | **Chưa đủ cơ sở** | Màn hình đang trống; có thể công ty dùng hệ thống khác | Hệ thống hiện hữu, yêu cầu pháp lý/kế toán, tích hợp và chi phí chuyển đổi |
+| Nhóm đề xuất                                                       | Độ chắc chắn                           | Cơ sở                                                                                                          | Việc còn phải xác minh                                                                  |
+| :--------------------------------------------------------------------- | :----------------------------------------- | :--------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------ |
+| Giữ Công việc, Dự án, Quy trình, Ký số và Lịch trên 1Office | **Cao**                              | Có người dùng, dữ liệu và lịch sử vận hành thực tế                                                  | SLA, pain point và chi phí theo từng phòng ban                                          |
+| Không xây workflow/ký số thứ hai trong SDG ERP                    | **Cao**                              | Sẽ tạo hai nơi xử lý và hai lịch sử pháp lý/nghiệp vụ                                                | Cơ chế deep link, API và báo cáo liên hệ thống                                      |
+| SDG ERP phát triển 3D, GIS và vận hành hạ tầng KCN              | **Cao**                              | Là nghiệp vụ không gian và kỹ thuật chuyên ngành, chưa thấy năng lực tương đương trên 1Office | Phạm vi tài sản, bản đồ nền, chủ sở hữu và dữ liệu đầu vào                  |
+| SDG ERP quản lý mapping và chất lượng dữ liệu                  | **Cao**                              | Dữ liệu hiện có thiếu mã và có chênh lệch giữa hồ sơ/tài khoản                                    | Hệ thống nguồn cuối cùng và chu kỳ đồng bộ                                        |
+| Dùng Tài liệu công ty và Báo cáo của 1Office                   | **Trung bình–cao**                 | Module sẵn có, phù hợp với dữ liệu và quy trình đã chạy                                              | Quyền, versioning, tìm kiếm và khả năng export                                        |
+| Kết hợp Văn bản đến với HCNS07                                  | **Trung bình**                      | Có workflow hoạt động nhưng module sổ văn bản đang trống                                               | Khả năng liên kết một bản ghi với workflow mà không nhập hai lần                 |
+| Dùng 1Office cho tài sản văn phòng                                | **Trung bình**                      | Module có sẵn nhưng chưa có dữ liệu để chứng minh mức đáp ứng                                      | QR, bàn giao, bảo hành, lịch sử, API và báo cáo                                     |
+| Dùng 1Office cho tuyển dụng và đào tạo                          | **Trung bình**                      | Phù hợp chức năng chuẩn, chưa có dữ liệu sử dụng                                                      | Quy trình thật, giấy tờ, báo cáo và nhu cầu tích hợp                              |
+| Khai thác CRM sâu hơn                                               | **Trung bình**                      | Có nhóm Enterprise và quyền CRM nhưng dữ liệu quan sát còn ít                                          | Đội ngũ sử dụng, nguồn khách hàng và quy trình bán hàng thực tế               |
+| Hợp nhất NP01/NP02 và VPP01/VPP02/VPP03                             | **Thấp–trung bình**               | Tên và mục đích gần nhau                                                                                   | Phải so sánh node, form, SLA, chứng từ và người duyệt trước khi quyết định     |
+| Bật KPI, OKR, Đánh giá hoặc AI/Tri thức                          | **Thấp ở thời điểm hiện tại** | Chưa thấy dữ liệu và chưa có bằng chứng về phương pháp quản trị đã chốt                        | Chủ sở hữu, quy chế, dữ liệu sạch, quyền và tiêu chí thành công                |
+| Dùng 1Office cho lương, tài chính, mua hàng và kho              | **Chưa đủ cơ sở**               | Màn hình đang trống; có thể công ty dùng hệ thống khác                                                | Hệ thống hiện hữu, yêu cầu pháp lý/kế toán, tích hợp và chi phí chuyển đổi |
 
 Các đề xuất có độ chắc chắn cao có thể dùng làm nguyên tắc kiến trúc ngay. Đề xuất mức trung bình chỉ được chuyển thành kế hoạch sau một pilot. Đề xuất mức thấp phải bắt đầu bằng phỏng vấn chủ sở hữu nghiệp vụ và quan sát quy trình thật.
 

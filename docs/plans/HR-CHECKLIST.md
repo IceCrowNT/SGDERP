@@ -12,6 +12,16 @@
 
 ## 📌 BẢNG TIẾN ĐỘ TỔNG QUAN
 
+### Việt hóa tên vật lý DB — 22/10/2026
+
+- [x] Khởi động Prisma Studio tại `http://localhost:5555` và mở Google Chrome theo yêu cầu để xem dữ liệu.
+
+- [x] Lập ánh xạ 16 bảng/194 cột sang tiếng Việt không dấu; giữ API Prisma để tương thích mã nguồn; tạo `docs/DATABASE-DICTIONARY.md` và cập nhật rule/kiến trúc.
+- [x] `prisma format` và `prisma validate` đạt. `migrate dev --create-only` bị từ chối do môi trường không tương tác; tạo SQL rename tường minh thay cho đề xuất drop/create của Prisma. `pg_dump` local v16 không tương thích server v17 nên lưu bản dữ liệu JSON đầy đủ và schema trước đổi tên trong thư mục tạm riêng tư ngoài repository; đây không phải bản backup cluster PostgreSQL.
+- [x] Áp dụng migration `20261022090000_viet_hoa_ten_bang_va_cot` chỉ rename trong transaction; cả 16 bảng giữ nguyên số dòng và dấu kiểm tra toàn bộ dữ liệu; Prisma diff DB–schema không có khác biệt, Prisma Client đã tái sinh.
+- [x] Truy vấn quan hệ Prisma sau rename đạt: 18 đơn vị, 68 user (gồm tài khoản hệ thống), 7 role, 1 chứng từ và 11 dòng kiểm kê, chưa có tài sản cá thể. TypeScript và production build webpack đạt.
+- [x] TypeScript, build webpack và `git diff --check` đạt; Playwright 5/5 đạt sau rename (27,5 giây), gồm đăng nhập, đọc cơ cấu, sửa metadata có hoàn tác và mobile. Các log đăng nhập/kiểm thử phát sinh sau đối soát toàn vẹn là thay đổi nghiệp vụ do test, không do migration.
+
 - [x] **Bước Chuẩn bị: Thiết lập Cấu trúc CSDL Khóa Số Nguyên & Bộ Nhận Diện Sao Đỏ**
 - [x] **Giai đoạn 1: Khởi tạo Thư viện UI & Nạp Dữ liệu thực tế 67 Nhân sự từ Excel**
 - [x] **Giai đoạn 2: Cơ cấu Tổ chức Phân cấp Cây (Cha - Con) & Quản lý Phòng Ban (Department Management)**
@@ -238,7 +248,7 @@
 
 ### Đầu vào từ nguồn chuẩn 1Office và xác nhận nghiệp vụ — rà soát ngày 21/10/2026
 - [x] Kiểm kê tài liệu tại docs/SDGSources; đọc các phần trách nhiệm/luồng xử lý liên quan trong QTHC12, QTHC15, QTHC18, quy trình hợp đồng BPC02, tài liệu kế toán/kinh doanh và bản phối hợp sửa đổi 6/2025 (bao gồm KHĐT–BQLDA). Phạm vi là xác định dữ liệu tổ chức, nhân sự và thẩm quyền; chưa kiểm định toàn bộ phụ lục hoặc hiệu lực hiện hành.
-- [x] Đọc trực quan đủ 21 trang cẩm nang hội nhập; ghi nhận tầng quản trị, chức năng sáu khối văn phòng, sáu bộ phận BQLDA, tuyến đầu mối phối hợp, quy tắc bảo mật/AI và ranh giới nghỉ phép trên 1Office tại `docs/strategy/ONBOARDING-HANDBOOK-ORGANIZATION-RECONCILIATION.md`.
+- [x] Đọc trực quan đủ 21 trang cẩm nang hội nhập; ghi nhận tầng quản trị, chức năng sáu khối văn phòng, sáu bộ phận BQLDA, tuyến đầu mối phối hợp, quy tắc bảo mật/AI và ranh giới nghỉ phép trên 1Office tại `docs/strategy/DOI-CHIEU-CAM-NANG-HOI-NHAP-VA-CO-CAU.md`.
 - [x] Dọn toàn bộ ảnh/contact sheet tạm sau khi kiểm tra trực quan; repository chỉ giữ PPTX nguồn và báo cáo đối chiếu có checksum.
 - [ ] Xin HCNS/BQLDA xác nhận quan hệ Ban Giám đốc QLDA–sáu bộ phận, cách phân loại Ban Kiểm soát và ngày hiệu lực của cẩm nang trước khi đổi master data.
 - [x] Đề xuất bộ trường cần HCNS xác nhận: đơn vị và cấp trên; vị trí/chức vụ; mã nhân viên và quản lý trực tiếp; phân công chính/kiêm nhiệm; trách nhiệm, phạm vi phê duyệt và ủy quyền; ngày hiệu lực và người xác nhận bản chốt. Soạn lời nhắn trong hội thoại, chưa gửi.

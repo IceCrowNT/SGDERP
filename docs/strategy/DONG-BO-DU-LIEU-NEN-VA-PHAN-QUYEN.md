@@ -265,6 +265,8 @@ Quy trình phải idempotent: cùng một nguồn, loại thực thể và exter
 
 ## 7. Mô hình dữ liệu mục tiêu
 
+**Quy ước tên DB cập nhật 22/10/2026:** các tên model/field trong tài liệu là tên API Prisma. PostgreSQL dùng tiếng Việt không dấu qua `@@map`/`@map` (ví dụ `Department` → `phong_ban`, `externalId` → `dinh_danh_nguon`). Mapping đầy đủ nằm tại [từ điển DB](../DATABASE-DICTIONARY.md). Các bảng mới trong thiết kế này cũng phải tuân thủ quy tắc đó khi triển khai; đổi tên vật lý không thay đổi ID hoặc nguồn chuẩn 1Office.
+
 Schema và tính năng hiện tại đều là bản nháp, nên có thể thay thế toàn bộ nếu phương án được duyệt. Đề xuất dưới đây chia hai bước để việc đánh giá, migration và kiểm chứng dữ liệu rõ ràng hơn.
 
 ### Bước A — Lớp tích hợp tối thiểu
@@ -343,7 +345,7 @@ Các nội dung sau cần người có thẩm quyền xác nhận trước khi t
 ## 11. Tài liệu liên quan
 
 - [Nguồn export quản trị 1Office](../1office-sources/README.md)
-- [Mô hình dữ liệu quản trị và tích hợp 1Office](./1OFFICE-ADMIN-DATA-MODEL-AND-INTEGRATION.md)
-- [Bối cảnh hiện tại và định hướng số hóa](./CURRENT-STATE-AND-DIGITAL-TRANSFORMATION-DIRECTION.md)
+- [Mô hình dữ liệu quản trị và tích hợp 1Office](./MO-HINH-DU-LIEU-QUAN-TRI-VA-TICH-HOP-1OFFICE.md)
+- [Bối cảnh hiện tại và định hướng số hóa](./BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md)
 - [Kế hoạch chuyển đổi số](../plans/DIGITAL-TRANSFORMATION-CHECKLIST.md)
 - [Kế hoạch HR](../plans/HR-CHECKLIST.md)

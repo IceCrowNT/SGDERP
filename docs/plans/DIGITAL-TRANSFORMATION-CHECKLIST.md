@@ -2,6 +2,11 @@
 
 ## Giai đoạn 0 — Khảo sát ban đầu
 
+- [x] Đổi tên 5 tài liệu trong `docs/strategy` sang tiếng Việt không dấu; cập nhật tham chiếu trong AGENTS.md, kiến trúc, checklist và tài liệu liên quan; kiểm tra không còn tên file cũ.
+
+- [x] Ngày 22/10/2026: làm sạch file bối cảnh, gộp ý trùng, bỏ câu hỏi nguồn chuẩn đã chốt và lộ trình chung chưa được duyệt; cập nhật trạng thái prototype, cơ cấu và hướng bản sao nhân sự/API/webhook. Các số liệu cũ giữ mốc snapshot rõ ràng.
+- [x] Ghi nhận mỗi phòng có tài khoản GPTpro5x riêng theo thông tin người phụ trách; định hướng người dùng tự kết nối tài khoản được cấp, sử dụng và phân bổ chi phí/hạn mức theo phòng, không tự chuyển sang nguồn trả phí chung. Tên gói, cách tích hợp và quyền sử dụng còn cần xác minh; chưa triển khai AI.
+
 - [x] Ghi nhận ràng buộc mới: không truy cập lại 1Office bằng credential cũ; chỉ xem/export khi được cấp lại cho yêu cầu cụ thể; giữ nguyên quyền và không thay đổi dữ liệu/cấu hình.
 - [x] Kiểm tra repository không chứa chuỗi mật khẩu 1Office đã cung cấp trong hội thoại.
 - [x] Ghi nhận toàn bộ tính năng SDG ERP hiện tại là bản nháp; báo cáo có thể đề xuất xây lại nhưng chưa phải lệnh triển khai.
@@ -18,16 +23,16 @@
 - [x] Lập mô hình dữ liệu tích hợp và ranh giới tính năng 1Office–SDG ERP.
 - [x] Ghi nhận mức sử dụng hiển thị của Công việc, Dự án, Quy trình, Ký số, HRM, CRM và các module Advance.
 - [x] Ghi nhận các khoảng trống và vấn đề từ lịch sử ticket hỗ trợ.
-- [x] Tạo tài liệu `docs/strategy/CURRENT-STATE-AND-DIGITAL-TRANSFORMATION-DIRECTION.md`.
+- [x] Tạo tài liệu `docs/strategy/BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md`.
 - [x] Đối chiếu từng hồ sơ giữa file 67 nhân sự và 66 tài khoản người dùng 1Office; xác nhận không có sai lệch phòng ban/vị trí ở các cặp đã khớp và nhận diện hồ sơ mã 71 chưa có tài khoản.
 - [x] Đối chiếu 18 đơn vị SDG với 18 đơn vị nghiệp vụ 1Office, lập mapping code SDG–ID 1Office và tách nút công ty ID 23.
 - [x] Đối chiếu role seed với nhóm 1Office; xác nhận hai mô hình không thể ánh xạ 1–1.
-- [x] Lập thiết kế `docs/strategy/MASTER-DATA-AND-RBAC-SYNCHRONIZATION.md` cho master data, RBAC, nguồn sở hữu, trạng thái và luồng đồng bộ.
+- [x] Lập thiết kế `docs/strategy/DONG-BO-DU-LIEU-NEN-VA-PHAN-QUYEN.md` cho master data, RBAC, nguồn sở hữu, trạng thái và luồng đồng bộ.
 - [x] Xác minh PostgreSQL local tại `localhost:5432` đang hoạt động; lỗi kết nối trước đó do sandbox. Migration tài sản đã được áp dụng và seed BMHC 0501 đã nạp 11 nhóm, tổng 90 thiết bị ở mức số lượng.
 - [x] Ghi nhận bối cảnh người phụ trách nhận bàn giao ít thông tin; phần lớn hiện trạng phải tự khảo sát, tìm kiếm và kiểm chứng dần.
 - [x] Chốt 1Office là nguồn chuẩn cho hồ sơ nhân sự và cơ cấu tổ chức dùng làm base cho SDG ERP.
 - [x] Hoàn thiện cơ cấu phòng ban giai đoạn hiện tại: lưu snapshot/mapping 1Office trên 18 đơn vị, khóa trường nguồn, hiển thị cây và tab đối chiếu 18/18 khớp.
-- [x] Đọc đủ 21 trang cẩm nang hội nhập dạng ảnh và lập báo cáo đối chiếu cơ cấu/chức năng/đầu mối/bảo mật tại `docs/strategy/ONBOARDING-HANDBOOK-ORGANIZATION-RECONCILIATION.md`.
+- [x] Đọc đủ 21 trang cẩm nang hội nhập dạng ảnh và lập báo cáo đối chiếu cơ cấu/chức năng/đầu mối/bảo mật tại `docs/strategy/DOI-CHIEU-CAM-NANG-HOI-NHAP-VA-CO-CAU.md`.
 
 ## Giai đoạn 1 — Xác nhận hiện trạng
 
