@@ -60,3 +60,11 @@
 - [ ] Cải thiện mobile/touch, keyboard accessibility, reduced motion và fallback khi WebGL không hỗ trợ.
 - [ ] Chuẩn hóa màu theo theme token; thiết kế legend rõ giữa phòng ban, loại tài sản và trạng thái.
 - [ ] Chỉ nâng cấp sang mô hình glTF/CAD sau khi có bản vẽ được xác nhận và mục tiêu sử dụng cụ thể.
+
+### Phụ lục tài sản IT — 23/10/2026
+- [x] Rà soát file project: chưa tìm thấy ảnh gốc bàn giao; tài liệu hiện có lưu số liệu tham khảo từ ảnh trong hội thoại.
+- [x] Tạo `docs/bao-cao/DANH-SACH-TAI-SAN-IT-VA-GHI-CHU.docx`: 11 nhóm, tổng 90 thiết bị, ghi chú cần bổ sung và mẫu ghi nhận từng tài sản. Không tự tạo 90 hồ sơ hoặc suy tình trạng/vị trí/người sử dụng.
+- [x] Kiểm tra tổng và cấu trúc DOCX; chưa kiểm tra phân trang trực quan vì thiếu LibreOffice (`soffice`).
+- [x] Theo yêu cầu rút gọn: giữ bảng tổng, thay mẫu phiếu bằng list 90 dòng (STT, thiết bị, ghi chú trống); đây là danh sách tạm theo số lượng, chưa phải 90 tài sản đã kiểm kê. Kiểm tra đủ 90 dòng.
+- [x] Gộp phụ lục Word thành một bảng duy nhất: 11 dòng nhóm có tên loại/số lượng và 90 dòng thiết bị với ghi chú trống. Đã kiểm tra cấu trúc và số dòng; render vẫn bị chặn do thiếu `soffice`.
+- [x] Đổi STT phụ lục Word: bắt đầu lại từ 1 cho từng chủng loại; kiểm tra đủ 11 nhóm và 90 dòng thiết bị.

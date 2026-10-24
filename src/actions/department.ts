@@ -35,13 +35,19 @@ export async function getDepartments() {
     if (!session?.userId) {
       return { success: false as const, message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." };
     }
-    if (session.permissions?.HR === "NONE") {
+    if (!["VIEW", "MANAGE"].includes(session.permissions?.HR ?? "")) {
       return { success: false as const, message: "Bạn không có quyền truy cập danh mục phòng ban." };
     }
 
+    const company = await db.company.findUnique({ where: { id: session.companyId }, select: { name: true } });
     const departments = await db.department.findMany({
       where: { companyId: session.companyId },
       include: {
+        users: {
+          where: { companyId: session.companyId },
+          select: { id: true, fullName: true, employeeCode: true, position: true },
+          orderBy: { fullName: "asc" },
+        },
         parent: { select: { id: true, code: true, name: true, externalId: true } },
         children: {
           select: {
@@ -79,6 +85,7 @@ export async function getDepartments() {
         parentId: department.parentId,
         parent: department.parent,
         children: department.children,
+        employees: department.users,
         _count: department._count,
         source: {
           system: department.externalSystem,
@@ -105,11 +112,10 @@ export async function getDepartments() {
     return {
       success: true as const,
       data,
+      companyName: company?.name ?? "Công ty",
       canManage: session.permissions?.HR === "MANAGE",
       comparison: {
         system: "1Office",
-        sourceRecords: linked > 0 ? linked + 1 : 0,
-        sourceCompanyNodes: linked > 0 ? 1 : 0,
         sourceDepartmentRecords: linked,
         matched,
         issues: data.length - matched,

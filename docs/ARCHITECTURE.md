@@ -210,3 +210,45 @@ Khi AI Agent hoặc kỹ sư thêm thư viện mới hoặc thay đổi hạ t�
 2. **Cập nhật Bảng Mục 3 (Sổ bộ thư viện):** 
    - Thêm 1 dòng tương ứng gồm: Nhóm, Tên gói, Phiên bản cài đặt, và **Mục đích nghiệp vụ cụ thể** (Tại sao phải cài, phục vụ tính năng gì).
 3. **Cập nhật `.env.example` & Mục 4 (nếu có biến môi trường mới):** Đảm bảo không lộ secret keys nhưng vẫn đủ thông số mẫu cho môi trường khác.
+
+### Tài liệu báo cáo nội bộ
+
+- `docs/bao-cao/`: bản trình bày phục vụ báo cáo thử việc và trao đổi nội bộ. `BAO-CAO-TUAN-THU-VIEC-DAU-TIEN-BAN-NHAP-01.pptx` bám 5 đầu việc tại trang 20 cẩm nang hội nhập, là bản nháp chờ người báo cáo xác nhận thông tin cá nhân và quản lý chốt KPI; không phải quyết định triển khai tính năng.
+- Việc tạo báo cáo không bổ sung dependency hoặc thay đổi cấu hình ứng dụng.
+
+### Thử nghiệm công cụ hồ sơ thanh toán AI
+
+Route `/ai-documents` dùng Server Component kiểm tra đăng nhập và quyền `SYSTEM`, nhúng `src/components/ai-documents/PaymentDocumentLab.tsx`. Bản pilot chỉ chạy tại trình duyệt: xem ảnh, nhập dữ liệu, tạo và sao chép bộ yêu cầu. Không có kết nối OpenAI, API key, OAuth, upload hoặc DB. Đã bổ sung xuất Word cục bộ bằng `docx` như mục bên dưới. Kế hoạch tại [AI-DOCUMENTS-CHECKLIST.md](./plans/AI-DOCUMENTS-CHECKLIST.md).
+
+### Xuất hồ sơ thanh toán Word tại trình duyệt
+
+Bổ sung dependency `docx` (`^9.13.0`) để tạo DOCX thật, tải động khi người dùng xuất. Bộ xuất tại `src/lib/payment-document.ts` điền dữ liệu biểu mẫu vào đề nghị thanh toán và tờ trình, bắt đầu mỗi văn bản trên trang mới. Không gọi AI và không gửi dữ liệu lên máy chủ. Mẫu thử nghiệm cần đối chiếu biểu mẫu chính thức trước khi sử dụng nghiệp vụ.
+
+### Thiết lập Sign in with ChatGPT
+
+`ChatGPTConnectionSetup.tsx` hiển thị trạng thái chờ đăng ký ứng dụng tại `/ai-documents`, dùng cùng guard SYSTEM của trang. Chưa triển khai route OAuth, lưu token, gọi AI hoặc thêm biến môi trường/dependency. Người phụ trách đã chọn hướng đăng nhập ChatGPT; cần client được cấp và quyền dùng gói cho web nội bộ trước khi triển khai luồng thật.
+
+### Sơ đồ tổ chức — 23/10/2026
+- `src/components/departments/OrganizationChart.tsx`: client component vẽ cây ngang bằng SVG và các nút Shadcn trong foreignObject, không thêm dependency. Tọa độ/kích thước SVG tính từ cây DB; màu dùng theme Tailwind.
+- Trang `/departments` có hai tab danh sách và sơ đồ dùng chung dữ liệu; tên công ty được truy vấn theo session. Đối soát snapshot chuyển vào dialog cho HR MANAGE. Sơ đồ không sửa quan hệ tổ chức.
+
+### Giao diện OpenAI API key — 23/10/2026
+- Thay `ChatGPTConnectionSetup.tsx` bằng `ApiKeyConnectionSetup.tsx`, đặt trong `PaymentDocumentLab` dưới tiêu đề tính năng. Form React Hook Form/Zod, key/model chỉ trong bộ nhớ component; chưa endpoint API hoặc lưu bí mật.
+- Không thêm dependency hoặc biến môi trường. OAuth không còn là hướng triển khai chính; luồng server gọi API là bước tiếp theo.
+
+### Cấu hình API phía server — thay cơ chế nhập key trên tab
+- `ApiKeyConnectionSetup.tsx` là Server Component có `server-only`; page truyền JSX đã render qua slot `connectionStatus` của PaymentDocumentLab. Không truyền key/model trong props client.
+- Cấu hình tại `.env.local` ở thư mục gốc (đã gitignore) hoặc secret/environment của môi trường triển khai:
+  ```dotenv
+  OPENAI_API_KEY=
+  OPENAI_MODEL=
+  ```
+- Quản trị viên điền key thật và mã model được phép sử dụng; không dùng tiền tố NEXT_PUBLIC_, không commit file env. Khởi động lại server sau khi thay cấu hình. Placeholder trống không ghi đè biến đã khai báo trong các file env hiện có.
+- Chưa gọi API, chưa xác thực cấu hình, chưa phân key theo phòng; giao diện chỉ báo có/thiếu cấu hình máy chủ. Không thêm dependency.
+
+### Cập nhật bố cục cơ cấu — 24/10/2026
+- `OrganizationChart.tsx` chuyển từ cây ngang sang cây từ trên xuống, x phân theo nhánh và y phân theo cấp; đường nối SVG từ đáy nút cha tới đỉnh nút con. Không thay nguồn dữ liệu hoặc dependency.
+
+### Kế hoạch phân quyền — 24/10/2026
+- Thêm tài liệu [ROLE-MANAGEMENT-CHECKLIST.md](plans/ROLE-MANAGEMENT-CHECKLIST.md), đăng ký router AGENTS. Đây là kế hoạch, chưa thay kiến trúc chạy thật hoặc dependencies.
+- Tái sử dụng Role/Permission/RolePermission/UserRole, dự kiến tách quyền RBAC, xử lý hiệu lực phiên và thêm quản lý phạm vi theo giai đoạn; xem plan cho các bước chưa thực hiện.

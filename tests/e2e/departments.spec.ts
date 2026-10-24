@@ -1,83 +1,113 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext } from "@playwright/test";
+import { SignJWT } from "jose";
+import { loadEnvConfig } from "@next/env";
+import { PrismaClient } from "@prisma/client";
 
-const username = process.env.E2E_ADMIN_USERNAME;
-const password = process.env.E2E_ADMIN_PASSWORD;
+loadEnvConfig(process.cwd());
 
-async function loginAsAdmin(page: Page) {
-  if (!username || !password) {
-    throw new Error("Cần E2E_ADMIN_USERNAME và E2E_ADMIN_PASSWORD để chạy kiểm thử admin.");
-  }
-
-  await page.goto("/login");
-  await page.locator('input[name="username"]').fill(username);
-  await page.locator('input[name="password"]').fill(password);
-  await page.getByRole("button", { name: "Đăng nhập" }).click();
-  await expect(page).toHaveURL("/");
+async function session(context: BrowserContext, level: "VIEW" | "MANAGE" | "NONE") {
+  const url = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:4000";
+  if (!["localhost", "127.0.0.1"].includes(new URL(url).hostname)) throw new Error("Local test only");
+  const db = new PrismaClient();
+  let companyId: number;
+  try {
+    const department = await db.department.findFirst({ select: { companyId: true } });
+    if (!department) throw new Error("Requires existing department data");
+    companyId = department.companyId;
+  } finally { await db.$disconnect(); }
+  const token = await new SignJWT({
+    userId: -1, username: "department-read-test", fullName: "Test", employeeCode: "TEST",
+    companyId, roleCodes: [], permissions: { HR: level },
+  }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("5m")
+    .sign(new TextEncoder().encode(process.env.SESSION_SECRET || "sdg_erp_super_secret_jwt_key_default_2026"));
+  await context.addCookies([{ name: "sdg_session", value: token, url }]);
 }
 
-test("khách chưa đăng nhập được chuyển về trang đăng nhập", async ({ page }) => {
+test("requires login and HR read permission", async ({ page, context }) => {
   await page.goto("/departments");
   await expect(page).toHaveURL(/\/login$/);
+  await session(context, "NONE");
+  await page.goto("/departments");
+  await expect(page.getByText("Bạn không có quyền truy cập danh mục phòng ban.")).toBeVisible();
 });
 
-test.describe("cơ cấu phòng ban với quyền admin", () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsAdmin(page);
-    await page.goto("/departments");
-    await expect(page.getByRole("heading", { name: "Cơ cấu tổ chức" })).toBeVisible();
-  });
+test("reader can search, expand and open personnel without reconciliation controls", async ({ page, context }) => {
+  await session(context, "VIEW");
+  await page.goto("/departments");
+  await expect(page.getByRole("heading", { name: "Phòng ban", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Đối soát/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Thông tin nội bộ/ })).toHaveCount(0);
+  await page.getByRole("button", { name: /^Mở rộng/ }).first().click();
+  const collapse = page.getByRole("button", { name: /^Thu gọn/ }).first();
+  await collapse.click();
+  await expect(page.getByRole("button", { name: /^Mở rộng/ }).first()).toBeVisible();
+  await page.getByLabel("Tìm phòng ban").fill("HCNS");
+  await expect(page.getByText("PHÒNG HÀNH CHÍNH NHÂN SỰ", { exact: true })).toBeVisible();
+  const people = page.getByRole("list", { name: "Nhân sự trực thuộc PHÒNG HÀNH CHÍNH NHÂN SỰ", exact: true });
+  await expect(people).toBeVisible();
+  expect(await people.getByRole("listitem").count()).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Thu gọn PHÒNG HÀNH CHÍNH NHÂN SỰ", exact: true }).click();
+  await expect(people).toHaveCount(0);
+  await page.getByRole("button", { name: "Mở rộng PHÒNG HÀNH CHÍNH NHÂN SỰ", exact: true }).click();
+  await expect(people).toBeVisible();
+  await page.getByRole("link", { name: /hồ sơ/ }).click();
+  await expect(page).toHaveURL(/employees\?departmentId=/);
+});
 
-  test("hiển thị và lọc dữ liệu đối chiếu 1Office", async ({ page }) => {
-    await expect(page.getByText("Nguồn chuẩn: 1Office")).toBeVisible();
-    await expect(page.getByText("18/18 đơn vị nghiệp vụ đang khớp 1Office")).toBeVisible();
-    await expect(page.getByRole("button", { name: /^Sửa metadata / })).toHaveCount(18);
+test("manager sees accurate snapshot wording and editable internal fields", async ({ page, context }) => {
+  await session(context, "MANAGE");
+  await page.goto("/departments");
+  await page.getByRole("button", { name: "Thông tin nội bộ BAN KIỂM SOÁT", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.locator("input").first()).toBeDisabled();
+  await expect(dialog.locator('input[name="code"]')).toBeEditable();
+  await page.getByRole("button", { name: "Hủy", exact: true }).click();
+  await page.getByRole("button", { name: /Đối soát/ }).click();
+  await expect(page.getByText(/Đây không phải kiểm tra trực tiếp/)).toBeVisible();
+  await page.getByLabel("Tìm đơn vị đối soát").fill("HCNS");
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator("tbody")).toContainText("Khớp bản đã lưu");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("dialog").getByRole("button", { name: /Close|Đóng/ }).click();
+  await page.getByRole("tab", { name: "Danh sách phòng ban" }).click();
+  await page.getByLabel("Tìm phòng ban").fill("xyz-no-match");
+  await expect(page.getByText("Không tìm thấy phòng ban phù hợp.")).toBeVisible();
+  await page.getByLabel("Tìm phòng ban").fill("");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
 
-    await page.getByRole("tab", { name: "Đối chiếu 1Office" }).click();
-    await page.getByPlaceholder(/^Tìm theo tên/).fill("HCNS");
-    const rows = page.locator("tbody tr");
-    await expect(rows).toHaveCount(1);
-    await expect(rows.first()).toContainText("HCNS");
-    await expect(rows.first()).toContainText("Khớp 1Office");
-  });
 
-  test("khóa trường nguồn và cho phép sửa metadata ERP", async ({ page }) => {
-    await page.getByRole("button", { name: "Sửa metadata BAN KIỂM SOÁT" }).click();
-    const dialog = page.getByRole("dialog", { name: "Cập nhật metadata ERP" });
-    await expect(dialog.locator("input").nth(0)).toBeDisabled();
-    await expect(dialog.locator('input[name="code"]')).toBeEditable();
-    await expect(dialog.locator('textarea[name="description"]')).toBeEditable();
-  });
+test("organization chart supports selection, collapse, zoom and mobile", async ({ page, context }) => {
+  await session(context, "VIEW");
+  await page.goto("/departments");
+  await page.getByRole("tab", { name: "Sơ đồ tổ chức" }).click();
+  const chart = page.getByRole("region", { name: "Sơ đồ cơ cấu tổ chức" });
+  await expect(chart).toBeVisible();
+  const positions = await chart.locator("foreignObject").evaluateAll(elements => elements.map(element => ({
+    y: Number(element.getAttribute("y")),
+    company: !element.hasAttribute("data-department-id"),
+  })));
+  const company = positions.find(node => node.company);
+  expect(company).toBeDefined();
+  expect(positions.filter(node => !node.company).every(node => node.y > company!.y)).toBe(true);
 
-  test("ghi đọc lại metadata và hoàn tác", async ({ page }) => {
-    test.skip(process.env.E2E_ALLOW_WRITES !== "1", "Chỉ chạy khi cho phép ghi có hoàn tác.");
-
-    await page.getByRole("button", { name: "Sửa metadata BAN KIỂM SOÁT" }).click();
-    const description = page.locator('textarea[name="description"]');
-    const baseline = await description.inputValue();
-    const marker = `E2E_PLAYWRIGHT_${Date.now()}`;
-
-    await description.fill(marker);
-    await page.getByRole("button", { name: "Lưu metadata" }).click();
-    await expect(page.getByText("Đã cập nhật metadata ERP của đơn vị.")).toBeVisible();
-
-    await page.reload();
-    await page.getByRole("button", { name: "Sửa metadata BAN KIỂM SOÁT" }).click();
-    await expect(page.locator('textarea[name="description"]')).toHaveValue(marker);
-    await page.locator('textarea[name="description"]').fill(baseline);
-    await page.getByRole("button", { name: "Lưu metadata" }).click();
-
-    await page.reload();
-    await page.getByRole("button", { name: "Sửa metadata BAN KIỂM SOÁT" }).click();
-    await expect(page.locator('textarea[name="description"]')).toHaveValue(baseline);
-  });
-
-  test("giao diện đối chiếu hoạt động trên mobile", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.getByRole("tab", { name: "Đối chiếu 1Office" }).click();
-    await expect(page.getByText("Tên nguồn")).toHaveCount(18);
-    const hasHorizontalOverflow = await page.evaluate(
-      () => document.documentElement.scrollWidth > document.documentElement.clientWidth
-    );
-    expect(hasHorizontalOverflow).toBe(false);
-  });
+  await page.getByRole("button", { name: "Xem nhân sự PHÒNG HÀNH CHÍNH NHÂN SỰ", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("hồ sơ trực thuộc");
+  await page.getByRole("dialog").getByRole("button", { name: /Close|Đóng/ }).click();
+  const child = page.getByRole("button", { name: "Xem nhân sự Bộ phận CSKH - Phòng Kinh Doanh", exact: true });
+  await expect(child).toHaveCount(1);
+  await page.getByRole("button", { name: "Thu nhánh PHÒNG KINH DOANH", exact: true }).click();
+  await expect(child).toHaveCount(0);
+  await page.getByRole("button", { name: "Mở nhánh PHÒNG KINH DOANH", exact: true }).click();
+  await expect(child).toHaveCount(1);
+  await page.getByRole("button", { name: "Phóng to sơ đồ", exact: true }).click();
+  await expect(page.getByText("90%", { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Vừa màn hình" }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: "outputs/department-chart-mobile.png" });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole("button", { name: "Vừa màn hình" }).click();
+  await page.screenshot({ path: "outputs/department-chart-desktop.png" });
 });

@@ -244,6 +244,24 @@
 - [ ] Đối soát lại các mục đã đánh dấu hoàn thành: phân trang HR/TanStack Table, data scope, render 3D theo nhu cầu và liên kết hồ sơ từ phòng 3D. Vòng lặp hiện vẫn render liên tục; route /employees/[id] chưa có trong cây mã nguồn.
 - [ ] Làm rõ liên kết phòng 3D theo deptCode so với quy tắc ID, cập nhật dependency registry và tách checklist OFFICE-3D theo router khi chỉnh lý tài liệu.
 
+## Hiển thị nhân sự trong cây phòng ban — 22/10/2026
+
+- [x] TypeScript, ESLint đạt; 3/3 Playwright Chrome đạt, đã bổ sung kiểm tra mở/thu danh sách nhân sự trực thuộc ngay trong cây.
+
+- [x] Mở nhánh hiển thị nhân sự trực thuộc (họ tên, mã nhân viên, chức vụ) và các bộ phận con; phòng không có đơn vị con vẫn mở được khi có nhân sự.
+- [x] Mặc định thu gọn để tránh hiển thị toàn bộ nhân sự ngay khi tải trang; tìm kiếm mở các nhánh, vẫn cho phép người dùng thu lại.
+- [x] Chỉ đọc các trường danh bạ cần thiết từ DB theo công ty, giữ kiểm tra quyền HR; không thay dữ liệu/schema hoặc suy trạng thái việc làm từ trạng thái tài khoản.
+
+## Rà soát độ gọn của trang phòng ban — 22/10/2026
+
+- [x] Đọc schema, Server Actions, trang `/departments`, `DepartmentManager`, liên kết sang danh bạ và tài liệu mapping 1Office; phân tích tĩnh, chưa kiểm chứng dữ liệu DB trực tiếp hoặc giao diện bằng trình duyệt trong lần rà soát này.
+- [x] Xác định thông tin đối soát đang lấn át nghiệp vụ: ID/tên nguồn, badge khớp, nhiều thẻ thống kê và giải thích snapshot lặp lại. Chưa có căn cứ gọi các bản ghi phòng ban là dữ liệu rác hoặc xóa chúng.
+- [x] Ghi nhận giới hạn: thông báo `18/18` hard-code; “Khớp hoàn toàn” chỉ kiểm tra tên/cấp trên với snapshot; tổng bản ghi nguồn suy từ số đơn vị liên kết; cây và tổng nhánh mới xử lý hai tầng; số nhân sự đếm bản ghi User chưa phân biệt tài khoản với hồ sơ việc làm.
+- [x] Đã triển khai theo yêu cầu: cây thu/mở nhánh, tìm tên/mã, số hồ sơ và liên kết danh bạ; chỉ HR MANAGE thấy đối soát và sửa thông tin nội bộ. Giữ nguyên mapping, audit và dữ liệu DB; không migration/xóa cột.
+- [x] Bỏ thông báo 18/18 cố định, tổng nguồn suy đoán và nhãn khớp hoàn toàn; mô tả đúng phạm vi đối chiếu snapshot tên/cấp trên. Đếm nhánh và lọc danh bạ qua toàn bộ cấp con với tập ID chống lặp.
+- [x] Kiểm tra TypeScript và ESLint cho component/action phòng ban; 3/3 Playwright Chrome đạt: chặn truy cập, quyền VIEW/MANAGE, thu nhánh, tìm kiếm, mở danh bạ, trường nguồn khóa, đối soát và mobile không tràn ngang. Kiểm thử chỉ đọc DB, không sửa dữ liệu nghiệp vụ; chưa tạo dữ liệu thử cây sâu trong DB.
+- [ ] Khi triển khai, giữ 3D chỉ hiển thị dữ liệu vị trí đã xác nhận từ DB; không suy chỗ ngồi từ phòng ban tổ chức.
+
 ## 🎯 QUY TRÌNH THỰC HIỆN BẮT BUỘC
 
 ### Đầu vào từ nguồn chuẩn 1Office và xác nhận nghiệp vụ — rà soát ngày 21/10/2026
@@ -264,3 +282,18 @@ Mỗi khi thực hiện một câu lệnh hoặc có sửa đổi kỹ thuật:
 1. AI Agent **BẮT BUỘC** cập nhật trạng thái tiến độ vào tệp Checklist này.
 2. Đánh dấu `[x]` vào các mục đã hoàn tất.
 3. Ghi nhận rõ các thay đổi kiến trúc mới phát sinh.
+
+## Sơ đồ tổ chức — 23/10/2026
+- [x] Thay tab đối soát bằng sơ đồ cây ngang cho người có quyền đọc HR; đối soát chuyển thành hộp thoại riêng dành cho HR MANAGE.
+- [x] Đọc tên công ty từ DB, dựng nhánh theo parentId, chọn đơn vị để xem nhân sự trực thuộc. Hỗ trợ thu/mở nhánh, kéo bằng chuột, cuộn trên điện thoại, zoom và vừa màn hình; tìm tên/mã và đi tới kết quả.
+- [x] Giữ nguyên dữ liệu cơ cấu, không suy thêm tuyến quản lý/phê duyệt; không truy cập 1Office và không cài thư viện mới.
+- [x] TypeScript và ESLint đạt; 4/4 Playwright Chrome đạt (quyền, danh sách, đối soát, sơ đồ/chọn nhân sự/thu nhánh/zoom/mobile). Đã xem ảnh desktop và mobile, không tràn ngang; chế độ fit dùng nhìn tổng thể, mặc định 80% để đọc và cuộn.
+
+## Sơ đồ cây từ trên xuống — 24/10/2026
+- [x] Đổi bố cục SVG: công ty ở trên, phòng ban và bộ phận ở các hàng bên dưới; đường nối từ đáy cha xuống đỉnh con. Giữ nguyên cơ cấu DB và các thao tác xem nhân sự/thu nhánh/zoom/tìm kiếm.
+- [x] Căn vùng nhìn ngang theo nút công ty khi bố cục hoặc mức zoom thay đổi để không mất nút gốc trên cây rộng.
+- [x] TypeScript, ESLint và 4/4 Playwright Chrome đạt; bổ sung kiểm tra vị trí công ty nằm trên các đơn vị. Kiểm thử thao tác, mobile không tràn ngang; xem ảnh desktop sau đổi bố cục.
+
+## Kế hoạch quản lý vai trò — 24/10/2026
+- [x] Rà soát tĩnh phần RBAC hiện có và tạo [ROLE-MANAGEMENT-CHECKLIST.md](ROLE-MANAGEMENT-CHECKLIST.md); đăng ký AGENTS router.
+- [x] Plan ưu tiên quản lý role gọn, tách quyền RBAC khỏi HR, quyền hiệu lực theo DB và kiểm tra server; scope phòng ban triển khai theo module. Chưa thay schema, quyền người dùng hoặc mã ứng dụng.

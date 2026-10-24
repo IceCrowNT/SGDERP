@@ -34,6 +34,7 @@ export default async function DepartmentsPage() {
     <div className="space-y-6">
       <DepartmentManager
         initialDepartments={res.data}
+        companyName={res.companyName}
         comparison={res.comparison}
         canManage={res.canManage}
       />

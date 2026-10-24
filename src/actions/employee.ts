@@ -57,15 +57,22 @@ export async function getEmployees(filter?: GetEmployeesFilter) {
 
     // Lọc theo phòng ban (Hỗ trợ lọc theo phòng cha thì lấy luôn toàn bộ nhân sự các phòng con)
     if (filter?.departmentId) {
-      const childDepts = await db.department.findMany({
-        where: {
-          parentId: filter.departmentId,
-          companyId: session.companyId,
-        },
-        select: { id: true },
+      const departments = await db.department.findMany({
+        where: { companyId: session.companyId },
+        select: { id: true, parentId: true },
       });
-      const allTargetDeptIds = [filter.departmentId, ...childDepts.map((c) => c.id)];
-      whereClause.departmentId = { in: allTargetDeptIds };
+      const targetIds = new Set<number>([filter.departmentId]);
+      const pending = [filter.departmentId];
+      while (pending.length) {
+        const parentId = pending.pop();
+        for (const department of departments) {
+          if (department.parentId === parentId && !targetIds.has(department.id)) {
+            targetIds.add(department.id);
+            pending.push(department.id);
+          }
+        }
+      }
+      whereClause.departmentId = { in: [...targetIds] };
     }
 
     // Lọc theo từ khóa tìm kiếm (Tên, Mã NV, Username, SĐT, Email, Chức vụ)

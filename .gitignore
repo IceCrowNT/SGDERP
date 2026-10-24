@@ -56,3 +56,7 @@ docs/SDGSources
 # This exception is intentionally narrow because other HR workbooks remain ignored.
 !docs/1office-sources/exports/
 !docs/1office-sources/exports/**/*.xlsx
+
+# generated previews/exports from Word document QA
+/outputs/word-tuan-dau/**/*.png
+/outputs/word-tuan-dau/**/*.pdf

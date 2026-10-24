@@ -1,0 +1,18 @@
+from pathlib import Path
+p=Path('outputs/word-tuan-dau/build.py');s=p.read_text()
+a=s.index("h1('2. Khung báo cáo");b=s.index('page()',a)
+s=s[:a]+'''h1('2. Trọng tâm công việc tuần đầu')
+item('Tìm hiểu tổ chức và cách phối hợp:', 'Nắm cơ cấu phòng ban, vai trò của IT trong HCNS và các đầu mối nghiệp vụ cần làm việc cùng.')
+item('Khảo sát hệ thống đang sử dụng:', 'Tìm hiểu quy trình, dữ liệu và các tính năng 1Office để xác định khả năng tận dụng trước khi phát triển thêm.')
+item('Đối chiếu và xây nền dữ liệu:', 'Kiểm tra nguồn nhân sự, cơ cấu tổ chức; lấy 1Office làm chuẩn áp dụng cho ERP.')
+item('Xây dựng và đánh giá bản mẫu:', 'Thử nghiệm cơ cấu phòng ban, cơ sở dữ liệu tài sản và mô hình 3D để làm rõ nhu cầu thực tế.')
+item('Đề xuất mục tiêu tiếp theo:', 'Chuẩn bị 3 hướng phát triển và các đầu ra để trao đổi, thống nhất với quản lý trực tiếp.')
+''' +s[b:]
+s=s.replace('Bản tổng hợp nội dung đã trao đổi','Báo cáo công việc tuần đầu')
+s=s.replace('Bản tổng hợp thảo luận • Cập nhật ngày 22/10/2026','Bản nháp báo cáo công việc • Cập nhật ngày 22/10/2026')
+s=s.replace("h1('3. Kết quả khảo sát cần đưa vào báo cáo')","h1('3. Công việc đã thực hiện và kết quả bước đầu')")
+s=s.replace("item('Ưu tiên 1 — Hoàn thiện báo cáo:', 'Bổ sung họ tên, người nhận, kỳ báo cáo và trạng thái của 5 đầu việc hội nhập. Rà soát nội dung để phân biệt việc đã làm, đang thử nghiệm và mới đề xuất.')","item('Ưu tiên 1 — Chốt kết quả công việc:', 'Rà soát kết quả khảo sát, các dữ liệu đã đối chiếu và những phần còn dở; xác định đầu ra cần hoàn thiện trong giai đoạn tiếp theo.')")
+s=s.replace('Cần xác nhận thông tin cá nhân và kỳ báo cáo; trạng thái 1Office/email, BIDV và tham quan; 3 KPI với quản lý; đầu mối HCNS và các phòng phối hợp; phạm vi thử nghiệm tài sản, 3D và AI được giao.','Cần thống nhất 3 KPI với quản lý, thời hạn và tiêu chí đánh giá; xác định đầu mối HCNS và các phòng phối hợp; chốt phạm vi thử nghiệm tài sản, 3D và AI được giao.')
+s=s.replace('Cẩm nang hội nhập Tập đoàn Sao Đỏ, slide 20;','Cẩm nang hội nhập Tập đoàn Sao Đỏ, slide 20 (các nội dung về mục tiêu công việc, cơ cấu tổ chức và phối hợp);')
+s=s.replace('Đã có PowerPoint “Báo cáo tuần thử việc đầu tiên – Bản nháp 01”, gồm 10 slide. Tài liệu Word này lưu lại nội dung tổng hợp và các việc cần làm để rà soát trước khi chốt báo cáo.','Tài liệu này tập trung vào kết quả công việc và kế hoạch tiếp theo. Các ý tưởng phát triển là đề xuất để trao đổi; không đồng nghĩa đã được phê duyệt triển khai.')
+p.write_text(s)

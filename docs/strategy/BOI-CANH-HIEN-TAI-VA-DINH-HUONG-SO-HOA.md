@@ -91,6 +91,8 @@ MVP không bao gồm chống mất trộm, điều tra thất thoát, khấu hao
 
 Cần phân biệt người dùng ERP với tài khoản AI: nhiều người trong một phòng có thể sử dụng cùng nguồn tài khoản theo thực tế được cung cấp, nên “dùng riêng” ở đây trước hết là riêng theo phòng; chưa có thông tin mỗi nhân viên sở hữu một thuê bao riêng.
 
+**Lựa chọn cập nhật ngày 23/10/2026:** sử dụng OpenAI API key cấu hình phía server qua `.env.local` hoặc biến môi trường triển khai (`OPENAI_API_KEY`, `OPENAI_MODEL`). Người dùng không nhập key trên tab. Giao diện chỉ hiển thị trạng thái có/thiếu cấu hình; chưa xác thực hoặc gọi AI. Chi phí API tách khỏi thuê bao ChatGPT, thuộc tài khoản API phía server; việc phân nguồn chi phí theo phòng chưa triển khai. Sign in with ChatGPT chỉ còn là hướng nghiên cứu.
+
 Các yêu cầu đề xuất cho tính năng:
 
 - Gắn kết nối AI với đúng user/phạm vi phòng được phép sử dụng; không tự chia sẻ kết nối, lịch sử hội thoại hoặc tài liệu sang phòng khác.
@@ -160,3 +162,7 @@ HCNS xác nhận dữ liệu nhân sự/cơ cấu; các phòng xác nhận nghi�
 - [Checklist HR](../plans/HR-CHECKLIST.md) và [checklist tài sản](../plans/ASSET-MANAGEMENT-CHECKLIST.md)
 - [Kiến trúc](../ARCHITECTURE.md) và [từ điển database](../DATABASE-DICTIONARY.md)
 - [Bộ tài liệu nội bộ](../SDGSources/)
+
+### Phạm vi báo cáo tuần đầu — cập nhật theo người phụ trách
+
+Báo cáo tập trung vào công việc đã làm, kết quả khảo sát, vấn đề cần hoàn thiện và kế hoạch tiếp theo. Các thủ tục cá nhân như thẻ, CCCD, BIDV và tài khoản hội nhập được mặc định đã hoàn tất trong phạm vi báo cáo, không liệt kê thành việc còn chờ xác nhận. Việc thống nhất KPI, đầu mối nghiệp vụ và phạm vi phát triển vẫn phải phản ánh đúng trạng thái thực tế.

@@ -17,6 +17,7 @@ import {
   Settings,
   ChevronDown,
   Cuboid,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -72,6 +73,16 @@ export const menuGroups: MenuGroup[] = [
     ],
   },
   {
+    id: "ai-tools",
+    title: "CÔNG CỤ AI",
+    icon: Sparkles,
+    requiredModule: "SYSTEM",
+    defaultOpen: true,
+    items: [
+      { label: "Hồ sơ thanh toán AI", href: "/ai-documents", icon: Sparkles, badge: "Thử" },
+    ],
+  },
+  {
     id: "system",
     title: "HỆ THỐNG & CẤU HÌNH",
     icon: ShieldCheck,
@@ -124,7 +135,7 @@ export function NavigationLinks({ session, onNavigate }: NavigationLinksProps) {
   // Lọc các nhóm theo quyền session
   const visibleGroups = menuGroups.filter((group) => {
     if (!group.requiredModule) return true
-    if (!session?.permissions) return true // Mặc định hiển thị nếu chưa có session
+    if (!session?.permissions) return false // Không hiển thị nhóm có quyền khi thiếu session
     const level = session.permissions[group.requiredModule]
     return level && level !== "NONE"
   })
