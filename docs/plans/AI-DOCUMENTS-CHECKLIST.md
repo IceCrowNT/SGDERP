@@ -1,6 +1,24 @@
 # Thử nghiệm hồ sơ thanh toán AI
 
-## Phạm vi đã triển khai
+## Trạng thái hiện tại — TẠM HOÃN (27/10/2026)
+
+Người phụ trách đã duyệt gỡ mô-đun thử nghiệm khỏi ứng dụng. Các checklist bên dưới là lịch sử, không mô tả tính năng đang hoạt động.
+
+- [x] Lưu bản thử nghiệm vào nhánh Git cục bộ `archive/ai-documents-20261027`, commit `168109ff0d995b250001b67f1fcf0cc79bdf3b68`. Không đổi nhánh làm việc hoặc index hiện tại, không push lên remote.
+- [x] Gỡ nhóm menu Công cụ AI trên desktop/mobile, form thử nghiệm, khối cấu hình API và bộ xuất Word riêng của pilot.
+- [x] Giữ `/ai-documents` là Server Component nhỏ thông báo “Tính năng tạm hoãn”, yêu cầu đăng nhập, không import mô-đun thử nghiệm hoặc đọc cấu hình OpenAI.
+- [x] Gỡ dependency `docx` và phụ thuộc riêng: npm loại 19 package; package/lockfile chỉ xóa mục liên quan, không nâng phiên bản thư viện.
+- [x] Gỡ bộ kiểm thử pilot; thay bằng kiểm tra URL cũ, menu và đường quay về tổng quan.
+- [x] Giữ tài liệu ý tưởng, biểu mẫu/báo cáo Word đã xuất và dữ liệu nghiệp vụ. Không thay schema, tài khoản, role hoặc quyền SYSTEM dùng chung.
+- [x] TypeScript, ESLint phần thay đổi và production build webpack đạt; 2/2 Playwright đạt (đăng nhập, URL cũ, không còn menu/form với quyền SYSTEM, mobile và quay về tổng quan). Không còn import mô-đun AI, đọc OPENAI_* hoặc dependency docx trong mã vận hành/lockfile.
+- [x] Giữ Next.js 16.4.0 theo yêu cầu; build tiếp tục sau nhắc nâng cấp bảo mật, không tự nâng phiên bản.
+
+### Khôi phục khi được duyệt lại
+
+Dùng `git show archive/ai-documents-20261027:<đường-dẫn>` để đọc lại tệp. Nhánh lưu page, hai component AI, `src/lib/payment-document.ts`, test và checklist trước gỡ. Khôi phục từng tệp cần thiết và cài lại dependency có chủ đích; không checkout cả nhánh hoặc ghi đè package/lockfile hiện tại vì nhánh lưu có nền lịch sử cũ. Đây là điểm lưu mã cục bộ, chưa phải bản phát hành hay bản chạy độc lập đầy đủ.
+
+
+## Lịch sử bản thử nghiệm (đã gỡ khỏi ứng dụng)
 
 - [x] Menu Công cụ AI → Hồ sơ thanh toán AI tại `/ai-documents`, dùng chung navigation desktop/mobile.
 - [x] Guard đăng nhập và quyền `SYSTEM: VIEW/MANAGE` cho pilot; menu ẩn khi thiếu quyền. Chưa cấp thêm quyền hay sửa vai trò trong DB.
@@ -8,7 +26,7 @@
 - [x] Tạo bộ yêu cầu gồm kỹ năng, quy tắc và khung đề nghị thanh toán/tờ trình; sao chép để dùng thủ công trong ChatGPT. Chỉnh dữ liệu làm mất hiệu lực bản yêu cầu cũ.
 - [x] Ghi rõ chưa kết nối AI; không lưu DB, không upload ảnh, không nhận credential và không tự đọc hóa đơn; đã bổ sung xuất Word theo mẫu từ dữ liệu nhập.
 
-## Cần triển khai sau
+## Ý tưởng tồn đọng — chỉ tiếp tục khi được duyệt lại
 
 - [ ] Xác minh điều kiện Sign in with ChatGPT và gói tài khoản thực tế hoặc chọn API riêng theo phòng.
 - [ ] Chốt quyền riêng cho phân hệ và phạm vi người/phòng được sử dụng.
@@ -54,3 +72,8 @@ Thông tin để chuẩn bị đăng ký: ứng dụng “SDG ERP”, web nội 
 - [x] Chuẩn bị placeholder trống trong .env.local nếu chưa có biến ở file env khác; giữ giá trị đã tồn tại, không log key, không thay bằng key giả. .env* được gitignore.
 - [ ] Cấu hình key/model thật tại máy chủ, triển khai và kiểm thử gọi AI. Có biến môi trường không đồng nghĩa đã kết nối thành công.
 - [x] Kiểm thử phát hiện submit trước khi form client sẵn sàng; chặn nút Chuẩn bị yêu cầu đến khi React Hook Form isReady. Chạy lại 4/4 Chrome đạt; xác nhận không còn input key/model và .env.local bị gitignore. TypeScript/ESLint đạt trước chỉnh isReady; kiểm tra lại sau chỉnh.
+
+## Hồi quy sau tách nhân sự/tài khoản — 27/10/2026
+
+- [x] 4/4 Playwright đạt: quyền SYSTEM, chuẩn bị yêu cầu, xuất DOCX và cấu hình API phía server.
+- [x] Fixture chuyển từ JWT giả có quyền tự khai sang tài khoản/role tạm có trong DB, dọn sau test; session nay đọc quyền hiện hành của từng tài khoản. Không đổi nghiệp vụ AI, không gọi API trả phí.

@@ -1,27 +1,7 @@
 import { expect, test, type BrowserContext } from "@playwright/test";
-import { SignJWT } from "jose";
-import { loadEnvConfig } from "@next/env";
-import { PrismaClient } from "@prisma/client";
-
-loadEnvConfig(process.cwd());
-
-async function session(context: BrowserContext, level: "VIEW" | "MANAGE" | "NONE") {
-  const url = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:4000";
-  if (!["localhost", "127.0.0.1"].includes(new URL(url).hostname)) throw new Error("Local test only");
-  const db = new PrismaClient();
-  let companyId: number;
-  try {
-    const department = await db.department.findFirst({ select: { companyId: true } });
-    if (!department) throw new Error("Requires existing department data");
-    companyId = department.companyId;
-  } finally { await db.$disconnect(); }
-  const token = await new SignJWT({
-    userId: -1, username: "department-read-test", fullName: "Test", employeeCode: "TEST",
-    companyId, roleCodes: [], permissions: { HR: level },
-  }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("5m")
-    .sign(new TextEncoder().encode(process.env.SESSION_SECRET || "sdg_erp_super_secret_jwt_key_default_2026"));
-  await context.addCookies([{ name: "sdg_session", value: token, url }]);
-}
+import { fixtureSession, cleanFixtures } from "../helpers/account-fixture";
+async function session(context: BrowserContext, level: "VIEW" | "MANAGE" | "NONE") { return fixtureSession(context, "HR", level); }
+test.afterEach(async () => { await cleanFixtures(); });
 
 test("requires login and HR read permission", async ({ page, context }) => {
   await page.goto("/departments");

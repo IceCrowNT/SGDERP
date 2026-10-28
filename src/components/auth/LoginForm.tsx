@@ -11,7 +11,7 @@ import Image from "next/image";
 import { loginAction } from "@/actions/auth";
 
 const LoginSchema = z.object({
-  username: z.string().min(1, "Vui lòng nhập tài khoản hoặc mã nhân viên"),
+  username: z.string().min(1, "Vui lòng nhập tên đăng nhập"),
   password: z.string().min(1, "Vui lòng nhập mật khẩu"),
 });
 
@@ -117,7 +117,7 @@ export function LoginForm() {
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium">Tài khoản / Mã nhân viên</FormLabel>
+                  <FormLabel className="text-sm font-medium">Tên đăng nhập</FormLabel>
                   <div className="relative">
                     <User className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <FormControl>
@@ -159,11 +159,7 @@ export function LoginForm() {
               )}
             />
 
-            <div className="p-3 bg-muted/40 rounded-xl border border-border/50 text-xs text-muted-foreground space-y-1">
-              <p className="font-semibold text-foreground">💡 Tài khoản trải nghiệm:</p>
-              <p>• Admin tối cao: <code className="text-primary font-mono font-bold">admin</code> / <code className="font-mono">123456</code></p>
-              <p>• Hoặc bất kỳ nhân sự trong 67 cán bộ công ty (mật khẩu chung <code className="font-mono">123456</code>)</p>
-            </div>
+            <p className="text-xs text-muted-foreground">Dùng tên đăng nhập được cấp. Một hồ sơ nhân sự có thể có nhiều tài khoản với quyền riêng.</p>
           </CardContent>
 
           <CardFooter className="pb-8 pt-2">

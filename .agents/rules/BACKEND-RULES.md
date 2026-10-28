@@ -22,10 +22,10 @@ Tệp này quản lý cách thức xây dựng Logic Backend và Bảo mật Ph�
 
 ---
 
-## 3. RÀNG BUỘC BẮT BUỘC VỀ PHÂN QUYỀN (SIMPLIFIED JSON RBAC)
-1. **Cấu trúc Quyền trong Session:** Quyền của người dùng được nạp sẵn vào Session từ cột JSON `permissions` của bảng `Role` theo định dạng: `{ HR: "NONE" | "VIEW" | "MANAGE", TASK: "NONE" | "VIEW" | "MANAGE" }`.
+## 3. RÀNG BUỘC BẮT BUỘC VỀ PHÂN QUYỀN
+1. **Quyền hiệu lực:** từ quan hệ `UserRole → Role → RolePermission → Permission`, không có cột JSON permissions trên Role. `getSession()` kiểm tra DB mỗi lần: trạng thái tài khoản, phiên bản phiên và quyền hiện tại. Role thuộc tài khoản; không cộng quyền từ các tài khoản khác cùng nhân sự.
 2. **Kiểm tra Quyền ở đầu Server Action:**
-   - Với thao tác Đọc dữ liệu nhạy cảm: Bắt buộc kiểm tra quyền khác `"NONE"` (tức là có `"VIEW"` hoặc `"MANAGE"`).
+   - Với thao tác Đọc dữ liệu nhạy cảm: Bắt buộc kiểm tra rõ `"VIEW"` hoặc `"MANAGE"`; thiếu quyền phải từ chối.
    - Với thao tác Ghi (Create/Update/Delete): Bắt buộc kiểm tra `session.permissions[MODULE] === "MANAGE"` (trừ phân hệ TASK cho phép nhân viên cập nhật trạng thái công việc được giao trực tiếp cho mình).
 3. **Lọc Dữ liệu (Data Filtering):**
    - Luôn luôn có điều kiện `companyId: session.companyId` trong mọi câu lệnh Prisma.
@@ -85,3 +85,10 @@ export async function createTask(formData: any) {
   }
 }
 ```
+
+## 5. Ranh giới hồ sơ và truy cập
+
+- HR MANAGE chỉ sửa hồ sơ, không quản lý mật khẩu/role. `/accounts` và actions tương ứng kiểm tra ADMIN/IT_ADMIN trong bản hiện tại; role management chi tiết theo kế hoạch riêng.
+- Không trả password/hash/legacy profile trong payload action hoặc audit. Khi tạo/sửa tài khoản kiểm tra người và role cùng công ty; khóa tài khoản không cập nhật Employee.
+- Đăng nhập username duy nhất, không đăng nhập mã nhân viên. Sửa tài khoản hoặc mật khẩu tăng sessionVersion để thu hồi phiên cũ.
+- Thay đổi dữ liệu và audit phải cùng transaction cho luồng nhân sự/tài khoản mới.

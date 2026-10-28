@@ -1,6 +1,6 @@
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { getSession } from "@/lib/auth"
+import { getSession, hasPermission } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { Office3DClientWrapper } from "@/components/office-3d/Office3DClientWrapper"
 
@@ -15,15 +15,17 @@ export default async function Office3DPage() {
     redirect("/login")
   }
 
+  if (!hasPermission(session, "HR")) return <p>Không có quyền xem nhân sự.</p>
+
   // Fetch departments with active personnel in the current company
   const departments = await db.department.findMany({
     where: {
       companyId: session.companyId,
     },
     include: {
-      users: {
+      employees: {
         where: {
-          isActive: true,
+          employmentStatus: "ACTIVE",
         },
         select: {
           id: true,
@@ -33,7 +35,7 @@ export default async function Office3DPage() {
           phone: true,
           email: true,
           avatarUrl: true,
-          isActive: true,
+          employmentStatus: true,
           departmentId: true,
         },
         orderBy: {
@@ -47,10 +49,10 @@ export default async function Office3DPage() {
   })
 
   // Count total active personnel in company
-  const totalPersonnel = await db.user.count({
+  const totalPersonnel = await db.employee.count({
     where: {
       companyId: session.companyId,
-      isActive: true,
+      employmentStatus: "ACTIVE",
     },
   })
 

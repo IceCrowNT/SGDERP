@@ -52,11 +52,27 @@ docs/HR_danhsachnhanvien/
 # internal docs(SDG)
 docs/SDGSources
 
-# 1Office exports explicitly retained as project source documents.
-# This exception is intentionally narrow because other HR workbooks remain ignored.
-!docs/1office-sources/exports/
-!docs/1office-sources/exports/**/*.xlsx
+# Local document sources, generated files and temporary document scripts
+# Keep application assets in public/ and src/ tracked.
+/outputs/
+/output/
+/ouput/
+/docs/1office-sources/exports/
+/docs/**/*.png
+/docs/**/*.jpg
+/docs/**/*.jpeg
+/docs/**/*.webp
+/docs/**/*.gif
+/docs/**/*.heic
+/docs/**/*.pdf
+/docs/**/*.doc
+/docs/**/*.docx
+/docs/**/*.ppt
+/docs/**/*.pptx
+/docs/**/*.odt
+/docs/**/*.ods
+/docs/**/*.odp
 
-# generated previews/exports from Word document QA
-/outputs/word-tuan-dau/**/*.png
-/outputs/word-tuan-dau/**/*.pdf
+# Temporary working directories for document generation
+/tmp/
+/temp/

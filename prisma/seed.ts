@@ -274,26 +274,10 @@ async function main() {
   // 6.1 Tạo tài khoản Quản trị viên tối cao (Master Admin)
   const adminUser = await prisma.user.upsert({
     where: { username: "admin" },
-    update: {
-      password: defaultPassword,
-      fullName: "Quản Trị Viên Hệ Thống",
-      employeeCode: "SDG-ADMIN",
-      position: "Quản trị hệ thống",
-      isActive: true,
-      companyId: company.id,
-      departmentId: departmentMap["PHÒNG HÀNH CHÍNH NHÂN SỰ"],
-    },
+    update: {}, // Never reset credentials or change the existing account owner on reseed.
     create: {
-      username: "admin",
-      password: defaultPassword,
-      fullName: "Quản Trị Viên Hệ Thống",
-      employeeCode: "SDG-ADMIN",
-      position: "Quản trị hệ thống",
-      email: "admin@saodogroup.com",
-      phone: "0900000000",
-      isActive: true,
-      companyId: company.id,
-      departmentId: departmentMap["PHÒNG HÀNH CHÍNH NHÂN SỰ"],
+      username: "admin", password: defaultPassword, displayName: "Quản Trị Viên Hệ Thống",
+      isActive: true, companyId: company.id,
     },
   });
 
@@ -333,7 +317,6 @@ async function main() {
 
   const idxMaNS = colIdx("Mã NS");
   const idxHoTen = colIdx("Họ và tên");
-  const idxTaiKhoan = colIdx("Tài khoản 1Office");
   const idxPhongBan = colIdx("Phòng ban");
   const idxChucVu = colIdx("Chức vụ");
   const idxTenViTri = colIdx("Tên vị trí");
@@ -350,7 +333,6 @@ async function main() {
     const fullName = row[idxHoTen]?.toString().trim();
     if (!fullName) continue;
 
-    const rawUsername = row[idxTaiKhoan]?.toString().trim();
     const rawPhone = cleanPhone(row[idxDienThoai]);
     const rawEmail = row[idxEmail]?.toString().trim() || null;
     let deptName = row[idxPhongBan]?.toString().trim() || "";
@@ -358,116 +340,31 @@ async function main() {
     const dateOfBirth = parseExcelDate(row[idxNgaySinh]);
     const joinDate = parseExcelDate(row[idxNgayVaoLam]);
     const statusStr = row[idxTrangThai]?.toString().trim();
-    const isActive = statusStr !== "Nghỉ việc";
 
     const employeeCode = rawMaNS
       ? `SDG-${rawMaNS.toString().padStart(3, "0")}`
       : `SDG-${r.toString().padStart(3, "0")}`;
 
-    const username = rawUsername ? rawUsername.toLowerCase() : `sdg_${rawMaNS || r}`;
 
-    // Xác định vai trò theo trách nhiệm & phòng ban
-    let assignedRoleCode = "STAFF";
-
-    const posLower = position.toLowerCase();
-    const deptLower = deptName.toLowerCase();
-
-    // 1. Phân loại Bộ phận IT (nằm trong HCNS)
-    if (posLower.includes("it") || username === "duongnm" || username === "nvit") {
-      assignedRoleCode = "IT_ADMIN";
-    }
-    // 2. Trưởng phòng HCNS
-    else if (posLower.includes("trưởng phòng hành chính") || username === "trangdtt") {
-      assignedRoleCode = "HR_MANAGER";
-    }
-    // 3. Nhân viên Hành chính
-    else if (deptLower.includes("hành chính nhân sự") && posLower.includes("hành chính")) {
-      assignedRoleCode = "HR_STAFF";
-    }
-    // 4. Ban Lãnh Đạo
-    else if (
-      posLower.includes("tổng giám đốc") ||
-      posLower.includes("chủ tịch") ||
-      deptLower.includes("ban lãnh đạo")
-    ) {
-      assignedRoleCode = "ADMIN";
-    }
-    // 5. Trưởng / Phó các phòng ban / Ban QLDA khác
-    else if (
-      posLower.includes("trưởng phòng") ||
-      posLower.includes("phó phòng") ||
-      posLower.includes("trưởng bộ phận") ||
-      posLower.includes("phó bộ phận") ||
-      posLower.includes("giám đốc ban") ||
-      posLower.includes("phó giám đốc ban") ||
-      posLower.includes("phó ban") ||
-      posLower.includes("tổ trưởng")
-    ) {
-      assignedRoleCode = "DEPT_HEAD";
-    }
-    // 6. Kế toán
-    else if (deptLower.includes("tài chính - kế toán") || deptLower.includes("kế toán")) {
-      assignedRoleCode = "ACCOUNTANT";
-    }
-
-    // Tra cứu ID phòng ban trực tiếp từ tên phòng ban trong Excel
-    let deptId = departmentMap[deptName] || null;
-
-    // Upsert User
-    const user = await prisma.user.upsert({
-      where: { username },
-      update: {
-        password: defaultPassword,
-        fullName,
-        employeeCode,
-        phone: rawPhone,
-        email: rawEmail,
-        position,
-        dateOfBirth,
-        joinDate,
-        isActive,
-        departmentId: deptId,
-      },
+    // Import people only. Account creation and role assignment are separate operations.
+    // Do not overwrite an existing profile using this old workbook.
+    await prisma.employee.upsert({
+      where: { companyId_employeeCode: { companyId: company.id, employeeCode } },
+      update: {},
       create: {
-        username,
-        password: defaultPassword,
-        fullName,
-        employeeCode,
-        phone: rawPhone,
-        email: rawEmail,
-        position,
-        dateOfBirth,
-        joinDate,
-        isActive,
-        companyId: company.id,
-        departmentId: deptId,
+        fullName, employeeCode, phone: rawPhone, email: rawEmail, position, dateOfBirth, joinDate,
+        employmentStatus: statusStr === "Đang làm việc" ? "ACTIVE" : statusStr === "Nghỉ việc" ? "LEFT" : "UNKNOWN",
+        companyId: company.id, departmentId: departmentMap[deptName] || null,
+        externalSystem: "ONE_OFFICE", externalId: String(row[colIdx("ID Hồ sơ nhân sự")]),
+        externalSnapshotAt: new Date("2026-10-14T00:00:00Z"),
       },
     });
-
-    // Gán Role vào UserRole
-    const targetRoleId = roleMap[assignedRoleCode] || roleMap["STAFF"];
-    if (targetRoleId) {
-      await prisma.userRole.upsert({
-        where: {
-          userId_roleId: {
-            userId: user.id,
-            roleId: targetRoleId,
-          },
-        },
-        update: { isPrimary: true },
-        create: {
-          userId: user.id,
-          roleId: targetRoleId,
-          isPrimary: true,
-        },
-      });
-    }
 
     insertedUsers++;
   }
 
   console.log(`\n🎉 HOÀN THÀNH: Đã nạp thành công ${insertedUsers} cán bộ nhân viên vào hệ thống!`);
-  console.log(`🔑 Mật khẩu mặc định cho tất cả tài khoản: 123456`);
+  console.log("Hồ sơ nhân sự không tự tạo tài khoản. Tạo tài khoản riêng tại /accounts.");
 }
 
 main()

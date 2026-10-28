@@ -1,5 +1,12 @@
 # QUY TẮC QUẢN LÝ TÀI SẢN & TÍCH HỢP KHÔNG GIAN 3D
 
+## 7. Liên kết người thật — 26/10/2026
+
+- `Asset.currentCustodian`, `AssetAssignment.assignedToEmployee` và `AssetMaintenance.technician` tham chiếu `Employee`, không phụ thuộc người đó có tài khoản.
+- `assignedBy`, `changedBy`, `requestedBy` giữ tài khoản thao tác `User`. Enum `AssetAssignmentType.USER` giữ nguyên vì tương thích lịch sử; nay chỉ giao cho người, không phải cấp tài khoản.
+- Luôn xác minh nhân sự nhận tài sản cùng công ty; chưa triển khai UI tài sản trong thay đổi tách hồ sơ.
+
+
 ## 1. Phân biệt chứng từ, số lượng và tài sản cá thể
 
 - Tên model/field dưới đây là API Prisma. Tên bảng/cột PostgreSQL phải dùng tiếng Việt không dấu qua `@@map`/`@map`, theo `DATABASE-RULES.md` và `docs/DATABASE-DICTIONARY.md` (ví dụ `Asset` → `tai_san`, `assetCode` → `ma_tai_san`).

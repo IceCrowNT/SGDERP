@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { canManageAccounts } from "@/lib/account-access"
 import { SessionUser } from "@/lib/auth"
 import {
   LayoutDashboard,
@@ -17,7 +18,6 @@ import {
   Settings,
   ChevronDown,
   Cuboid,
-  Sparkles,
   type LucideIcon,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -73,22 +73,13 @@ export const menuGroups: MenuGroup[] = [
     ],
   },
   {
-    id: "ai-tools",
-    title: "CÔNG CỤ AI",
-    icon: Sparkles,
-    requiredModule: "SYSTEM",
-    defaultOpen: true,
-    items: [
-      { label: "Hồ sơ thanh toán AI", href: "/ai-documents", icon: Sparkles, badge: "Thử" },
-    ],
-  },
-  {
     id: "system",
     title: "HỆ THỐNG & CẤU HÌNH",
     icon: ShieldCheck,
     requiredModule: "SYSTEM",
     defaultOpen: true,
     items: [
+      { label: "Tài khoản đăng nhập", href: "/accounts", icon: Users },
       { label: "Phân quyền vai trò", href: "/roles", icon: ShieldCheck, badge: "Sắp có" },
       { label: "Nhật ký hoạt động", href: "/audit-logs", icon: History },
       { label: "Cài đặt chung", href: "/settings", icon: Settings, badge: "Sắp có" },
@@ -205,7 +196,7 @@ export function NavigationLinks({ session, onNavigate }: NavigationLinksProps) {
               {/* Danh sách các Menu con (Sub-items) */}
               {isOpen && (
                 <div className="space-y-1 pl-2.5 ml-2 border-l border-border/50 animate-in fade-in slide-in-from-top-1 duration-200">
-                  {group.items.map((subItem) => {
+                  {group.items.filter(item => item.href !== "/accounts" || canManageAccounts(session)).map((subItem) => {
                     const isActive =
                       pathname === subItem.href ||
                       (subItem.href !== "/" && pathname.startsWith(subItem.href))

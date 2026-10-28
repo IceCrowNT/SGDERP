@@ -13,7 +13,7 @@
 
 ## Tệp nguồn trong project
 
-Các tệp gốc nằm trong `docs/1office-sources/exports/2026-10-21/` và được Git nhận diện như tài liệu nguồn của project theo yêu cầu của người phụ trách. Đây là dữ liệu nội bộ có thông tin nhân sự; repository chứa chúng phải được giữ ở chế độ riêng tư và giới hạn người được truy cập.
+Các tệp gốc nằm cục bộ trong `docs/1office-sources/exports/2026-10-21/`. Theo yêu cầu ngày 28/10/2026, các file export không được đưa lên GitHub; ngoại lệ Git trước đây đã bỏ. Manifest Markdown này vẫn được theo dõi. Khi clone mới cần nhận file nguồn riêng; các đường dẫn dưới đây chỉ mở được khi máy đã có file.
 
 | Tệp | Số bản ghi | SHA-256 |
 | :--- | ---: | :--- |
@@ -48,7 +48,7 @@ Các phát hiện trực tiếp từ file:
 
 ## Cách sử dụng an toàn
 
-- Chỉ commit các tệp này vào repository riêng tư đã giới hạn quyền truy cập; không đưa lên kho công khai hoặc gửi qua kênh chat ngoài công ty.
+- Không commit các file export; giữ cục bộ hoặc bàn giao riêng qua kênh nội bộ phù hợp. Không dùng `git add -f` để vượt `.gitignore`.
 - 1Office là nguồn chuẩn cho hồ sơ nhân sự và cơ cấu, nhưng mỗi export chỉ là snapshot tại thời điểm thu thập. Khi đồng bộ phải ghi ngày nguồn, đối chiếu thay đổi và không coi snapshot cũ là dữ liệu sống hiện tại.
 - Khi nhập thử, sao chép sang môi trường test và ẩn thông tin cá nhân không cần thiết.
 - Đối chiếu checksum trước khi dùng lại để phát hiện tệp bị thay đổi.
@@ -59,3 +59,5 @@ Các phát hiện trực tiếp từ file:
 - [Mô hình dữ liệu quản trị và định hướng tích hợp 1Office](../strategy/MO-HINH-DU-LIEU-QUAN-TRI-VA-TICH-HOP-1OFFICE.md)
 - [Thiết kế đồng bộ Master Data và phân quyền SDG ERP–1Office](../strategy/DONG-BO-DU-LIEU-NEN-VA-PHAN-QUYEN.md)
 - [Bối cảnh hiện tại và định hướng số hóa](../strategy/BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md)
+
+- [Bảng đối chiếu với danh sách HR final 26/10/2026](../strategy/BANG-SO-SANH-HR-FINAL-VA-1OFFICE.md): 72 dòng HR, chênh lệch danh sách/phòng ban/chức danh/ngày sinh và trạng thái tài khoản. Chỉ dùng file đã lưu, chưa khảo sát lại hệ thống trực tiếp.

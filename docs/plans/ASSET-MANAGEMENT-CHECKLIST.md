@@ -1,5 +1,24 @@
 # Kế hoạch quản lý tài sản IT và tích hợp không gian 3D
 
+## Phân tích file tài sản người phụ trách cập nhật — 27/10/2026
+
+- [x] Đọc bản Excel mới A1:I96: 92 dòng/11 nhóm/92 mã không trùng; điện thoại bàn tăng từ 8 lên 10. Mẫu Word vẫn có 90 dòng ghi chú trống. Các mô tả 90 dòng/49 dòng cần xác minh của lần tạo workbook trước ở cuối plan là lịch sử.
+- [x] Đối chiếu 46 dòng có người với HR final: 44 khớp tên duy nhất; PC26 khác cách viết Joonsun Yoon/YOON JOON SUN, Lap12 khác Lệ/Lê Dung. 46 dòng trống người không tự đồng nghĩa dùng chung. Lap09 có phòng tài sản BKS nhưng người Nguyễn Tiến Trung thuộc PTDA theo final.
+- [x] Kiểm tra DB chỉ đọc: 0 tài sản cá thể/vị trí/bàn giao/bảo trì/lịch sử vị trí; 11 category, 1 chứng từ DRAFT/11 dòng tổng 90. Chưa có va chạm mã tài sản hiện hữu; cần mapping và làm rõ ý nghĩa cột.
+- [x] Lưu [phân tích nhập tài sản, xung đột và vị trí dùng chung](../strategy/PHAN-TICH-NHAP-TAI-SAN-VA-VI-TRI-DUNG-CHUNG.md). DB đã có ZONE và quan hệ người/phòng nullable nên AP ngoài sảnh không cần phòng ban hoặc người dùng giả.
+- [x] Phát hiện hai ô ghi chú có thông tin truy cập; báo cáo chỉ nêu mã dòng, không sao chép giá trị. Chưa sửa workbook hoặc nhập các ghi chú vào DB.
+- [ ] Chốt bổ sung đơn vị quản lý riêng với đơn vị sử dụng/vị trí; không dùng currentDepartmentId đồng thời cho ba ý nghĩa hoặc phân quyền theo nơi đặt máy.
+- [ ] Hoàn tất phương án HR trước khi gán tài sản theo Employee.id; xóa/tạo lại nhân sự sau nhập tài sản sẽ làm mất liên kết theo FK SetNull.
+- [ ] Chuẩn hóa nguồn/92 mã, 11 category, vị trí, các liên kết tên và trạng thái chưa xác định; làm preview trước nhập. Chưa chạy import hoặc migration tài sản trong lượt phân tích này.
+
+
+## Đồng bộ nền nhân sự — 26/10/2026
+
+- [x] Chuyển người giữ tài sản, người nhận bàn giao và kỹ thuật viên sang Employee; giữ tài khoản cho người thao tác và nhật ký.
+- [x] Kiểm tra trước chuyển đổi: chưa có tài sản cá thể, bàn giao hoặc bảo trì; không tạo thiết bị từ biên bản tham khảo.
+- [ ] Khi triển khai UI tài sản: chọn người từ bảng nhân sự, kiểm tra cùng công ty; không bắt buộc có tài khoản đăng nhập.
+
+
 ## Giai đoạn 0 — Tiếp nhận nguồn và thiết kế dữ liệu
 
 - [x] Bổ sung quy ước tên PostgreSQL tiếng Việt không dấu: các model tài sản ánh xạ bằng `@@map`/`@map`; xem `docs/DATABASE-DICTIONARY.md`. Không đổi trạng thái hoặc tạo thêm tài sản từ dữ liệu tham khảo.
@@ -68,3 +87,15 @@
 - [x] Theo yêu cầu rút gọn: giữ bảng tổng, thay mẫu phiếu bằng list 90 dòng (STT, thiết bị, ghi chú trống); đây là danh sách tạm theo số lượng, chưa phải 90 tài sản đã kiểm kê. Kiểm tra đủ 90 dòng.
 - [x] Gộp phụ lục Word thành một bảng duy nhất: 11 dòng nhóm có tên loại/số lượng và 90 dòng thiết bị với ghi chú trống. Đã kiểm tra cấu trúc và số dòng; render vẫn bị chặn do thiếu `soffice`.
 - [x] Đổi STT phụ lục Word: bắt đầu lại từ 1 cho từng chủng loại; kiểm tra đủ 11 nhóm và 90 dòng thiết bị.
+
+### Ý tưởng quét tem tài sản — 24/10/2026
+- [x] Ghi nhận đề xuất mã vạch/QR và camera điện thoại tại [Ý tưởng tính năng](../strategy/Y-TUONG-TINH-NANG.md); đây là ý tưởng, chưa triển khai.
+- [ ] Sau khi hoàn thiện hồ sơ tài sản cá thể và phân quyền: thử 5–10 tem, quét từ web điện thoại, mở hồ sơ và nhập mã thủ công dự phòng.
+- [ ] Kiểm chứng HTTPS, quyền camera và thiết bị Android/iPhone; quét không tự ghi nhận bàn giao/vị trí hoặc tạo tài sản.
+
+### Sổ Excel từ ghi chú kiểm kê — 27/10/2026
+- [x] Tạo `outputs/asset-inventory-20261027/DANH-SACH-TAI-SAN-CHI-TIET-TU-GHI-CHU.xlsx` từ 04 ảnh người phụ trách cung cấp: đủ 90 dòng thuộc 11 nhóm, số lượng từng nhóm khớp danh sách in và chênh lệch bằng 0.
+- [x] Tách các cột nhóm thiết bị, hãng/model, phòng ban, người sử dụng, vị trí, địa chỉ mạng, ghi chú chuẩn hóa, ghi chú đọc từ ảnh, mức độ đọc và trạng thái cần xác minh; để trống mã tài sản, serial, ngày/người kiểm kê chờ đối chiếu thực tế.
+- [x] Đánh dấu 49 dòng có chữ viết tay hoặc thông tin cần xác minh; ghi riêng chênh lệch tiềm năng ở nhóm điện thoại bàn (`8 + 2: PTDA + ĐT`) để kiểm tra, không tự tăng số tài sản.
+- [x] Không đưa tài khoản/mật khẩu thiết bị mạng nhìn thấy trên ảnh vào workbook; chỉ giữ địa chỉ IP phục vụ nhận diện và nhắc chuyển thông tin truy cập sang kho mật khẩu.
+- [x] Kiểm tra công thức tổng quan, khóa dòng nguồn duy nhất, lỗi công thức và ảnh render của đủ 03 sheet; không tạo `Asset` trong cơ sở dữ liệu từ dữ liệu ảnh.

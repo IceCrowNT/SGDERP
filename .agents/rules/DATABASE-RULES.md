@@ -1,5 +1,15 @@
 # QUY TRÌNH & RÀNG BUỘC CƠ SỞ DỮ LIỆU (DATABASE RULES)
 
+## 5. Nhân sự và tài khoản — áp dụng 26/10/2026
+
+- Hồ sơ người thật nằm ở `Employee`/`nhan_su`; `User`/`nguoi_dung` chỉ là tài khoản. `User.employeeId` nullable để giữ tài khoản hệ thống; không đặt unique vì một người có nhiều tài khoản.
+- Khóa ngoại kép `(departmentId, companyId)` và `(employeeId, companyId)` bảo đảm nhân sự–phòng ban và tài khoản–nhân sự cùng công ty. Mã nhân viên và định danh nguồn duy nhất trong công ty.
+- `Employee.employmentStatus` (ACTIVE/LEFT/UNKNOWN) độc lập `User.isActive`. Không dùng số tài khoản/role làm số người. Không suy nghỉ việc từ tài khoản khóa hoặc thiếu trong một export.
+- Các cột `User.legacy*` giữ nguyên dữ liệu cũ, `@ignore` trong Prisma; không dùng làm nguồn sống, không xóa khi chưa được duyệt. `displayName` chỉ là nhãn tài khoản, tên người lấy từ `employee.fullName`.
+- Người giữ tài sản, người nhận bàn giao và kỹ thuật viên tham chiếu Employee. Người tạo bàn giao, người ghi nhận vị trí, người báo yêu cầu trong ứng dụng và AuditLog vẫn tham chiếu tài khoản User.
+- Migration chuyển đổi dùng workbook 14/10/2026; mã SDG-074 có tên nguồn chung, giữ tên ERP hiện có. Không chạy lại seed để chuyển đổi DB; seed mới nhập hồ sơ mà không tạo tài khoản hàng loạt.
+
+
 Tệp quy tắc này định hướng mọi hoạt động liên quan đến Prisma ORM và Database. Mọi AI Agent tham gia vào codebase phải tuân thủ nghiêm ngặt các quy tắc dưới đây.
 
 ## 1. Cơ chế Đồng bộ Database
@@ -32,3 +42,22 @@ Tệp quy tắc này định hướng mọi hoạt động liên quan đến Pri
 ## 4. Bảo mật kết nối
 - Chuỗi kết nối Database `DATABASE_URL` bắt buộc phải đặt trong tệp `.env`.
 - Không hardcode mật khẩu, username hay cấu hình kết nối trong bất kỳ file TypeScript hay Script nào.
+
+## 6. Danh sách HR chính thức — 27/10/2026
+
+- **Quyết định người phụ trách 27/10/2026:** `DS_nhan_su_Sao_Do_26.10.2026.xlsx` là nguồn chuẩn ưu tiên về độ chính xác cho danh sách 72 người, họ tên, ngày sinh, phòng ban được gán, chức danh và ghi chú. Khi các trường này khác export 1Office, dùng giá trị HR final; không yêu cầu xác nhận lại chỉ vì nguồn cũ khác.
+- Export/API 1Office, kể cả bản mới hơn, không tự giành quyền ưu tiên đối với các trường HR đã chốt. Phải trình chênh lệch để người phụ trách/HR chốt bản cập nhật hoặc thay đổi nguồn chuẩn. Trường không có trong file final có thể giữ thông tin nguồn cũ kèm nguồn gốc, không coi là đã được HR xác nhận.
+- `hrSourceFile/hrSnapshotAt/hrNotes` độc lập mapping 1Office; không gán STT Excel thành mã người hay ID nguồn. Công ty chưa dùng mã nhân sự; mã SDG tự sinh không phải mã chính thức HR cấp.
+- Phân biệt độ chính xác của hồ sơ HR với độ chắc chắn của liên kết nguồn: ưu tiên final không đồng nghĩa đã xác nhận hồ sơ chung “Nhân viên IT”, “Lễ tân” hoặc người trùng tên thuộc tài khoản nào. Không tự gộp hồ sơ/chuyển tài khoản từ quyết định ưu tiên dữ liệu.
+- 8 hồ sơ cũ ngoài danh sách final chỉ phục vụ lưu trữ/đối chiếu, không cộng vào 72 người chuẩn. Cây đơn vị 1Office và tài khoản/quyền vẫn là dữ liệu riêng; phòng ban gán cho từng người theo final, không suy bộ phận con nếu final không nêu.
+- Giữ ID/mã ERP đã có, mã mới do ERP cấp; ghép tên không được tự gộp trường hợp trùng/khác cách viết. Mapping đặc biệt đã rà soát nằm trong importer của snapshot này.
+- Danh sách final xác nhận người hiện tại: hồ sơ ACTIVE vắng mặt chuyển UNKNOWN để đối chiếu, không chuyển LEFT hoặc khóa tài khoản. Giữ LEFT đã xác nhận. Ghi chú thời hạn tương lai không kích hoạt nghỉ việc tự động.
+- Đọc ngày Excel từ serial thành UTC calendar date; không dùng local Date rồi cắt ISO. Nhập theo transaction, backup, audit và kiểm tra dữ liệu bảo toàn.
+- Đồng bộ 1Office tương lai phải so sánh với nguồn HR đã chốt, không ghi đè âm thầm. Script này chỉ phục vụ đúng file đã kiểm hash, không dùng như importer tổng quát.
+
+## 7. Phòng ban và chức danh — yêu cầu cập nhật 27/10/2026
+
+- Phòng ban của người tham chiếu một nút có sẵn trong cây cơ cấu cùng công ty; không dùng text chức danh để tạo/suy phòng ban. File HR là căn cứ gán ban đầu vào cơ cấu, không thay thế cây đơn vị.
+- Chức danh là text có thể chỉnh nội bộ bởi người có quyền, kể cả hồ sơ có nguồn HR/1Office; file final cung cấp giá trị ban đầu. Ghi audit sửa đổi và tránh import sau ghi đè sửa tay. Không dùng chức danh như role hoặc quyền truy cập.
+- Quyết định mới 27/10/2026: giữ `employeeCode` bắt buộc, duy nhất trong công ty; ERP tự cấp, không bắt nhập tay. Đây là mã nội bộ ERP phục vụ Excel, không phải mã HR/1Office. Giữ ổn định, không đổi theo tên/phòng ban và không cấp lại cho người khác. FK vẫn dùng `Employee.id`. Có thể ẩn mã ở UI; export phục vụ cập nhật phải giữ mã dạng text. Import có mã đối chiếu trong công ty, báo mã lạ/trùng hoặc mâu thuẫn danh tính; file không mã cần đối chiếu ban đầu. Không lấy STT Excel làm mã.
+- Trạng thái triển khai: các yêu cầu này đã ghi nhận, UI/backend đang khóa chức danh và còn bắt mã; xem phương án khởi tạo lại trong HR-CHECKLIST. Không nhầm phần thiết kế với trạng thái code hiện tại.

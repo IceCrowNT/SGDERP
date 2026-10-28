@@ -54,10 +54,10 @@ export interface DepartmentItem {
     code: string;
     name: string;
     externalId: string | null;
-    _count: { users: number };
+    _count: { employees: number };
   }>;
   employees: Array<{ id: number; fullName: string; employeeCode: string; position: string | null }>;
-  _count: { users: number; children: number };
+  _count: { employees: number; children: number };
   source: {
     system: string | null;
     id: string | null;
@@ -143,7 +143,7 @@ export function DepartmentManager({
   });
 
   const totalEmployees = useMemo(
-    () => initialDepartments.reduce((total, department) => total + department._count.users, 0),
+    () => initialDepartments.reduce((total, department) => total + department._count.employees, 0),
     [initialDepartments]
   );
   const rootDepartments = useMemo(
@@ -187,7 +187,7 @@ export function DepartmentManager({
   const branchCount = (department: DepartmentItem, visited = new Set<number>()): number => {
     if (visited.has(department.id)) return 0;
     const next = new Set(visited).add(department.id);
-    return department._count.users + childrenOf(department.id).reduce((sum, child) => sum + branchCount(child, next), 0);
+    return department._count.employees + childrenOf(department.id).reduce((sum, child) => sum + branchCount(child, next), 0);
   };
   const branchMatches = (department: DepartmentItem, visited = new Set<number>()): boolean => {
     if (visited.has(department.id)) return false;

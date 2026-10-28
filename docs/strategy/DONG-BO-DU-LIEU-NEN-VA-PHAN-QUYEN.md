@@ -1,5 +1,26 @@
 # Thiết kế đồng bộ Master Data và phân quyền SDG ERP – 1Office
 
+> **Cập nhật nguồn nhân sự 27/10/2026:** Đã nhập file HR final ngày 26/10/2026: 72 người theo danh sách, giữ 7 hồ sơ chờ xác nhận và 1 đã nghỉ riêng. File HR ưu tiên cho các trường nhân sự có trong file; mapping 1Office và cây 18 đơn vị được giữ. Các số liệu 66/67 trong khảo sát cũ bên dưới là lịch sử, không phải hiện trạng mới. Xem [đối chiếu HR và các điểm cần xác nhận](DOI-CHIEU-NHAN-SU-HR-2026-10-26.md).
+
+
+## Thẩm quyền nguồn hiện hành — chốt 27/10/2026
+
+File HR final 72 người ngày 26/10/2026 được người phụ trách xác nhận ưu tiên về độ chính xác. Khi bất đồng tên/ngày sinh/phòng ban gán cho người/chức danh/ghi chú, ERP dùng final. Ví dụ Nguyễn Tiến Trung thuộc PTDA và Nguyễn Đức Hậu có chức danh Lái xe BQLDA theo final, không chờ nguồn 1Office cũ khớp mới áp dụng.
+
+Nguồn 1Office giữ mapping, thông tin bổ sung chưa có trong final và cây đơn vị đã lưu. Bản xuất/API mới phải báo chênh lệch, không tự ghi đè trường HR đã chốt. Chỉ đổi khi người phụ trách/HR xác nhận cập nhật. Quyết định này thay thế nguyên tắc ưu tiên nhân sự 1Office trong phần khảo sát lịch sử bên dưới; không xác nhận thay các liên kết người–tài khoản còn mơ hồ và không cấp quyền từ chức danh.
+
+
+## Cập nhật triển khai ngày 26/10/2026
+
+Các nhận xét về bảng User gộp hồ sơ ở phần khảo sát bên dưới là lịch sử. Hiện đã tách `Employee` (người) và `User` (tài khoản), 1 người có 0..N tài khoản. Giữ nguyên tài khoản ERP cũ, không đồng bộ trạng thái/mật khẩu/role từ tài khoản 1Office.
+
+- Đối chiếu workbook HR ngày 14/10/2026: 67 hồ sơ (66 đang làm, 1 nghỉ việc); DB ERP có 68 tài khoản gồm 1 tài khoản hệ thống không liên kết người. Đây là số liệu snapshot, không chứng nhận hiện trạng nhân sự hôm nay.
+- Mã SDG-074: nguồn ghi “Nhân viên IT”, ERP đã có tên Dương Hoàng Nam; giữ thông tin ERP, cần xác nhận tên nguồn khi cập nhật snapshot. Liên kết nguồn theo mã/ID, không tự ghép chỉ theo tên.
+- Mã SDG-071 vẫn có tài khoản ERP do seed cũ tạo. Việc không có tài khoản 1Office không có nghĩa phải xóa tài khoản ERP; chuyển đổi lần này bảo toàn tài khoản.
+- Tên/mã/phòng/chức vụ của hồ sơ nguồn được bảo vệ trong form; liên hệ và tình trạng làm việc có thể được xác nhận nội bộ, có audit. Import tương lai phải báo xung đột thay vì ghi đè thay đổi này.
+- Tạo nhân sự nội bộ riêng khi chưa có nguồn phải đối chiếu tránh trùng; không tự tạo tài khoản hoặc cấp quyền từ chức danh. Chưa có đồng bộ API/webhook/nhập file tổng quát.
+
+
 **Ngày đối chiếu:** 21/10/2026  
 **Trạng thái:** Đã chốt 1Office làm nguồn chuẩn cho nhân sự/cơ cấu; thiết kế đồng bộ và RBAC còn chờ triển khai  
 **Phạm vi:** công ty, cơ cấu tổ chức, hồ sơ nhân sự, tài khoản, nhóm quyền và RBAC  

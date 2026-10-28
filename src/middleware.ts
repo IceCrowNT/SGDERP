@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifySessionToken } from "@/lib/auth";
+import { verifySessionToken } from "@/lib/session-token";
 
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get("sdg_session")?.value;
@@ -18,12 +18,6 @@ export async function middleware(request: NextRequest) {
   if (!isAuthenticated && !isLoginPage) {
     const loginUrl = new URL("/login", request.url);
     return NextResponse.redirect(loginUrl);
-  }
-
-  // Đã đăng nhập mà truy cập lại trang /login -> điều hướng về trang chủ
-  if (isAuthenticated && isLoginPage) {
-    const homeUrl = new URL("/", request.url);
-    return NextResponse.redirect(homeUrl);
   }
 
   return NextResponse.next();

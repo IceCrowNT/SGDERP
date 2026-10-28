@@ -18,6 +18,7 @@ model Company {
   isActive Boolean @default(true) @map("dang_hoat_dong")
 
   users                   User[]
+  employees               Employee[]
   departments             Department[]
   roles                   Role[]
   auditLogs               AuditLog[]
@@ -63,7 +64,7 @@ model Department {
   companyId Int     @map("dinh_danh_cong_ty")
   company   Company @relation(map: "Department_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
 
-  users             User[]
+  employees         Employee[]
   physicalLocations PhysicalLocation[]
   currentAssets     Asset[]            @relation("AssetCurrentDepartment")
   assetAssignments  AssetAssignment[]
@@ -71,6 +72,7 @@ model Department {
   createdAt DateTime @default(now()) @map("thoi_diem_tao")
   updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
 
+  @@unique([id, companyId])
   @@unique([companyId, code], map: "Department_companyId_code_key")
   @@unique([companyId, externalSystem, externalId], map: "Department_companyId_externalSystem_externalId_key")
   @@index([companyId, externalSystem], map: "Department_companyId_externalSystem_idx")
@@ -81,51 +83,81 @@ model Department {
 // -----------------------------------------------------------------------------
 // IDENTITY & HR PROFILE (Định danh tài khoản & Hồ sơ nhân sự)
 // -----------------------------------------------------------------------------
+model Employee {
+  id                       Int                @id @default(autoincrement()) @map("dinh_danh")
+  employeeCode             String             @map("ma_nhan_vien") @db.VarChar(50)
+  fullName                 String             @map("ho_ten") @db.VarChar(255)
+  position                 String?            @map("chuc_vu") @db.VarChar(100)
+  email                    String?            @map("thu_dien_tu") @db.VarChar(255)
+  phone                    String?            @map("so_dien_thoai") @db.VarChar(20)
+  dateOfBirth              DateTime?          @map("ngay_sinh") @db.Date
+  joinDate                 DateTime?          @map("ngay_vao_lam") @db.Date
+  avatarUrl                String?            @map("duong_dan_anh_dai_dien") @db.Text
+  address                  String?            @map("dia_chi") @db.Text
+  employmentStatus         EmploymentStatus   @default(UNKNOWN) @map("tinh_trang_lam_viec")
+  externalSystem           String?            @map("he_thong_nguon") @db.VarChar(50)
+  externalId               String?            @map("dinh_danh_nguon") @db.VarChar(100)
+  externalSnapshotAt       DateTime?          @map("thoi_diem_chup_du_lieu_nguon")
+  hrSourceFile             String?            @map("tep_nguon_nhan_su_hr") @db.VarChar(255)
+  hrSnapshotAt             DateTime?          @map("ngay_chot_nhan_su_hr") @db.Date
+  hrNotes                  String?            @map("ghi_chu_nhan_su_hr") @db.Text
+  companyId                Int                @map("dinh_danh_cong_ty")
+  company                  Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  departmentId             Int?               @map("dinh_danh_phong_ban")
+  department               Department?        @relation(fields: [departmentId, companyId], references: [id, companyId], onDelete: Restrict)
+  accounts                 User[]
+  currentCustodyAssets     Asset[]            @relation("AssetCurrentCustodian")
+  assignedAssets           AssetAssignment[]  @relation("AssetAssignmentAssignee")
+  assetMaintenancesHandled AssetMaintenance[] @relation("AssetMaintenanceTechnician")
+  createdAt                DateTime           @default(now()) @map("thoi_diem_tao")
+  updatedAt                DateTime           @updatedAt @map("thoi_diem_cap_nhat")
+
+  @@unique([id, companyId])
+  @@unique([companyId, employeeCode])
+  @@unique([companyId, externalSystem, externalId])
+  @@index([companyId, departmentId])
+  @@index([companyId, employmentStatus])
+  @@map("nhan_su")
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  LEFT
+  UNKNOWN
+}
+
 model User {
-  id Int @id(map: "User_pkey") @default(autoincrement()) @map("dinh_danh")
-
-  // Thông tin định danh & đăng nhập
-  username String @unique(map: "User_username_key") @map("ten_dang_nhap") @db.VarChar(100)
-  password String @map("mat_khau_bam") @db.VarChar(255) // Hashed password
-
-  // Thông tin liên hệ
-  email String? @unique(map: "User_email_key") @map("thu_dien_tu") @db.VarChar(255)
-  phone String? @unique(map: "User_phone_key") @map("so_dien_thoai") @db.VarChar(20)
-
-  // Thông tin hồ sơ cán bộ nhân viên
-  employeeCode String    @unique(map: "User_employeeCode_key") @map("ma_nhan_vien") @db.VarChar(50)
-  fullName     String    @map("ho_ten") @db.VarChar(255)
-  position     String?   @map("chuc_vu") @db.VarChar(100) // Chức vụ (VD: Trưởng phòng Kế toán, Kỹ sư, Tổng Giám Đốc)
-  dateOfBirth  DateTime? @map("ngay_sinh") @db.Date
-  joinDate     DateTime? @map("ngay_vao_lam") @db.Date
-  avatarUrl    String?   @map("duong_dan_anh_dai_dien") @db.Text
-  address      String?   @map("dia_chi") @db.Text
-
-  // Trạng thái hoạt động
-  isActive Boolean @default(true) @map("dang_hoat_dong")
-
-  // Quan hệ Tổ chức
-  companyId Int     @map("dinh_danh_cong_ty")
-  company   Company @relation(map: "User_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
-
-  departmentId Int?        @map("dinh_danh_phong_ban")
-  department   Department? @relation(map: "User_departmentId_fkey", fields: [departmentId], references: [id], onDelete: SetNull)
-
-  // Phân quyền đa vai trò & kiêm nhiệm (RBAC)
+  id                         Int                    @id(map: "User_pkey") @default(autoincrement()) @map("dinh_danh")
+  username                   String                 @unique(map: "User_username_key") @map("ten_dang_nhap") @db.VarChar(100)
+  password                   String                 @map("mat_khau_bam") @db.VarChar(255)
+  displayName                String                 @map("ho_ten") @db.VarChar(255)
+  isActive                   Boolean                @default(true) @map("dang_hoat_dong")
+  sessionVersion             Int                    @default(0) @map("phien_ban_dang_nhap")
+  companyId                  Int                    @map("dinh_danh_cong_ty")
+  company                    Company                @relation(map: "User_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
+  employeeId                 Int?                   @map("dinh_danh_nhan_su")
+  employee                   Employee?              @relation(fields: [employeeId, companyId], references: [id, companyId], onDelete: Restrict)
   roles                      UserRole[]
   auditLogs                  AuditLog[]
-  currentCustodyAssets       Asset[]                @relation("AssetCurrentCustodian")
-  assignedAssets             AssetAssignment[]      @relation("AssetAssignmentAssignee")
   assetAssignmentsCreated    AssetAssignment[]      @relation("AssetAssignmentCreator")
   assetLocationChanges       AssetLocationHistory[] @relation("AssetLocationChangedBy")
   assetMaintenancesRequested AssetMaintenance[]     @relation("AssetMaintenanceRequester")
-  assetMaintenancesHandled   AssetMaintenance[]     @relation("AssetMaintenanceTechnician")
+  // Archive of the pre-split profile. Not available in Prisma Client; never used as live HR data.
+  legacyEmail                String?                @unique(map: "User_email_key") @map("thu_dien_tu") @ignore @db.VarChar(255)
+  legacyPhone                String?                @unique(map: "User_phone_key") @map("so_dien_thoai") @ignore @db.VarChar(20)
+  legacyEmployeeCode         String?                @unique(map: "User_employeeCode_key") @map("ma_nhan_vien") @ignore @db.VarChar(50)
+  legacyPosition             String?                @map("chuc_vu") @ignore @db.VarChar(100)
+  legacyDateOfBirth          DateTime?              @map("ngay_sinh") @ignore @db.Date
+  legacyJoinDate             DateTime?              @map("ngay_vao_lam") @ignore @db.Date
+  legacyAvatarUrl            String?                @map("duong_dan_anh_dai_dien") @ignore @db.Text
+  legacyAddress              String?                @map("dia_chi") @ignore @db.Text
+  legacyDepartmentId         Int?                   @map("dinh_danh_phong_ban") @ignore
+  createdAt                  DateTime               @default(now()) @map("thoi_diem_tao")
+  updatedAt                  DateTime               @updatedAt @map("thoi_diem_cap_nhat")
 
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
-
-  @@index([companyId, departmentId], map: "User_companyId_departmentId_idx")
+  @@index([companyId, legacyDepartmentId], map: "User_companyId_departmentId_idx")
   @@index([isActive], map: "User_isActive_idx")
+  @@index([employeeId, companyId])
   @@map("nguoi_dung")
 }
 
@@ -450,8 +482,8 @@ model Asset {
   currentLocationId Int?              @map("dinh_danh_vi_tri_hien_tai")
   currentLocation   PhysicalLocation? @relation(map: "Asset_currentLocationId_fkey", "AssetCurrentLocation", fields: [currentLocationId], references: [id], onDelete: SetNull)
 
-  currentCustodianId Int?  @map("dinh_danh_nguoi_giu_hien_tai")
-  currentCustodian   User? @relation(map: "Asset_currentCustodianId_fkey", "AssetCurrentCustodian", fields: [currentCustodianId], references: [id], onDelete: SetNull)
+  currentCustodianId Int?      @map("dinh_danh_nguoi_giu_hien_tai")
+  currentCustodian   Employee? @relation(map: "Asset_currentCustodianId_fkey", "AssetCurrentCustodian", fields: [currentCustodianId], references: [id], onDelete: SetNull)
 
   currentDepartmentId Int?        @map("dinh_danh_phong_ban_hien_tai")
   currentDepartment   Department? @relation(map: "Asset_currentDepartmentId_fkey", "AssetCurrentDepartment", fields: [currentDepartmentId], references: [id], onDelete: SetNull)
@@ -489,8 +521,8 @@ model AssetAssignment {
   assetId Int   @map("dinh_danh_tai_san")
   asset   Asset @relation(map: "AssetAssignment_assetId_fkey", fields: [assetId], references: [id], onDelete: Restrict)
 
-  assignedToUserId Int?  @map("dinh_danh_nguoi_nhan")
-  assignedToUser   User? @relation(map: "AssetAssignment_assignedToUserId_fkey", "AssetAssignmentAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  assignedToEmployeeId Int?      @map("dinh_danh_nguoi_nhan")
+  assignedToEmployee   Employee? @relation(map: "AssetAssignment_assignedToUserId_fkey", "AssetAssignmentAssignee", fields: [assignedToEmployeeId], references: [id], onDelete: SetNull)
 
   assignedToDepartmentId Int?        @map("dinh_danh_phong_ban_nhan")
   assignedToDepartment   Department? @relation(map: "AssetAssignment_assignedToDepartmentId_fkey", fields: [assignedToDepartmentId], references: [id], onDelete: SetNull)
@@ -503,7 +535,7 @@ model AssetAssignment {
 
   @@index([companyId, assignedAt], map: "AssetAssignment_companyId_assignedAt_idx")
   @@index([assetId, returnedAt], map: "AssetAssignment_assetId_returnedAt_idx")
-  @@index([assignedToUserId], map: "AssetAssignment_assignedToUserId_idx")
+  @@index([assignedToEmployeeId], map: "AssetAssignment_assignedToUserId_idx")
   @@index([assignedToDepartmentId], map: "AssetAssignment_assignedToDepartmentId_idx")
   @@map("ban_giao_tai_san")
 }
@@ -560,8 +592,8 @@ model AssetMaintenance {
   requestedById Int?  @map("dinh_danh_nguoi_yeu_cau")
   requestedBy   User? @relation(map: "AssetMaintenance_requestedById_fkey", "AssetMaintenanceRequester", fields: [requestedById], references: [id], onDelete: SetNull)
 
-  technicianId Int?  @map("dinh_danh_ky_thuat_vien")
-  technician   User? @relation(map: "AssetMaintenance_technicianId_fkey", "AssetMaintenanceTechnician", fields: [technicianId], references: [id], onDelete: SetNull)
+  technicianId Int?      @map("dinh_danh_ky_thuat_vien")
+  technician   Employee? @relation(map: "AssetMaintenance_technicianId_fkey", "AssetMaintenanceTechnician", fields: [technicianId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("thoi_diem_tao")
   updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")

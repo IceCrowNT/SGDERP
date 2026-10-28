@@ -4,7 +4,7 @@ Ngày áp dụng: 22/10/2026. Migration: `20261022090000_viet_hoa_ten_bang_va_co
 
 Tên vật lý trong PostgreSQL dùng tiếng Việt không dấu, `snake_case`. Tên model/field Prisma giữ nguyên để tương thích mã ứng dụng, ánh xạ bằng `@@map`/`@map`. Tên kỹ thuật của constraint, index, sequence, enum và bảng hệ thống `_prisma_migrations` được giữ nguyên; giá trị enum và khóa JSON lịch sử không đổi.
 
-Không suy diễn `User` thành hồ sơ nhân sự độc lập: bảng `nguoi_dung` hiện vẫn chứa cả tài khoản và thông tin nhân sự. `currentDepartmentId` vẫn là phòng đang sử dụng, chưa phải phòng chịu trách nhiệm quản lý.
+Cập nhật 26/10/2026: `Employee`/`nhan_su` là hồ sơ người thật, `User`/`nguoi_dung` là tài khoản. Các cột hồ sơ cũ được lưu trữ qua field `legacy*` có `@ignore`, không dùng làm nguồn nghiệp vụ. `currentDepartmentId` vẫn là phòng đang sử dụng, chưa phải phòng chịu trách nhiệm quản lý.
 
 ## `Company` → `cong_ty`
 
@@ -39,6 +39,34 @@ Không suy diễn `User` thành hồ sơ nhân sự độc lập: bảng `nguoi_
 | `createdAt` | `thoi_diem_tao` |
 | `updatedAt` | `thoi_diem_cap_nhat` |
 
+## `Employee` → `nhan_su`
+
+Quyết định 27/10/2026: `id` là khóa liên kết nội bộ; `employeeCode` là mã nhân sự ERP bắt buộc, duy nhất trong công ty, ổn định để xuất Excel và đối chiếu nhập lại. Mã không phải STT Excel hoặc username. Giữ cấu trúc hiện có; cơ chế tự cấp mã khi tạo, ẩn ở UI và xuất–nhập theo mã là yêu cầu chờ triển khai trong HR-CHECKLIST.
+
+| Field Prisma | Cột PostgreSQL |
+| :--- | :--- |
+| `id` | `dinh_danh` |
+| `employeeCode` | `ma_nhan_vien` |
+| `fullName` | `ho_ten` |
+| `position` | `chuc_vu` |
+| `email` | `thu_dien_tu` |
+| `phone` | `so_dien_thoai` |
+| `dateOfBirth` | `ngay_sinh` |
+| `joinDate` | `ngay_vao_lam` |
+| `avatarUrl` | `duong_dan_anh_dai_dien` |
+| `address` | `dia_chi` |
+| `employmentStatus` | `tinh_trang_lam_viec` |
+| `externalSystem` | `he_thong_nguon` |
+| `externalId` | `dinh_danh_nguon` |
+| `externalSnapshotAt` | `thoi_diem_chup_du_lieu_nguon` |
+| `hrSourceFile` | `tep_nguon_nhan_su_hr` |
+| `hrSnapshotAt` | `ngay_chot_nhan_su_hr` (DATE) |
+| `hrNotes` | `ghi_chu_nhan_su_hr` |
+| `companyId` | `dinh_danh_cong_ty` |
+| `departmentId` | `dinh_danh_phong_ban` |
+| `createdAt` | `thoi_diem_tao` |
+| `updatedAt` | `thoi_diem_cap_nhat` |
+
 ## `User` → `nguoi_dung`
 
 | Field Prisma | Cột PostgreSQL |
@@ -46,18 +74,20 @@ Không suy diễn `User` thành hồ sơ nhân sự độc lập: bảng `nguoi_
 | `id` | `dinh_danh` |
 | `username` | `ten_dang_nhap` |
 | `password` | `mat_khau_bam` |
-| `email` | `thu_dien_tu` |
-| `phone` | `so_dien_thoai` |
-| `employeeCode` | `ma_nhan_vien` |
-| `fullName` | `ho_ten` |
-| `position` | `chuc_vu` |
-| `dateOfBirth` | `ngay_sinh` |
-| `joinDate` | `ngay_vao_lam` |
-| `avatarUrl` | `duong_dan_anh_dai_dien` |
-| `address` | `dia_chi` |
+| `displayName` | `ho_ten` |
 | `isActive` | `dang_hoat_dong` |
+| `sessionVersion` | `phien_ban_dang_nhap` |
 | `companyId` | `dinh_danh_cong_ty` |
-| `departmentId` | `dinh_danh_phong_ban` |
+| `employeeId` | `dinh_danh_nhan_su` |
+| `legacyEmail` (lưu trữ, @ignore) | `thu_dien_tu` |
+| `legacyPhone` (lưu trữ, @ignore) | `so_dien_thoai` |
+| `legacyEmployeeCode` (lưu trữ, @ignore) | `ma_nhan_vien` |
+| `legacyPosition` (lưu trữ, @ignore) | `chuc_vu` |
+| `legacyDateOfBirth` (lưu trữ, @ignore) | `ngay_sinh` |
+| `legacyJoinDate` (lưu trữ, @ignore) | `ngay_vao_lam` |
+| `legacyAvatarUrl` (lưu trữ, @ignore) | `duong_dan_anh_dai_dien` |
+| `legacyAddress` (lưu trữ, @ignore) | `dia_chi` |
+| `legacyDepartmentId` (lưu trữ, @ignore) | `dinh_danh_phong_ban` |
 | `createdAt` | `thoi_diem_tao` |
 | `updatedAt` | `thoi_diem_cap_nhat` |
 
@@ -234,7 +264,7 @@ Không suy diễn `User` thành hồ sơ nhân sự độc lập: bảng `nguoi_
 | `notes` | `ghi_chu` |
 | `companyId` | `dinh_danh_cong_ty` |
 | `assetId` | `dinh_danh_tai_san` |
-| `assignedToUserId` | `dinh_danh_nguoi_nhan` |
+| `assignedToEmployeeId` | `dinh_danh_nguoi_nhan` |
 | `assignedToDepartmentId` | `dinh_danh_phong_ban_nhan` |
 | `assignedById` | `dinh_danh_nguoi_giao` |
 | `createdAt` | `thoi_diem_tao` |
@@ -279,3 +309,11 @@ Không suy diễn `User` thành hồ sơ nhân sự độc lập: bảng `nguoi_
 | `technicianId` | `dinh_danh_ky_thuat_vien` |
 | `createdAt` | `thoi_diem_tao` |
 | `updatedAt` | `thoi_diem_cap_nhat` |
+
+## Quan hệ hồ sơ – tài khoản (26/10/2026)
+
+- `Employee.departmentId + companyId` → `Department.id + companyId`.
+- `User.employeeId + companyId` → `Employee.id + companyId`, không unique employeeId; cho phép nhiều tài khoản/người.
+- `Employee.employmentStatus`: ACTIVE (đang làm), LEFT (nghỉ việc), UNKNOWN (chưa xác nhận); độc lập `User.isActive`.
+- `Asset.currentCustodianId`, `AssetAssignment.assignedToEmployeeId`, `AssetMaintenance.technicianId` → Employee. Nhật ký và tác giả thao tác → User.
+- Tên bảng tài khoản vẫn là `nguoi_dung` để giữ tương thích. Migration bổ sung bảng thứ 17; mô tả 16 bảng ở đầu là phạm vi đổi tên năm 2026 trước lần tách này.

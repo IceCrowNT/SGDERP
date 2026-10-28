@@ -23,7 +23,7 @@ import {
   MapPin,
 } from "lucide-react"
 
-export interface DepartmentUser {
+export interface DepartmentEmployee {
   id: number
   fullName: string
   employeeCode: string
@@ -31,23 +31,23 @@ export interface DepartmentUser {
   phone: string | null
   email: string | null
   avatarUrl: string | null
-  isActive: boolean
+  employmentStatus: string
   departmentId: number | null
 }
 
-export interface DepartmentWithUsers {
+export interface DepartmentWithEmployees {
   id: number
   name: string
   code: string
   parentId: number | null
-  users: DepartmentUser[]
+  employees: DepartmentEmployee[]
 }
 
 interface RoomDetailSheetProps {
   room: Room3D | null
   isOpen: boolean
   onClose: () => void
-  departments: DepartmentWithUsers[]
+  departments: DepartmentWithEmployees[]
 }
 
 export function RoomDetailSheet({
@@ -65,7 +65,7 @@ export function RoomDetailSheet({
     // Specific case: Ban Pháp chế + Phòng HCNS
     if (room.id === "t2_hcns_pc") {
       const depts = departments.filter((d) => d.code === "HCNS" || d.code === "PC")
-      return depts.flatMap((d) => d.users)
+      return depts.flatMap((d) => d.employees)
     }
 
     if (!room.deptCode) return []
@@ -78,7 +78,7 @@ export function RoomDetailSheet({
     const childDepts = departments.filter((d) => d.parentId === mainDept.id)
     const allRelevantDepts = [mainDept, ...childDepts]
 
-    return allRelevantDepts.flatMap((d) => d.users)
+    return allRelevantDepts.flatMap((d) => d.employees)
   }, [room, departments])
 
   // Filter users

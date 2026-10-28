@@ -43,7 +43,7 @@ export async function getDepartments() {
     const departments = await db.department.findMany({
       where: { companyId: session.companyId },
       include: {
-        users: {
+        employees: {
           where: { companyId: session.companyId },
           select: { id: true, fullName: true, employeeCode: true, position: true },
           orderBy: { fullName: "asc" },
@@ -55,10 +55,10 @@ export async function getDepartments() {
             code: true,
             name: true,
             externalId: true,
-            _count: { select: { users: true } },
+            _count: { select: { employees: true } },
           },
         },
-        _count: { select: { users: true, children: true } },
+        _count: { select: { employees: true, children: true } },
       },
       orderBy: [{ externalLevel: "asc" }, { parentId: "asc" }, { code: "asc" }],
     });
@@ -85,7 +85,7 @@ export async function getDepartments() {
         parentId: department.parentId,
         parent: department.parent,
         children: department.children,
-        employees: department.users,
+        employees: department.employees,
         _count: department._count,
         source: {
           system: department.externalSystem,
@@ -226,13 +226,13 @@ export async function deleteDepartment(id: number) {
 
     const department = await db.department.findFirst({
       where: { id, companyId: session.companyId },
-      include: { _count: { select: { users: true, children: true } } },
+      include: { _count: { select: { employees: true, children: true } } },
     });
     if (!department) return { success: false as const, message: "Phòng ban không tồn tại." };
     if (department.externalSystem === ONE_OFFICE_SYSTEM) {
       return { success: false as const, message: "Đơn vị đã liên kết 1Office không thể xóa trực tiếp trong ERP." };
     }
-    if (department._count.children > 0 || department._count.users > 0) {
+    if (department._count.children > 0 || department._count.employees > 0) {
       return { success: false as const, message: "Không thể xóa đơn vị đang có bộ phận con hoặc nhân sự." };
     }
 

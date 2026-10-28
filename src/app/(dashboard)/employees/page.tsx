@@ -47,36 +47,14 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
     );
   }
 
-  // Lấy danh sách phòng ban và vai trò trực tiếp từ DB để điền vào Select Filter & Dialogs
-  const [departments, roles] = await Promise.all([
-    db.department.findMany({
-      where: { companyId: session.companyId },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        parentId: true,
-      },
-      orderBy: [{ parentId: "asc" }, { name: "asc" }],
-    }),
-    db.role.findMany({
-      select: {
-        id: true,
-        code: true,
-        name: true,
-      },
-      orderBy: { id: "asc" },
-    }),
-  ]);
+  const departments = await db.department.findMany({ where: { companyId: session.companyId }, select: { id: true, name: true }, orderBy: { name: "asc" } });
 
   return (
     <div className="space-y-6">
       <EmployeeManager
-        initialEmployees={(res.data as any) || []}
+        initialEmployees={res.data || []}
         departments={departments}
-        roles={roles}
         canManage={res.canManage || false}
-        initialDepartmentFilter={deptFilterId || null}
       />
     </div>
   );

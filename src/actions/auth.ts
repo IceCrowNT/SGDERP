@@ -8,10 +8,9 @@ import {
   setSessionCookie,
   deleteSessionCookie,
   getSession,
-  PermissionLevel,
-  SessionUser,
 } from "@/lib/auth";
 import { LoginSchema, LoginInput } from "@/lib/validations/auth";
+import { readAccountSession } from "@/lib/account-session";
 import { logActivity } from "@/lib/audit";
 
 export async function loginAction(formData: FormData | LoginInput) {
@@ -33,33 +32,10 @@ export async function loginAction(formData: FormData | LoginInput) {
     }
 
     const cleanUsername = parsed.data.username.trim().toLowerCase();
-    const cleanPassword = parsed.data.password.trim();
+    const cleanPassword = parsed.data.password;
 
-    // Tìm kiếm User theo username hoặc employeeCode
-    const user = await db.user.findFirst({
-      where: {
-        OR: [
-          { username: cleanUsername },
-          { employeeCode: cleanUsername.toUpperCase() },
-        ],
-      },
-      include: {
-        department: true,
-        roles: {
-          include: {
-            role: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    // Username identifies one account; employee code can belong to several accounts.
+    const user = await db.user.findUnique({ where: { username: cleanUsername } });
 
     if (!user) {
       await logActivity({
@@ -78,12 +54,12 @@ export async function loginAction(formData: FormData | LoginInput) {
       await logActivity({
         userId: user.id,
         username: user.username,
-        fullName: user.fullName,
+        fullName: user.displayName,
         companyId: user.companyId,
         action: "LOGIN_FAILED",
         module: "AUTH",
         targetId: String(user.id),
-        targetName: user.fullName,
+        targetName: user.displayName,
         description: `Đăng nhập thất bại: Tài khoản "${user.username}" đang bị khoá.`,
       });
       return {
@@ -98,12 +74,12 @@ export async function loginAction(formData: FormData | LoginInput) {
       await logActivity({
         userId: user.id,
         username: user.username,
-        fullName: user.fullName,
+        fullName: user.displayName,
         companyId: user.companyId,
         action: "LOGIN_FAILED",
         module: "AUTH",
         targetId: String(user.id),
-        targetName: user.fullName,
+        targetName: user.displayName,
         description: `Đăng nhập thất bại: Sai mật khẩu cho tài khoản "${user.username}".`,
       });
       return {
@@ -112,52 +88,8 @@ export async function loginAction(formData: FormData | LoginInput) {
       };
     }
 
-    // Trích xuất vai trò và tính toán ma trận quyền 3 cấp độ (NONE, VIEW, MANAGE)
-    const roleCodes = user.roles.map((ur) => ur.role.code);
-    const isAdmin = roleCodes.includes("ADMIN") || roleCodes.includes("IT_ADMIN");
-
-    const permissions: Record<string, PermissionLevel> = {
-      HR: "NONE",
-      TASK: "NONE",
-      SYSTEM: "NONE",
-      APPROVAL: "NONE",
-    };
-
-    if (isAdmin) {
-      // Admin tối cao có toàn quyền quản lý ở tất cả phân hệ
-      permissions.HR = "MANAGE";
-      permissions.TASK = "MANAGE";
-      permissions.SYSTEM = "MANAGE";
-      permissions.APPROVAL = "MANAGE";
-    } else {
-      // Phân quyền theo các vai trò thực tế
-      for (const ur of user.roles) {
-        for (const rp of ur.role.permissions) {
-          const mod = rp.permission.module;
-          const act = rp.permission.action;
-
-          if (act === "MANAGE") {
-            permissions[mod] = "MANAGE";
-          } else if (act === "VIEW" && permissions[mod] !== "MANAGE") {
-            permissions[mod] = "VIEW";
-          }
-        }
-      }
-    }
-
-    const sessionPayload: SessionUser = {
-      userId: user.id,
-      username: user.username,
-      fullName: user.fullName,
-      employeeCode: user.employeeCode,
-      position: user.position,
-      avatarUrl: user.avatarUrl,
-      companyId: user.companyId,
-      departmentId: user.departmentId,
-      departmentName: user.department?.name || null,
-      roleCodes,
-      permissions,
-    };
+    const sessionPayload = await readAccountSession(user.id);
+    if (!sessionPayload) return { success: false, error: "Tài khoản không còn hoạt động." };
 
     // Tạo JWT token và lưu vào HttpOnly Cookie
     const token = await createSessionToken(sessionPayload);
@@ -167,13 +99,13 @@ export async function loginAction(formData: FormData | LoginInput) {
     await logActivity({
       userId: user.id,
       username: user.username,
-      fullName: user.fullName,
+      fullName: user.displayName,
       companyId: user.companyId,
       action: "LOGIN",
       module: "AUTH",
       targetId: String(user.id),
-      targetName: user.fullName,
-      description: `Đăng nhập thành công vào hệ thống (Chức vụ: ${user.position || "Cán bộ nhân viên"})`,
+      targetName: user.displayName,
+      description: `Đăng nhập thành công vào hệ thống (Chức vụ: ${sessionPayload.position || "Cán bộ nhân viên"})`,
     });
 
     return { success: true };

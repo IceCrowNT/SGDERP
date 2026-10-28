@@ -1,5 +1,7 @@
 # Mô hình dữ liệu quản trị và định hướng tích hợp 1Office
 
+> Cập nhật triển khai 27/10/2026: ERP đã tách Employee (hồ sơ người) và User (tài khoản); dữ liệu khảo sát 1Office bên dưới vẫn là snapshot lịch sử. Xem [thiết kế dữ liệu nền cập nhật](DONG-BO-DU-LIEU-NEN-VA-PHAN-QUYEN.md) và [checklist HR](../plans/HR-CHECKLIST.md). Không truy cập lại 1Office trong lần triển khai này.
+
 **Trạng thái:** Khảo sát kỹ thuật ban đầu, cần chủ sở hữu nghiệp vụ xác nhận  
 **Ngày quan sát:** 21/10/2026  
 **Mục tiêu:** dùng 1Office làm nền tảng vận hành hiện hữu và phát triển SDG ERP cho dữ liệu chuẩn, phân tích hợp nhất và nghiệp vụ đặc thù của Sao Đỏ Group

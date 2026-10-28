@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import { Room3D, BUILDING_ROOMS, FLOORS_CONFIG } from "@/lib/office-3d-data"
 import { Office3DViewer } from "./Office3DViewer"
-import { RoomDetailSheet, DepartmentWithUsers } from "./RoomDetailSheet"
+import { RoomDetailSheet, DepartmentWithEmployees } from "./RoomDetailSheet"
 import { 
   Building2, 
   Users, 
@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 interface Office3DClientWrapperProps {
-  departments: DepartmentWithUsers[]
+  departments: DepartmentWithEmployees[]
   totalPersonnel: number
 }
 
@@ -50,7 +50,7 @@ export function Office3DClientWrapper({
                 Mô Hình 3D Digital Twin Tòa Nhà Sao Đỏ
               </h1>
               <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] py-0">
-                Live Data
+                Dữ liệu ERP
               </Badge>
             </div>
             <p className="text-xs text-slate-400">
@@ -75,7 +75,7 @@ export function Office3DClientWrapper({
 
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
             <Users className="w-4 h-4 text-emerald-400" />
-            <span className="text-slate-400">Nhân sự:</span>
+            <span className="text-slate-400">Đang làm việc:</span>
             <strong className="text-white">{totalPersonnel} CBNV</strong>
           </div>
         </div>

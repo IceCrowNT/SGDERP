@@ -1,4 +1,132 @@
 # QUY TRÌNH & CHECKLIST TRIỂN KHAI PHÂN HỆ QUẢN LÝ NHÂN SỰ & MA TRẬN PHÂN QUYỀN (HR & RBAC MATRIX MODULE)
+
+## Chốt giữ mã nhân sự nội bộ ERP — 27/10/2026
+
+- [x] Người phụ trách chốt giữ `employeeCode` để xuất Excel và đối chiếu khi nhập lại, dù công ty chưa có mã HR chính thức. Quyết định này thay thế đề xuất cho mã nullable ở lần đánh giá trước.
+- [x] Đồng bộ quyết định vào rule DB, kiến trúc, từ điển dữ liệu và bối cảnh. Lần này chỉ cập nhật tài liệu; chưa sửa ứng dụng hoặc dữ liệu.
+- [ ] ERP tự cấp mã khi tạo nhân sự, không bắt người dùng nhập; mã bắt buộc và duy nhất trong công ty. Giữ mã đã cấp, không đổi theo tên/phòng ban và không cấp lại mã người cũ cho người khác.
+- [ ] Có thể ẩn mã ở danh sách mặc định; file Excel phục vụ cập nhật phải có cột “Mã nhân sự ERP” kiểu text. Mã không phải username, ID 1Office hay STT của dòng Excel.
+- [ ] Import có mã: đối chiếu chính xác mã trong công ty và kiểm tra chênh lệch trước khi cập nhật. Mã lạ/trùng hoặc thông tin người mâu thuẫn phải báo để rà soát; không tự tạo/gộp người. File cũ chưa có mã cần đối chiếu ban đầu, sau đó xuất lại kèm mã ERP.
+- [ ] Kiểm thử cấp mã đồng thời không trùng, giữ mã qua sửa hồ sơ/chuyển phòng, và xuất–nhập lại đúng người. Mọi FK vẫn dùng `Employee.id`; không chuyển FK sang mã text.
+
+## Đánh giá khởi tạo lại nhân sự–tài khoản — 27/10/2026
+
+**Trạng thái:** đã rà soát và lập phương án theo yêu cầu “nhận xét và đánh giá”; chưa sửa code/schema hoặc xóa dữ liệu trong lần đánh giá này. Người phụ trách cho phép xem xét làm sạch cả nhân sự và tài khoản nếu cần; phương án dưới đây là phạm vi đề xuất cụ thể.
+
+### Yêu cầu nghiệp vụ mới đã ghi nhận
+
+- Phòng ban là quan hệ với cây `Department` hiện có, không nhập tên phòng tự do trong hồ sơ. Khi tạo/sửa, chọn đơn vị cùng công ty; hiển thị đường dẫn cha → con. Chọn phòng hoặc bộ phận hợp lệ, không bắt buộc chỉ chọn nút lá.
+- Chức danh là text tự do (`Employee.position` hiện đã là String), được sửa bởi người có quyền HR MANAGE cả với hồ sơ nhập nguồn. Không cần thêm bảng chức danh, không suy role/quyền hay phòng ban từ text này.
+- HR final 72 người là dữ liệu khởi tạo chuẩn; không phải giới hạn cố định 72 trong ứng dụng. Tạo thêm một người hợp lệ thì tổng là 73. Chỉnh chức danh nội bộ có audit; đồng bộ/import sau phải báo chênh lệch, không đè sửa tay.
+- Công ty chưa có mã HR chính thức; ERP vẫn giữ mã nhân sự nội bộ bắt buộc, tự sinh để đối chiếu/xuất Excel, không yêu cầu nhập tay. ID DB giữ làm khóa liên kết; tên + ngày sinh chỉ giúp đối chiếu, không đặt unique vì có thể trùng.
+
+### Kết quả kiểm tra thực tế
+
+| Đối tượng | Hiện trạng kiểm tra | Ý nghĩa với việc làm sạch |
+| --- | --- | --- |
+| Nhân sự | 80 hồ sơ = 72 ACTIVE theo final + 7 UNKNOWN + 1 LEFT | Có thể khởi tạo lại đúng 72 từ nguồn final, không đưa 8 hồ sơ cũ vào danh sách người mới |
+| Tài khoản | 68; 67 gắn nhân sự, 1 tài khoản quản trị hệ thống không gắn người | Đề xuất giữ tài khoản quản trị hệ thống, xóa 67 tài khoản mẫu/cũ và tạo riêng theo nhu cầu |
+| Cơ cấu | 18 đơn vị | Giữ nguyên cây, ID và metadata đơn vị; final 9 nhóm được ánh xạ vào cây này |
+| Role | 7 role | Giữ danh mục role và quyền, xóa liên kết role của tài khoản bị xóa; không tự gán role theo chức danh |
+| Tài sản / bàn giao / bảo trì / lịch sử vị trí | Đều 0 bản ghi | Hiện chưa có giao dịch này bị mất liên kết người khi khởi tạo lại; kiểm lại ngay trước khi chạy |
+| Chứng từ kiểm kê tham khảo | 1 chứng từ, 11 dòng tổng hợp | Giữ nguyên, nằm ngoài phạm vi làm sạch HR |
+| Nhật ký | 81 HR, 33 AUTH, 17 DEPARTMENT tại thời điểm kiểm tra | Giữ lịch sử; xóa User làm userId trong audit thành null theo FK, tên/username và snapshot vẫn còn |
+
+### Đánh giá và phương án đề xuất
+
+**Khuyến nghị khởi tạo lại dữ liệu riêng phân hệ HR/tài khoản, không reset toàn bộ DB và không xây lại mô hình bảng từ đầu.** Cấu trúc `Department → Employee → User → UserRole` đã phù hợp; vấn đề hiện tại là dữ liệu kế thừa, yêu cầu mã và khóa sửa trường nguồn. Đây là thời điểm tương đối thuận lợi để làm sạch vì vẫn là prototype và chưa có giao dịch tài sản gắn người.
+
+Giới hạn cụ thể của phương án:
+
+1. Giữ công ty, 18 đơn vị, 7 role, danh mục quyền, tài khoản quản trị hệ thống hiện có, chứng từ tài sản và nhật ký. Không truy cập/thay đổi 1Office.
+2. Backup các bảng liên quan và kiểm tra khả năng đọc/khôi phục bản sao. Kiểm lại các FK/giao dịch trước thao tác; nếu đã phát sinh giao dịch mới thì phải xử lý mapping, không mặc định tiếp tục xóa.
+3. Sửa luồng seed/khởi tạo trước: seed hiện vẫn đọc file 67 hồ sơ ngày 14/10. Importer final hiện là một lần, phụ thuộc mã/hồ sơ cũ và marker audit; không chạy nguyên trạng hai script này để khởi tạo từ rỗng.
+4. Xóa 67 tài khoản gắn người và liên kết role tương ứng, sau đó 80 hồ sơ cũ; nạp mới đúng 72 dòng final trong transaction dữ liệu. Không reset sequence để tránh tái sử dụng ID của tài khoản/người cũ trong token và audit. Không tạo lại các liên kết nguồn mơ hồ chỉ để giữ số liệu cũ.
+5. Tài khoản quản trị hệ thống tiếp tục đăng nhập; tài khoản nhân viên tạo riêng khi cần, liên kết người và chọn role rõ ràng. Các tài khoản bị xóa mất khả năng đăng nhập và phiên cũ không còn hợp lệ. Nếu chọn giữ thêm tài khoản cá nhân IT thì phải ghi ngoại lệ cụ thể trước khi áp dụng; phương án mặc định ở đây chỉ giữ tài khoản quản trị hệ thống.
+6. Khởi tạo theo cột final, các trường liên hệ không có trong final để trống; không lén đưa lại dữ liệu cũ. Mapping 1Office dùng lại chỉ khi danh tính được đối chiếu chắc và có nhu cầu tích hợp; không bắt buộc với 72 người mới.
+7. Giữ `employeeCode` bắt buộc và duy nhất trong công ty như schema hiện có; bổ sung cấp mã tự động ở backend. Tiếp tục ID kỹ thuật tự sinh, FK phòng ban cùng công ty, chức danh text. Chưa cần drop các cột legacy hay dựng bảng chức danh mới. Form/backend bắt buộc chọn phòng ban hợp lệ khi tạo người; không phụ thuộc việc DB còn cho phép null với dữ liệu lịch sử.
+
+### Form tạo và sửa nhân sự dự kiến
+
+| Trường | Cách nhập | Quy tắc |
+| --- | --- | --- |
+| Họ và tên | Text | Bắt buộc; cảnh báo trường hợp có thể trùng nhưng không tự gộp |
+| Phòng ban/bộ phận | Chọn từ cây cơ cấu | Bắt buộc, cùng công ty; không tạo phòng qua text của form nhân sự |
+| Chức danh | Text tự do | Cho phép sửa, có giới hạn độ dài; bỏ khóa nguồn ở UI lẫn Server Action |
+| Ngày sinh | Ngày | Tùy chọn khi tạo mới; nhập final giữ đủ ngày; xử lý theo ngày lịch, không lệch múi giờ |
+| Ngày vào làm, điện thoại, email, ghi chú | Trường bổ sung | Tùy chọn; phân biệt ghi chú nội bộ với ghi chú HR nguồn nếu cùng lưu |
+| Tình trạng làm việc | Lựa chọn | Tách trạng thái tài khoản; không suy nghỉ việc từ tài khoản bị khóa |
+| Mã nhân sự / role / mật khẩu | Không nằm trong form nhân sự | ERP tự cấp mã; tạo tài khoản/gán quyền ở chức năng riêng |
+
+File final chỉ ghi 9 nhóm phòng/ban. Nạp ban đầu vào đúng các nút tương ứng trong cây 18 đơn vị, không xóa bộ phận con. Khi có phân công chi tiết thì chuyển người xuống bộ phận hợp lệ qua form; không tự suy từ chức danh hoặc khôi phục toàn bộ phân bổ cũ 1Office nếu chưa được xác nhận.
+
+**Phụ thuộc tài sản bổ sung 27/10/2026:** Đã nhận danh sách tài sản cập nhật 92 dòng, trong đó 46 dòng có tên người sử dụng. Hiện chưa nhập Asset. Nếu chọn khởi tạo lại HR, thực hiện trước bước gán tài sản; FK người giữ/nhận tài sản dùng SetNull nên xóa người sau khi nhập sẽ mất liên kết. Xem [phân tích tài sản](../strategy/PHAN-TICH-NHAP-TAI-SAN-VA-VI-TRI-DUNG-CHUNG.md).
+
+### Checklist triển khai sau đánh giá
+
+- [x] Đọc schema, constraints thực tế, actions, validation, form và seed; kiểm kê DB bằng truy vấn chỉ đọc.
+- [x] Ghi nhận quy tắc phòng ban từ cây/chức danh text và đánh giá phạm vi reset vào plan, rule, bối cảnh và kiến trúc.
+- [ ] Điều chỉnh schema/validation/form/action đồng bộ: bỏ nhập mã thủ công, tự cấp mã bắt buộc trong DB, chọn cây cơ cấu, sửa chức danh có audit, không cấp role theo chức danh.
+- [ ] Viết luồng khởi tạo 72 từ file final không phụ thuộc hồ sơ cũ; sửa seed để không nạp lại 67 hồ sơ cũ. Rà lại các script sync/export và phép tìm kiếm đang dựa vào employeeCode.
+- [ ] Tạo backup mới, preview số dòng bị xóa/giữ/nạp, kiểm tra tài khoản quản trị còn hoạt động và xử lý transaction/FK.
+- [ ] Thực hiện làm sạch đúng phạm vi trên; không reset toàn DB, không reset sequence hoặc xóa migration cũ.
+- [ ] Đồng bộ `/employees`, `/accounts`, phòng ban, tổng quan, 3D, seed và tài liệu từ cùng dữ liệu người; kiểm tra còn đúng 72 người sau nạp và không tạo tài khoản hàng loạt.
+- [ ] Kiểm thử tạo/sửa chức danh ở cả hồ sơ nhập và mới; chọn nhánh hợp lệ/chặn khác công ty; tạo người không có tài khoản; tài khoản quản trị còn dùng được, phiên tài khoản đã xóa bị từ chối; bộ đếm tăng đúng khi thêm người mới và khởi tạo lại không sinh trùng.
+
+
+## Chốt ưu tiên độ chính xác nguồn HR — 27/10/2026
+
+- [x] Người phụ trách xác nhận file final 72 người là nguồn ưu tiên về độ chính xác. Thông tin khác 1Office dùng final, không yêu cầu xác nhận lại chỉ vì chênh nguồn cũ.
+- [x] Đồng bộ DATABASE-RULES, bối cảnh, thiết kế đồng bộ, kiến trúc và bảng đối chiếu. Giữ thẩm quyền HR đối với bản export/API mới; cập nhật sau phải được chốt, không tự ghi đè. Tách rõ các liên kết tài khoản mơ hồ với thông tin hồ sơ HR đã được xác nhận.
+- [x] Lần cập nhật này ghi nhận quy tắc/tài liệu; không sửa lại DB hoặc triển khai job đồng bộ. Việc tách danh sách chính/lưu trữ và ẩn mã vẫn ở mục chờ thực hiện bên dưới.
+
+
+## Đối chiếu HR final với file 1Office — 27/10/2026
+
+- [x] Lập [bảng so sánh đầy đủ 72 dòng](../strategy/BANG-SO-SANH-HR-FINAL-VA-1OFFICE.md) trực tiếp từ file gốc: HR 26/10, hồ sơ 1Office 14/10, tài khoản/cơ cấu 21/10. Lần này chỉ phân tích, không sửa DB hoặc truy cập 1Office.
+- [x] Phân biệt 58 cặp có căn cứ, 1 liên kết IT tạm, 13 người chưa thấy trong export và 8 hồ sơ cũ không có đối ứng. Không trình bày 59 liên kết là 59 danh tính đã được xác nhận chắc chắn.
+- [x] Xác minh 56 ngày sinh đủ ở hai nguồn đều khớp; 3 hồ sơ nguồn thiếu ngày sinh. Lỗi lệch ngày từng có trong ERP không phải bất đồng giữa hai file nguồn.
+- [x] Gộp bộ phận con để so cùng cấp: 30 khác mức chi tiết, 1 khác phòng cấp chính. Tài khoản đối ứng: 50 kích hoạt (gồm 1 IT tạm), 8 khóa, 14 chưa thấy; không suy nghỉ việc từ khóa tài khoản.
+- [x] Ghi nhận yêu cầu: công ty chưa quản lý mã nhân sự, danh sách chính chỉ có 72 người theo HR. ID kỹ thuật vẫn cần cho liên kết, không coi mã SDG tự sinh là mã chính thức do HR cấp.
+- [ ] Điều chỉnh giao diện danh sách chính/lưu trữ và cách hiển thị mã theo yêu cầu mới; chưa thực hiện trong lần lập bảng đối chiếu này.
+
+
+## Nhập danh sách HR chốt 26/10/2026 — thực hiện 27/10/2026
+
+- [x] Khắc phục Prisma Studio không hiển thị Employee (27/10/2026): tiến trình cổng 5555 chạy từ 26/10 giữ schema cũ. Xác minh PostgreSQL `sdg_erp.public.nhan_su` tồn tại; khởi động lại riêng Studio bằng schema hiện tại. Playwright kiểm tra danh sách model sau khởi động có Employee 80 và User 68. Không thay đổi dữ liệu hoặc khởi động lại ứng dụng.
+
+- [x] Kiểm tra lại DB chỉ đọc ngày 27/10/2026 theo câu hỏi về trạng thái nhập: 72 hồ sơ có `hrSourceFile = DS_nhan_su_Sao_Do_26.10.2026.xlsx`, ngày chốt 26/10; tổng trạng thái 72 ACTIVE, 7 UNKNOWN, 1 LEFT; 68 tài khoản, 18 đơn vị. File final đã nhập; phương án xóa dữ liệu cũ/khởi tạo lại và tự cấp mã trong form chưa thực hiện.
+
+- [x] Đọc file `docs/HR_danhsachnhanvien/DS_nhan_su_Sao_Do_26.10.2026.xlsx`: 72 dòng người, 9 nhóm phòng ban, không có mã nhân viên/ID nguồn. STT không dùng làm định danh.
+- [x] Đối chiếu dữ liệu hiện có; xác định ngày sinh cũ bị lệch ngày. Ngày Excel phải đọc serial thành ngày UTC, không qua giờ địa phương.
+- [x] Thêm nguồn HR/ngày chốt/ghi chú riêng; giữ mapping 1Office, ID và mã ERP hiện có. Migration `20261027033903_hr_final_source` đã áp dụng, Prisma Client đã sinh lại.
+- [x] Nhập có preview, backup, transaction và audit; không tạo/khóa tài khoản, không đổi role. Người vắng trong file: giữ hồ sơ, ACTIVE thành UNKNOWN, LEFT giữ nguyên.
+- [x] Đối chiếu đủ 72 dòng và chạy lại không ghi thêm: 59 cập nhật, 13 mới; 72 ACTIVE, 7 UNKNOWN, 1 LEFT. Giữ nguyên 68 tài khoản và 18 đơn vị. Ghi chú HR hiển thị ở bảng/hồ sơ; nguồn HR mới được bảo vệ như hồ sơ nguồn.
+- [x] Kiểm thử parser/matching 2/2, TypeScript, ESLint phần thay đổi và `git diff --check` đạt. Prisma diff không lệch schema. Playwright kiểm tra trực tiếp `/employees` HTTP 200: 72 đang làm, ghi chú HR, ngày sinh đúng, nguồn khóa sửa tên, desktop/mobile đạt. Kiểm tra DB độc lập sau nhập: 80 hồ sơ/72 HR/6 ghi chú; tài khoản, role, quan hệ quyền và đơn vị giống backup. [Báo cáo đối chiếu](../strategy/DOI-CHIEU-NHAN-SU-HR-2026-10-26.md) lưu cách ghép, các hồ sơ cần xác nhận và vị trí backup.
+
+
+## Tách nhân sự và tài khoản — 26/10/2026
+
+**Đã được duyệt và triển khai.** Phần lịch sử bên dưới mô tả mô hình User gộp hồ sơ trước lần chuyển đổi này; thiết kế hiện hành là Employee (người) và User (tài khoản).
+
+- [x] Kiểm kê DB và đối chiếu workbook HR 14/10/2026: 68 tài khoản cũ; 67 mã hồ sơ nguồn. Workbook có 66 đang làm, 1 nghỉ việc. Mã 074 có tên nguồn “Nhân viên IT”, giữ tên ERP hiện tại và ghi chú cần xác nhận nguồn.
+- [x] Lưu snapshot trước chuyển đổi ngoài repository tại thư mục riêng tư trên máy; không phải bản backup toàn cluster. Migration có transaction, giữ mật khẩu/ID/quyền/trạng thái tài khoản, không xóa hồ sơ cũ.
+- [x] Tạo Employee/nhan_su với mã, tên, trạng thái làm việc và mapping nguồn. Chuyển 67 hồ sơ, liên kết 67 tài khoản hiện có; 1 tài khoản hệ thống không được tính vào nhân sự. Giữ các tài khoản ERP từng được seed dù nguồn 1Office không có tài khoản tương ứng.
+- [x] DB cho phép người có 0..N tài khoản; ràng buộc người–phòng và tài khoản–người cùng công ty. Cột legacy lưu trữ chỉ để đối chiếu, không truy vấn từ ứng dụng.
+- [x] Tách `/employees` và `/accounts`: hồ sơ không yêu cầu mật khẩu/role; tài khoản tạo riêng và chọn người sở hữu. Tên/mã/phòng/chức vụ của hồ sơ nguồn được bảo vệ; liên hệ và tình trạng làm việc có audit khi xác nhận nội bộ.
+- [x] ADMIN/IT_ADMIN quản lý tài khoản và gán role hiện có. HR MANAGE chỉ quản lý hồ sơ. Không tự cộng quyền giữa các tài khoản cùng người.
+- [x] Session đọc tài khoản và quyền từ DB; khóa tài khoản hoặc đổi phiên bản phiên làm mất hiệu lực phiên cũ. JWT verification tách riêng khỏi DB cho middleware. Đăng nhập bằng username, không dùng mã nhân viên.
+- [x] Tổng quan đếm hồ sơ và người ACTIVE riêng; phòng ban đếm hồ sơ gắn đơn vị; 3D lấy nhân sự ACTIVE, không lọc trạng thái tài khoản. Giữ nguyên cơ cấu phòng ban và mapping vị trí hiện tại.
+- [x] FK người giữ/nhận tài sản và kỹ thuật viên chuyển sang Employee; người thao tác và audit giữ User. Seed chỉ nhập hồ sơ người, không tạo tài khoản hàng loạt hoặc reset mật khẩu tài khoản hiện hữu.
+- [x] Xác minh sau migration: 67 hồ sơ, 68 tài khoản, 1 hệ thống; mật khẩu băm/tên đăng nhập/trạng thái/quyền và 18 phòng ban giữ nguyên. TypeScript và ESLint các phần mới đạt.
+- [x] Playwright 4/4 tình huống mới đạt: DB 0/2 tài khoản và chặn khác công ty; UI tạo người/tài khoản độc lập và mobile; quyền tài khoản riêng, đăng nhập và thu hồi phiên; bảo vệ admin cuối cùng với rollback.
+- [x] Hồi quy: 4/4 phòng ban và sơ đồ, 4/4 AI/Word; thêm 2/2 kiểm thử tổng quan/3D và HR không được quản lý tài khoản. Tổng 14 tình huống riêng biệt đạt; chạy lại 2 luồng tạo và đăng nhập sau chỉnh UI đều đạt.
+- [x] Schema DB không lệch Prisma, migration đã áp dụng. Dọn dữ liệu test: còn đúng 1 công ty, 18 phòng ban, 67 nhân sự, 68 tài khoản và 7 role gốc; so sánh lại toàn bộ trường cũ của tài khoản và dữ liệu phòng ban không đổi.
+- [x] Production build webpack đạt sau tách module JWT khỏi Prisma; Next.js vẫn cảnh báo phiên bản 16.4.0, giữ phiên bản theo lựa chọn của người phụ trách. Kiểm tra cuối ngày 27/10/2026: TypeScript, ESLint phần thay đổi mới và production build webpack trên mã cuối đều đạt; không còn cảnh báo Prisma trong Edge Runtime.
+- [x] Đối chiếu file HR final 26/10/2026: 72 người hiện tại; chi tiết xem mục đầu tài liệu.
+- [ ] API/webhook, importer tổng quát cho các lần sau và đồng bộ định kỳ chưa triển khai. Lệnh nhập một snapshot không thay thế các chức năng này.
+- [ ] Quản lý kiêm nhiệm và lịch sử chuyển phòng chi tiết nằm ngoài bản đơn giản hiện tại. Ma trận `/roles` theo kế hoạch riêng; không đánh dấu hoàn thiện RBAC chỉ vì đã có `/accounts`.
+
 > **Dự án:** Sao Đỏ Group ERP (SDG ERP)  
 > **Kiến trúc:** CSDL Tối ưu ERP (Khóa chính số nguyên tự tăng `Int autoincrement`, Hồ sơ `User` phẳng kết hợp Cơ cấu tổ chức cây phân cấp `Department` và Ma trận Phân quyền động đa chiều `Role` - `Permission` - `UserRole`).  
 > **Khả năng mở rộng (Dynamic Scalability):**  

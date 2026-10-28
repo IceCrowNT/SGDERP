@@ -1,8 +1,9 @@
 import { Metadata } from "next";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Users, Building2, ShieldCheck, CheckCircle2, ArrowUpRight, Sparkles, UserCheck } from "lucide-react";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getSession, hasPermission } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -16,13 +17,17 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   const session = await getSession();
 
+  if (!session) redirect("/login");
+  if (!hasPermission(session, "HR")) return <div className="p-6">Xin chào, {session.fullName}. Chọn chức năng được cấp quyền trong menu.</div>;
+  const where = { companyId: session.companyId };
   // Truy vấn dữ liệu thực tế từ PostgreSQL
   const [totalUsers, activeUsers, totalDepartments, totalRoles, recentUsers] = await Promise.all([
-    db.user.count(),
-    db.user.count({ where: { isActive: true } }),
-    db.department.count(),
-    db.role.count(),
-    db.user.findMany({
+    db.employee.count({ where }),
+    db.employee.count({ where: { ...where, employmentStatus: "ACTIVE" } }),
+    db.department.count({ where }),
+    db.role.count({ where }),
+    db.employee.findMany({
+      where,
       take: 6,
       orderBy: { createdAt: "desc" },
       include: { department: true },
@@ -33,9 +38,9 @@ export default async function DashboardPage() {
 
   const statCards = [
     {
-      title: "Tổng số nhân sự",
+      title: "Tổng hồ sơ nhân sự",
       value: totalUsers.toLocaleString("vi-VN"),
-      subtitle: `${activeUsers} đang hoạt động`,
+      subtitle: `${activeUsers} đang làm việc theo hồ sơ`,
       icon: Users,
       color: "text-primary",
       bgColor: "bg-primary/10",
@@ -77,7 +82,7 @@ export default async function DashboardPage() {
             Xin chào, {session?.fullName || "Quản trị viên"}!
           </h1>
           <p className="text-white/80 text-sm sm:text-base font-normal">
-            Hệ thống đã đồng bộ toàn bộ dữ liệu thực tế của Tập đoàn với {totalUsers} hồ sơ nhân sự và {totalDepartments} phòng ban trực thuộc.
+            Dữ liệu hiện lưu gồm {totalUsers} hồ sơ nhân sự và {totalDepartments} phòng ban trực thuộc.
           </p>
         </div>
         <div className="absolute -right-8 -bottom-10 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />
@@ -168,8 +173,8 @@ export default async function DashboardPage() {
                         {u.department.name}
                       </Badge>
                     )}
-                    <Badge variant={u.isActive ? "default" : "secondary"} className={`text-[10px] h-5 px-2 ${u.isActive ? "bg-emerald-600 hover:bg-emerald-600 text-white" : ""}`}>
-                      {u.isActive ? "Hoạt động" : "Nghỉ việc"}
+                    <Badge variant={(u.employmentStatus === "ACTIVE") ? "default" : "secondary"} className={`text-[10px] h-5 px-2 ${(u.employmentStatus === "ACTIVE") ? "bg-emerald-600 hover:bg-emerald-600 text-white" : ""}`}>
+                      {u.employmentStatus === "ACTIVE" ? "Đang làm việc" : u.employmentStatus === "LEFT" ? "Đã nghỉ việc" : "Chưa xác nhận"}
                     </Badge>
                   </div>
                 </div>

@@ -1,4 +1,37 @@
 # TÀI LIỆU KIẾN TRÚC TỔNG THỂ & SỔ BỘ THƯ VIỆN
+
+## Lưu trữ tài liệu và đầu ra — 28/10/2026
+
+Git theo dõi mã nguồn, tài nguyên ứng dụng và tài liệu Markdown. Các thư mục `outputs/`, `output/`, `ouput/`, `tmp/`, `temp/`, export 1Office và tài liệu nhị phân/ảnh trong `docs/` chỉ lưu cục bộ theo `.gitignore`. Script tạo tài liệu dùng tạm đặt trong `outputs/`. Khi clone mới, các file nguồn phục vụ seed/import và tài liệu báo cáo phải được cung cấp riêng vào đúng đường dẫn; không tự tải lại 1Office. Bỏ theo dõi giữ nguyên file trên máy, không xóa chúng khỏi lịch sử commit cũ.
+
+## Thiết kế điều chỉnh HR sau đánh giá 27/10/2026 — chưa triển khai
+
+Giữ mô hình `Department → Employee → User` hiện có. Phòng ban chọn từ cây qua FK, chức danh giữ text và cho phép sửa có audit. Theo quyết định bổ sung 27/10/2026, giữ `employeeCode` bắt buộc và duy nhất trong công ty; ERP tự cấp thay vì yêu cầu nhập ở form. Mã ổn định có thể ẩn trên UI nhưng đưa vào Excel để đối chiếu nhập lại; đây là mã ERP, không phải mã HR chính thức. FK vẫn dùng `Employee.id`. Đề xuất cho mã nullable trước đây đã được thay thế; cơ chế tự cấp mã trong luồng tạo và xuất–nhập chưa triển khai. Luồng tạo người không tự tạo tài khoản hay gán role.
+
+[Phương án trong HR-CHECKLIST](plans/HR-CHECKLIST.md) đề xuất làm sạch riêng dữ liệu HR/tài khoản, nạp 72 người từ final và giữ tài khoản quản trị hệ thống, cơ cấu, role/quyền và dữ liệu tài sản. Phải sửa seed cũ và importer phụ thuộc mã trước, không reset toàn DB hoặc sequence. Phần này là thiết kế đề xuất; schema và ứng dụng hiện vẫn theo mô tả triển khai bên dưới.
+
+
+## Nguồn nhân sự HR chốt 26/10/2026
+
+- `Employee.hrSourceFile`, `hrSnapshotAt`, `hrNotes` lưu nguồn HR chính thức, ngày chốt và ghi chú; không thay `externalSystem/externalId/externalSnapshotAt` của mapping 1Office.
+- Migration `20261027033903_hr_final_source` chỉ thêm ba cột nullable; không xóa/đổi dữ liệu cũ.
+- `prisma/hr-final-data.ts` đọc ngày Excel theo lịch UTC và mapping đã đối chiếu; `prisma/import-hr-final-20261026.ts` là lệnh nhập một lần, preview mặc định, khóa theo hash file, backup riêng tư ngoài repo, transaction và audit. Không phải API/sync định kỳ.
+- Preview: `npx tsx prisma/import-hr-final-20261026.ts --company-id=1`; thêm `--apply` để nhập. Có marker ngăn nhập lại cùng snapshot, tránh đè sửa đổi mới.
+- Người phụ trách chốt ưu tiên độ chính xác của file HR final 72 người (27/10/2026): tên, ngày sinh, chức danh, phòng ban gán cho người, ghi chú và danh sách người theo final. Export/API 1Office mới phải trình chênh lệch để chốt cập nhật, không tự ghi đè trường HR đã xác nhận. Không suy bộ phận con từ chức danh; giữ nguyên cây phòng ban và lưu phân bổ cũ trong audit. Không tạo tài khoản/đổi role khi nhập.
+- Không thêm dependency hoặc biến môi trường; dùng `xlsx`, `tsx`, Prisma sẵn có. Kiểm thử importer: `npx tsx --test tests/unit/hr-final-data.test.ts`.
+
+
+## Cập nhật nhân sự – tài khoản (26/10/2026)
+
+- DB: `Employee` → `nhan_su` là hồ sơ người thật; `User` → `nguoi_dung` là tài khoản. `Department.employees` và `Employee.accounts` thay cho dùng tài khoản làm hồ sơ. Một người có 0..N tài khoản; role gắn từng tài khoản.
+- Migration `20261026100000_split_employees_accounts`: bổ sung bảng, chuyển dữ liệu và FK tài sản; giữ ID/mật khẩu/quyền tài khoản, không xóa cột hồ sơ cũ. Các field `User.legacy*` dùng `@ignore`, chỉ phục vụ đối chiếu, không đọc/ghi trong ứng dụng.
+- `/employees`: hồ sơ và tình trạng làm việc. `/accounts`: tạo/sửa/liên kết tài khoản, khóa/mở, đặt lại mật khẩu và gán role hiện có; chỉ ADMIN/IT_ADMIN. `/roles` vẫn chưa triển khai ma trận quản lý role.
+- `src/actions/account.ts`, `src/lib/account-access.ts`, `src/lib/account-session.ts`, `src/lib/session-token.ts` (JWT cho middleware, không import Prisma), `src/components/accounts/AccountManager.tsx` là các tệp mới. `src/components/ui/checkbox.tsx` dùng Radix đã có; không thêm thư viện.
+- Server xác minh tài khoản còn mở, phiên bản phiên và quyền hiện tại từ DB. Thay đổi tài khoản tăng `sessionVersion`; phiên cũ bị từ chối. Đăng nhập bằng username, không dùng mã nhân sự vì một người có nhiều tài khoản.
+- Nhân sự giữ mapping 1Office; file HR final ưu tiên theo mục nguồn HR phía trên. Tên/mã/phòng/chức vụ của hồ sơ đã liên kết nguồn hoặc được HR chốt không sửa qua form. Có thể thêm hồ sơ nội bộ chưa có mapping, cần đối chiếu trước khi đồng bộ. Chưa có importer nhân sự định kỳ/API/webhook.
+- Bộ đếm: tổng hồ sơ gồm lịch sử, đang làm việc chỉ `ACTIVE`, `UNKNOWN` tách riêng. 3D chỉ hiển thị `Employee.ACTIVE`; phòng ban hiển thị tổng hồ sơ gắn đơn vị. Không đổi quy tắc vị trí ngồi 3D trong lần này.
+- Giữ Next.js 16.4.0 theo yêu cầu; không thay package/dependency/env. Sau khi sinh Prisma Client cần khởi động lại dev server để tránh giữ client cũ.
+
 ## SAO ĐỎ GROUP ERP (SDG ERP)
 
 > **Vị trí tệp:** `docs/ARCHITECTURE.md`  
@@ -45,7 +78,7 @@ graph TD
 ```
 
 ### Các Trục Nghiệp Vụ Trọng Tâm:
-1. **Quản trị Nhân sự & Định danh (Core HR & IAM):** 67 nhân sự, cây phòng ban 2 cấp gắn ID số nguyên (`Int`), liên kết kế thừa quyền.
+1. **Quản trị Nhân sự & Định danh (Core HR & IAM):** 72 người theo danh sách HR chốt 26/10/2026 (80 hồ sơ lưu trữ), cây phòng ban 2 cấp gắn ID số nguyên (`Int`), liên kết kế thừa quyền.
 2. **Không gian số 3D Tòa nhà (Digital Twin 3D Office):** Trực quan hóa mặt bằng văn phòng, định vị phòng ban và hiển thị tức thì nhân sự ngồi tại từng phòng bằng WebGL Three.js.
 3. **Quản trị Tài sản & Thiết bị IT (IT Asset Management):** Quản lý vòng đời máy móc, camera, bản quyền phần mềm cho phòng HCNS & IT.
 4. **Điều hành Xe Công Vụ (Fleet Management):** Xếp lịch điều xe đưa đón giữa Tập đoàn và KCN Nam Đình Vũ.
@@ -81,7 +114,7 @@ SGDERP/
 │   ├── ARCHITECTURE.md               # [TỆP NÀY] Kiến trúc tổng thể & Sổ bộ thư viện
 │   ├── plans/                        # Kế hoạch & Checklist phân hệ (HR-CHECKLIST.md...)
 │   ├── strategy/                     # Bối cảnh hiện trạng, chiến lược số hóa và ranh giới hệ thống
-│   ├── 1office-sources/               # Manifest và export 1Office nội bộ được quản lý trong repo riêng tư
+│   ├── 1office-sources/               # Manifest trong Git; export nội bộ chỉ lưu cục bộ
 │   └── HR_danhsachnhanvien/          # Dữ liệu nguồn Excel 67 cán bộ nhân sự
 ├── prisma/                           # Schema PostgreSQL, Migrations & Seed data
 │   ├── schema.prisma                 # Lược đồ quan hệ thực thể (Data Model)
@@ -216,35 +249,14 @@ Khi AI Agent hoặc kỹ sư thêm thư viện mới hoặc thay đổi hạ t�
 - `docs/bao-cao/`: bản trình bày phục vụ báo cáo thử việc và trao đổi nội bộ. `BAO-CAO-TUAN-THU-VIEC-DAU-TIEN-BAN-NHAP-01.pptx` bám 5 đầu việc tại trang 20 cẩm nang hội nhập, là bản nháp chờ người báo cáo xác nhận thông tin cá nhân và quản lý chốt KPI; không phải quyết định triển khai tính năng.
 - Việc tạo báo cáo không bổ sung dependency hoặc thay đổi cấu hình ứng dụng.
 
-### Thử nghiệm công cụ hồ sơ thanh toán AI
 
-Route `/ai-documents` dùng Server Component kiểm tra đăng nhập và quyền `SYSTEM`, nhúng `src/components/ai-documents/PaymentDocumentLab.tsx`. Bản pilot chỉ chạy tại trình duyệt: xem ảnh, nhập dữ liệu, tạo và sao chép bộ yêu cầu. Không có kết nối OpenAI, API key, OAuth, upload hoặc DB. Đã bổ sung xuất Word cục bộ bằng `docx` như mục bên dưới. Kế hoạch tại [AI-DOCUMENTS-CHECKLIST.md](./plans/AI-DOCUMENTS-CHECKLIST.md).
 
-### Xuất hồ sơ thanh toán Word tại trình duyệt
-
-Bổ sung dependency `docx` (`^9.13.0`) để tạo DOCX thật, tải động khi người dùng xuất. Bộ xuất tại `src/lib/payment-document.ts` điền dữ liệu biểu mẫu vào đề nghị thanh toán và tờ trình, bắt đầu mỗi văn bản trên trang mới. Không gọi AI và không gửi dữ liệu lên máy chủ. Mẫu thử nghiệm cần đối chiếu biểu mẫu chính thức trước khi sử dụng nghiệp vụ.
-
-### Thiết lập Sign in with ChatGPT
-
-`ChatGPTConnectionSetup.tsx` hiển thị trạng thái chờ đăng ký ứng dụng tại `/ai-documents`, dùng cùng guard SYSTEM của trang. Chưa triển khai route OAuth, lưu token, gọi AI hoặc thêm biến môi trường/dependency. Người phụ trách đã chọn hướng đăng nhập ChatGPT; cần client được cấp và quyền dùng gói cho web nội bộ trước khi triển khai luồng thật.
 
 ### Sơ đồ tổ chức — 23/10/2026
 - `src/components/departments/OrganizationChart.tsx`: client component vẽ cây ngang bằng SVG và các nút Shadcn trong foreignObject, không thêm dependency. Tọa độ/kích thước SVG tính từ cây DB; màu dùng theme Tailwind.
 - Trang `/departments` có hai tab danh sách và sơ đồ dùng chung dữ liệu; tên công ty được truy vấn theo session. Đối soát snapshot chuyển vào dialog cho HR MANAGE. Sơ đồ không sửa quan hệ tổ chức.
 
-### Giao diện OpenAI API key — 23/10/2026
-- Thay `ChatGPTConnectionSetup.tsx` bằng `ApiKeyConnectionSetup.tsx`, đặt trong `PaymentDocumentLab` dưới tiêu đề tính năng. Form React Hook Form/Zod, key/model chỉ trong bộ nhớ component; chưa endpoint API hoặc lưu bí mật.
-- Không thêm dependency hoặc biến môi trường. OAuth không còn là hướng triển khai chính; luồng server gọi API là bước tiếp theo.
 
-### Cấu hình API phía server — thay cơ chế nhập key trên tab
-- `ApiKeyConnectionSetup.tsx` là Server Component có `server-only`; page truyền JSX đã render qua slot `connectionStatus` của PaymentDocumentLab. Không truyền key/model trong props client.
-- Cấu hình tại `.env.local` ở thư mục gốc (đã gitignore) hoặc secret/environment của môi trường triển khai:
-  ```dotenv
-  OPENAI_API_KEY=
-  OPENAI_MODEL=
-  ```
-- Quản trị viên điền key thật và mã model được phép sử dụng; không dùng tiền tố NEXT_PUBLIC_, không commit file env. Khởi động lại server sau khi thay cấu hình. Placeholder trống không ghi đè biến đã khai báo trong các file env hiện có.
-- Chưa gọi API, chưa xác thực cấu hình, chưa phân key theo phòng; giao diện chỉ báo có/thiếu cấu hình máy chủ. Không thêm dependency.
 
 ### Cập nhật bố cục cơ cấu — 24/10/2026
 - `OrganizationChart.tsx` chuyển từ cây ngang sang cây từ trên xuống, x phân theo nhánh và y phân theo cấp; đường nối SVG từ đáy nút cha tới đỉnh nút con. Không thay nguồn dữ liệu hoặc dependency.
@@ -252,3 +264,17 @@ Bổ sung dependency `docx` (`^9.13.0`) để tạo DOCX thật, tải động k
 ### Kế hoạch phân quyền — 24/10/2026
 - Thêm tài liệu [ROLE-MANAGEMENT-CHECKLIST.md](plans/ROLE-MANAGEMENT-CHECKLIST.md), đăng ký router AGENTS. Đây là kế hoạch, chưa thay kiến trúc chạy thật hoặc dependencies.
 - Tái sử dụng Role/Permission/RolePermission/UserRole, dự kiến tách quyền RBAC, xử lý hiệu lực phiên và thêm quản lý phạm vi theo giai đoạn; xem plan cho các bước chưa thực hiện.
+
+### Danh mục ý tưởng — 24/10/2026
+- Thêm [Ý tưởng tính năng](strategy/Y-TUONG-TINH-NANG.md), ghi nhận quét mã tài sản qua web điện thoại và liên kết checklist tài sản. Chưa thay kiến trúc vận hành, schema hoặc dependency.
+
+### Công cụ kiểm tra lần tách nhân sự (27/10/2026)
+
+TypeScript, ESLint, Prisma validate/migrate diff và production build webpack; Playwright Chrome kiểm thử trên tài khoản tạm và dọn sau test. Prettier 3 chạy qua npm exec để định dạng tệp mới, không thêm dependency vào package.json hoặc thay lockfile. Snapshot trước chuyển đổi được lưu ngoài repo; không công khai nội dung mật khẩu băm trong báo cáo.
+
+### Tạm hoãn mô-đun AI — 27/10/2026
+
+- Gỡ nhóm menu AI, thư mục `src/components/ai-documents`, `src/lib/payment-document.ts` và test pilot. `/ai-documents/page.tsx` chỉ hiển thị thông báo tạm hoãn sau đăng nhập; không có form, xử lý ảnh, xuất Word hoặc cấu hình AI.
+- Gỡ `docx` khỏi dependencies/lockfile; không thay phiên bản Next.js hoặc thư viện nghiệp vụ khác. Biến OPENAI_API_KEY/OPENAI_MODEL không còn được mã ứng dụng sử dụng; không yêu cầu cấu hình chúng. Không đọc/in giá trị hay thay secret hiện có.
+- Không thay DB/role/quyền dùng chung; giữ các Word đã xuất và tài liệu nghiệp vụ. Không có API AI hoặc worker nền cần dừng.
+- Điểm lưu mã cục bộ: `archive/ai-documents-20261027` (`168109ff0d995b250001b67f1fcf0cc79bdf3b68`); hướng khôi phục từng tệp trong [plan AI](plans/AI-DOCUMENTS-CHECKLIST.md). Không đóng gói mã archive trong ứng dụng.

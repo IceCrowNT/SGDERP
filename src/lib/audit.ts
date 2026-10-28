@@ -140,9 +140,7 @@ export async function getAuditLogs(params: {
       include: {
         user: {
           select: {
-            employeeCode: true,
-            avatarUrl: true,
-            position: true,
+            employee: { select: { employeeCode: true, avatarUrl: true, position: true } },
           },
         },
       },

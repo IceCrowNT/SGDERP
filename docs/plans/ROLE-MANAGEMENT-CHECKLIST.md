@@ -1,5 +1,14 @@
 # Kế hoạch quản lý vai trò và phân quyền
 
+## Cập nhật nền tảng được duyệt — 26/10/2026
+
+- [x] Tách `Employee` và `User`; role gắn tài khoản, không gắn người. Một người có thể có tài khoản thường và admin với quyền độc lập.
+- [x] Có `/accounts` cho ADMIN/IT_ADMIN tạo/sửa tài khoản, liên kết người, gán role hiện có, khóa/mở và đổi mật khẩu. HR MANAGE riêng không được quản lý tài khoản.
+- [x] Kiểm tra tài khoản/quyền từ DB ở ranh giới server; tăng phiên bản phiên khi sửa tài khoản, tránh JWT tiếp tục sử dụng quyền cũ. Bảo vệ tài khoản quản trị hoạt động cuối cùng bằng transaction và khóa theo công ty.
+- [ ] `/roles`, sửa ma trận permission, phạm vi quyền theo phòng ban và bỏ hardcode ADMIN/IT_ADMIN vẫn là các bước sau. Không coi `/accounts` là đã hoàn thiện toàn bộ RBAC.
+- Các mục cũ nói “người được gán role” được hiểu là **tài khoản**; UI phải hiển thị thêm người sở hữu để phân biệt nhiều tài khoản của cùng người.
+
+
 **Ngày lập:** 24/10/2026  
 **Trạng thái:** Đã lập kế hoạch theo yêu cầu; chưa triển khai chức năng hoặc thay quyền hiện hành.  
 **Trang dự kiến:** `/roles` — Vai trò và phân quyền.  

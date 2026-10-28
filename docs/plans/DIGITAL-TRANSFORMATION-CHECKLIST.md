@@ -1,7 +1,15 @@
 # Kế hoạch khảo sát và định hướng số hóa
 
+## Tài liệu cục bộ, không đưa lên GitHub — 28/10/2026
+
+- [x] Cập nhật `.gitignore`: bỏ qua toàn bộ outputs/output/ouput, tmp/temp, ảnh và tài liệu nhị phân trong docs, export 1Office; bỏ ngoại lệ đưa workbook export vào Git.
+- [x] Bỏ theo dõi 24 file đã có trong Git bằng `git rm --cached`; đối chiếu SHA-256 xác nhận các file còn trên máy không đổi. File `outputs/ai-api-key-mobile.png` đã bị xóa từ trước, không khôi phục hay xóa thêm file cục bộ.
+- [x] Giữ logo/icon ứng dụng và mã nguồn được theo dõi; kiểm tra không còn file tracked thuộc các quy tắc ignore. Cập nhật AGENTS, ARCHITECTURE và README nguồn 1Office.
+- [x] Đây là thay đổi working tree/index để áp dụng ở commit tiếp theo; chưa commit/push hoặc viết lại lịch sử Git. Các bản đã commit trước đây vẫn còn trong lịch sử.
+
 ## Giai đoạn 0 — Khảo sát ban đầu
 
+- [x] Ngày 27/10/2026: rà soát tài liệu hiện có để phân nhóm thành bộ hồ sơ dự án phát triển SDG ERP; repository đã có nền tảng chiến lược, kiến trúc, dữ liệu và checklist phân hệ, nhưng còn cần chuẩn hóa hồ sơ khởi động/phạm vi, yêu cầu nghiệp vụ, kiểm thử–UAT, triển khai–nghiệm thu và vận hành–bàn giao.
 - [x] Đổi tên 5 tài liệu trong `docs/strategy` sang tiếng Việt không dấu; cập nhật tham chiếu trong AGENTS.md, kiến trúc, checklist và tài liệu liên quan; kiểm tra không còn tên file cũ.
 
 - [x] Ngày 22/10/2026: làm sạch file bối cảnh, gộp ý trùng, bỏ câu hỏi nguồn chuẩn đã chốt và lộ trình chung chưa được duyệt; cập nhật trạng thái prototype, cơ cấu và hướng bản sao nhân sự/API/webhook. Các số liệu cũ giữ mốc snapshot rõ ràng.

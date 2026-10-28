@@ -1,10 +1,13 @@
-import { SignJWT, jwtVerify } from "jose";
+import { verifySessionToken } from "@/lib/session-token";
+export { createSessionToken, verifySessionToken } from "@/lib/session-token";
 import { cookies } from "next/headers";
 
 export type PermissionLevel = "NONE" | "VIEW" | "MANAGE";
 
 export interface SessionUser {
   userId: number;
+  employeeId?: number | null;
+  sessionVersion?: number;
   username: string;
   fullName: string;
   employeeCode: string;
@@ -18,33 +21,6 @@ export interface SessionUser {
 }
 
 const COOKIE_NAME = "sdg_session";
-const SECRET_KEY = new TextEncoder().encode(
-  process.env.SESSION_SECRET || "sdg_erp_super_secret_jwt_key_default_2026"
-);
-
-/**
- * Tạo JWT Session Token từ thông tin người dùng
- */
-export async function createSessionToken(user: SessionUser): Promise<string> {
-  return new SignJWT({ ...user })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("7d")
-    .sign(SECRET_KEY);
-}
-
-/**
- * Xác thực chuỗi Token và trả về thông tin Session (Edge & Node compatible)
- */
-export async function verifySessionToken(token: string): Promise<SessionUser | null> {
-  try {
-    const { payload } = await jwtVerify(token, SECRET_KEY);
-    return payload as unknown as SessionUser;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Lấy Session người dùng hiện tại từ Cookie (dùng trong Server Components / Server Actions)
  */
@@ -53,7 +29,12 @@ export async function getSession(): Promise<SessionUser | null> {
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value;
     if (!token) return null;
-    return await verifySessionToken(token);
+    const tokenUser = await verifySessionToken(token);
+    if (!tokenUser || !Number.isInteger(tokenUser.userId)) return null;
+    const { readAccountSession } = await import("@/lib/account-session");
+    const current = await readAccountSession(tokenUser.userId);
+    if (!current || current.companyId !== tokenUser.companyId || current.sessionVersion !== (tokenUser.sessionVersion ?? 0)) return null;
+    return current;
   } catch {
     return null;
   }

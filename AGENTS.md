@@ -23,14 +23,15 @@ Khi nhận bất kỳ yêu cầu nào, AI Agent BẮT BUỘC tra cứu bảng đ
 | **Cơ sở dữ liệu & Schema** | [.agents/rules/DATABASE-RULES.md](file:///Users/duonghoangnam/Desktop/SGDERP/.agents/rules/DATABASE-RULES.md) | Migration chuẩn, Prisma Schema, Khóa chính Int, Cấu trúc cây, Audit fields. |
 | **Backend & Logic Nghiệp Vụ** | [.agents/rules/BACKEND-RULES.md](file:///Users/duonghoangnam/Desktop/SGDERP/.agents/rules/BACKEND-RULES.md) | Next.js Server Actions, Zod Validation, Session Auth, Prisma Transactions. |
 | **Giao diện & UI Theme** | [.agents/rules/FRONTEND-RULES.md](file:///Users/duonghoangnam/Desktop/SGDERP/.agents/rules/FRONTEND-RULES.md) | 100% Tailwind CSS & Shadcn/UI, Mobile-first Responsive, AJAX SPA. |
-| **Kế hoạch: Quản lý Nhân sự (HR)** | [docs/plans/HR-CHECKLIST.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/plans/HR-CHECKLIST.md) | Lộ trình từng bước triển khai phân hệ Quản lý Nhân sự & Phân quyền. |
-| **Quản lý vai trò & Phân quyền** | [docs/plans/ROLE-MANAGEMENT-CHECKLIST.md](docs/plans/ROLE-MANAGEMENT-CHECKLIST.md) | Trang /roles, ma trận quyền, gán người dùng, phạm vi công ty/phòng ban và hiệu lực phiên; kế hoạch chưa triển khai. |
+| **Kế hoạch: Quản lý Nhân sự (HR)** | [docs/plans/HR-CHECKLIST.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/plans/HR-CHECKLIST.md) | Hồ sơ Employee tách tài khoản User; /employees và /accounts, thống kê người thật và trạng thái đăng nhập độc lập. |
+| **Quản lý vai trò & Phân quyền** | [docs/plans/ROLE-MANAGEMENT-CHECKLIST.md](docs/plans/ROLE-MANAGEMENT-CHECKLIST.md) | Trang /roles và ma trận quyền còn trong kế hoạch; /accounts và kiểm tra phiên DB đã triển khai, role thuộc tài khoản. |
 | **Chiến lược số hóa & Hiện trạng hệ thống** | [docs/strategy/BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/strategy/BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md) | Vai trò của 1Office, phạm vi SDG ERP, rủi ro, nguyên tắc tích hợp và lộ trình 30–60–90 ngày. |
 | **Mô hình dữ liệu quản trị & Tích hợp 1Office** | [docs/strategy/MO-HINH-DU-LIEU-QUAN-TRI-VA-TICH-HOP-1OFFICE.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/strategy/MO-HINH-DU-LIEU-QUAN-TRI-VA-TICH-HOP-1OFFICE.md) | Cơ cấu, tài khoản, nhóm quyền, quy trình, tri thức ngầm, dữ liệu nguồn và ranh giới tích hợp 1Office–SDG ERP. |
 | **Master Data & RBAC SDG ERP–1Office** | [docs/strategy/DONG-BO-DU-LIEU-NEN-VA-PHAN-QUYEN.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/strategy/DONG-BO-DU-LIEU-NEN-VA-PHAN-QUYEN.md) | Đối chiếu dữ liệu nền, mapping đơn vị, phân lớp role, quyền sở hữu dữ liệu, quy tắc xung đột và luồng đồng bộ. |
 | **Kế hoạch: Chuyển đổi số** | [docs/plans/DIGITAL-TRANSFORMATION-CHECKLIST.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/plans/DIGITAL-TRANSFORMATION-CHECKLIST.md) | Checklist khảo sát, xác nhận dữ liệu, hardening, tích hợp, pilot và mở rộng. |
+| **Ý tưởng tính năng** | [docs/strategy/Y-TUONG-TINH-NANG.md](docs/strategy/Y-TUONG-TINH-NANG.md) | Ý tưởng để xem xét, gồm quét mã tài sản bằng camera điện thoại; không đồng nghĩa đã duyệt triển khai. |
 | **Quản lý tài sản & Tích hợp 3D** | [.agents/rules/ASSET-MANAGEMENT-RULES.md](file:///Users/duonghoangnam/Desktop/SGDERP/.agents/rules/ASSET-MANAGEMENT-RULES.md), [docs/plans/ASSET-MANAGEMENT-CHECKLIST.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/plans/ASSET-MANAGEMENT-CHECKLIST.md), [docs/strategy/DANH-GIA-TICH-HOP-TAI-SAN-VA-MO-HINH-3D.md](file:///Users/duonghoangnam/Desktop/SGDERP/docs/strategy/DANH-GIA-TICH-HOP-TAI-SAN-VA-MO-HINH-3D.md) | Danh mục và vòng đời tài sản, chứng từ kiểm kê, vị trí vật lý, bảo trì, mapping Three.js và roadmap Digital Twin. |
-| **Công cụ hồ sơ thanh toán AI** | [docs/plans/AI-DOCUMENTS-CHECKLIST.md](docs/plans/AI-DOCUMENTS-CHECKLIST.md) | Pilot chuẩn bị yêu cầu và xuất Word theo mẫu, quyền SYSTEM, chưa tích hợp AI. |
+| **Công cụ hồ sơ thanh toán AI** | [docs/plans/AI-DOCUMENTS-CHECKLIST.md](docs/plans/AI-DOCUMENTS-CHECKLIST.md) | TẠM HOÃN: đã gỡ pilot và menu; /ai-documents chỉ thông báo tạm hoãn. Giữ lịch sử và hướng khôi phục trong plan. |
 
 ---
 
@@ -46,6 +47,10 @@ Khi nhận bất kỳ yêu cầu nào, AI Agent BẮT BUỘC tra cứu bảng đ
 8. **Trạng thái prototype:** Toàn bộ tính năng SDG ERP hiện có là bản nháp phục vụ khảo sát. Agent được phép đề xuất giữ, sửa lớn hoặc xây lại; báo cáo/phân tích không đồng nghĩa được duyệt triển khai. Không thực hiện thay đổi kiến trúc hoặc chức năng theo đề xuất trước khi có yêu cầu triển khai rõ ràng.
 
 ---
+
+## Lưu tài liệu cục bộ — cập nhật 28/10/2026
+
+Ảnh tài liệu, file nguồn/export nội bộ, Word/PDF/PowerPoint và file tạm/script hỗ trợ tạo tài liệu chỉ lưu trên máy, không đưa lên GitHub. Đặt đầu ra và script dùng tạm trong `outputs/` (các thư mục `output/`, `ouput/`, `tmp/`, `temp/` cũng được bỏ qua). Không dùng `git add -f` để đưa các file này vào Git. Tài liệu thiết kế/plan/rule Markdown và tài nguyên ứng dụng trong `public/`, `src/` vẫn được quản lý bằng Git. Khi bỏ theo dõi file đã có trong Git, dùng `git rm --cached` để giữ bản trên máy; không tự xóa file hoặc viết lại lịch sử Git.
 
 ## 3. Quản Lý Kế Hoạch & Mở Rộng Phân Hệ Mới (Plans Extensibility)
 

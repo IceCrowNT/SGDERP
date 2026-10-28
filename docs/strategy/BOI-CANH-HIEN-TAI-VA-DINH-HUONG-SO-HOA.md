@@ -1,5 +1,20 @@
 # Bối cảnh hiện tại và định hướng số hóa Sao Đỏ Group
 
+> **Yêu cầu bổ sung 27/10/2026:** Phòng ban phải chọn theo cây cơ cấu hiện có; chức danh là text tự do có thể chỉnh khi tạo/sửa người, không phải role. File HR 72 người là chuẩn khởi tạo. Người phụ trách cho phép cân nhắc làm sạch nhân sự/tài khoản và cơ cấu lại DB nếu cần, đồng thời yêu cầu nhận xét/đánh giá trước. Đã lập [phương án cụ thể trong kế hoạch HR](../plans/HR-CHECKLIST.md); chưa xóa dữ liệu hoặc triển khai phương án trong lượt đánh giá này.
+
+
+> **Cập nhật nguồn nhân sự 27/10/2026:** Đã nhập file HR final ngày 26/10/2026: 72 người theo danh sách, giữ 7 hồ sơ chờ xác nhận và 1 đã nghỉ riêng. File HR ưu tiên cho các trường nhân sự có trong file; mapping 1Office và cây 18 đơn vị được giữ. Các số liệu 66/67 trong khảo sát cũ bên dưới là lịch sử, không phải hiện trạng mới. Xem [đối chiếu HR và các điểm cần xác nhận](DOI-CHIEU-NHAN-SU-HR-2026-10-26.md).
+
+
+> **Quyết định 27/10/2026:** Tạm hoãn tích hợp AI và gỡ bản thử nghiệm hồ sơ thanh toán khỏi ứng dụng. Giữ ý tưởng/tài liệu để xem xét sau; không tự khôi phục khi chưa được duyệt. Xem [plan AI](../plans/AI-DOCUMENTS-CHECKLIST.md).
+
+## Quyết định nhân sự và tài khoản — 26/10/2026
+
+Người phụ trách duyệt quản lý đơn giản: phòng ban → hồ sơ nhân sự → 0 hoặc nhiều tài khoản. Số người tính từ hồ sơ, không từ tài khoản. Tài khoản cá nhân/admin của cùng người dùng chung ID nhân sự, quyền độc lập. Nguồn nhân sự hiện ưu tiên file HR final 72 người theo quyết định 27/10/2026; cây cơ cấu giữ tham chiếu 1Office, ERP quản lý tài khoản và quyền riêng. Không bổ sung hệ quản trị danh tính phức tạp.
+
+Đã triển khai nền DB, cập nhật thống kê và giao diện quản lý tách biệt. Nguồn hiện dùng là snapshot đã lưu, không xác nhận số người hiện tại tuyệt đối nếu chưa đối chiếu mới. Bảng User cũ giữ cột lưu trữ để bảo toàn dữ liệu nhưng ứng dụng chỉ đọc hồ sơ từ Employee.
+
+
 **Cập nhật:** 22/10/2026
 
 **Mốc khảo sát 1Office:** 21/10/2026; số liệu trong file là snapshot, không phải dữ liệu trực tuyến
@@ -16,8 +31,10 @@ Phạm vi đã khảo sát gồm văn phòng Tập đoàn Sao Đỏ và Ban QLDA
 
 ## 2. Những quyết định và giới hạn đã xác nhận
 
+- **Giữ mã nhân sự nội bộ ERP (chốt 27/10/2026).** Công ty chưa có mã HR chính thức, nhưng ERP sẽ tự cấp mã ổn định để xuất Excel và đối chiếu khi nhập lại. Có thể ẩn trên giao diện, không bắt nhập tay; FK vẫn dùng ID DB. Quyết định này thay thế phương án mã nullable; luồng tự cấp mã và xuất–nhập còn chờ triển khai theo kế hoạch HR.
+
 - **1Office đang hoạt động ổn và tiếp tục là nền tảng làm việc chính.** Người phụ trách sẽ nghiên cứu sâu để tối ưu tính năng sẵn có trước khi đề xuất xây thêm.
-- **1Office là nguồn chuẩn cho hồ sơ nhân sự và cơ cấu tổ chức.** ERP giữ bản sao và liên kết dữ liệu để phục vụ nghiệp vụ riêng; không duy trì một cơ cấu cạnh tranh với nguồn.
+- **File HR final 72 người là nguồn chuẩn ưu tiên về độ chính xác của nhân sự.** Họ tên, ngày sinh, phòng ban gán cho người, chức danh và ghi chú theo file HR chốt 26/10/2026 khi khác 1Office. Dữ liệu 1Office giữ vai trò đối chiếu, liên kết và cung cấp cây đơn vị hiện có. Export/API mới không tự ghi đè trường HR đã chốt; cần duyệt chênh lệch. Trường không có trong final được giữ từ nguồn cũ nhưng chưa được coi là HR xác nhận.
 - **SDG ERP tập trung vào nhu cầu đặc thù:** tài sản gắn vị trí, không gian 3D, tích hợp dữ liệu và các bài toán vận hành được khảo sát xác nhận. GIS, IoT và AI là hướng mở rộng đang nghiên cứu.
 - **Các tính năng ERP hiện tại là prototype.** Có thể đề xuất sửa lớn hoặc xây lại; đề xuất trong tài liệu không đồng nghĩa đã được giao triển khai.
 - **Không tự truy cập lại 1Office.** Mỗi lần khảo sát cần người phụ trách cấp lại thông tin và phạm vi; chỉ xem/export, giữ nguyên dữ liệu, quyền và cấu hình. Không lưu hoặc tái sử dụng credential, cookie hay session cũ.
