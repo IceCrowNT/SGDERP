@@ -91,20 +91,10 @@ async function saveEmployee(input: unknown, updating: boolean) {
           })
         : null;
       if (id && !previous) throw Error("Không tìm thấy nhân sự.");
-      if (
-        (previous?.externalSystem || previous?.hrSnapshotAt) &&
-        (v.employeeCode !== previous.employeeCode ||
-          v.fullName !== previous.fullName ||
-          v.departmentId !== previous.departmentId ||
-          (v.position || null) !== previous.position)
-      )
-        throw Error(
-          "Tên, mã, phòng ban và chức vụ theo dữ liệu nguồn đã chốt. Hãy cập nhật bằng dữ liệu nguồn đã đối chiếu.",
-        );
       const data = {
         fullName: v.fullName,
-        employeeCode: v.employeeCode,
         position: v.position || null,
+        notes: v.notes || null,
         departmentId: v.departmentId,
         phone: v.phone || null,
         email: v.email || null,

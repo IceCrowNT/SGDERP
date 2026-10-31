@@ -49,7 +49,7 @@ Các phát hiện trực tiếp từ file:
 ## Cách sử dụng an toàn
 
 - Không commit các file export; giữ cục bộ hoặc bàn giao riêng qua kênh nội bộ phù hợp. Không dùng `git add -f` để vượt `.gitignore`.
-- 1Office là nguồn chuẩn cho hồ sơ nhân sự và cơ cấu, nhưng mỗi export chỉ là snapshot tại thời điểm thu thập. Khi đồng bộ phải ghi ngày nguồn, đối chiếu thay đổi và không coi snapshot cũ là dữ liệu sống hiện tại.
+- Quyết định 28/10/2026: export 1Office chỉ phục vụ nguồn khởi tạo/đối chiếu. HR đã dùng final 72 làm baseline và vận hành độc lập trong ERP; không tự nhập lại hoặc ghi đè từ các snapshot này. Cây cơ cấu đã chốt được giữ riêng.
 - Khi nhập thử, sao chép sang môi trường test và ẩn thông tin cá nhân không cần thiết.
 - Đối chiếu checksum trước khi dùng lại để phát hiện tệp bị thay đổi.
 - Mỗi lần xuất mới phải tạo thư mục theo ngày, cập nhật manifest và ghi bộ lọc đã dùng.

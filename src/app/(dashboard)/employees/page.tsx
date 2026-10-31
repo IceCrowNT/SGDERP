@@ -8,7 +8,8 @@ import { AlertCircle } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Hồ Sơ & Danh Bạ Nhân Sự | SDG ERP - Sao Đỏ Group",
-  description: "Quản lý danh sách nhân sự, phân bổ phòng ban và chức danh tại Sao Đỏ Group",
+  description:
+    "Quản lý danh sách nhân sự, phân bổ phòng ban và chức danh tại Sao Đỏ Group",
 };
 
 interface PageProps {
@@ -41,19 +42,37 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
         <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center text-destructive mb-4">
           <AlertCircle className="w-6 h-6" />
         </div>
-        <h2 className="text-lg font-bold text-foreground">Không Thể Truy Cập</h2>
+        <h2 className="text-lg font-bold text-foreground">
+          Không Thể Truy Cập
+        </h2>
         <p className="text-sm text-muted-foreground mt-1.5">{res.message}</p>
       </div>
     );
   }
 
-  const departments = await db.department.findMany({ where: { companyId: session.companyId }, select: { id: true, name: true }, orderBy: { name: "asc" } });
+  const departments = await db.department.findMany({
+    where: { companyId: session.companyId },
+    select: { id: true, name: true, parentId: true },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <div className="space-y-6">
       <EmployeeManager
         initialEmployees={res.data || []}
-        departments={departments}
+        departments={departments.map((department) => {
+          const names = [department.name];
+          const seen = new Set([department.id]);
+          let parentId = department.parentId;
+          while (parentId && !seen.has(parentId)) {
+            seen.add(parentId);
+            const parent = departments.find((item) => item.id === parentId);
+            if (!parent) break;
+            names.unshift(parent.name);
+            parentId = parent.parentId;
+          }
+          return { id: department.id, name: names.join(" → ") };
+        })}
         canManage={res.canManage || false}
       />
     </div>

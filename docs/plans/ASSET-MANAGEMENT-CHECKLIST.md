@@ -1,5 +1,23 @@
 # Kế hoạch quản lý tài sản IT và tích hợp không gian 3D
 
+## Gỡ phân hệ tài sản khỏi DB — 31/10/2026
+
+**Đã được người phụ trách yêu cầu xóa các bảng tài sản để tập trung tài khoản và phân quyền.** Phần kế hoạch bên dưới giữ làm lịch sử, không tự triển khai hoặc khôi phục.
+
+- [x] Kiểm tra 8 bảng: 11 loại, 1 chứng từ DRAFT và 11 dòng tham khảo; Asset, PhysicalLocation, bàn giao, bảo trì, lịch sử vị trí đều 0 bản ghi. Code 3D hiện chỉ đọc người/phòng ban, không dùng các bảng này.
+- [x] Backup toàn DB trước thay đổi tại `~/Library/Application Support/SDGERP/backups/remove-assets-20261031-KhazfN/` (quyền thư mục 700/file 600); lưu schema và script cũ ngoài Git. Đã restore archive vào DB tạm và thử migration thành công; DB tạm đã xóa. Fingerprint 9 bảng lõi trước/sau trên DB thật khớp toàn bộ.
+- [x] Migration `20261031090000_remove_asset_module` đã áp dụng, gỡ 8 bảng cùng 8 enum, bỏ relation trong Company/Department/Employee/User; không sửa/xóa các migration lịch sử.
+- [x] Gỡ seed tài sản và lệnh npm tương ứng; ngừng script cleanup HR lịch sử vốn phụ thuộc các bảng tài sản đã gỡ.
+- [x] Cập nhật rule, router, từ điển DB, kiến trúc và bối cảnh: tài sản tạm hoãn, tập trung user/role/permission.
+- [x] Kiểm tra migration trên bản restore đạt; fingerprint cả 9 bảng lõi khớp trước/sau và sau E2E. Prisma validate/diff và TypeScript đạt; 9/9 kiểm thử Playwright về HR, tài khoản, đăng nhập, thu hồi quyền và 3D đạt. Kiểm tra DOM Studio 5555 chỉ còn 9 model, Employee 72 / User 60, không còn model tài sản. `git diff --check` đạt.
+
+## Nền HR sau làm sạch — 28/10/2026
+
+- [x] HR hiện có 72 người final và vận hành độc lập; ID/mã người giữ nguyên sau làm sạch. 8 hồ sơ cũ và tài khoản gắn chúng đã bỏ sau backup; bảng tài khoản không còn hồ sơ legacy.
+- [x] Mã người mới do DB cấp và bất biến; tài sản tiếp tục liên kết Employee.id, không theo tên hoặc tài khoản. Chưa nhập 92 tài sản trong lần thay đổi HR này.
+- [ ] Khi nhập tài sản, chỉ đối chiếu danh sách 72 hiện hành và các hồ sơ được tạo thêm hợp lệ; không tái tạo người cũ từ export 1Office hoặc tên trong ghi chú tài sản.
+
+
 ## Phân tích file tài sản người phụ trách cập nhật — 27/10/2026
 
 - [x] Đọc bản Excel mới A1:I96: 92 dòng/11 nhóm/92 mã không trùng; điện thoại bàn tăng từ 8 lên 10. Mẫu Word vẫn có 90 dòng ghi chú trống. Các mô tả 90 dòng/49 dòng cần xác minh của lần tạo workbook trước ở cuối plan là lịch sử.

@@ -1,5 +1,69 @@
 # Kế hoạch quản lý vai trò và phân quyền
 
+## Rà soát DB và ưu tiên tài khoản/phân quyền — 31/10/2026
+
+Người phụ trách yêu cầu đọc lại các bảng phân quyền và gỡ các bảng tài sản. Lần này giữ cấu trúc/quyền hiện hành của RBAC; chưa triển khai trang /roles hoặc tự thay quyền tài khoản.
+
+### Vì sao cần các bảng này?
+
+| Model / bảng PostgreSQL | Vai trò | Số dòng kiểm tra |
+| --- | --- | ---: |
+| User / nguoi_dung | Tài khoản đăng nhập | 60 |
+| Role / vai_tro | Nhóm quyền, ví dụ HR_MANAGER | 7 |
+| Permission / quyen | Một khả năng, ví dụ HR:MANAGE | 9 |
+| RolePermission / vai_tro_quyen | Vai trò được cấp những quyền nào | 38 |
+| UserRole / nguoi_dung_vai_tro | Tài khoản được gán những vai trò nào | 68 |
+
+Ví dụ hiện có: vai trò HR_MANAGER (ID 8) gắn quyền HR:MANAGE (ID 2) qua một dòng RolePermission (8, 2). UserRole nối tài khoản với vai trò đó. RolePermission không tạo một quyền mới; nó chỉ ghi việc cấp quyền đã có cho vai trò. Khóa kép ngăn cùng cặp bị gán trùng. 68 liên kết trên 60 tài khoản là hợp lệ vì 3 tài khoản có nhiều vai trò, không phải 68 người.
+
+```mermaid
+flowchart LR
+    U["Tài khoản: User"] --> UR["UserRole: tài khoản có vai trò nào"]
+    UR --> R["Role: nhóm quyền"]
+    R --> RP["RolePermission: nhóm được quyền nào"]
+    RP --> P["Permission: việc được phép làm"]
+```
+
+### Dữ liệu hiện hành
+
+| Vai trò | Số tài khoản được gán | Số quyền liên kết |
+| --- | ---: | ---: |
+| ADMIN | 2 | 9 |
+| IT_ADMIN | 3 | 9 |
+| HR_MANAGER | 2 | 6 |
+| HR_STAFF | 2 | 4 |
+| DEPT_HEAD | 13 | 5 |
+| ACCOUNTANT | 6 | 3 |
+| STAFF | 40 | 2 |
+
+Các số tài khoản có chồng lặp; không cộng để tính số người. Không có tài khoản thiếu role hoặc UserRole khác công ty trong lần kiểm tra này.
+
+### Phần thực sự cần làm gọn
+
+1. Có 3 quyền thuộc chức năng đang dùng: HR:VIEW, HR:MANAGE, SYSTEM:MANAGE; 6 quyền thuộc TASK/APPROVAL dự kiến. Nên chỉ đưa chức năng đã hoạt động vào ma trận mặc định, không coi quyền trong DB là bằng chứng đã có chức năng tương ứng.
+2. ADMIN/IT_ADMIN đang được cấp MANAGE bằng code trong readAccountSession; quản trị tài khoản dùng tên role trong canManageAccounts. Vì vậy sửa RolePermission chưa đủ để thu hồi toàn bộ quyền admin. Cần thống nhất quyền hiệu lực trước khi xây UI /roles.
+3. Permission.scope chưa được bộ dựng session áp dụng. Helper getAccessibleDepartmentIds chưa được gọi bởi các trang/action hiện hành. Không coi cấu hình DEPARTMENT trong DB là đã giới hạn theo phòng.
+4. Có 1 tài khoản mang nhiều cờ isPrimary=true. Cờ này không được dùng để tính quyền hiện tại (quyền cộng từ tất cả role); cần quyết định giữ hay bỏ khái niệm “vai trò chính” khi làm giao diện. Chưa sửa dữ liệu.
+5. Tên ADMIN đang trộn “Ban Giám Đốc” với quyền quản trị; quyền kỹ thuật và chức danh cần phân biệt. Không tự cấp role từ phòng ban/chức vụ.
+6. Chặn gán role khác công ty đã có ở server; UserRole hiện chỉ có FK đơn nên DB chưa tự bảo đảm cặp tài khoản/vai trò cùng công ty. Cần xem xét constraint khi hoàn thiện phân quyền.
+
+**Đề xuất:** giữ 4 bảng Role/Permission/RolePermission/UserRole. Làm đơn giản ở giao diện: trang tài khoản chọn vai trò; trang vai trò hiển thị ma trận “Không truy cập / Xem / Quản lý”. Không yêu cầu người vận hành sửa bảng nối trong Studio. Không gộp quyền thành chuỗi/JSON hoặc đặt một roleId duy nhất trên User vì mô hình hiện hỗ trợ nhiều vai trò.
+
+- [x] Đọc schema, truy vấn DB, đối chiếu readAccountSession, canManageAccounts, actions account/HR và scope helper; ghi kết quả phía trên.
+- [x] Ghi nhận ưu tiên user và phân quyền; giữ nguyên 7 role, 9 permission, 38 liên kết role–permission và 68 liên kết user–role trong lượt gỡ tài sản.
+- [x] 9/9 kiểm thử HR/tài khoản/đăng nhập/thu hồi quyền/3D đạt sau khi gỡ tài sản; fingerprint dữ liệu quyền và tài khoản không đổi. Studio 5555 đã tải schema còn 9 model.
+- [ ] Thực hiện trang /roles và thống nhất quyền server theo kế hoạch sau; chưa duyệt thay đổi ma trận quyền trong lần rà soát này.
+
+Các mục khảo sát cũ bên dưới là lịch sử; kết quả 31/10/2026 phía trên là trạng thái mới nhất.
+
+
+## Cập nhật HR độc lập — 28/10/2026
+
+- [x] HR MANAGE sửa hồ sơ và ghi chú dù có nguồn nhập; mã nhân sự do DB cấp và không sửa. HR VIEW không có quyền ghi. Không cấp role từ chức danh/phòng ban.
+- [x] Sau làm sạch theo yêu cầu, giữ 60 tài khoản (gồm admin hệ thống), bỏ 8 tài khoản gắn 8 hồ sơ ngoài final; ID/quyền/mật khẩu của tài khoản giữ lại không đổi. Role vẫn gắn User riêng với Employee.
+- [ ] Trang /roles và phạm vi phân quyền phòng ban vẫn thuộc kế hoạch riêng; thay đổi HR không đồng nghĩa đã hoàn thiện toàn bộ RBAC.
+
+
 ## Cập nhật nền tảng được duyệt — 26/10/2026
 
 - [x] Tách `Employee` và `User`; role gắn tài khoản, không gắn người. Một người có thể có tài khoản thường và admin với quyền độc lập.
@@ -25,7 +89,7 @@
 
 Tham chiếu: [thiết kế dữ liệu nền và RBAC](../strategy/DONG-BO-DU-LIEU-NEN-VA-PHAN-QUYEN.md), [HR](HR-CHECKLIST.md), [DB rules](../../.agents/rules/DATABASE-RULES.md), [backend rules](../../.agents/rules/BACKEND-RULES.md), [frontend rules](../../.agents/rules/FRONTEND-RULES.md).
 
-Lưu ý: phần backend rules mô tả permissions JSON trên Role chưa khớp schema quan hệ thực tế. Khi triển khai cần cập nhật rule theo thiết kế được chốt, không thêm cột JSON chỉ để khớp mô tả cũ.
+Rule backend hiện đã dùng quan hệ UserRole → Role → RolePermission → Permission; không có cột permissions JSON trên Role.
 
 ## 2. Nguyên tắc nghiệp vụ
 

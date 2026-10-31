@@ -17,19 +17,11 @@ model Company {
   address  String? @map("dia_chi") @db.Text
   isActive Boolean @default(true) @map("dang_hoat_dong")
 
-  users                   User[]
-  employees               Employee[]
-  departments             Department[]
-  roles                   Role[]
-  auditLogs               AuditLog[]
-  assetCategories         AssetCategory[]
-  assets                  Asset[]
-  physicalLocations       PhysicalLocation[]
-  assetInventoryDocuments AssetInventoryDocument[]
-  assetInventoryLines     AssetInventoryLine[]
-  assetAssignments        AssetAssignment[]
-  assetLocationHistory    AssetLocationHistory[]
-  assetMaintenances       AssetMaintenance[]
+  users       User[]
+  employees   Employee[]
+  departments Department[]
+  roles       Role[]
+  auditLogs   AuditLog[]
 
   createdAt DateTime @default(now()) @map("thoi_diem_tao")
   updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
@@ -64,10 +56,7 @@ model Department {
   companyId Int     @map("dinh_danh_cong_ty")
   company   Company @relation(map: "Department_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
 
-  employees         Employee[]
-  physicalLocations PhysicalLocation[]
-  currentAssets     Asset[]            @relation("AssetCurrentDepartment")
-  assetAssignments  AssetAssignment[]
+  employees Employee[]
 
   createdAt DateTime @default(now()) @map("thoi_diem_tao")
   updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
@@ -84,33 +73,31 @@ model Department {
 // IDENTITY & HR PROFILE (Định danh tài khoản & Hồ sơ nhân sự)
 // -----------------------------------------------------------------------------
 model Employee {
-  id                       Int                @id @default(autoincrement()) @map("dinh_danh")
-  employeeCode             String             @map("ma_nhan_vien") @db.VarChar(50)
-  fullName                 String             @map("ho_ten") @db.VarChar(255)
-  position                 String?            @map("chuc_vu") @db.VarChar(100)
-  email                    String?            @map("thu_dien_tu") @db.VarChar(255)
-  phone                    String?            @map("so_dien_thoai") @db.VarChar(20)
-  dateOfBirth              DateTime?          @map("ngay_sinh") @db.Date
-  joinDate                 DateTime?          @map("ngay_vao_lam") @db.Date
-  avatarUrl                String?            @map("duong_dan_anh_dai_dien") @db.Text
-  address                  String?            @map("dia_chi") @db.Text
-  employmentStatus         EmploymentStatus   @default(UNKNOWN) @map("tinh_trang_lam_viec")
-  externalSystem           String?            @map("he_thong_nguon") @db.VarChar(50)
-  externalId               String?            @map("dinh_danh_nguon") @db.VarChar(100)
-  externalSnapshotAt       DateTime?          @map("thoi_diem_chup_du_lieu_nguon")
-  hrSourceFile             String?            @map("tep_nguon_nhan_su_hr") @db.VarChar(255)
-  hrSnapshotAt             DateTime?          @map("ngay_chot_nhan_su_hr") @db.Date
-  hrNotes                  String?            @map("ghi_chu_nhan_su_hr") @db.Text
-  companyId                Int                @map("dinh_danh_cong_ty")
-  company                  Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  departmentId             Int?               @map("dinh_danh_phong_ban")
-  department               Department?        @relation(fields: [departmentId, companyId], references: [id, companyId], onDelete: Restrict)
-  accounts                 User[]
-  currentCustodyAssets     Asset[]            @relation("AssetCurrentCustodian")
-  assignedAssets           AssetAssignment[]  @relation("AssetAssignmentAssignee")
-  assetMaintenancesHandled AssetMaintenance[] @relation("AssetMaintenanceTechnician")
-  createdAt                DateTime           @default(now()) @map("thoi_diem_tao")
-  updatedAt                DateTime           @updatedAt @map("thoi_diem_cap_nhat")
+  id                 Int              @id @default(autoincrement()) @map("dinh_danh")
+  employeeCode       String           @default(dbgenerated("tao_ma_nhan_su()")) @map("ma_nhan_vien") @db.VarChar(50)
+  fullName           String           @map("ho_ten") @db.VarChar(255)
+  position           String?          @map("chuc_vu") @db.VarChar(100)
+  email              String?          @map("thu_dien_tu") @db.VarChar(255)
+  phone              String?          @map("so_dien_thoai") @db.VarChar(20)
+  dateOfBirth        DateTime?        @map("ngay_sinh") @db.Date
+  joinDate           DateTime?        @map("ngay_vao_lam") @db.Date
+  avatarUrl          String?          @map("duong_dan_anh_dai_dien") @db.Text
+  address            String?          @map("dia_chi") @db.Text
+  employmentStatus   EmploymentStatus @default(UNKNOWN) @map("tinh_trang_lam_viec")
+  externalSystem     String?          @map("he_thong_nguon") @db.VarChar(50)
+  externalId         String?          @map("dinh_danh_nguon") @db.VarChar(100)
+  externalSnapshotAt DateTime?        @map("thoi_diem_chup_du_lieu_nguon")
+  hrSourceFile       String?          @map("tep_nguon_nhan_su_hr") @db.VarChar(255)
+  hrSnapshotAt       DateTime?        @map("ngay_chot_nhan_su_hr") @db.Date
+  notes              String?          @map("ghi_chu") @db.Text
+  hrNotes            String?          @map("ghi_chu_nhan_su_hr") @db.Text
+  companyId          Int              @map("dinh_danh_cong_ty")
+  company            Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  departmentId       Int?             @map("dinh_danh_phong_ban")
+  department         Department?      @relation(fields: [departmentId, companyId], references: [id, companyId], onDelete: Restrict)
+  accounts           User[]
+  createdAt          DateTime         @default(now()) @map("thoi_diem_tao")
+  updatedAt          DateTime         @updatedAt @map("thoi_diem_cap_nhat")
 
   @@unique([id, companyId])
   @@unique([companyId, employeeCode])
@@ -127,35 +114,21 @@ enum EmploymentStatus {
 }
 
 model User {
-  id                         Int                    @id(map: "User_pkey") @default(autoincrement()) @map("dinh_danh")
-  username                   String                 @unique(map: "User_username_key") @map("ten_dang_nhap") @db.VarChar(100)
-  password                   String                 @map("mat_khau_bam") @db.VarChar(255)
-  displayName                String                 @map("ho_ten") @db.VarChar(255)
-  isActive                   Boolean                @default(true) @map("dang_hoat_dong")
-  sessionVersion             Int                    @default(0) @map("phien_ban_dang_nhap")
-  companyId                  Int                    @map("dinh_danh_cong_ty")
-  company                    Company                @relation(map: "User_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
-  employeeId                 Int?                   @map("dinh_danh_nhan_su")
-  employee                   Employee?              @relation(fields: [employeeId, companyId], references: [id, companyId], onDelete: Restrict)
-  roles                      UserRole[]
-  auditLogs                  AuditLog[]
-  assetAssignmentsCreated    AssetAssignment[]      @relation("AssetAssignmentCreator")
-  assetLocationChanges       AssetLocationHistory[] @relation("AssetLocationChangedBy")
-  assetMaintenancesRequested AssetMaintenance[]     @relation("AssetMaintenanceRequester")
-  // Archive of the pre-split profile. Not available in Prisma Client; never used as live HR data.
-  legacyEmail                String?                @unique(map: "User_email_key") @map("thu_dien_tu") @ignore @db.VarChar(255)
-  legacyPhone                String?                @unique(map: "User_phone_key") @map("so_dien_thoai") @ignore @db.VarChar(20)
-  legacyEmployeeCode         String?                @unique(map: "User_employeeCode_key") @map("ma_nhan_vien") @ignore @db.VarChar(50)
-  legacyPosition             String?                @map("chuc_vu") @ignore @db.VarChar(100)
-  legacyDateOfBirth          DateTime?              @map("ngay_sinh") @ignore @db.Date
-  legacyJoinDate             DateTime?              @map("ngay_vao_lam") @ignore @db.Date
-  legacyAvatarUrl            String?                @map("duong_dan_anh_dai_dien") @ignore @db.Text
-  legacyAddress              String?                @map("dia_chi") @ignore @db.Text
-  legacyDepartmentId         Int?                   @map("dinh_danh_phong_ban") @ignore
-  createdAt                  DateTime               @default(now()) @map("thoi_diem_tao")
-  updatedAt                  DateTime               @updatedAt @map("thoi_diem_cap_nhat")
+  id             Int        @id(map: "User_pkey") @default(autoincrement()) @map("dinh_danh")
+  username       String     @unique(map: "User_username_key") @map("ten_dang_nhap") @db.VarChar(100)
+  password       String     @map("mat_khau_bam") @db.VarChar(255)
+  displayName    String     @map("ten_hien_thi") @db.VarChar(255)
+  isActive       Boolean    @default(true) @map("dang_hoat_dong")
+  sessionVersion Int        @default(0) @map("phien_ban_dang_nhap")
+  companyId      Int        @map("dinh_danh_cong_ty")
+  company        Company    @relation(map: "User_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
+  employeeId     Int?       @map("dinh_danh_nhan_su")
+  employee       Employee?  @relation(fields: [employeeId, companyId], references: [id, companyId], onDelete: Restrict)
+  roles          UserRole[]
+  auditLogs      AuditLog[]
+  createdAt      DateTime   @default(now()) @map("thoi_diem_tao")
+  updatedAt      DateTime   @updatedAt @map("thoi_diem_cap_nhat")
 
-  @@index([companyId, legacyDepartmentId], map: "User_companyId_departmentId_idx")
   @@index([isActive], map: "User_isActive_idx")
   @@index([employeeId, companyId])
   @@map("nguoi_dung")
@@ -274,334 +247,4 @@ model AuditLog {
   @@index([companyId, module, createdAt], map: "AuditLog_companyId_module_createdAt_idx")
   @@index([userId], map: "AuditLog_userId_idx")
   @@map("nhat_ky_hoat_dong")
-}
-
-// -----------------------------------------------------------------------------
-// IT ASSET MANAGEMENT - DANH MỤC, KIỂM KÊ, VỊ TRÍ, BÀN GIAO & BẢO TRÌ
-// -----------------------------------------------------------------------------
-
-enum AssetTrackingMode {
-  INDIVIDUAL
-  QUANTITY
-}
-
-enum AssetStatus {
-  IN_STOCK
-  ASSIGNED
-  IN_USE
-  UNDER_MAINTENANCE
-  BROKEN
-  LOST
-  RETIRED
-}
-
-enum AssetCondition {
-  UNKNOWN
-  NEW
-  GOOD
-  FAIR
-  POOR
-  DAMAGED
-}
-
-enum PhysicalLocationType {
-  BUILDING
-  FLOOR
-  ROOM
-  ZONE
-  RACK
-  STORAGE
-}
-
-enum AssetInventoryDocumentStatus {
-  DRAFT
-  CONFIRMED
-  CANCELLED
-}
-
-enum AssetAssignmentType {
-  USER
-  DEPARTMENT
-  SHARED
-}
-
-enum AssetMaintenanceType {
-  INSPECTION
-  PREVENTIVE
-  REPAIR
-  REPLACEMENT
-  UPGRADE
-  OTHER
-}
-
-enum AssetMaintenanceStatus {
-  REPORTED
-  SCHEDULED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
-model AssetCategory {
-  id           Int               @id(map: "AssetCategory_pkey") @default(autoincrement()) @map("dinh_danh")
-  code         String            @map("ma") @db.VarChar(50)
-  name         String            @map("ten") @db.VarChar(255)
-  description  String?           @map("mo_ta") @db.Text
-  trackingMode AssetTrackingMode @default(INDIVIDUAL) @map("che_do_theo_doi")
-  isActive     Boolean           @default(true) @map("dang_hoat_dong")
-
-  companyId Int     @map("dinh_danh_cong_ty")
-  company   Company @relation(map: "AssetCategory_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
-
-  assets         Asset[]
-  inventoryLines AssetInventoryLine[]
-
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
-
-  @@unique([companyId, code], map: "AssetCategory_companyId_code_key")
-  @@unique([companyId, name], map: "AssetCategory_companyId_name_key")
-  @@index([companyId, isActive], map: "AssetCategory_companyId_isActive_idx")
-  @@map("loai_tai_san")
-}
-
-model PhysicalLocation {
-  id          Int                  @id(map: "PhysicalLocation_pkey") @default(autoincrement()) @map("dinh_danh")
-  code        String               @map("ma") @db.VarChar(50)
-  name        String               @map("ten") @db.VarChar(255)
-  type        PhysicalLocationType @map("loai")
-  description String?              @map("mo_ta") @db.Text
-  floorNumber Int?                 @map("so_tang")
-  threeDKey   String?              @map("khoa_khong_gian_3d") @db.VarChar(100)
-  positionX   Float?               @map("toa_do_x")
-  positionY   Float?               @map("toa_do_y")
-  positionZ   Float?               @map("toa_do_z")
-  isActive    Boolean              @default(true) @map("dang_hoat_dong")
-
-  parentId Int?               @map("dinh_danh_cap_tren")
-  parent   PhysicalLocation?  @relation(map: "PhysicalLocation_parentId_fkey", "PhysicalLocationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
-  children PhysicalLocation[] @relation("PhysicalLocationHierarchy")
-
-  companyId Int     @map("dinh_danh_cong_ty")
-  company   Company @relation(map: "PhysicalLocation_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
-
-  departmentId Int?        @map("dinh_danh_phong_ban")
-  department   Department? @relation(map: "PhysicalLocation_departmentId_fkey", fields: [departmentId], references: [id], onDelete: SetNull)
-
-  currentAssets   Asset[]                @relation("AssetCurrentLocation")
-  locationHistory AssetLocationHistory[]
-
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
-
-  @@unique([companyId, code], map: "PhysicalLocation_companyId_code_key")
-  @@unique([companyId, threeDKey], map: "PhysicalLocation_companyId_threeDKey_key")
-  @@index([companyId, type, isActive], map: "PhysicalLocation_companyId_type_isActive_idx")
-  @@index([parentId], map: "PhysicalLocation_parentId_idx")
-  @@index([departmentId], map: "PhysicalLocation_departmentId_idx")
-  @@map("vi_tri_vat_ly")
-}
-
-model AssetInventoryDocument {
-  id                 Int                          @id(map: "AssetInventoryDocument_pkey") @default(autoincrement()) @map("dinh_danh")
-  documentNumber     String                       @map("so_chung_tu") @db.VarChar(100)
-  documentDate       DateTime?                    @map("ngay_chung_tu") @db.Date
-  title              String                       @map("tieu_de") @db.VarChar(255)
-  transferorName     String?                      @map("ten_ben_giao") @db.VarChar(255)
-  transferorPosition String?                      @map("chuc_vu_ben_giao") @db.VarChar(100)
-  recipientName      String?                      @map("ten_ben_nhan") @db.VarChar(255)
-  recipientPosition  String?                      @map("chuc_vu_ben_nhan") @db.VarChar(100)
-  sourceFile         String?                      @map("tep_nguon") @db.Text
-  status             AssetInventoryDocumentStatus @default(DRAFT) @map("trang_thai")
-  notes              String?                      @map("ghi_chu") @db.Text
-
-  companyId Int     @map("dinh_danh_cong_ty")
-  company   Company @relation(map: "AssetInventoryDocument_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
-
-  lines AssetInventoryLine[]
-
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
-
-  @@unique([companyId, documentNumber], map: "AssetInventoryDocument_companyId_documentNumber_key")
-  @@index([companyId, status, documentDate], map: "AssetInventoryDocument_companyId_status_documentDate_idx")
-  @@map("chung_tu_kiem_ke")
-}
-
-model AssetInventoryLine {
-  id         Int     @id(map: "AssetInventoryLine_pkey") @default(autoincrement()) @map("dinh_danh")
-  lineNumber Int     @map("so_thu_tu_dong")
-  itemName   String  @map("ten_hang_muc") @db.VarChar(255)
-  quantity   Int     @map("so_luong")
-  unit       String  @default("Cái") @map("don_vi_tinh") @db.VarChar(50)
-  notes      String? @map("ghi_chu") @db.Text
-
-  companyId Int     @map("dinh_danh_cong_ty")
-  company   Company @relation(map: "AssetInventoryLine_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
-
-  documentId Int                    @map("dinh_danh_chung_tu")
-  document   AssetInventoryDocument @relation(map: "AssetInventoryLine_documentId_fkey", fields: [documentId], references: [id], onDelete: Cascade)
-
-  categoryId Int?           @map("dinh_danh_loai_tai_san")
-  category   AssetCategory? @relation(map: "AssetInventoryLine_categoryId_fkey", fields: [categoryId], references: [id], onDelete: SetNull)
-
-  assets Asset[]
-
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
-
-  @@unique([documentId, lineNumber], map: "AssetInventoryLine_documentId_lineNumber_key")
-  @@index([companyId, categoryId], map: "AssetInventoryLine_companyId_categoryId_idx")
-  @@map("dong_kiem_ke")
-}
-
-model Asset {
-  id              Int            @id(map: "Asset_pkey") @default(autoincrement()) @map("dinh_danh")
-  assetCode       String         @map("ma_tai_san") @db.VarChar(100)
-  name            String         @map("ten") @db.VarChar(255)
-  serialNumber    String?        @map("so_se_ri") @db.VarChar(255)
-  manufacturer    String?        @map("nha_san_xuat") @db.VarChar(255)
-  model           String?        @map("kieu_may") @db.VarChar(255)
-  specifications  Json?          @map("thong_so_ky_thuat")
-  purchaseDate    DateTime?      @map("ngay_mua") @db.Date
-  warrantyEndDate DateTime?      @map("ngay_het_bao_hanh") @db.Date
-  originalValue   Decimal?       @map("nguyen_gia") @db.Decimal(18, 2)
-  status          AssetStatus    @default(IN_STOCK) @map("trang_thai")
-  condition       AssetCondition @default(UNKNOWN) @map("tinh_trang")
-  notes           String?        @map("ghi_chu") @db.Text
-
-  companyId Int     @map("dinh_danh_cong_ty")
-  company   Company @relation(map: "Asset_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
-
-  categoryId Int           @map("dinh_danh_loai_tai_san")
-  category   AssetCategory @relation(map: "Asset_categoryId_fkey", fields: [categoryId], references: [id], onDelete: Restrict)
-
-  sourceLineId Int?                @map("dinh_danh_dong_nguon")
-  sourceLine   AssetInventoryLine? @relation(map: "Asset_sourceLineId_fkey", fields: [sourceLineId], references: [id], onDelete: SetNull)
-
-  currentLocationId Int?              @map("dinh_danh_vi_tri_hien_tai")
-  currentLocation   PhysicalLocation? @relation(map: "Asset_currentLocationId_fkey", "AssetCurrentLocation", fields: [currentLocationId], references: [id], onDelete: SetNull)
-
-  currentCustodianId Int?      @map("dinh_danh_nguoi_giu_hien_tai")
-  currentCustodian   Employee? @relation(map: "Asset_currentCustodianId_fkey", "AssetCurrentCustodian", fields: [currentCustodianId], references: [id], onDelete: SetNull)
-
-  currentDepartmentId Int?        @map("dinh_danh_phong_ban_hien_tai")
-  currentDepartment   Department? @relation(map: "Asset_currentDepartmentId_fkey", "AssetCurrentDepartment", fields: [currentDepartmentId], references: [id], onDelete: SetNull)
-
-  assignments     AssetAssignment[]
-  locationHistory AssetLocationHistory[]
-  maintenances    AssetMaintenance[]
-
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
-
-  @@unique([companyId, assetCode], map: "Asset_companyId_assetCode_key")
-  @@unique([companyId, serialNumber], map: "Asset_companyId_serialNumber_key")
-  @@index([companyId, categoryId, status], map: "Asset_companyId_categoryId_status_idx")
-  @@index([currentLocationId], map: "Asset_currentLocationId_idx")
-  @@index([currentCustodianId], map: "Asset_currentCustodianId_idx")
-  @@index([currentDepartmentId], map: "Asset_currentDepartmentId_idx")
-  @@index([sourceLineId], map: "Asset_sourceLineId_idx")
-  @@map("tai_san")
-}
-
-model AssetAssignment {
-  id                Int                 @id(map: "AssetAssignment_pkey") @default(autoincrement()) @map("dinh_danh")
-  assignmentType    AssetAssignmentType @map("loai_ban_giao")
-  assignedAt        DateTime            @default(now()) @map("thoi_diem_gan")
-  expectedReturnAt  DateTime?           @map("thoi_diem_du_kien_tra")
-  returnedAt        DateTime?           @map("thoi_diem_tra")
-  conditionOnAssign AssetCondition      @default(UNKNOWN) @map("tinh_trang_khi_giao")
-  conditionOnReturn AssetCondition?     @map("tinh_trang_khi_tra")
-  notes             String?             @map("ghi_chu") @db.Text
-
-  companyId Int     @map("dinh_danh_cong_ty")
-  company   Company @relation(map: "AssetAssignment_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
-
-  assetId Int   @map("dinh_danh_tai_san")
-  asset   Asset @relation(map: "AssetAssignment_assetId_fkey", fields: [assetId], references: [id], onDelete: Restrict)
-
-  assignedToEmployeeId Int?      @map("dinh_danh_nguoi_nhan")
-  assignedToEmployee   Employee? @relation(map: "AssetAssignment_assignedToUserId_fkey", "AssetAssignmentAssignee", fields: [assignedToEmployeeId], references: [id], onDelete: SetNull)
-
-  assignedToDepartmentId Int?        @map("dinh_danh_phong_ban_nhan")
-  assignedToDepartment   Department? @relation(map: "AssetAssignment_assignedToDepartmentId_fkey", fields: [assignedToDepartmentId], references: [id], onDelete: SetNull)
-
-  assignedById Int?  @map("dinh_danh_nguoi_giao")
-  assignedBy   User? @relation(map: "AssetAssignment_assignedById_fkey", "AssetAssignmentCreator", fields: [assignedById], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
-
-  @@index([companyId, assignedAt], map: "AssetAssignment_companyId_assignedAt_idx")
-  @@index([assetId, returnedAt], map: "AssetAssignment_assetId_returnedAt_idx")
-  @@index([assignedToEmployeeId], map: "AssetAssignment_assignedToUserId_idx")
-  @@index([assignedToDepartmentId], map: "AssetAssignment_assignedToDepartmentId_idx")
-  @@map("ban_giao_tai_san")
-}
-
-model AssetLocationHistory {
-  id        Int       @id(map: "AssetLocationHistory_pkey") @default(autoincrement()) @map("dinh_danh")
-  placedAt  DateTime  @default(now()) @map("thoi_diem_dat")
-  removedAt DateTime? @map("thoi_diem_di_doi")
-  notes     String?   @map("ghi_chu") @db.Text
-
-  companyId Int     @map("dinh_danh_cong_ty")
-  company   Company @relation(map: "AssetLocationHistory_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
-
-  assetId Int   @map("dinh_danh_tai_san")
-  asset   Asset @relation(map: "AssetLocationHistory_assetId_fkey", fields: [assetId], references: [id], onDelete: Restrict)
-
-  locationId Int              @map("dinh_danh_vi_tri")
-  location   PhysicalLocation @relation(map: "AssetLocationHistory_locationId_fkey", fields: [locationId], references: [id], onDelete: Restrict)
-
-  changedById Int?  @map("dinh_danh_nguoi_thay_doi")
-  changedBy   User? @relation(map: "AssetLocationHistory_changedById_fkey", "AssetLocationChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
-
-  @@index([companyId, placedAt], map: "AssetLocationHistory_companyId_placedAt_idx")
-  @@index([assetId, removedAt], map: "AssetLocationHistory_assetId_removedAt_idx")
-  @@index([locationId, removedAt], map: "AssetLocationHistory_locationId_removedAt_idx")
-  @@map("lich_su_vi_tri_tai_san")
-}
-
-model AssetMaintenance {
-  id                Int                    @id(map: "AssetMaintenance_pkey") @default(autoincrement()) @map("dinh_danh")
-  maintenanceCode   String                 @map("ma_bao_tri") @db.VarChar(100)
-  type              AssetMaintenanceType   @map("loai")
-  status            AssetMaintenanceStatus @default(REPORTED) @map("trang_thai")
-  title             String                 @map("tieu_de") @db.VarChar(255)
-  description       String?                @map("mo_ta") @db.Text
-  reportedAt        DateTime               @default(now()) @map("thoi_diem_bao_hong")
-  scheduledAt       DateTime?              @map("thoi_diem_du_kien")
-  startedAt         DateTime?              @map("thoi_diem_bat_dau")
-  completedAt       DateTime?              @map("thoi_diem_hoan_tat")
-  vendorName        String?                @map("ten_nha_cung_cap") @db.VarChar(255)
-  cost              Decimal?               @map("chi_phi") @db.Decimal(18, 2)
-  result            String?                @map("ket_qua") @db.Text
-  nextMaintenanceAt DateTime?              @map("thoi_diem_bao_tri_tiep")
-
-  companyId Int     @map("dinh_danh_cong_ty")
-  company   Company @relation(map: "AssetMaintenance_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
-
-  assetId Int   @map("dinh_danh_tai_san")
-  asset   Asset @relation(map: "AssetMaintenance_assetId_fkey", fields: [assetId], references: [id], onDelete: Restrict)
-
-  requestedById Int?  @map("dinh_danh_nguoi_yeu_cau")
-  requestedBy   User? @relation(map: "AssetMaintenance_requestedById_fkey", "AssetMaintenanceRequester", fields: [requestedById], references: [id], onDelete: SetNull)
-
-  technicianId Int?      @map("dinh_danh_ky_thuat_vien")
-  technician   Employee? @relation(map: "AssetMaintenance_technicianId_fkey", "AssetMaintenanceTechnician", fields: [technicianId], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
-
-  @@unique([companyId, maintenanceCode], map: "AssetMaintenance_companyId_maintenanceCode_key")
-  @@index([companyId, status, scheduledAt], map: "AssetMaintenance_companyId_status_scheduledAt_idx")
-  @@index([assetId, reportedAt], map: "AssetMaintenance_assetId_reportedAt_idx")
-  @@index([requestedById], map: "AssetMaintenance_requestedById_idx")
-  @@index([technicianId], map: "AssetMaintenance_technicianId_idx")
-  @@map("bao_tri_tai_san")
 }

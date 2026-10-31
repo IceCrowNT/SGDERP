@@ -120,12 +120,16 @@ test("UI creates a profile independently and two accounts without extra people",
   await page
     .getByLabel("Họ và tên", { exact: true })
     .fill("Người mới kiểm thử");
-  await page.getByLabel("Mã nhân sự", { exact: true }).fill("UI-PERSON");
+  await expect(page.getByText("Tự cấp khi lưu")).toBeVisible();
+  await page.getByRole("combobox", { name: "Phòng ban", exact: true }).click();
+  await page
+    .getByRole("option", { name: "Phòng kiểm thử", exact: true })
+    .click();
   await expect(page.getByLabel("Mật khẩu", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Lưu hồ sơ" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  const employee = await p.employee.findUniqueOrThrow({
-    where: { companyId_employeeCode: { companyId, employeeCode: "UI-PERSON" } },
+  const employee = await p.employee.findFirstOrThrow({
+    where: { companyId, fullName: "Người mới kiểm thử" },
   });
   expect(await p.user.count({ where: { employeeId: employee.id } })).toBe(0);
   const count = await p.employee.count({ where: { companyId } });
@@ -135,7 +139,9 @@ test("UI creates a profile independently and two accounts without extra people",
       .getByRole("button", { name: "Tạo tài khoản", exact: true })
       .click();
     await page.getByRole("combobox", { name: "Nhân sự sở hữu" }).click();
-    await page.getByRole("option", { name: /UI-PERSON/ }).click();
+    await page
+      .getByRole("option", { name: new RegExp(employee.employeeCode) })
+      .click();
     await page
       .getByLabel("Tên đăng nhập", { exact: true })
       .fill(`identity-${suffix}-${run}`);
@@ -149,7 +155,7 @@ test("UI creates a profile independently and two accounts without extra people",
   expect(await p.user.count({ where: { employeeId: employee.id } })).toBe(2);
   expect(await p.employee.count({ where: { companyId } })).toBe(count);
   await page.goto("/employees");
-  const row = page.getByRole("row").filter({ hasText: "UI-PERSON" });
+  const row = page.getByRole("row").filter({ hasText: employee.employeeCode });
   await expect(row).toContainText("2 tài khoản");
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
@@ -157,7 +163,9 @@ test("UI creates a profile independently and two accounts without extra people",
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await expect(page.getByRole("combobox", { name: "Tình trạng làm việc" })).toContainText("Tất cả tình trạng");
+  await expect(
+    page.getByRole("combobox", { name: "Tình trạng làm việc" }),
+  ).toContainText("Tất cả tình trạng");
   await page.screenshot({
     path: "outputs/identity-employees-mobile.png",
     fullPage: true,

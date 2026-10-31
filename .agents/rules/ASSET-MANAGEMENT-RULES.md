@@ -1,5 +1,8 @@
 # QUY TẮC QUẢN LÝ TÀI SẢN & TÍCH HỢP KHÔNG GIAN 3D
 
+> **TẠM HOÃN — 31/10/2026:** Người phụ trách yêu cầu gỡ toàn bộ bảng tài sản để tập trung user/phân quyền. Các quy tắc dưới đây chỉ dùng tham khảo khi phân hệ được duyệt triển khai lại; không tự khôi phục schema, seed hoặc nhập tài sản. Dữ liệu cũ đã được backup riêng trước khi gỡ. 3D nhân sự hiện không phụ thuộc các bảng này.
+
+
 ## 7. Liên kết người thật — 26/10/2026
 
 - `Asset.currentCustodian`, `AssetAssignment.assignedToEmployee` và `AssetMaintenance.technician` tham chiếu `Employee`, không phụ thuộc người đó có tài khoản.

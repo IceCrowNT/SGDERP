@@ -1,5 +1,11 @@
 # Bối cảnh hiện tại và định hướng số hóa Sao Đỏ Group
 
+> **Ưu tiên 31/10/2026:** Tập trung quản lý tài khoản và phân quyền. Đã yêu cầu gỡ các bảng tài sản cùng seed; tài liệu/nguồn giữ tham khảo để xem xét sau. Giữ nhân sự, cơ cấu và 3D nhân sự. Cấu trúc Role/Permission/RolePermission/UserRole được giữ, các điểm cần làm gọn đã ghi trong kế hoạch role.
+
+
+> **Quyết định hiện hành 28/10/2026:** HR hoạt động độc lập sau khởi tạo. 1Office là nguồn đối chiếu ban đầu, file HR final 72 người là baseline; hồ sơ hiện hành được sửa trong ERP theo quyền HR MANAGE, có audit. Không tự đồng bộ HR từ 1Office hoặc ghi đè bằng file nguồn. Mã ERP tự sinh và không điều chỉnh. Đã làm sạch 8 hồ sơ ngoài final và 8 tài khoản tương ứng; giữ 72 người, 60 tài khoản, cơ cấu 18 đơn vị và quyền. Các quyết định nguồn/reset chưa triển khai bên dưới là lịch sử, được thay thế bởi mục này.
+
+
 > **Yêu cầu bổ sung 27/10/2026:** Phòng ban phải chọn theo cây cơ cấu hiện có; chức danh là text tự do có thể chỉnh khi tạo/sửa người, không phải role. File HR 72 người là chuẩn khởi tạo. Người phụ trách cho phép cân nhắc làm sạch nhân sự/tài khoản và cơ cấu lại DB nếu cần, đồng thời yêu cầu nhận xét/đánh giá trước. Đã lập [phương án cụ thể trong kế hoạch HR](../plans/HR-CHECKLIST.md); chưa xóa dữ liệu hoặc triển khai phương án trong lượt đánh giá này.
 
 

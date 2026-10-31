@@ -1,10 +1,43 @@
 # QUY TRÌNH & CHECKLIST TRIỂN KHAI PHÂN HỆ QUẢN LÝ NHÂN SỰ & MA TRẬN PHÂN QUYỀN (HR & RBAC MATRIX MODULE)
 
+## Kiểm tra sau khi gỡ phân hệ tài sản — 31/10/2026
+
+- [x] DB hiện còn 9 bảng nghiệp vụ; giữ nguyên 72 người, 60 tài khoản và toàn bộ quyền/liên kết. Fingerprint các bảng lõi trước/sau và sau kiểm thử khớp. Các số 17 bảng bên dưới là lịch sử trước khi gỡ tài sản.
+- [x] 9/9 kiểm thử HR độc lập, tài khoản, đăng nhập/thu hồi quyền và thống kê 3D đạt; Prisma diff không lệch, TypeScript đạt. Studio 5555 đã khởi động lại và xác nhận 9 model.
+- [x] Ngừng script `clean-hr-legacy.ts`: đợt làm sạch một lần đã hoàn tất, không chạy lại trên HR đang vận hành. Bản script cũ lưu cùng backup riêng tư của lần gỡ tài sản; xem [kế hoạch tài sản](ASSET-MANAGEMENT-CHECKLIST.md).
+
+## Triển khai HR độc lập — 28/10/2026
+
+**Đã được yêu cầu triển khai.** Mục này thay thế các đề xuất chưa làm bên dưới: nguồn 1Office chỉ khởi tạo/đối chiếu lần đầu, final 72 là baseline; sau đó ERP quản lý độc lập. Không có job đồng bộ HR từ 1Office.
+
+- [x] Kiểm tra thực tế: 17 bảng nghiệp vụ đã dùng tên tiếng Việt qua @map/@@map; nhân sự/tài khoản đã tách. Còn 8 hồ sơ ngoài final, 8 tài khoản gắn chúng và 9 cột legacy trong nguoi_dung. Bảng tài sản/giao dịch tài sản chưa có dữ liệu.
+- [x] Chốt làm sạch có chọn lọc: giữ ID/mã và tài khoản của 72 người final, giữ admin hệ thống; bỏ 8 hồ sơ cũ và 8 tài khoản tương ứng. Không reset toàn DB/sequence, không áp dụng đề xuất cũ xóa toàn bộ 67 tài khoản gắn người.
+- [x] Sao lưu toàn DB bằng pg_dump 17 và kiểm tra archive đọc được trước thay đổi; backup riêng tư ngoài Git; đã thử restore và migration trên DB tạm ở bước tiếp theo.
+- [x] Migration `20261028090000_independent_hr` đã áp dụng: bỏ cột legacy tài khoản, đổi tên nhãn tài khoản thành ten_hien_thi, thêm ghi chú vận hành, mã tự sinh bằng sequence và chặn đổi mã tại DB.
+- [x] Sửa đồng bộ validation/action/form: HR MANAGE chỉnh hồ sơ kể cả nhập nguồn; chọn phòng ban cùng công ty; mã chỉ đọc; ghi chú sửa được và có audit.
+- [x] Làm sạch 8 hồ sơ/tài khoản cũ trong transaction sau kiểm chứng file final và backup; giữ nguyên hồ sơ final, quyền và tài khoản hợp lệ. Kết quả 72 người, 60 tài khoản. Đã restore backup vào DB tạm, kiểm số lượng 80/68 và chạy migration mới thành công; DB tạm đã xóa.
+- [x] Seed không đọc lại workbook 67 người; bootstrap final chỉ chạy khi chưa có HR, không ghi đè ERP khi chạy lại. Vô hiệu hóa importer cũ theo mô hình mới.
+- [x] 13/13 kiểm thử Playwright đạt (HR độc lập, tài khoản, phòng ban và 3D), 2/2 kiểm thử parser đạt. Kiểm tra mã đồng thời/bất biến/không dùng lại, form source-bound sửa được, ghi chú có audit, chặn payload sửa mã, chặn khác công ty/thu hồi quyền; bootstrap chạy đồng thời chỉ nạp một lần và không ghi đè sửa tay.
+- [x] Build webpack đạt sau retry thông báo của Next 16.4.0; TypeScript và ESLint phần thay đổi đạt, Prisma diff không lệch. Không nâng Next/Prisma. Kiểm tra mobile và Studio 5555 có Employee 72 / User 60; dev 4000 và Studio đã khởi động lại.
+- [x] Đối chiếu fingerprint sau kiểm thử: 72 hồ sơ giữ lại, 60 tài khoản, 18 đơn vị, role/quyền/liên kết tài khoản giữ nguyên so với backup trước cleanup; không còn bản ghi kiểm thử. Tài sản vẫn 0.
+- [x] Backup lâu dài ngoài Git: `~/Library/Application Support/SDGERP/backups/hr-independent-20261028/` gồm `before.dump`, `before-cleanup.json`, `verification.json`; quyền thư mục 700/file 600, đã đối chiếu checksum khi sao chép. Archive có dữ liệu đăng nhập băm, không đưa vào repo/log.
+- [x] Đồng bộ rule DB/backend, kiến trúc, từ điển DB, bối cảnh, thiết kế nguồn, kế hoạch role/tài sản. Xuất–nhập Excel theo mã và trang /roles vẫn là tính năng riêng chưa triển khai.
+
+Các mục đánh giá/reset/khóa nguồn bên dưới ghi lịch sử trước triển khai; ưu tiên trạng thái tại mục này.
+
+## Rà soát quyền sửa hồ sơ và khóa trường nguồn — 28/10/2026
+
+- [x] Kiểm tra code trang, form, validation, actions và session: HR VIEW/MANAGE kiểm soát đọc/ghi; giới hạn cùng công ty; ADMIN/IT_ADMIN hiện được gán MANAGE trong bộ dựng session. Có kiểm tra server, không chỉ ẩn nút.
+- [x] Xác định khóa họ tên/mã/chức danh/phòng ban áp dụng khi có externalSystem hoặc hrSnapshotAt, kể cả admin; đây là khóa theo nguồn ở UI và backend, không phải thiếu quyền tài khoản.
+- [x] Ghi chú HR hiện chỉ được hiển thị từ hrNotes; chưa có trường nhập, validation hoặc lệnh cập nhật ghi chú. Điện thoại/email/ngày sinh/ngày vào làm/tình trạng vẫn sửa được với HR MANAGE.
+- [x] Đã triển khai trong mục HR độc lập phía trên: sửa hồ sơ và ghi chú vận hành có audit, giữ ghi chú nguồn để truy nguyên.
+- Phân quyền hiện ở mức module/công ty; ma trận role qua UI, phạm vi phòng ban và quyền riêng từng trường chưa hoàn thiện. Lần này chỉ rà soát code và cập nhật ghi nhận, không sửa quyền hoặc dữ liệu.
+
 ## Chốt giữ mã nhân sự nội bộ ERP — 27/10/2026
 
 - [x] Người phụ trách chốt giữ `employeeCode` để xuất Excel và đối chiếu khi nhập lại, dù công ty chưa có mã HR chính thức. Quyết định này thay thế đề xuất cho mã nullable ở lần đánh giá trước.
 - [x] Đồng bộ quyết định vào rule DB, kiến trúc, từ điển dữ liệu và bối cảnh. Lần này chỉ cập nhật tài liệu; chưa sửa ứng dụng hoặc dữ liệu.
-- [ ] ERP tự cấp mã khi tạo nhân sự, không bắt người dùng nhập; mã bắt buộc và duy nhất trong công ty. Giữ mã đã cấp, không đổi theo tên/phòng ban và không cấp lại mã người cũ cho người khác.
+- [x] ERP tự cấp mã khi tạo nhân sự (đã triển khai 28/10/2026), không bắt người dùng nhập; mã bắt buộc và duy nhất trong công ty. Giữ mã đã cấp, không đổi theo tên/phòng ban và không cấp lại mã người cũ cho người khác.
 - [ ] Có thể ẩn mã ở danh sách mặc định; file Excel phục vụ cập nhật phải có cột “Mã nhân sự ERP” kiểu text. Mã không phải username, ID 1Office hay STT của dòng Excel.
 - [ ] Import có mã: đối chiếu chính xác mã trong công ty và kiểm tra chênh lệch trước khi cập nhật. Mã lạ/trùng hoặc thông tin người mâu thuẫn phải báo để rà soát; không tự tạo/gộp người. File cũ chưa có mã cần đối chiếu ban đầu, sau đó xuất lại kèm mã ERP.
 - [ ] Kiểm thử cấp mã đồng thời không trùng, giữ mã qua sửa hồ sơ/chuyển phòng, và xuất–nhập lại đúng người. Mọi FK vẫn dùng `Employee.id`; không chuyển FK sang mã text.
@@ -395,6 +428,7 @@ File final chỉ ghi 9 nhóm phòng/ban. Nạp ban đầu vào đúng các nút 
 ### Đầu vào từ nguồn chuẩn 1Office và xác nhận nghiệp vụ — rà soát ngày 21/10/2026
 - [x] Kiểm kê tài liệu tại docs/SDGSources; đọc các phần trách nhiệm/luồng xử lý liên quan trong QTHC12, QTHC15, QTHC18, quy trình hợp đồng BPC02, tài liệu kế toán/kinh doanh và bản phối hợp sửa đổi 6/2025 (bao gồm KHĐT–BQLDA). Phạm vi là xác định dữ liệu tổ chức, nhân sự và thẩm quyền; chưa kiểm định toàn bộ phụ lục hoặc hiệu lực hiện hành.
 - [x] Đọc trực quan đủ 21 trang cẩm nang hội nhập; ghi nhận tầng quản trị, chức năng sáu khối văn phòng, sáu bộ phận BQLDA, tuyến đầu mối phối hợp, quy tắc bảo mật/AI và ranh giới nghỉ phép trên 1Office tại `docs/strategy/DOI-CHIEU-CAM-NANG-HOI-NHAP-VA-CO-CAU.md`.
+- [x] Ngày 29/10/2026: kiểm tra lại trực quan trang 15 cẩm nang để hướng dẫn nhân sự xin nghỉ: tạo và điền đơn hoàn toàn trên 1Office, trình lãnh đạo trực tiếp, HCNS kiểm tra quỹ phép/chuyển cấp cuối, nhận kết quả trên ứng dụng/email; nghỉ đột xuất phải báo điện thoại cho lãnh đạo và HCNS rồi hoàn thiện đơn khi đi làm lại.
 - [x] Dọn toàn bộ ảnh/contact sheet tạm sau khi kiểm tra trực quan; repository chỉ giữ PPTX nguồn và báo cáo đối chiếu có checksum.
 - [ ] Xin HCNS/BQLDA xác nhận quan hệ Ban Giám đốc QLDA–sáu bộ phận, cách phân loại Ban Kiểm soát và ngày hiệu lực của cẩm nang trước khi đổi master data.
 - [x] Đề xuất bộ trường cần HCNS xác nhận: đơn vị và cấp trên; vị trí/chức vụ; mã nhân viên và quản lý trực tiếp; phân công chính/kiêm nhiệm; trách nhiệm, phạm vi phê duyệt và ủy quyền; ngày hiệu lực và người xác nhận bản chốt. Soạn lời nhắn trong hội thoại, chưa gửi.

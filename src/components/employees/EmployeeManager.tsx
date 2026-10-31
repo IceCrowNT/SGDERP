@@ -15,6 +15,7 @@ import {
 } from "@/lib/validations/user";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -95,8 +96,8 @@ export function EmployeeManager({
       </div>
       <p className="text-sm text-muted-foreground">
         Nhân sự và tài khoản đăng nhập được quản lý riêng. Hồ sơ chưa xác nhận
-        không tính vào số đang làm việc. Dữ liệu được cập nhật từ file nguồn đã
-        đối chiếu; chưa đồng bộ tự động.
+        không tính vào số đang làm việc. Hồ sơ được quản lý trực tiếp tại ERP
+        sau lần nhập dữ liệu ban đầu.
       </p>
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input
@@ -147,16 +148,16 @@ export function EmployeeManager({
                   </p>
                 </TableCell>
                 <TableCell>
-                  <p>{e.department?.name ?? "Chưa gán phòng ban"}</p>
+                  <p>{e.department?.name ?? "Chọn phòng ban"}</p>
                   <p className="text-xs text-muted-foreground">{e.position}</p>
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary">
                     {statuses[e.employmentStatus]}
                   </Badge>
-                  {e.hrNotes && (
+                  {e.notes && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {e.hrNotes}
+                      {e.notes}
                     </p>
                   )}
                 </TableCell>
@@ -198,9 +199,9 @@ export function EmployeeManager({
               {editing ? "Cập nhật hồ sơ nhân sự" : "Thêm hồ sơ nhân sự"}
             </DialogTitle>
             <DialogDescription>
-              {editing?.externalSystem || editing?.hrSnapshotAt
-                ? "Thông tin tổ chức lấy từ dữ liệu nguồn đã chốt. Có thể bổ sung liên hệ và xác nhận tình trạng làm việc. Thay đổi hồ sơ không tự khóa tài khoản."
-                : "Hồ sơ mới không tự tạo tài khoản. Kiểm tra danh sách nguồn để tránh tạo trùng người."}
+              Quản lý hồ sơ trực tiếp trong ERP. Mã nhân sự được cấp tự động và
+              giữ nguyên. Thay đổi hồ sơ không tự tạo, khóa tài khoản hoặc đổi
+              quyền.
             </DialogDescription>
           </DialogHeader>
           {editing !== undefined && (
@@ -233,19 +234,18 @@ function EmployeeForm({
     resolver: zodResolver(CreateEmployeeSchema),
     defaultValues: {
       fullName: employee?.fullName ?? "",
-      employeeCode: employee?.employeeCode ?? "",
       position: employee?.position ?? "",
-      departmentId: employee?.departmentId ?? null,
+      departmentId: employee?.departmentId ?? undefined,
+      notes: employee?.notes ?? "",
       phone: employee?.phone ?? "",
       email: employee?.email ?? "",
       dateOfBirth: date(employee?.dateOfBirth),
       joinDate: date(employee?.joinDate),
-      employmentStatus: employee?.employmentStatus ?? "UNKNOWN",
+      employmentStatus: employee?.employmentStatus ?? "ACTIVE",
     },
   });
   const fields = [
     { name: "fullName", label: "Họ và tên" },
-    { name: "employeeCode", label: "Mã nhân sự" },
     { name: "position", label: "Chức vụ" },
     { name: "phone", label: "Điện thoại" },
     { name: "email", label: "Email" },
@@ -271,19 +271,33 @@ function EmployeeForm({
           }),
         )}
       >
+        <div className="rounded-lg border p-3 text-sm">
+          <p>
+            Mã nhân sự:{" "}
+            <span className="font-mono">
+              {employee?.employeeCode ?? "Tự cấp khi lưu"}
+            </span>
+          </p>
+          <p className="text-muted-foreground">
+            Mã được giữ nguyên khi đổi tên hoặc chuyển phòng ban.
+          </p>
+        </div>
         {employee?.hrSnapshotAt && (
-          <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+          <details className="text-sm text-muted-foreground">
+            <summary className="cursor-pointer py-2">
+              Nguồn nhập ban đầu
+            </summary>
             <p>
-              Nguồn: danh sách HR chốt ngày{" "}
+              Danh sách HR ngày{" "}
               {new Date(employee.hrSnapshotAt).toLocaleDateString("vi-VN", {
                 timeZone: "UTC",
               })}
-              .
+              . Hồ sơ hiện tại được cập nhật độc lập.
             </p>
             {employee.hrNotes && (
-              <p className="mt-1">Ghi chú HR: {employee.hrNotes}</p>
+              <p>Ghi chú trong file gốc: {employee.hrNotes}</p>
             )}
-          </div>
+          </details>
         )}
         <div className="grid gap-4 sm:grid-cols-2">
           {fields.map((f) => (
@@ -299,12 +313,6 @@ function EmployeeForm({
                       {...field}
                       value={field.value ?? ""}
                       type={"type" in f ? f.type : "text"}
-                      readOnly={Boolean(
-                        (employee?.externalSystem || employee?.hrSnapshotAt) &&
-                        ["fullName", "employeeCode", "position"].includes(
-                          f.name,
-                        ),
-                      )}
                     />
                   </FormControl>
                   <FormMessage />
@@ -319,24 +327,18 @@ function EmployeeForm({
               <FormItem>
                 <FormLabel>Phòng ban</FormLabel>
                 <Select
-                  disabled={Boolean(
-                    employee?.externalSystem || employee?.hrSnapshotAt,
-                  )}
-                  value={field.value?.toString() ?? "NONE"}
-                  onValueChange={(v) =>
-                    field.onChange(v === "NONE" ? null : Number(v))
-                  }
+                  value={field.value?.toString() ?? ""}
+                  onValueChange={(v) => field.onChange(Number(v))}
                 >
                   <FormControl>
                     <SelectTrigger className="h-10 w-full">
                       <SelectValue>
                         {departments.find((d) => d.id === field.value)?.name ??
-                          "Chưa gán phòng ban"}
+                          "Chọn phòng ban"}
                       </SelectValue>
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="NONE">Chưa gán phòng ban</SelectItem>
                     {departments.map((d) => (
                       <SelectItem key={d.id} value={String(d.id)}>
                         {d.name}
@@ -373,6 +375,24 @@ function EmployeeForm({
             )}
           />
         </div>
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Ghi chú</FormLabel>
+              <FormControl>
+                <Textarea
+                  {...field}
+                  value={field.value ?? ""}
+                  maxLength={5000}
+                  rows={3}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <Button type="submit" disabled={pending || !form.formState.isReady}>
           {pending ? "Đang lưu…" : "Lưu hồ sơ"}
         </Button>

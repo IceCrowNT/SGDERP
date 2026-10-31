@@ -92,3 +92,9 @@ export async function createTask(formData: any) {
 - Không trả password/hash/legacy profile trong payload action hoặc audit. Khi tạo/sửa tài khoản kiểm tra người và role cùng công ty; khóa tài khoản không cập nhật Employee.
 - Đăng nhập username duy nhất, không đăng nhập mã nhân viên. Sửa tài khoản hoặc mật khẩu tăng sessionVersion để thu hồi phiên cũ.
 - Thay đổi dữ liệu và audit phải cùng transaction cho luồng nhân sự/tài khoản mới.
+
+## 6. HR độc lập — 28/10/2026
+
+- Mọi trường hồ sơ nghiệp vụ có thể sửa bởi HR MANAGE dù có nguồn HR/1Office; nguồn chỉ là lịch sử nhập.
+- Schema input strict không nhận employeeCode, companyId, metadata nguồn hoặc role. Mã do DB cấp và không cập nhật; phòng ban bắt buộc cùng công ty. Ghi chú vận hành là notes, không sửa hrNotes gốc qua form.
+- Không chạy lại importer snapshot lên hồ sơ vận hành. Seed phải idempotent và không tái sinh hồ sơ/tài khoản đã dọn.

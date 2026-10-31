@@ -1,5 +1,8 @@
 # Thiết kế đồng bộ Master Data và phân quyền SDG ERP – 1Office
 
+> **Cập nhật 28/10/2026:** HR chỉ lấy nguồn để khởi tạo/đối chiếu ban đầu (baseline file final 72); từ đây ERP quản lý độc lập, không chạy đồng bộ nhân sự định kỳ hoặc khóa sửa theo nguồn. Các luồng snapshot/API/webhook HR bên dưới là phương án nghiên cứu cũ, không phải kế hoạch hiện hành. Mã ERP do DB tự cấp, bất biến; nguồn và ngày nhập chỉ là provenance. Cơ cấu phòng ban vẫn giữ cây đã chốt, tài khoản và role quản lý riêng.
+
+
 > **Cập nhật nguồn nhân sự 27/10/2026:** Đã nhập file HR final ngày 26/10/2026: 72 người theo danh sách, giữ 7 hồ sơ chờ xác nhận và 1 đã nghỉ riêng. File HR ưu tiên cho các trường nhân sự có trong file; mapping 1Office và cây 18 đơn vị được giữ. Các số liệu 66/67 trong khảo sát cũ bên dưới là lịch sử, không phải hiện trạng mới. Xem [đối chiếu HR và các điểm cần xác nhận](DOI-CHIEU-NHAN-SU-HR-2026-10-26.md).
 
 

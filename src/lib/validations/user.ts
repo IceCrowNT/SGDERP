@@ -8,26 +8,35 @@ const optionalDate = z
   )
   .optional()
   .nullable();
-export const CreateEmployeeSchema = z.object({
-  fullName: z.string().trim().min(2, "Nhập họ và tên").max(255),
-  employeeCode: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .min(1, "Nhập mã nhân sự")
-    .max(50)
-    .regex(/^[A-Z0-9_-]+$/, "Mã không chứa dấu hoặc khoảng trắng"),
-  position: z.string().trim().max(100).optional().nullable(),
-  departmentId: z.number().int().positive("Chọn phòng ban").nullable(),
-  phone: z.string().trim().max(20).optional().nullable(),
-  email: z
-    .union([z.literal(""), z.string().trim().email("Email không hợp lệ")])
-    .optional()
-    .nullable(),
-  dateOfBirth: optionalDate,
-  joinDate: optionalDate,
-  employmentStatus: z.enum(["ACTIVE", "LEFT", "UNKNOWN"]),
-});
+export const CreateEmployeeSchema = z
+  .object({
+    fullName: z.string().trim().min(2, "Nhập họ và tên").max(255),
+    position: z.string().trim().max(100).optional().nullable(),
+    departmentId: z
+      .number({
+        required_error: "Chọn phòng ban",
+        invalid_type_error: "Chọn phòng ban",
+      })
+      .int()
+      .positive("Chọn phòng ban"),
+    notes: z
+      .string()
+      .trim()
+      .max(5000, "Ghi chú tối đa 5.000 ký tự")
+      .optional()
+      .nullable(),
+    phone: z.string().trim().max(20).optional().nullable(),
+    email: z
+      .union([z.literal(""), z.string().trim().email("Email không hợp lệ")])
+      .optional()
+      .nullable(),
+    dateOfBirth: optionalDate,
+    joinDate: optionalDate,
+    employmentStatus: z.enum(["ACTIVE", "LEFT", "UNKNOWN"]),
+  })
+  .strict(
+    "Biểu mẫu chứa trường không được phép sửa (mã nhân sự hoặc thông tin nguồn).",
+  );
 export const UpdateEmployeeSchema = CreateEmployeeSchema.extend({
   id: z.number().int().positive(),
 });

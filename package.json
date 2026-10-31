@@ -10,7 +10,6 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "db:seed": "tsx prisma/seed.ts",
-    "db:seed:it-assets": "tsx prisma/seed-it-assets.ts",
     "db:sync:oneoffice-departments": "tsx prisma/sync-oneoffice-departments.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma skills sync || exit 0"

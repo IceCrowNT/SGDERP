@@ -1,15 +1,31 @@
 # TÀI LIỆU KIẾN TRÚC TỔNG THỂ & SỔ BỘ THƯ VIỆN
 
+## Thu gọn DB, ưu tiên tài khoản và phân quyền — 31/10/2026
+
+- Theo yêu cầu, gỡ 8 model/bảng tài sản và 8 enum bằng migration `20261031090000_remove_asset_module`; giữ nguyên các migration đã chạy. DB còn 9 bảng nghiệp vụ: Company, Department, Employee, User, Role, Permission, RolePermission, UserRole, AuditLog (ngoài `_prisma_migrations`).
+- Bỏ quan hệ tài sản khỏi bảng lõi, xóa `prisma/seed-it-assets.ts` và npm script `db:seed:it-assets`. Không thêm/gỡ thư viện, không đổi biến môi trường. Script cleanup HR một lần `prisma/clean-hr-legacy.ts` đã ngừng để không truy vấn các bảng tài sản đã gỡ hoặc xóa lại dữ liệu đang dùng.
+- Code 3D hiện chỉ đọc Department/Employee nên tiếp tục hoạt động. PhysicalLocation thuộc thiết kế tài sản, chưa có dữ liệu và đã gỡ cùng phân hệ.
+- Tài liệu và file nguồn tài sản giữ làm lịch sử, không tự tạo lại bảng hoặc seed. Khi khởi động lại phân hệ cần kế hoạch/migration mới.
+- Bốn bảng RBAC đều có vai trò riêng, giữ nguyên dữ liệu/quyền. [Kế hoạch phân quyền](plans/ROLE-MANAGEMENT-CHECKLIST.md) có sơ đồ, số liệu thực tế và các điểm chưa hoàn thiện.
+
+
+
 ## Lưu trữ tài liệu và đầu ra — 28/10/2026
 
 Git theo dõi mã nguồn, tài nguyên ứng dụng và tài liệu Markdown. Các thư mục `outputs/`, `output/`, `ouput/`, `tmp/`, `temp/`, export 1Office và tài liệu nhị phân/ảnh trong `docs/` chỉ lưu cục bộ theo `.gitignore`. Script tạo tài liệu dùng tạm đặt trong `outputs/`. Khi clone mới, các file nguồn phục vụ seed/import và tài liệu báo cáo phải được cung cấp riêng vào đúng đường dẫn; không tự tải lại 1Office. Bỏ theo dõi giữ nguyên file trên máy, không xóa chúng khỏi lịch sử commit cũ.
 
-## Thiết kế điều chỉnh HR sau đánh giá 27/10/2026 — chưa triển khai
+## HR độc lập — triển khai 28/10/2026
 
-Giữ mô hình `Department → Employee → User` hiện có. Phòng ban chọn từ cây qua FK, chức danh giữ text và cho phép sửa có audit. Theo quyết định bổ sung 27/10/2026, giữ `employeeCode` bắt buộc và duy nhất trong công ty; ERP tự cấp thay vì yêu cầu nhập ở form. Mã ổn định có thể ẩn trên UI nhưng đưa vào Excel để đối chiếu nhập lại; đây là mã ERP, không phải mã HR chính thức. FK vẫn dùng `Employee.id`. Đề xuất cho mã nullable trước đây đã được thay thế; cơ chế tự cấp mã trong luồng tạo và xuất–nhập chưa triển khai. Luồng tạo người không tự tạo tài khoản hay gán role.
+- Giữ mô hình `Department → Employee → User`. PostgreSQL dùng tên Việt (`phong_ban`, `nhan_su`, `nguoi_dung`); Prisma Studio dùng tên model tiếng Anh theo code. Không phải hai bộ bảng trùng nhau.
+- Migration `20261028090000_independent_hr`: bỏ 9 cột hồ sơ legacy trong tài khoản, đổi nhãn tài khoản `ho_ten` → `ten_hien_thi`, thêm `Employee.notes` / `ghi_chu`. Mã tự cấp qua sequence/default và trigger bất biến; schema Prisma giữ `employeeCode` required có default DB. Không reset sequence.
+- HR final 72 là dữ liệu khởi tạo; sau đó sửa trực tiếp trong ERP theo HR MANAGE, cùng công ty và có audit. Metadata nguồn chỉ phục vụ truy nguyên. Họ tên, chức danh, phòng ban và ghi chú không còn bị khóa vì nguồn.
+- Giữ ID/mã của 72 người cùng 60 tài khoản hợp lệ/admin; loại 8 hồ sơ cũ và 8 tài khoản tương ứng sau backup. Không dựng lại toàn DB. Phòng ban, role, quyền và dữ liệu tài sản giữ nguyên.
+- `prisma/bootstrap-hr-final.ts`: bootstrap final một lần cho HR rỗng, có marker/khóa theo công ty chống chạy lặp; không tạo tài khoản hàng loạt. `prisma/seed.ts` không đọc file 67 người, không ghi đè HR/phòng ban khi chạy lại. `prisma/import-hr-final-20261026.ts` đã vô hiệu hóa.
+- `prisma/clean-hr-legacy.ts`: đã hoàn thành lần làm sạch 28/10, ngừng chạy từ 31/10; thuật toán cũ nằm trong backup riêng, không dùng lại cho dữ liệu vận hành.
+- Form/action sử dụng validation strict, không nhận mã/metadata nguồn từ client; chọn phòng theo cây. Ghi chú vận hành chỉnh được, ghi chú file HR gốc nằm trong mục nguồn nhập. Không thêm dependency hoặc biến môi trường.
+- Kiểm thử: `npx playwright test tests/e2e/hr-independent.spec.ts tests/e2e/identity.spec.ts --workers=1`. File nguồn final lưu cục bộ, cần được cấp riêng khi clone máy mới để bootstrap/kiểm thử bootstrap.
 
-[Phương án trong HR-CHECKLIST](plans/HR-CHECKLIST.md) đề xuất làm sạch riêng dữ liệu HR/tài khoản, nạp 72 người từ final và giữ tài khoản quản trị hệ thống, cơ cấu, role/quyền và dữ liệu tài sản. Phải sửa seed cũ và importer phụ thuộc mã trước, không reset toàn DB hoặc sequence. Phần này là thiết kế đề xuất; schema và ứng dụng hiện vẫn theo mô tả triển khai bên dưới.
-
+Các mục bên dưới ghi lịch sử các đợt triển khai trước; quyết định HR độc lập phía trên là hiện hành.
 
 ## Nguồn nhân sự HR chốt 26/10/2026
 
@@ -24,11 +40,11 @@ Giữ mô hình `Department → Employee → User` hiện có. Phòng ban chọn
 ## Cập nhật nhân sự – tài khoản (26/10/2026)
 
 - DB: `Employee` → `nhan_su` là hồ sơ người thật; `User` → `nguoi_dung` là tài khoản. `Department.employees` và `Employee.accounts` thay cho dùng tài khoản làm hồ sơ. Một người có 0..N tài khoản; role gắn từng tài khoản.
-- Migration `20261026100000_split_employees_accounts`: bổ sung bảng, chuyển dữ liệu và FK tài sản; giữ ID/mật khẩu/quyền tài khoản, không xóa cột hồ sơ cũ. Các field `User.legacy*` dùng `@ignore`, chỉ phục vụ đối chiếu, không đọc/ghi trong ứng dụng.
+- Migration `20261026100000_split_employees_accounts`: bổ sung bảng, chuyển dữ liệu và FK tài sản; giữ ID/mật khẩu/quyền tài khoản, không xóa cột hồ sơ cũ. Các field `User.legacy*` từng giữ tạm để đối chiếu và đã được loại ở migration 28/10/2026.
 - `/employees`: hồ sơ và tình trạng làm việc. `/accounts`: tạo/sửa/liên kết tài khoản, khóa/mở, đặt lại mật khẩu và gán role hiện có; chỉ ADMIN/IT_ADMIN. `/roles` vẫn chưa triển khai ma trận quản lý role.
 - `src/actions/account.ts`, `src/lib/account-access.ts`, `src/lib/account-session.ts`, `src/lib/session-token.ts` (JWT cho middleware, không import Prisma), `src/components/accounts/AccountManager.tsx` là các tệp mới. `src/components/ui/checkbox.tsx` dùng Radix đã có; không thêm thư viện.
 - Server xác minh tài khoản còn mở, phiên bản phiên và quyền hiện tại từ DB. Thay đổi tài khoản tăng `sessionVersion`; phiên cũ bị từ chối. Đăng nhập bằng username, không dùng mã nhân sự vì một người có nhiều tài khoản.
-- Nhân sự giữ mapping 1Office; file HR final ưu tiên theo mục nguồn HR phía trên. Tên/mã/phòng/chức vụ của hồ sơ đã liên kết nguồn hoặc được HR chốt không sửa qua form. Có thể thêm hồ sơ nội bộ chưa có mapping, cần đối chiếu trước khi đồng bộ. Chưa có importer nhân sự định kỳ/API/webhook.
+- Nhân sự giữ mapping 1Office; file HR final ưu tiên theo mục nguồn HR phía trên. Từ 28/10/2026 chỉ mã không sửa; tên/phòng/chức vụ sửa được theo HR MANAGE. Có thể thêm hồ sơ nội bộ chưa có mapping, cần đối chiếu trước khi đồng bộ. Chưa có importer nhân sự định kỳ/API/webhook.
 - Bộ đếm: tổng hồ sơ gồm lịch sử, đang làm việc chỉ `ACTIVE`, `UNKNOWN` tách riêng. 3D chỉ hiển thị `Employee.ACTIVE`; phòng ban hiển thị tổng hồ sơ gắn đơn vị. Không đổi quy tắc vị trí ngồi 3D trong lần này.
 - Giữ Next.js 16.4.0 theo yêu cầu; không thay package/dependency/env. Sau khi sinh Prisma Client cần khởi động lại dev server để tránh giữ client cũ.
 
@@ -78,17 +94,15 @@ graph TD
 ```
 
 ### Các Trục Nghiệp Vụ Trọng Tâm:
-1. **Quản trị Nhân sự & Định danh (Core HR & IAM):** 72 người theo danh sách HR chốt 26/10/2026 (80 hồ sơ lưu trữ), cây phòng ban 2 cấp gắn ID số nguyên (`Int`), liên kết kế thừa quyền.
+1. **Quản trị Nhân sự & Định danh (Core HR & IAM):** 72 người theo danh sách HR chốt 26/10/2026 (đã làm sạch hồ sơ dư), cây phòng ban 2 cấp gắn ID số nguyên (`Int`), liên kết kế thừa quyền.
 2. **Không gian số 3D Tòa nhà (Digital Twin 3D Office):** Trực quan hóa mặt bằng văn phòng, định vị phòng ban và hiển thị tức thì nhân sự ngồi tại từng phòng bằng WebGL Three.js.
-3. **Quản trị Tài sản & Thiết bị IT (IT Asset Management):** Quản lý vòng đời máy móc, camera, bản quyền phần mềm cho phòng HCNS & IT.
+3. **Tài sản IT — tạm hoãn:** bảng và seed đã gỡ ngày 31/10/2026; chỉ giữ thiết kế tham khảo.
 4. **Điều hành Xe Công Vụ (Fleet Management):** Xếp lịch điều xe đưa đón giữa Tập đoàn và KCN Nam Đình Vũ.
 5. **Cầu nối Phê duyệt Dự án (Executive Bridge):** Luân chuyển hồ sơ, biên bản bàn giao đất, nghiệm thu giữa Tập đoàn và Ban QLDA Nam Đình Vũ.
 
-### Nền tảng dữ liệu tài sản IT và không gian
+### Tài sản và không gian — thiết kế lưu trữ
 
-Phân hệ tài sản tách ba lớp: chứng từ/số lượng kiểm kê (`AssetInventoryDocument`, `AssetInventoryLine`), tài sản cá thể (`Asset`) và lịch sử vận hành (`AssetAssignment`, `AssetLocationHistory`, `AssetMaintenance`). Cây `PhysicalLocation` quản lý Tòa nhà → Tầng → Phòng → Khu vực/Rack/Kho; trường `threeDKey` ánh xạ vị trí nghiệp vụ với đối tượng trong Three.js mà không biến mesh thành khóa dữ liệu.
-
-Ảnh BMHC 0501 chỉ là dữ liệu tham khảo tạm gồm 11 nhóm, tổng 90 thiết bị và được giữ ở trạng thái `DRAFT`. Không tự tạo 90 tài sản thật từ ảnh. Sau khi có giao diện, dữ liệu kiểm kê thực tế sẽ tạo một hồ sơ `Asset` cho từng thiết bị; mã nội bộ, loại và tình trạng là tối thiểu, các trường chi tiết được bổ sung dần.
+Phân hệ tài sản đã được gỡ khỏi DB ngày 31/10/2026 để tập trung user/phân quyền. Mô hình cũ, số lượng tham khảo và hướng tích hợp 3D nằm trong [kế hoạch tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md); chúng không mô tả bảng đang hoạt động.
 
 ### Quy ước tên vật lý PostgreSQL — 22/10/2026
 
@@ -120,7 +134,6 @@ SGDERP/
 │   ├── schema.prisma                 # Lược đồ quan hệ thực thể (Data Model)
 │   ├── migrations/                   # Lịch sử các bản migration chính thức
 │   ├── seed.ts                       # Script khởi tạo 67 nhân viên, 18 phòng ban, 7 roles
-│   ├── seed-it-assets.ts             # Nạp chứng từ nháp BMHC 0501 và 11 danh mục tài sản IT
 │   └── sync-oneoffice-departments.ts # Nhập snapshot cơ cấu 1Office và cập nhật mapping 18 đơn vị
 ├── src/
 │   ├── actions/                      # Server Actions xử lý logic nghiệp vụ (Direct-to-DB)
@@ -209,21 +222,20 @@ npm install
 # 2. Cấu hình biến môi trường
 cp .env.example .env
 
-# 3. Đồng bộ cấu trúc bảng và nạp 67 cán bộ nhân sự gốc
+# 3. Đồng bộ cấu trúc bảng và khởi tạo HR final 72 người một lần
+# Cần cung cấp riêng file HR final vào docs/HR_danhsachnhanvien/
 npx prisma migrate dev
 npm run db:seed
 
-# 4. Sau khi migration tài sản đã áp dụng, nạp chứng từ BMHC 0501 ở trạng thái DRAFT
-npm run db:seed:it-assets
-
-# 5. Nhập snapshot cơ cấu 1Office đã lưu trong project (chỉ ghi SDG ERP)
+# 4. Khởi tạo cơ cấu từ snapshot cục bộ đã được cấp riêng, chỉ khi cần
+# Không truy cập 1Office hoặc đồng bộ lại nhân sự
 npm run db:sync:oneoffice-departments
 
-# 6. Khởi động hệ thống
+# 5. Khởi động hệ thống
 npm run dev
 # Truy cập: http://localhost:4000 (Tài khoản mẫu: admin / 123456)
 
-# 7. Chạy E2E bằng Chrome đã cài trên máy
+# 6. Chạy E2E bằng Chrome đã cài trên máy
 E2E_ADMIN_USERNAME=<local-admin> E2E_ADMIN_PASSWORD=<local-password> npm run test:e2e
 # Thêm E2E_ALLOW_WRITES=1 để chạy ca ghi metadata có hoàn tác.
 ```
