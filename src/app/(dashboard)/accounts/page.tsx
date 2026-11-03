@@ -12,15 +12,15 @@ export default async function AccountsPage() {
     return <p>Không có quyền quản lý tài khoản.</p>;
   const [result, employees, roles] = await Promise.all([
     getAccounts(),
-    db.employee.findMany({
-      where: { companyId: session.companyId },
-      select: { id: true, fullName: true, employeeCode: true },
-      orderBy: { fullName: "asc" },
+    db.nhan_su.findMany({
+      where: { dinh_danh_cong_ty: session.companyId },
+      select: { dinh_danh: true, ho_ten: true, ma_nhan_su: true },
+      orderBy: { ho_ten: "asc" },
     }),
-    db.role.findMany({
-      where: { companyId: session.companyId },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
+    db.vai_tro.findMany({
+      where: { dinh_danh_cong_ty: session.companyId },
+      select: { dinh_danh: true, ten_vai_tro: true },
+      orderBy: { ten_vai_tro: "asc" },
     }),
   ]);
   if (!result.success) return <p>{result.message}</p>;

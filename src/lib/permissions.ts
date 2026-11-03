@@ -26,11 +26,11 @@ export async function getAccessibleDepartmentIds(
   }
 
   // 3. Truy vấn phòng ban của user kèm toàn bộ các bộ phận con trực thuộc
-  const userDept = await db.department.findUnique({
-    where: { id: session.departmentId },
+  const userDept = await db.phong_ban.findUnique({
+    where: { dinh_danh: session.departmentId },
     include: {
-      children: {
-        select: { id: true },
+      phong_ban_con: {
+        select: { dinh_danh: true },
       },
     },
   });
@@ -39,6 +39,6 @@ export async function getAccessibleDepartmentIds(
     return [session.departmentId];
   }
 
-  const childIds = userDept.children.map((c) => c.id);
-  return [userDept.id, ...childIds];
+  const childIds = userDept.phong_ban_con.map((c) => c.dinh_danh);
+  return [userDept.dinh_danh, ...childIds];
 }

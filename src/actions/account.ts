@@ -14,20 +14,20 @@ export async function getAccounts() {
       success: false as const,
       message: "Không có quyền quản lý tài khoản.",
     };
-  const data = await db.user.findMany({
-    where: { companyId: session!.companyId },
+  const data = await db.tai_khoan.findMany({
+    where: { dinh_danh_cong_ty: session!.companyId },
     select: {
-      id: true,
-      username: true,
-      displayName: true,
-      isActive: true,
-      employeeId: true,
-      employee: {
-        select: { fullName: true, employeeCode: true, employmentStatus: true },
+      dinh_danh: true,
+      ten_dang_nhap: true,
+      ten_hien_thi: true,
+      cho_phep_dang_nhap: true,
+      dinh_danh_nhan_su: true,
+      nhan_su: {
+        select: { ho_ten: true, ma_nhan_su: true, tinh_trang_lam_viec: true },
       },
-      roles: { select: { roleId: true, role: { select: { name: true } } } },
+      danh_sach_vai_tro: { select: { dinh_danh_vai_tro: true, vai_tro: { select: { ten_vai_tro: true } } } },
     },
-    orderBy: { username: "asc" },
+    orderBy: { ten_dang_nhap: "asc" },
   });
   return { success: true as const, data };
 }
@@ -53,69 +53,69 @@ export async function saveAccount(input: AccountInput) {
       // Serialize account changes per company, including last-administrator checks.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       const previous = v.id
-        ? await tx.user.findFirst({
-            where: { id: v.id, companyId: session.companyId },
-            select: { id: true, username: true, employeeId: true },
+        ? await tx.tai_khoan.findFirst({
+            where: { dinh_danh: v.id, dinh_danh_cong_ty: session.companyId },
+            select: { dinh_danh: true, ten_dang_nhap: true, dinh_danh_nhan_su: true },
           })
         : null;
       if (v.id && !previous) throw Error("Không tìm thấy tài khoản.");
       if (v.id === session.userId && !v.isActive)
         throw Error("Không thể tự khóa tài khoản đang sử dụng.");
-      if (previous && previous.username !== v.username)
+      if (previous && previous.ten_dang_nhap !== v.username)
         throw Error("Tên đăng nhập không thay đổi trong bản này.");
-      if (previous?.employeeId && !v.employeeId)
+      if (previous?.dinh_danh_nhan_su && !v.employeeId)
         throw Error("Tài khoản cá nhân phải có người sở hữu.");
       if (
         v.employeeId &&
-        !(await tx.employee.findFirst({
-          where: { id: v.employeeId, companyId: session.companyId },
+        !(await tx.nhan_su.findFirst({
+          where: { dinh_danh: v.employeeId, dinh_danh_cong_ty: session.companyId },
         }))
       )
         throw Error("Nhân sự không thuộc công ty.");
       const ids = [...new Set(v.roleIds)];
       if (
-        (await tx.role.count({
-          where: { id: { in: ids }, companyId: session.companyId },
+        (await tx.vai_tro.count({
+          where: { dinh_danh: { in: ids }, dinh_danh_cong_ty: session.companyId },
         })) !== ids.length
       )
         throw Error("Vai trò không hợp lệ.");
       const data = {
-        displayName: v.displayName,
-        employeeId: v.employeeId,
-        isActive: v.isActive,
-        ...(password ? { password } : {}),
+        ten_hien_thi: v.displayName,
+        dinh_danh_nhan_su: v.employeeId,
+        cho_phep_dang_nhap: v.isActive,
+        ...(password ? { mat_khau_bam: password } : {}),
       };
       const account = previous
-        ? await tx.user.update({
-            where: { id: previous.id },
-            data: { ...data, sessionVersion: { increment: 1 } },
+        ? await tx.tai_khoan.update({
+            where: { dinh_danh: previous.dinh_danh },
+            data: { ...data, phien_ban_dang_nhap: { increment: 1 } },
           })
-        : await tx.user.create({
+        : await tx.tai_khoan.create({
             data: {
               ...data,
-              username: v.username,
-              password: password!,
-              companyId: session.companyId,
+              ten_dang_nhap: v.username,
+              mat_khau_bam: password!,
+              dinh_danh_cong_ty: session.companyId,
             },
           });
-      await tx.userRole.deleteMany({ where: { userId: account.id } });
+      await tx.tai_khoan_vai_tro.deleteMany({ where: { dinh_danh_tai_khoan: account.dinh_danh } });
       if (ids.length)
-        await tx.userRole.createMany({
+        await tx.tai_khoan_vai_tro.createMany({
           data: ids.map((roleId, i) => ({
-            userId: account.id,
-            roleId,
-            isPrimary: i === 0,
+            dinh_danh_tai_khoan: account.dinh_danh,
+            dinh_danh_vai_tro: roleId,
+            la_vai_tro_chinh: i === 0,
           })),
         });
-      const admins = await tx.user.count({
+      const admins = await tx.tai_khoan.count({
         where: {
-          companyId: session.companyId,
-          isActive: true,
-          roles: {
+          dinh_danh_cong_ty: session.companyId,
+          cho_phep_dang_nhap: true,
+          danh_sach_vai_tro: {
             some: {
-              role: {
-                companyId: session.companyId,
-                code: { in: ["ADMIN", "IT_ADMIN"] },
+              vai_tro: {
+                dinh_danh_cong_ty: session.companyId,
+                ma_vai_tro: { in: ["ADMIN", "IT_ADMIN"] },
               },
             },
           },
@@ -123,20 +123,20 @@ export async function saveAccount(input: AccountInput) {
       });
       if (!admins)
         throw Error("Phải giữ ít nhất một tài khoản quản trị hoạt động.");
-      await tx.auditLog.create({
+      await tx.nhat_ky_hoat_dong.create({
         data: {
-          userId: session.userId,
-          username: session.username,
-          fullName: session.fullName,
-          companyId: session.companyId,
-          action: previous ? "UPDATE" : "CREATE",
-          module: "AUTH",
-          targetId: String(account.id),
-          targetName: v.username,
-          description: `${previous ? "Cập nhật" : "Tạo"} tài khoản; không thay đổi hồ sơ nhân sự.`,
-          newData: {
-            employeeId: v.employeeId,
-            isActive: v.isActive,
+          dinh_danh_tai_khoan: session.userId,
+          ten_dang_nhap: session.username,
+          ho_ten: session.fullName,
+          dinh_danh_cong_ty: session.companyId,
+          hanh_dong: previous ? "UPDATE" : "CREATE",
+          phan_he: "AUTH",
+          dinh_danh_doi_tuong: String(account.dinh_danh),
+          ten_doi_tuong: v.username,
+          mo_ta: `${previous ? "Cập nhật" : "Tạo"} tài khoản; không thay đổi hồ sơ nhân sự.`,
+          du_lieu_moi: {
+            dinh_danh_nhan_su: v.employeeId,
+            cho_phep_dang_nhap: v.isActive,
             roleIds: ids,
             passwordChanged: Boolean(password),
           },

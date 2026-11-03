@@ -10,7 +10,7 @@ const optionalDate = z
   .nullable();
 export const CreateEmployeeSchema = z
   .object({
-    fullName: z.string().trim().min(2, "Nhập họ và tên").max(255),
+    fullName: z.string({ required_error: "Vui lòng nhập họ và tên", invalid_type_error: "Vui lòng nhập họ và tên" }).trim().min(1, "Vui lòng nhập họ và tên").min(2, "Họ và tên phải có ít nhất 2 ký tự").max(255, "Họ và tên tối đa 255 ký tự"),
     position: z.string().trim().max(100).optional().nullable(),
     departmentId: z
       .number({
@@ -32,7 +32,10 @@ export const CreateEmployeeSchema = z
       .nullable(),
     dateOfBirth: optionalDate,
     joinDate: optionalDate,
-    employmentStatus: z.enum(["ACTIVE", "LEFT", "UNKNOWN"]),
+    employmentStatus: z.enum(["ACTIVE", "LEFT", "UNKNOWN"], {
+      required_error: "Vui lòng chọn tình trạng làm việc",
+      invalid_type_error: "Vui lòng chọn tình trạng làm việc",
+    }),
   })
   .strict(
     "Biểu mẫu chứa trường không được phép sửa (mã nhân sự hoặc thông tin nguồn).",

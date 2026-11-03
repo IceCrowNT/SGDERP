@@ -1,5 +1,27 @@
 # TÀI LIỆU KIẾN TRÚC TỔNG THỂ & SỔ BỘ THƯ VIỆN
 
+## Thống nhất tên DB với nghiệp vụ — 03/11/2026
+
+Migration `20261103090000_thong_nhat_ten_nghiep_vu` đổi tên `nguoi_dung` → `tai_khoan`, `nguoi_dung_vai_tro` → `tai_khoan_vai_tro`; mã hồ sơ thành `nhan_su.ma_nhan_su`, trạng thái tài khoản thành `cho_phep_dang_nhap`. Tên/mã công ty, phòng ban, vai trò, quyền và FK được làm rõ theo [từ điển DB](DATABASE-DICTIONARY.md). Không thêm bảng, thư viện, biến môi trường hoặc thay quyền.
+
+Yêu cầu tiếp theo cùng ngày đã đồng nhất **model/field Prisma với bảng/cột PostgreSQL**, ví dụ `db.nhan_su` và `nhan_su.ho_ten`. Prisma Studio 5555 hiển thị tiếng Việt không dấu. Bỏ alias model/field Anh–Việt; giữ map của constraint/index lịch sử. Refactor không phát sinh DDL/migration mới; generate client và khởi động lại dev/Studio. Các tên API/tên vật lý cũ trong phần lịch sử phía dưới chỉ mô tả thời điểm trước thay đổi này.
+
+Migration dùng RENAME và sửa hàm trigger bảo vệ mã trong cùng transaction; đã thử trên bản restore với fingerprint 9 bảng không đổi, sau đó áp dụng local. Cần khởi động lại dev server và Studio sau khi generate client để tránh dùng mapping cũ. Giữ nguyên 72 hồ sơ, 60 tài khoản, 19 phòng ban tại thời điểm đổi tên; không chạy lại seed/import.
+
+## Phòng ban độc lập — 03/11/2026
+
+ERP quản lý tên, mã, mô tả và cây cha/con qua `/departments` với HR MANAGE. Bỏ đối soát snapshot và khóa nguồn; metadata 1Office chỉ giữ lịch sử. Các action CRUD kiểm tra cùng công ty, vòng lặp cơ cấu, mã trùng và dữ liệu liên kết trước khi xóa; khóa theo công ty và ghi audit cùng transaction. Không thêm bảng, thư viện hay biến môi trường.
+
+Đã bỏ npm script `db:sync:oneoffice-departments`; file script cũ chỉ báo ngừng sử dụng, không đọc file hay ghi DB. Seed không khôi phục cơ cấu nếu đã có phòng ban, nhân sự hoặc nhật ký phòng ban. Mọi yêu cầu nhập/đối soát 1Office cũ bên dưới là lịch sử, không là điều kiện sử dụng CRUD. Mapping vị trí 3D vẫn dựa trên mã, nên đổi mã/thêm đơn vị chưa tự tạo vị trí trên mô hình; quản lý vị trí thuộc bước riêng.
+
+## Địa chỉ development được phép — 03/11/2026
+
+`next.config.ts` bổ sung `allowedDevOrigins: ["127.0.2.2"]` để trang được mở tại `http://127.0.2.2:4000` có thể kết nối HMR và khởi tạo giao diện. `http://localhost:4000` vẫn được Next cho phép mặc định. Cấu hình chỉ áp dụng dev, không phải CORS/API hay quyền đăng nhập; không mở wildcard, không đổi thư viện/env. Sau khi đổi config cần dev server khởi động lại (Next dev thường tự khởi động lại). Test hồi quy: `tests/e2e/login-origin.spec.ts`.
+
+## Đề xuất workflow sơ khai — 02/11/2026
+
+[Kế hoạch và thiết kế workflow](plans/WORKFLOW-CHECKLIST.md) đề xuất 5 bảng cho mẫu có phiên bản, bước mẫu, hồ sơ, bước xử lý và lịch sử; tái sử dụng nhân sự/tài khoản/RBAC, bổ sung head phòng ban nếu hỗ trợ tự tìm người duyệt. Bản đầu tuần tự, một người mỗi bước, xử lý bằng Server Actions/Prisma transaction. **Chưa triển khai hoặc migration; DB vẫn 9 bảng nghiệp vụ.** Không cài dependency, đổi môi trường, thêm worker hoặc gọi 1Office trong bước thiết kế.
+
 ## Thu gọn DB, ưu tiên tài khoản và phân quyền — 31/10/2026
 
 - Theo yêu cầu, gỡ 8 model/bảng tài sản và 8 enum bằng migration `20261031090000_remove_asset_module`; giữ nguyên các migration đã chạy. DB còn 9 bảng nghiệp vụ: Company, Department, Employee, User, Role, Permission, RolePermission, UserRole, AuditLog (ngoài `_prisma_migrations`).
@@ -16,7 +38,7 @@ Git theo dõi mã nguồn, tài nguyên ứng dụng và tài liệu Markdown. C
 
 ## HR độc lập — triển khai 28/10/2026
 
-- Giữ mô hình `Department → Employee → User`. PostgreSQL dùng tên Việt (`phong_ban`, `nhan_su`, `nguoi_dung`); Prisma Studio dùng tên model tiếng Anh theo code. Không phải hai bộ bảng trùng nhau.
+- Giữ mô hình `Department → Employee → User`. PostgreSQL dùng tên Việt (`phong_ban`, `nhan_su`, `nguoi_dung`); Ở thời điểm 28/10 Studio dùng model tiếng Anh; từ 03/11 đã đồng nhất tên như phần đầu tài liệu. Không phải hai bộ bảng trùng nhau.
 - Migration `20261028090000_independent_hr`: bỏ 9 cột hồ sơ legacy trong tài khoản, đổi nhãn tài khoản `ho_ten` → `ten_hien_thi`, thêm `Employee.notes` / `ghi_chu`. Mã tự cấp qua sequence/default và trigger bất biến; schema Prisma giữ `employeeCode` required có default DB. Không reset sequence.
 - HR final 72 là dữ liệu khởi tạo; sau đó sửa trực tiếp trong ERP theo HR MANAGE, cùng công ty và có audit. Metadata nguồn chỉ phục vụ truy nguyên. Họ tên, chức danh, phòng ban và ghi chú không còn bị khóa vì nguồn.
 - Giữ ID/mã của 72 người cùng 60 tài khoản hợp lệ/admin; loại 8 hồ sơ cũ và 8 tài khoản tương ứng sau backup. Không dựng lại toàn DB. Phòng ban, role, quyền và dữ liệu tài sản giữ nguyên.
@@ -80,7 +102,7 @@ graph TD
     subgraph Storage & External
         PrismaORM[Prisma ORM v6.19.3]
         LocalPostgres[(PostgreSQL 5432 - Dedicated Server)]
-        OneOffice[1Office - Nguồn chuẩn Nhân sự & Cơ cấu]
+        OneOffice[1Office - Nguồn tham khảo khởi tạo trước đây]
         AccountingServer[(Server Kế Toán Riêng - Tương Lai)]
     end
 
@@ -89,7 +111,7 @@ graph TD
     NextMonolith --> AppRouter
     AppRouter --> ServerActions
     ServerActions --> PrismaORM --> LocalPostgres
-    OneOffice -.->|Export/API một chiều + mapping| ServerActions
+    OneOffice -.->|Lịch sử nhập ban đầu, không đồng bộ hiện hành| ServerActions
     ServerActions -.->|Tích hợp 2 chiều| AccountingServer
 ```
 
@@ -110,9 +132,7 @@ Phân hệ tài sản đã được gỡ khỏi DB ngày 31/10/2026 để tập 
 
 ### Nguồn cơ cấu và cách ánh xạ
 
-1Office là nguồn chuẩn cho hồ sơ nhân sự và cây cơ cấu tổ chức. SDG ERP nhận snapshot/export hoặc API một chiều, giữ external ID và bảng mapping, sau đó cung cấp bản đọc cho các nghiệp vụ nội bộ. Không sửa cơ cấu độc lập trong ERP theo cách tạo ra một phiên bản cạnh tranh với 1Office. Trạng thái con người, quan hệ làm việc và tài khoản đăng nhập phải được tách riêng để tài khoản khóa hoặc chưa được cấp không làm mất hồ sơ nhân sự.
-
-`Department` hiện giữ snapshot nguồn gồm `externalSystem`, `externalId`, `externalParentId`, `externalName`, `externalPath`, `externalLevel`, người giám sát và thời điểm snapshot. UI tính trạng thái `MATCHED`, `NAME_MISMATCH`, `PARENT_MISMATCH` hoặc `UNLINKED` ở thời điểm đọc. Tên và quan hệ cha/con của đơn vị đã liên kết là read-only trong ERP; mã và mô tả nội bộ vẫn có thể quản lý tại ERP.
+Từ 03/11/2026, cả hồ sơ nhân sự và cơ cấu phòng ban đều do ERP quản lý độc lập sau khởi tạo. Metadata `Department.external*` giữ lịch sử nhập, không được dùng để khóa tên/cấp trên hoặc tính trạng thái khớp nguồn. Không còn giao diện đối soát hay tác vụ đồng bộ phòng ban từ 1Office. Khi sửa, khóa liên kết Employee.departmentId vẫn giữ nguyên; chỉ xóa đơn vị không còn nhân sự hoặc đơn vị con.
 
 ---
 

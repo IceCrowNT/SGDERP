@@ -31,6 +31,7 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
+  FormRequiredHint,
 } from "@/components/ui/form";
 import {
   Select,
@@ -71,8 +72,8 @@ export function EmployeeManager({
   const [editing, setEditing] = useState<Employee | null | undefined>();
   const rows = initialEmployees.filter(
     (e) =>
-      (status === "ALL" || e.employmentStatus === status) &&
-      `${e.fullName} ${e.employeeCode} ${e.department?.name ?? ""}`
+      (status === "ALL" || e.tinh_trang_lam_viec === status) &&
+      `${e.ho_ten} ${e.ma_nhan_su} ${e.phong_ban?.ten_phong_ban ?? ""}`
         .toLocaleLowerCase("vi")
         .includes(search.toLocaleLowerCase("vi")),
   );
@@ -84,7 +85,7 @@ export function EmployeeManager({
           <p className="text-sm text-muted-foreground">
             {initialEmployees.length} hồ sơ ·{" "}
             {
-              initialEmployees.filter((e) => e.employmentStatus === "ACTIVE")
+              initialEmployees.filter((e) => e.tinh_trang_lam_viec === "ACTIVE")
                 .length
             }{" "}
             đang làm việc theo hồ sơ
@@ -140,30 +141,30 @@ export function EmployeeManager({
           </TableHeader>
           <TableBody>
             {rows.map((e) => (
-              <TableRow key={e.id}>
+              <TableRow key={e.dinh_danh}>
                 <TableCell>
-                  <p className="font-medium">{e.fullName}</p>
+                  <p className="font-medium">{e.ho_ten}</p>
                   <p className="text-xs text-muted-foreground">
-                    {e.employeeCode}
+                    {e.ma_nhan_su}
                   </p>
                 </TableCell>
                 <TableCell>
-                  <p>{e.department?.name ?? "Chọn phòng ban"}</p>
-                  <p className="text-xs text-muted-foreground">{e.position}</p>
+                  <p>{e.phong_ban?.ten_phong_ban ?? "Chọn phòng ban"}</p>
+                  <p className="text-xs text-muted-foreground">{e.chuc_vu}</p>
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary">
-                    {statuses[e.employmentStatus]}
+                    {statuses[e.tinh_trang_lam_viec]}
                   </Badge>
-                  {e.notes && (
+                  {e.ghi_chu && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {e.notes}
+                      {e.ghi_chu}
                     </p>
                   )}
                 </TableCell>
                 <TableCell>
-                  {e._count.accounts
-                    ? `${e._count.accounts} tài khoản`
+                  {e._count.danh_sach_tai_khoan
+                    ? `${e._count.danh_sach_tai_khoan} tài khoản`
                     : "Chưa có tài khoản"}
                 </TableCell>
                 {canManage && (
@@ -206,7 +207,7 @@ export function EmployeeManager({
           </DialogHeader>
           {editing !== undefined && (
             <EmployeeForm
-              key={editing?.id ?? "new"}
+              key={editing?.dinh_danh ?? "new"}
               employee={editing}
               departments={departments}
               done={() => setEditing(undefined)}
@@ -233,15 +234,15 @@ function EmployeeForm({
   const form = useForm<CreateEmployeeInput>({
     resolver: zodResolver(CreateEmployeeSchema),
     defaultValues: {
-      fullName: employee?.fullName ?? "",
-      position: employee?.position ?? "",
-      departmentId: employee?.departmentId ?? undefined,
-      notes: employee?.notes ?? "",
-      phone: employee?.phone ?? "",
-      email: employee?.email ?? "",
-      dateOfBirth: date(employee?.dateOfBirth),
-      joinDate: date(employee?.joinDate),
-      employmentStatus: employee?.employmentStatus ?? "ACTIVE",
+      fullName: employee?.ho_ten ?? "",
+      position: employee?.chuc_vu ?? "",
+      departmentId: employee?.dinh_danh_phong_ban ?? undefined,
+      notes: employee?.ghi_chu ?? "",
+      phone: employee?.so_dien_thoai ?? "",
+      email: employee?.thu_dien_tu ?? "",
+      dateOfBirth: date(employee?.ngay_sinh),
+      joinDate: date(employee?.ngay_vao_lam),
+      employmentStatus: employee?.tinh_trang_lam_viec ?? "ACTIVE",
     },
   });
   const fields = [
@@ -256,12 +257,22 @@ function EmployeeForm({
     <Form {...form}>
       <form
         className="space-y-5"
+        noValidate
         onSubmit={form.handleSubmit((values) =>
           start(async () => {
             const r = employee
-              ? await updateEmployee({ ...values, id: employee.id })
+              ? await updateEmployee({ ...values, id: employee.dinh_danh })
               : await createEmployee(values);
             if (!r.success) {
+              if ("fieldErrors" in r && r.fieldErrors) {
+                let focusFirst = true;
+                for (const [key, messages] of Object.entries(r.fieldErrors)) {
+                  if (key in CreateEmployeeSchema.shape && messages?.[0]) {
+                    form.setError(key as keyof CreateEmployeeInput, { type: "server", message: messages[0] }, { shouldFocus: focusFirst });
+                    focusFirst = false;
+                  }
+                }
+              }
               toast.error(r.message);
               return;
             }
@@ -269,33 +280,35 @@ function EmployeeForm({
             router.refresh();
             done();
           }),
+          () => toast.error("Vui lòng kiểm tra các trường được đánh dấu trong biểu mẫu."),
         )}
       >
+        <FormRequiredHint />
         <div className="rounded-lg border p-3 text-sm">
           <p>
             Mã nhân sự:{" "}
             <span className="font-mono">
-              {employee?.employeeCode ?? "Tự cấp khi lưu"}
+              {employee?.ma_nhan_su ?? "Tự cấp khi lưu"}
             </span>
           </p>
           <p className="text-muted-foreground">
             Mã được giữ nguyên khi đổi tên hoặc chuyển phòng ban.
           </p>
         </div>
-        {employee?.hrSnapshotAt && (
+        {employee?.ngay_chot_nhan_su_hr && (
           <details className="text-sm text-muted-foreground">
             <summary className="cursor-pointer py-2">
               Nguồn nhập ban đầu
             </summary>
             <p>
               Danh sách HR ngày{" "}
-              {new Date(employee.hrSnapshotAt).toLocaleDateString("vi-VN", {
+              {new Date(employee.ngay_chot_nhan_su_hr).toLocaleDateString("vi-VN", {
                 timeZone: "UTC",
               })}
               . Hồ sơ hiện tại được cập nhật độc lập.
             </p>
-            {employee.hrNotes && (
-              <p>Ghi chú trong file gốc: {employee.hrNotes}</p>
+            {employee.ghi_chu_nhan_su_hr && (
+              <p>Ghi chú trong file gốc: {employee.ghi_chu_nhan_su_hr}</p>
             )}
           </details>
         )}
@@ -307,10 +320,11 @@ function EmployeeForm({
               name={f.name}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{f.label}</FormLabel>
+                  <FormLabel required={f.name === "fullName"}>{f.label}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
+                      aria-required={f.name === "fullName" || undefined}
                       value={field.value ?? ""}
                       type={"type" in f ? f.type : "text"}
                     />
@@ -325,13 +339,13 @@ function EmployeeForm({
             name="departmentId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Phòng ban</FormLabel>
+                <FormLabel required>Phòng ban</FormLabel>
                 <Select
                   value={field.value?.toString() ?? ""}
                   onValueChange={(v) => field.onChange(Number(v))}
                 >
                   <FormControl>
-                    <SelectTrigger className="h-10 w-full">
+                    <SelectTrigger ref={field.ref} onBlur={field.onBlur} aria-required="true" className="h-10 w-full">
                       <SelectValue>
                         {departments.find((d) => d.id === field.value)?.name ??
                           "Chọn phòng ban"}
@@ -355,10 +369,10 @@ function EmployeeForm({
             name="employmentStatus"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Tình trạng làm việc</FormLabel>
+                <FormLabel required>Tình trạng làm việc</FormLabel>
                 <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
-                    <SelectTrigger className="h-10 w-full">
+                    <SelectTrigger ref={field.ref} onBlur={field.onBlur} aria-required="true" className="h-10 w-full">
                       <SelectValue>{statuses[field.value]}</SelectValue>
                     </SelectTrigger>
                   </FormControl>

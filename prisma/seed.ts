@@ -9,18 +9,18 @@ async function main() {
   console.log("🚀 Bắt đầu quá trình nạp dữ liệu (Seed Data)...");
 
   // 1. Tạo Công ty Sao Đỏ Group mặc định
-  const company = await prisma.company.upsert({
-    where: { taxCode: "0200765782" },
+  const company = await prisma.cong_ty.upsert({
+    where: { ma_so_thue: "0200765782" },
     update: {},
     create: {
-      name: "CÔNG TY CỔ PHẦN TẬP ĐOÀN ĐẦU TƯ SAO ĐỎ",
-      taxCode: "0200765782",
-      address:
+      ten_cong_ty: "CÔNG TY CỔ PHẦN TẬP ĐOÀN ĐẦU TƯ SAO ĐỎ",
+      ma_so_thue: "0200765782",
+      dia_chi:
         "Số 768B Ngô Gia Tự, Phường Thành Tô, Quận Hải An, Thành phố Hải Phòng",
-      isActive: true,
+      dang_hoat_dong: true,
     },
   });
-  console.log(`✅ Công ty: ${company.name} (ID: ${company.id})`);
+  console.log(`✅ Công ty: ${company.ten_cong_ty} (ID: ${company.dinh_danh})`);
 
   // 2. Tạo các Nhóm vai trò chuẩn (Roles) tập trung cho HCNS & IT làm nòng cốt
   const roleDefs = [
@@ -77,23 +77,23 @@ async function main() {
 
   const roleMap: Record<string, number> = {};
   for (const r of roleDefs) {
-    const role = await prisma.role.upsert({
+    const role = await prisma.vai_tro.upsert({
       where: {
-        companyId_code: {
-          companyId: company.id,
-          code: r.code,
+        dinh_danh_cong_ty_ma_vai_tro: {
+          dinh_danh_cong_ty: company.dinh_danh,
+          ma_vai_tro: r.code,
         },
       },
       update: {},
       create: {
-        companyId: company.id,
-        code: r.code,
-        name: r.name,
-        description: r.description,
-        isSystem: r.isSystem,
+        dinh_danh_cong_ty: company.dinh_danh,
+        ma_vai_tro: r.code,
+        ten_vai_tro: r.name,
+        mo_ta: r.description,
+        la_vai_tro_he_thong: r.isSystem,
       },
     });
-    roleMap[r.code] = role.id;
+    roleMap[r.code] = role.dinh_danh;
   }
   console.log(
     `✅ Đã khởi tạo ${Object.keys(roleMap).length} Nhóm Vai Trò (Roles).`,
@@ -154,22 +154,22 @@ async function main() {
 
   const permMap: Record<string, number> = {};
   for (const p of permissionDefs) {
-    const perm = await prisma.permission.upsert({
+    const perm = await prisma.quyen.upsert({
       where: {
-        module_action: {
-          module: p.module,
-          action: p.action,
+        phan_he_hanh_dong: {
+          phan_he: p.module,
+          hanh_dong: p.action,
         },
       },
       update: {},
       create: {
-        module: p.module,
-        action: p.action,
-        name: p.name,
-        scope: p.scope,
+        phan_he: p.module,
+        hanh_dong: p.action,
+        ten_quyen: p.name,
+        pham_vi: p.scope,
       },
     });
-    permMap[`${p.module}:${p.action}`] = perm.id;
+    permMap[`${p.module}:${p.action}`] = perm.dinh_danh;
   }
   console.log(
     `✅ Đã khởi tạo ${Object.keys(permMap).length} Quyền Phân Hệ (Permissions).`,
@@ -204,17 +204,17 @@ async function main() {
     for (const pKey of pKeys) {
       const pId = permMap[pKey];
       if (rId && pId) {
-        await prisma.rolePermission.upsert({
+        await prisma.vai_tro_quyen.upsert({
           where: {
-            roleId_permissionId: {
-              roleId: rId,
-              permissionId: pId,
+            dinh_danh_vai_tro_dinh_danh_quyen: {
+              dinh_danh_vai_tro: rId,
+              dinh_danh_quyen: pId,
             },
           },
           update: {},
           create: {
-            roleId: rId,
-            permissionId: pId,
+            dinh_danh_vai_tro: rId,
+            dinh_danh_quyen: pId,
           },
         });
       }
@@ -222,6 +222,11 @@ async function main() {
   }
   console.log(`✅ Đã gán ma trận quyền hạn cho các vai trò.`);
 
+  // Only bootstrap organization data on a pristine company. Never recreate renamed/deleted units.
+  const hasOrganizationData = await prisma.phong_ban.count({ where: { dinh_danh_cong_ty: company.dinh_danh } })
+    || await prisma.nhan_su.count({ where: { dinh_danh_cong_ty: company.dinh_danh } })
+    || await prisma.nhat_ky_hoat_dong.count({ where: { dinh_danh_cong_ty: company.dinh_danh, phan_he: "DEPARTMENT" } });
+  if (!hasOrganizationData) {
   // 5. Khởi tạo Cơ cấu Tổ chức Phân cấp Cây (6 Phòng ban Cha + Lãnh đạo + Bộ phận Con)
   // 5.1 Các Đơn vị cấp Cha (Cấp 1 - Trực thuộc Tập đoàn)
   const parentDeptDefs = [
@@ -275,23 +280,23 @@ async function main() {
   const departmentMap: Record<string, number> = {};
 
   for (const pDept of parentDeptDefs) {
-    const dept = await prisma.department.upsert({
+    const dept = await prisma.phong_ban.upsert({
       where: {
-        companyId_code: {
-          companyId: company.id,
-          code: pDept.code,
+        dinh_danh_cong_ty_ma_phong_ban: {
+          dinh_danh_cong_ty: company.dinh_danh,
+          ma_phong_ban: pDept.code,
         },
       },
       update: {},
       create: {
-        companyId: company.id,
-        code: pDept.code,
-        name: pDept.name,
-        description: pDept.description,
-        parentId: null,
+        dinh_danh_cong_ty: company.dinh_danh,
+        ma_phong_ban: pDept.code,
+        ten_phong_ban: pDept.name,
+        mo_ta: pDept.description,
+        dinh_danh_phong_ban_cha: null,
       },
     });
-    departmentMap[pDept.name] = dept.id;
+    departmentMap[pDept.name] = dept.dinh_danh;
   }
 
   // 5.2 Khởi tạo các Bộ phận Con chuẩn 100% theo File Excel gốc:
@@ -357,59 +362,63 @@ async function main() {
 
   for (const cDept of childDeptDefs) {
     const parentId = departmentMap[cDept.parentName];
-    const dept = await prisma.department.upsert({
+    const dept = await prisma.phong_ban.upsert({
       where: {
-        companyId_code: {
-          companyId: company.id,
-          code: cDept.code,
+        dinh_danh_cong_ty_ma_phong_ban: {
+          dinh_danh_cong_ty: company.dinh_danh,
+          ma_phong_ban: cDept.code,
         },
       },
       update: {},
       create: {
-        companyId: company.id,
-        code: cDept.code,
-        name: cDept.name,
-        description: cDept.description,
-        parentId,
+        dinh_danh_cong_ty: company.dinh_danh,
+        ma_phong_ban: cDept.code,
+        ten_phong_ban: cDept.name,
+        mo_ta: cDept.description,
+        dinh_danh_phong_ban_cha: parentId,
       },
     });
-    departmentMap[cDept.name] = dept.id;
+    departmentMap[cDept.name] = dept.dinh_danh;
   }
 
   console.log(
-    `✅ Đã đồng bộ ${Object.keys(departmentMap).length} Đơn vị / Phòng ban theo mô hình Cây phân cấp.`,
+    `✅ Đã khởi tạo ${Object.keys(departmentMap).length} Đơn vị / Phòng ban theo mô hình Cây phân cấp.`,
   );
+
+  } else {
+    console.log("Giữ nguyên cơ cấu phòng ban đang được quản lý độc lập trong ERP.");
+  }
 
   // 6. Mật khẩu mặc định băm sẵn (đơn giản hoá 123456 cho nội bộ)
   const defaultPassword = await bcrypt.hash("123456", 10);
 
   // 6.1 Tạo tài khoản Quản trị viên tối cao (Master Admin)
-  const adminUser = await prisma.user.upsert({
-    where: { username: "admin" },
+  const adminUser = await prisma.tai_khoan.upsert({
+    where: { ten_dang_nhap: "admin" },
     update: {}, // Never reset credentials or change the existing account owner on reseed.
     create: {
-      username: "admin",
-      password: defaultPassword,
-      displayName: "Quản Trị Viên Hệ Thống",
-      isActive: true,
-      companyId: company.id,
+      ten_dang_nhap: "admin",
+      mat_khau_bam: defaultPassword,
+      ten_hien_thi: "Quản Trị Viên Hệ Thống",
+      cho_phep_dang_nhap: true,
+      dinh_danh_cong_ty: company.dinh_danh,
     },
   });
 
   const adminRoleId = roleMap["ADMIN"];
   if (adminRoleId) {
-    await prisma.userRole.upsert({
+    await prisma.tai_khoan_vai_tro.upsert({
       where: {
-        userId_roleId: {
-          userId: adminUser.id,
-          roleId: adminRoleId,
+        dinh_danh_tai_khoan_dinh_danh_vai_tro: {
+          dinh_danh_tai_khoan: adminUser.dinh_danh,
+          dinh_danh_vai_tro: adminRoleId,
         },
       },
-      update: { isPrimary: true },
+      update: { la_vai_tro_chinh: true },
       create: {
-        userId: adminUser.id,
-        roleId: adminRoleId,
-        isPrimary: true,
+        dinh_danh_tai_khoan: adminUser.dinh_danh,
+        dinh_danh_vai_tro: adminRoleId,
+        la_vai_tro_chinh: true,
       },
     });
   }
@@ -418,7 +427,7 @@ async function main() {
   );
 
   // HR is initialized only once; subsequent seeds preserve all manual changes.
-  const result = await bootstrapHrFinal(prisma, company.id);
+  const result = await bootstrapHrFinal(prisma, company.dinh_danh);
   console.log(
     result.skipped
       ? "Đã có dữ liệu HR: giữ nguyên, không đồng bộ lại từ nguồn."

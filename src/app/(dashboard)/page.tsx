@@ -19,18 +19,18 @@ export default async function DashboardPage() {
 
   if (!session) redirect("/login");
   if (!hasPermission(session, "HR")) return <div className="p-6">Xin chào, {session.fullName}. Chọn chức năng được cấp quyền trong menu.</div>;
-  const where = { companyId: session.companyId };
+  const where = { dinh_danh_cong_ty: session.companyId };
   // Truy vấn dữ liệu thực tế từ PostgreSQL
   const [totalUsers, activeUsers, totalDepartments, totalRoles, recentUsers] = await Promise.all([
-    db.employee.count({ where }),
-    db.employee.count({ where: { ...where, employmentStatus: "ACTIVE" } }),
-    db.department.count({ where }),
-    db.role.count({ where }),
-    db.employee.findMany({
+    db.nhan_su.count({ where }),
+    db.nhan_su.count({ where: { ...where, tinh_trang_lam_viec: "ACTIVE" } }),
+    db.phong_ban.count({ where }),
+    db.vai_tro.count({ where }),
+    db.nhan_su.findMany({
       where,
       take: 6,
-      orderBy: { createdAt: "desc" },
-      include: { department: true },
+      orderBy: { thoi_diem_tao: "desc" },
+      include: { phong_ban: true },
     }),
   ]);
 
@@ -143,7 +143,7 @@ export default async function DashboardPage() {
 
           <div className="divide-y divide-border/40">
             {recentUsers.map((u) => {
-              const initials = u.fullName
+              const initials = u.ho_ten
                 .split(" ")
                 .filter(Boolean)
                 .slice(-2)
@@ -152,7 +152,7 @@ export default async function DashboardPage() {
                 .toUpperCase();
 
               return (
-                <div key={u.id} className="py-3 flex items-center justify-between gap-3 hover:bg-muted/30 px-2 rounded-xl transition-colors">
+                <div key={u.dinh_danh} className="py-3 flex items-center justify-between gap-3 hover:bg-muted/30 px-2 rounded-xl transition-colors">
                   <div className="flex items-center gap-3 min-w-0">
                     <Avatar className="h-9 w-9 border border-border/50 shrink-0">
                       <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
@@ -160,21 +160,21 @@ export default async function DashboardPage() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate text-foreground">{u.fullName}</p>
+                      <p className="text-sm font-semibold truncate text-foreground">{u.ho_ten}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {u.position || "Nhân viên"} • <span className="text-foreground/75 font-mono">{u.employeeCode}</span>
+                        {u.chuc_vu || "Nhân viên"} • <span className="text-foreground/75 font-mono">{u.ma_nhan_su}</span>
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    {u.department && (
+                    {u.phong_ban && (
                       <Badge variant="outline" className="hidden sm:inline-flex text-[11px] font-normal border-border/60">
-                        {u.department.name}
+                        {u.phong_ban.ten_phong_ban}
                       </Badge>
                     )}
-                    <Badge variant={(u.employmentStatus === "ACTIVE") ? "default" : "secondary"} className={`text-[10px] h-5 px-2 ${(u.employmentStatus === "ACTIVE") ? "bg-emerald-600 hover:bg-emerald-600 text-white" : ""}`}>
-                      {u.employmentStatus === "ACTIVE" ? "Đang làm việc" : u.employmentStatus === "LEFT" ? "Đã nghỉ việc" : "Chưa xác nhận"}
+                    <Badge variant={(u.tinh_trang_lam_viec === "ACTIVE") ? "default" : "secondary"} className={`text-[10px] h-5 px-2 ${(u.tinh_trang_lam_viec === "ACTIVE") ? "bg-emerald-600 hover:bg-emerald-600 text-white" : ""}`}>
+                      {u.tinh_trang_lam_viec === "ACTIVE" ? "Đang làm việc" : u.tinh_trang_lam_viec === "LEFT" ? "Đã nghỉ việc" : "Chưa xác nhận"}
                     </Badge>
                   </div>
                 </div>

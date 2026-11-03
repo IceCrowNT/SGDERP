@@ -1,5 +1,8 @@
 # Bối cảnh hiện tại và định hướng số hóa Sao Đỏ Group
 
+> **Quyết định 03/11/2026:** Phòng ban vận hành độc lập trong ERP, cho phép tạo/sửa/xóa theo HR MANAGE và quản lý cây cha/con. Bỏ đối soát với snapshot 1Office và yêu cầu API đồng bộ cơ cấu; importer cũ đã ngừng. Dữ liệu nguồn chỉ là lịch sử khởi tạo. Quyết định này thay thế các đoạn bên dưới coi 1Office là nguồn quản lý cơ cấu hiện hành hoặc khóa sửa ERP. HR cũng đã độc lập từ 28/10/2026. Xem [kế hoạch HR](../plans/HR-CHECKLIST.md).
+
+
 > **Ưu tiên 31/10/2026:** Tập trung quản lý tài khoản và phân quyền. Đã yêu cầu gỡ các bảng tài sản cùng seed; tài liệu/nguồn giữ tham khảo để xem xét sau. Giữ nhân sự, cơ cấu và 3D nhân sự. Cấu trúc Role/Permission/RolePermission/UserRole được giữ, các điểm cần làm gọn đã ghi trong kế hoạch role.
 
 

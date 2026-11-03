@@ -10,101 +10,97 @@ datasource db {
 // -----------------------------------------------------------------------------
 // CORE & TENANT (Công ty thành viên / Chi nhánh trong Tập đoàn)
 // -----------------------------------------------------------------------------
-model Company {
-  id       Int     @id(map: "Company_pkey") @default(autoincrement()) @map("dinh_danh")
-  name     String  @map("ten") @db.VarChar(255)
-  taxCode  String? @unique(map: "Company_taxCode_key") @map("ma_so_thue") @db.VarChar(50)
-  address  String? @map("dia_chi") @db.Text
-  isActive Boolean @default(true) @map("dang_hoat_dong")
+model cong_ty {
+  dinh_danh      Int     @id(map: "Company_pkey") @default(autoincrement())
+  ten_cong_ty    String  @db.VarChar(255)
+  ma_so_thue     String? @unique(map: "Company_taxCode_key") @db.VarChar(50)
+  dia_chi        String? @db.Text
+  dang_hoat_dong Boolean @default(true)
 
-  users       User[]
-  employees   Employee[]
-  departments Department[]
-  roles       Role[]
-  auditLogs   AuditLog[]
+  danh_sach_tai_khoan tai_khoan[]
+  danh_sach_nhan_su   nhan_su[]
+  danh_sach_phong_ban phong_ban[]
+  danh_sach_vai_tro   vai_tro[]
+  danh_sach_nhat_ky   nhat_ky_hoat_dong[]
 
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
-
-  @@map("cong_ty")
+  thoi_diem_tao      DateTime @default(now())
+  thoi_diem_cap_nhat DateTime @updatedAt
 }
 
 // -----------------------------------------------------------------------------
 // ORGANIZATION (Phòng ban / Ban QLDA / Bộ phận trực thuộc)
 // -----------------------------------------------------------------------------
-model Department {
-  id          Int     @id(map: "Department_pkey") @default(autoincrement()) @map("dinh_danh")
-  code        String  @map("ma") @db.VarChar(50)
-  name        String  @map("ten") @db.VarChar(255)
-  description String? @map("mo_ta") @db.Text
+model phong_ban {
+  dinh_danh     Int     @id(map: "Department_pkey") @default(autoincrement())
+  ma_phong_ban  String  @db.VarChar(50)
+  ten_phong_ban String  @db.VarChar(255)
+  mo_ta         String? @db.Text
 
-  // Snapshot/mapping nguồn chuẩn cơ cấu tổ chức (hiện tại: 1Office)
-  externalSystem         String?   @map("he_thong_nguon") @db.VarChar(50)
-  externalId             String?   @map("dinh_danh_nguon") @db.VarChar(100)
-  externalParentId       String?   @map("dinh_danh_cap_tren_nguon") @db.VarChar(100)
-  externalName           String?   @map("ten_nguon") @db.VarChar(255)
-  externalPath           String?   @map("duong_dan_nguon") @db.Text
-  externalLevel          Int?      @map("cap_nguon")
-  externalSupervisorName String?   @map("ten_nguoi_giam_sat_nguon") @db.VarChar(255)
-  externalSnapshotAt     DateTime? @map("thoi_diem_chup_du_lieu_nguon")
+  // Lịch sử nhập cơ cấu ban đầu; từ 03/11/2026 ERP quản lý độc lập, không khóa/đối soát nguồn.
+  he_thong_nguon               String?   @db.VarChar(50)
+  dinh_danh_nguon              String?   @db.VarChar(100)
+  dinh_danh_cap_tren_nguon     String?   @db.VarChar(100)
+  ten_nguon                    String?   @db.VarChar(255)
+  duong_dan_nguon              String?   @db.Text
+  cap_nguon                    Int?
+  ten_nguoi_giam_sat_nguon     String?   @db.VarChar(255)
+  thoi_diem_chup_du_lieu_nguon DateTime?
 
   // Cấu trúc phân cấp Cây Phòng Ban (Cha - Con)
-  parentId Int?         @map("dinh_danh_cap_tren")
-  parent   Department?  @relation(map: "Department_parentId_fkey", "DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children Department[] @relation("DepartmentHierarchy")
+  dinh_danh_phong_ban_cha Int?
+  phong_ban_cha           phong_ban?  @relation(map: "Department_parentId_fkey", "DepartmentHierarchy", fields: [dinh_danh_phong_ban_cha], references: [dinh_danh], onDelete: SetNull)
+  phong_ban_con           phong_ban[] @relation("DepartmentHierarchy")
 
-  companyId Int     @map("dinh_danh_cong_ty")
-  company   Company @relation(map: "Department_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
+  dinh_danh_cong_ty Int
+  cong_ty           cong_ty @relation(map: "Department_companyId_fkey", fields: [dinh_danh_cong_ty], references: [dinh_danh], onDelete: Restrict)
 
-  employees Employee[]
+  danh_sach_nhan_su nhan_su[]
 
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
+  thoi_diem_tao      DateTime @default(now())
+  thoi_diem_cap_nhat DateTime @updatedAt
 
-  @@unique([id, companyId])
-  @@unique([companyId, code], map: "Department_companyId_code_key")
-  @@unique([companyId, externalSystem, externalId], map: "Department_companyId_externalSystem_externalId_key")
-  @@index([companyId, externalSystem], map: "Department_companyId_externalSystem_idx")
-  @@index([externalParentId], map: "Department_externalParentId_idx")
-  @@map("phong_ban")
+  @@unique([dinh_danh, dinh_danh_cong_ty])
+  @@unique([dinh_danh_cong_ty, ma_phong_ban], map: "Department_companyId_code_key")
+  @@unique([dinh_danh_cong_ty, he_thong_nguon, dinh_danh_nguon], map: "Department_companyId_externalSystem_externalId_key")
+  @@index([dinh_danh_cong_ty, he_thong_nguon], map: "Department_companyId_externalSystem_idx")
+  @@index([dinh_danh_cap_tren_nguon], map: "Department_externalParentId_idx")
 }
 
 // -----------------------------------------------------------------------------
 // IDENTITY & HR PROFILE (Định danh tài khoản & Hồ sơ nhân sự)
 // -----------------------------------------------------------------------------
-model Employee {
-  id                 Int              @id @default(autoincrement()) @map("dinh_danh")
-  employeeCode       String           @default(dbgenerated("tao_ma_nhan_su()")) @map("ma_nhan_vien") @db.VarChar(50)
-  fullName           String           @map("ho_ten") @db.VarChar(255)
-  position           String?          @map("chuc_vu") @db.VarChar(100)
-  email              String?          @map("thu_dien_tu") @db.VarChar(255)
-  phone              String?          @map("so_dien_thoai") @db.VarChar(20)
-  dateOfBirth        DateTime?        @map("ngay_sinh") @db.Date
-  joinDate           DateTime?        @map("ngay_vao_lam") @db.Date
-  avatarUrl          String?          @map("duong_dan_anh_dai_dien") @db.Text
-  address            String?          @map("dia_chi") @db.Text
-  employmentStatus   EmploymentStatus @default(UNKNOWN) @map("tinh_trang_lam_viec")
-  externalSystem     String?          @map("he_thong_nguon") @db.VarChar(50)
-  externalId         String?          @map("dinh_danh_nguon") @db.VarChar(100)
-  externalSnapshotAt DateTime?        @map("thoi_diem_chup_du_lieu_nguon")
-  hrSourceFile       String?          @map("tep_nguon_nhan_su_hr") @db.VarChar(255)
-  hrSnapshotAt       DateTime?        @map("ngay_chot_nhan_su_hr") @db.Date
-  notes              String?          @map("ghi_chu") @db.Text
-  hrNotes            String?          @map("ghi_chu_nhan_su_hr") @db.Text
-  companyId          Int              @map("dinh_danh_cong_ty")
-  company            Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  departmentId       Int?             @map("dinh_danh_phong_ban")
-  department         Department?      @relation(fields: [departmentId, companyId], references: [id, companyId], onDelete: Restrict)
-  accounts           User[]
-  createdAt          DateTime         @default(now()) @map("thoi_diem_tao")
-  updatedAt          DateTime         @updatedAt @map("thoi_diem_cap_nhat")
+model nhan_su {
+  dinh_danh                    Int              @id @default(autoincrement())
+  ma_nhan_su                   String           @default(dbgenerated("tao_ma_nhan_su()")) @db.VarChar(50)
+  ho_ten                       String           @db.VarChar(255)
+  chuc_vu                      String?          @db.VarChar(100)
+  thu_dien_tu                  String?          @db.VarChar(255)
+  so_dien_thoai                String?          @db.VarChar(20)
+  ngay_sinh                    DateTime?        @db.Date
+  ngay_vao_lam                 DateTime?        @db.Date
+  duong_dan_anh_dai_dien       String?          @db.Text
+  dia_chi                      String?          @db.Text
+  tinh_trang_lam_viec          EmploymentStatus @default(UNKNOWN)
+  he_thong_nguon               String?          @db.VarChar(50)
+  dinh_danh_nguon              String?          @db.VarChar(100)
+  thoi_diem_chup_du_lieu_nguon DateTime?
+  tep_nguon_nhan_su_hr         String?          @db.VarChar(255)
+  ngay_chot_nhan_su_hr         DateTime?        @db.Date
+  ghi_chu                      String?          @db.Text
+  ghi_chu_nhan_su_hr           String?          @db.Text
+  dinh_danh_cong_ty            Int
+  cong_ty                      cong_ty          @relation(fields: [dinh_danh_cong_ty], references: [dinh_danh], onDelete: Restrict)
+  dinh_danh_phong_ban          Int?
+  phong_ban                    phong_ban?       @relation(fields: [dinh_danh_phong_ban, dinh_danh_cong_ty], references: [dinh_danh, dinh_danh_cong_ty], onDelete: Restrict)
+  danh_sach_tai_khoan          tai_khoan[]
+  thoi_diem_tao                DateTime         @default(now())
+  thoi_diem_cap_nhat           DateTime         @updatedAt
 
-  @@unique([id, companyId])
-  @@unique([companyId, employeeCode])
-  @@unique([companyId, externalSystem, externalId])
-  @@index([companyId, departmentId])
-  @@index([companyId, employmentStatus])
-  @@map("nhan_su")
+  @@unique([dinh_danh, dinh_danh_cong_ty])
+  @@unique([dinh_danh_cong_ty, ma_nhan_su], map: "nhan_su_dinh_danh_cong_ty_ma_nhan_vien_key")
+  @@unique([dinh_danh_cong_ty, he_thong_nguon, dinh_danh_nguon])
+  @@index([dinh_danh_cong_ty, dinh_danh_phong_ban])
+  @@index([dinh_danh_cong_ty, tinh_trang_lam_viec])
 }
 
 enum EmploymentStatus {
@@ -113,138 +109,132 @@ enum EmploymentStatus {
   UNKNOWN
 }
 
-model User {
-  id             Int        @id(map: "User_pkey") @default(autoincrement()) @map("dinh_danh")
-  username       String     @unique(map: "User_username_key") @map("ten_dang_nhap") @db.VarChar(100)
-  password       String     @map("mat_khau_bam") @db.VarChar(255)
-  displayName    String     @map("ten_hien_thi") @db.VarChar(255)
-  isActive       Boolean    @default(true) @map("dang_hoat_dong")
-  sessionVersion Int        @default(0) @map("phien_ban_dang_nhap")
-  companyId      Int        @map("dinh_danh_cong_ty")
-  company        Company    @relation(map: "User_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
-  employeeId     Int?       @map("dinh_danh_nhan_su")
-  employee       Employee?  @relation(fields: [employeeId, companyId], references: [id, companyId], onDelete: Restrict)
-  roles          UserRole[]
-  auditLogs      AuditLog[]
-  createdAt      DateTime   @default(now()) @map("thoi_diem_tao")
-  updatedAt      DateTime   @updatedAt @map("thoi_diem_cap_nhat")
+model tai_khoan {
+  dinh_danh           Int                 @id(map: "User_pkey") @default(autoincrement())
+  ten_dang_nhap       String              @unique(map: "User_username_key") @db.VarChar(100)
+  mat_khau_bam        String              @db.VarChar(255)
+  ten_hien_thi        String              @db.VarChar(255)
+  cho_phep_dang_nhap  Boolean             @default(true)
+  phien_ban_dang_nhap Int                 @default(0)
+  dinh_danh_cong_ty   Int
+  cong_ty             cong_ty             @relation(map: "User_companyId_fkey", fields: [dinh_danh_cong_ty], references: [dinh_danh], onDelete: Restrict)
+  dinh_danh_nhan_su   Int?
+  nhan_su             nhan_su?            @relation(map: "nguoi_dung_dinh_danh_nhan_su_dinh_danh_cong_ty_fkey", fields: [dinh_danh_nhan_su, dinh_danh_cong_ty], references: [dinh_danh, dinh_danh_cong_ty], onDelete: Restrict)
+  danh_sach_vai_tro   tai_khoan_vai_tro[]
+  danh_sach_nhat_ky   nhat_ky_hoat_dong[]
+  thoi_diem_tao       DateTime            @default(now())
+  thoi_diem_cap_nhat  DateTime            @updatedAt
 
-  @@index([isActive], map: "User_isActive_idx")
-  @@index([employeeId, companyId])
-  @@map("nguoi_dung")
+  @@index([cho_phep_dang_nhap], map: "User_isActive_idx")
+  @@index([dinh_danh_nhan_su, dinh_danh_cong_ty], map: "nguoi_dung_dinh_danh_nhan_su_dinh_danh_cong_ty_idx")
 }
 
 // -----------------------------------------------------------------------------
 // RBAC - NHÓM VAI TRÒ (Roles)
 // -----------------------------------------------------------------------------
-model Role {
-  id          Int     @id(map: "Role_pkey") @default(autoincrement()) @map("dinh_danh")
-  code        String  @map("ma") @db.VarChar(50) // VD: "ADMIN", "DIRECTOR", "DEPT_HEAD", "HR", "ACCOUNTANT", "STAFF"
-  name        String  @map("ten") @db.VarChar(255) // VD: "Ban Giám Đốc", "Trưởng Phòng / Bộ Phận", "Nhân Sự", "Nhân Viên"
-  description String? @map("mo_ta") @db.Text
-  isSystem    Boolean @default(false) @map("thuoc_he_thong") // Vai trò mặc định hệ thống không thể xóa
+model vai_tro {
+  dinh_danh           Int     @id(map: "Role_pkey") @default(autoincrement())
+  ma_vai_tro          String  @db.VarChar(50) // VD: "ADMIN", "DIRECTOR", "DEPT_HEAD", "HR", "ACCOUNTANT", "STAFF"
+  ten_vai_tro         String  @db.VarChar(255) // VD: "Ban Giám Đốc", "Trưởng Phòng / Bộ Phận", "Nhân Sự", "Nhân Viên"
+  mo_ta               String? @db.Text
+  la_vai_tro_he_thong Boolean @default(false) // Vai trò mặc định hệ thống không thể xóa
 
-  companyId Int     @map("dinh_danh_cong_ty")
-  company   Company @relation(map: "Role_companyId_fkey", fields: [companyId], references: [id], onDelete: Restrict)
+  dinh_danh_cong_ty Int
+  cong_ty           cong_ty @relation(map: "Role_companyId_fkey", fields: [dinh_danh_cong_ty], references: [dinh_danh], onDelete: Restrict)
 
-  permissions RolePermission[]
-  users       UserRole[]
+  danh_sach_quyen     vai_tro_quyen[]
+  danh_sach_tai_khoan tai_khoan_vai_tro[]
 
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
+  thoi_diem_tao      DateTime @default(now())
+  thoi_diem_cap_nhat DateTime @updatedAt
 
-  @@unique([companyId, code], map: "Role_companyId_code_key")
-  @@map("vai_tro")
+  @@unique([dinh_danh_cong_ty, ma_vai_tro], map: "Role_companyId_code_key")
 }
 
 // -----------------------------------------------------------------------------
 // RBAC - DANH MỤC QUYỀN THEO PHÂN HỆ (Module Permissions)
 // -----------------------------------------------------------------------------
-model Permission {
-  id          Int     @id(map: "Permission_pkey") @default(autoincrement()) @map("dinh_danh")
-  module      String  @map("phan_he") @db.VarChar(50) // VD: "HR", "TASK", "SYSTEM", "REPORT"
-  action      String  @map("hanh_dong") @db.VarChar(50) // VD: "VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "ASSIGN", "MANAGE"
-  name        String  @map("ten") @db.VarChar(255) // Tên hiển thị (VD: "Xem danh bạ nhân sự", "Giao việc phòng ban")
-  description String? @map("mo_ta") @db.Text
-  scope       String  @default("ALL") @map("pham_vi") @db.VarChar(20) // "ALL" (Toàn công ty), "DEPARTMENT" (Nội bộ phòng), "PERSONAL" (Cá nhân)
+model quyen {
+  dinh_danh Int     @id(map: "Permission_pkey") @default(autoincrement())
+  phan_he   String  @db.VarChar(50) // VD: "HR", "TASK", "SYSTEM", "REPORT"
+  hanh_dong String  @db.VarChar(50) // VD: "VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "ASSIGN", "MANAGE"
+  ten_quyen String  @db.VarChar(255) // Tên hiển thị (VD: "Xem danh bạ nhân sự", "Giao việc phòng ban")
+  mo_ta     String? @db.Text
+  pham_vi   String  @default("ALL") @db.VarChar(20) // "ALL" (Toàn công ty), "DEPARTMENT" (Nội bộ phòng), "PERSONAL" (Cá nhân)
 
-  roles RolePermission[]
+  danh_sach_vai_tro vai_tro_quyen[]
 
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
-  updatedAt DateTime @updatedAt @map("thoi_diem_cap_nhat")
+  thoi_diem_tao      DateTime @default(now())
+  thoi_diem_cap_nhat DateTime @updatedAt
 
-  @@unique([module, action], map: "Permission_module_action_key")
-  @@index([module], map: "Permission_module_idx")
-  @@map("quyen")
+  @@unique([phan_he, hanh_dong], map: "Permission_module_action_key")
+  @@index([phan_he], map: "Permission_module_idx")
 }
 
 // -----------------------------------------------------------------------------
 // RBAC - LIÊN KẾT VAI TRÒ & QUYỀN HẠN (Role - Permission Matrix)
 // -----------------------------------------------------------------------------
-model RolePermission {
-  roleId Int  @map("dinh_danh_vai_tro")
-  role   Role @relation(map: "RolePermission_roleId_fkey", fields: [roleId], references: [id], onDelete: Cascade)
+model vai_tro_quyen {
+  dinh_danh_vai_tro Int
+  vai_tro           vai_tro @relation(map: "RolePermission_roleId_fkey", fields: [dinh_danh_vai_tro], references: [dinh_danh], onDelete: Cascade)
 
-  permissionId Int        @map("dinh_danh_quyen")
-  permission   Permission @relation(map: "RolePermission_permissionId_fkey", fields: [permissionId], references: [id], onDelete: Cascade)
+  dinh_danh_quyen Int
+  quyen           quyen @relation(map: "RolePermission_permissionId_fkey", fields: [dinh_danh_quyen], references: [dinh_danh], onDelete: Cascade)
 
-  assignedAt DateTime @default(now()) @map("thoi_diem_gan")
+  thoi_diem_gan DateTime @default(now())
 
-  @@id([roleId, permissionId], map: "RolePermission_pkey")
-  @@map("vai_tro_quyen")
+  @@id([dinh_danh_vai_tro, dinh_danh_quyen], map: "RolePermission_pkey")
 }
 
 // -----------------------------------------------------------------------------
 // RBAC - LIÊN KẾT NGƯỜI DÙNG & VAI TRÒ (User - Role & Kiêm nhiệm)
 // -----------------------------------------------------------------------------
-model UserRole {
-  userId Int  @map("dinh_danh_nguoi_dung")
-  user   User @relation(map: "UserRole_userId_fkey", fields: [userId], references: [id], onDelete: Cascade)
+model tai_khoan_vai_tro {
+  dinh_danh_tai_khoan Int
+  tai_khoan           tai_khoan @relation(map: "UserRole_userId_fkey", fields: [dinh_danh_tai_khoan], references: [dinh_danh], onDelete: Cascade)
 
-  roleId Int  @map("dinh_danh_vai_tro")
-  role   Role @relation(map: "UserRole_roleId_fkey", fields: [roleId], references: [id], onDelete: Cascade)
+  dinh_danh_vai_tro Int
+  vai_tro           vai_tro @relation(map: "UserRole_roleId_fkey", fields: [dinh_danh_vai_tro], references: [dinh_danh], onDelete: Cascade)
 
-  isPrimary  Boolean  @default(false) @map("la_chinh") // Vai trò chính hoặc vai trò kiêm nhiệm
-  assignedAt DateTime @default(now()) @map("thoi_diem_gan")
+  la_vai_tro_chinh Boolean  @default(false) // Vai trò chính hoặc vai trò kiêm nhiệm
+  thoi_diem_gan    DateTime @default(now())
 
-  @@id([userId, roleId], map: "UserRole_pkey")
-  @@map("nguoi_dung_vai_tro")
+  @@id([dinh_danh_tai_khoan, dinh_danh_vai_tro], map: "UserRole_pkey")
 }
 
 // -----------------------------------------------------------------------------
 // AUDIT LOG - NHẬT KÝ KIỂM TOÁN VÀ LỊCH SỬ HOẠT ĐỘNG TOÀN HỆ THỐNG
 // -----------------------------------------------------------------------------
-model AuditLog {
-  id Int @id(map: "AuditLog_pkey") @default(autoincrement()) @map("dinh_danh")
+model nhat_ky_hoat_dong {
+  dinh_danh Int @id(map: "AuditLog_pkey") @default(autoincrement())
 
   // Định danh người thực hiện
-  userId   Int?   @map("dinh_danh_nguoi_dung")
-  user     User?  @relation(map: "AuditLog_userId_fkey", fields: [userId], references: [id], onDelete: SetNull)
-  username String @map("ten_dang_nhap") @db.VarChar(100)
-  fullName String @map("ho_ten") @db.VarChar(255)
+  dinh_danh_tai_khoan Int?
+  tai_khoan           tai_khoan? @relation(map: "AuditLog_userId_fkey", fields: [dinh_danh_tai_khoan], references: [dinh_danh], onDelete: SetNull)
+  ten_dang_nhap       String     @db.VarChar(100)
+  ho_ten              String     @db.VarChar(255)
 
   // Chi tiết thao tác & Phân hệ
-  action     String  @map("hanh_dong") @db.VarChar(50) // LOGIN, LOGOUT, LOGIN_FAILED, CREATE, UPDATE, DELETE, STATUS_CHANGE
-  module     String  @map("phan_he") @db.VarChar(50) // AUTH, HR, DEPARTMENT, ROLE, TASK, SYSTEM
-  targetId   String? @map("dinh_danh_doi_tuong") @db.VarChar(100) // ID đối tượng bị tác động
-  targetName String? @map("ten_doi_tuong") @db.VarChar(255) // Tên đối tượng (VD: "Nguyễn Văn A", "Phòng Kế toán")
+  hanh_dong           String  @db.VarChar(50) // LOGIN, LOGOUT, LOGIN_FAILED, CREATE, UPDATE, DELETE, STATUS_CHANGE
+  phan_he             String  @db.VarChar(50) // AUTH, HR, DEPARTMENT, ROLE, TASK, SYSTEM
+  dinh_danh_doi_tuong String? @db.VarChar(100) // ID đối tượng bị tác động
+  ten_doi_tuong       String? @db.VarChar(255) // Tên đối tượng (VD: "Nguyễn Văn A", "Phòng Kế toán")
 
   // Diễn giải và snapshot dữ liệu
-  description String @map("mo_ta") @db.Text
-  oldData     Json?  @map("du_lieu_cu")
-  newData     Json?  @map("du_lieu_moi")
+  mo_ta       String @db.Text
+  du_lieu_cu  Json?
+  du_lieu_moi Json?
 
   // Thông tin mạng
-  ipAddress String? @map("dia_chi_ip") @db.VarChar(50)
-  userAgent String? @map("thong_tin_trinh_duyet") @db.Text
+  dia_chi_ip            String? @db.VarChar(50)
+  thong_tin_trinh_duyet String? @db.Text
 
   // Multi-tenancy
-  companyId Int     @map("dinh_danh_cong_ty")
-  company   Company @relation(map: "AuditLog_companyId_fkey", fields: [companyId], references: [id], onDelete: Cascade)
+  dinh_danh_cong_ty Int
+  cong_ty           cong_ty @relation(map: "AuditLog_companyId_fkey", fields: [dinh_danh_cong_ty], references: [dinh_danh], onDelete: Cascade)
 
-  createdAt DateTime @default(now()) @map("thoi_diem_tao")
+  thoi_diem_tao DateTime @default(now())
 
-  @@index([companyId, module, createdAt], map: "AuditLog_companyId_module_createdAt_idx")
-  @@index([userId], map: "AuditLog_userId_idx")
-  @@map("nhat_ky_hoat_dong")
+  @@index([dinh_danh_cong_ty, phan_he, thoi_diem_tao], map: "AuditLog_companyId_module_createdAt_idx")
+  @@index([dinh_danh_tai_khoan], map: "AuditLog_userId_idx")
 }

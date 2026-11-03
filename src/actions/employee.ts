@@ -16,36 +16,36 @@ export interface GetEmployeesFilter {
   status?: "ALL" | "ACTIVE" | "LEFT" | "UNKNOWN";
 }
 const employeeInclude = {
-  department: { select: { id: true, name: true } },
-  _count: { select: { accounts: true } },
+  phong_ban: { select: { dinh_danh: true, ten_phong_ban: true } },
+  _count: { select: { danh_sach_tai_khoan: true } },
 } as const;
 export async function getEmployees(filter?: GetEmployeesFilter) {
   const session = await getSession();
   if (!session || !hasPermission(session, "HR"))
     return { success: false as const, message: "Không có quyền xem nhân sự." };
-  const where: Prisma.EmployeeWhereInput = { companyId: session.companyId };
+  const where: Prisma.nhan_suWhereInput = { dinh_danh_cong_ty: session.companyId };
   if (filter?.status && filter.status !== "ALL")
-    where.employmentStatus = filter.status;
+    where.tinh_trang_lam_viec = filter.status;
   if (filter?.departmentId) {
-    const departments = await db.department.findMany({
-      where: { companyId: session.companyId },
-      select: { id: true, parentId: true },
+    const departments = await db.phong_ban.findMany({
+      where: { dinh_danh_cong_ty: session.companyId },
+      select: { dinh_danh: true, dinh_danh_phong_ban_cha: true },
     });
     const ids = new Set([filter.departmentId]);
     for (const id of ids)
-      for (const d of departments) if (d.parentId === id) ids.add(d.id);
-    where.departmentId = { in: [...ids] };
+      for (const d of departments) if (d.dinh_danh_phong_ban_cha === id) ids.add(d.dinh_danh);
+    where.dinh_danh_phong_ban = { in: [...ids] };
   }
   if (filter?.search?.trim()) {
     const contains = filter.search.trim();
-    where.OR = ["fullName", "employeeCode", "phone", "email", "position"].map(
+    where.OR = ["ho_ten", "ma_nhan_su", "so_dien_thoai", "thu_dien_tu", "chuc_vu"].map(
       (key) => ({ [key]: { contains, mode: "insensitive" } }),
     );
   }
-  const data = await db.employee.findMany({
+  const data = await db.nhan_su.findMany({
     where,
     include: employeeInclude,
-    orderBy: { employeeCode: "asc" },
+    orderBy: { ma_nhan_su: "asc" },
   });
   return {
     success: true as const,
@@ -57,8 +57,8 @@ export async function getEmployeeById(id: number) {
   const session = await getSession();
   if (!session || !hasPermission(session, "HR") || !Number.isInteger(id))
     return { success: false as const, message: "Không có quyền xem hồ sơ." };
-  const data = await db.employee.findFirst({
-    where: { id, companyId: session.companyId },
+  const data = await db.nhan_su.findFirst({
+    where: { dinh_danh: id, dinh_danh_cong_ty: session.companyId },
     include: employeeInclude,
   });
   return data
@@ -73,53 +73,53 @@ async function saveEmployee(input: unknown, updating: boolean) {
     updating ? UpdateEmployeeSchema : CreateEmployeeSchema
   ).safeParse(input);
   if (!parsed.success)
-    return { success: false, message: parsed.error.issues[0].message };
+    return { success: false, message: parsed.error.issues[0].message, fieldErrors: parsed.error.flatten().fieldErrors };
   const v = parsed.data;
   const id = "id" in v ? (v.id as number) : undefined;
   try {
     await db.$transaction(async (tx) => {
       if (
         v.departmentId &&
-        !(await tx.department.findFirst({
-          where: { id: v.departmentId, companyId: session.companyId },
+        !(await tx.phong_ban.findFirst({
+          where: { dinh_danh: v.departmentId, dinh_danh_cong_ty: session.companyId },
         }))
       )
         throw Error("Phòng ban không hợp lệ.");
       const previous = id
-        ? await tx.employee.findFirst({
-            where: { id, companyId: session.companyId },
+        ? await tx.nhan_su.findFirst({
+            where: { dinh_danh: id, dinh_danh_cong_ty: session.companyId },
           })
         : null;
       if (id && !previous) throw Error("Không tìm thấy nhân sự.");
       const data = {
-        fullName: v.fullName,
-        position: v.position || null,
-        notes: v.notes || null,
-        departmentId: v.departmentId,
-        phone: v.phone || null,
-        email: v.email || null,
-        dateOfBirth: v.dateOfBirth ? new Date(v.dateOfBirth) : null,
-        joinDate: v.joinDate ? new Date(v.joinDate) : null,
-        employmentStatus: v.employmentStatus,
+        ho_ten: v.fullName,
+        chuc_vu: v.position || null,
+        ghi_chu: v.notes || null,
+        dinh_danh_phong_ban: v.departmentId,
+        so_dien_thoai: v.phone || null,
+        thu_dien_tu: v.email || null,
+        ngay_sinh: v.dateOfBirth ? new Date(v.dateOfBirth) : null,
+        ngay_vao_lam: v.joinDate ? new Date(v.joinDate) : null,
+        tinh_trang_lam_viec: v.employmentStatus,
       };
       const person = id
-        ? await tx.employee.update({ where: { id }, data })
-        : await tx.employee.create({
-            data: { ...data, companyId: session.companyId },
+        ? await tx.nhan_su.update({ where: { dinh_danh: id }, data })
+        : await tx.nhan_su.create({
+            data: { ...data, dinh_danh_cong_ty: session.companyId },
           });
-      await tx.auditLog.create({
+      await tx.nhat_ky_hoat_dong.create({
         data: {
-          userId: session.userId,
-          username: session.username,
-          fullName: session.fullName,
-          companyId: session.companyId,
-          action: id ? "UPDATE" : "CREATE",
-          module: "HR",
-          targetId: String(person.id),
-          targetName: person.fullName,
-          description: `${id ? "Cập nhật" : "Tạo"} hồ sơ nhân sự; không thay đổi tài khoản.`,
-          oldData: previous ? JSON.parse(JSON.stringify(previous)) : undefined,
-          newData: JSON.parse(JSON.stringify(person)),
+          dinh_danh_tai_khoan: session.userId,
+          ten_dang_nhap: session.username,
+          ho_ten: session.fullName,
+          dinh_danh_cong_ty: session.companyId,
+          hanh_dong: id ? "UPDATE" : "CREATE",
+          phan_he: "HR",
+          dinh_danh_doi_tuong: String(person.dinh_danh),
+          ten_doi_tuong: person.ho_ten,
+          mo_ta: `${id ? "Cập nhật" : "Tạo"} hồ sơ nhân sự; không thay đổi tài khoản.`,
+          du_lieu_cu: previous ? JSON.parse(JSON.stringify(previous)) : undefined,
+          du_lieu_moi: JSON.parse(JSON.stringify(person)),
         },
       });
     });

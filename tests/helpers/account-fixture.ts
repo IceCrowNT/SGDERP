@@ -12,44 +12,44 @@ export async function fixtureSession(
   level: "NONE" | "VIEW" | "MANAGE",
 ) {
   const url = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:4000";
-  if (!["localhost", "127.0.0.1"].includes(new URL(url).hostname))
+  if (!["localhost", "127.0.0.1", "127.0.2.2"].includes(new URL(url).hostname))
     throw Error("Local fixture only");
   const p = new PrismaClient();
   try {
-    const company = await p.company.findFirstOrThrow();
-    const role = await p.role.create({
+    const company = await p.cong_ty.findFirstOrThrow();
+    const role = await p.vai_tro.create({
       data: {
-        companyId: company.id,
-        code: `TEST-${randomUUID()}`,
-        name: "Temporary test role",
+        dinh_danh_cong_ty: company.dinh_danh,
+        ma_vai_tro: `TEST-${randomUUID()}`,
+        ten_vai_tro: "Temporary test role",
       },
     });
-    const record: (typeof created)[number] = { roleId: role.id };
+    const record: (typeof created)[number] = { roleId: role.dinh_danh };
     created.push(record);
     if (level !== "NONE") {
-      let permission = await p.permission.findFirst({
-        where: { module, action: level },
+      let permission = await p.quyen.findFirst({
+        where: { phan_he: module, hanh_dong: level },
       });
       if (!permission) {
-        permission = await p.permission.create({
-          data: { module, action: level, name: "Temporary test permission" },
+        permission = await p.quyen.create({
+          data: { phan_he: module, hanh_dong: level, ten_quyen: "Temporary test permission" },
         });
-        record.permissionId = permission.id;
+        record.permissionId = permission.dinh_danh;
       }
-      await p.rolePermission.create({
-        data: { roleId: role.id, permissionId: permission.id },
+      await p.vai_tro_quyen.create({
+        data: { dinh_danh_vai_tro: role.dinh_danh, dinh_danh_quyen: permission.dinh_danh },
       });
     }
-    const user = await p.user.create({
+    const user = await p.tai_khoan.create({
       data: {
-        username: `test-${randomUUID()}`,
-        displayName: "Temporary test account",
-        password: "disabled-for-login",
-        companyId: company.id,
-        roles: { create: { roleId: role.id } },
+        ten_dang_nhap: `test-${randomUUID()}`,
+        ten_hien_thi: "Temporary test account",
+        mat_khau_bam: "disabled-for-login",
+        dinh_danh_cong_ty: company.dinh_danh,
+        danh_sach_vai_tro: { create: { dinh_danh_vai_tro: role.dinh_danh } },
       },
     });
-    record.userId = user.id;
+    record.userId = user.dinh_danh;
     await signAccount(context, user);
   } finally {
     await p.$disconnect();
@@ -57,15 +57,15 @@ export async function fixtureSession(
 }
 export async function signAccount(
   context: BrowserContext,
-  user: { id: number; companyId: number; sessionVersion: number },
+  user: { dinh_danh: number; dinh_danh_cong_ty: number; phien_ban_dang_nhap: number },
 ) {
   const url = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:4000";
-  if (!["localhost", "127.0.0.1"].includes(new URL(url).hostname))
+  if (!["localhost", "127.0.0.1", "127.0.2.2"].includes(new URL(url).hostname))
     throw Error("Local fixture only");
   const token = await new SignJWT({
-    userId: user.id,
-    companyId: user.companyId,
-    sessionVersion: user.sessionVersion,
+    userId: user.dinh_danh,
+    companyId: user.dinh_danh_cong_ty,
+    sessionVersion: user.phien_ban_dang_nhap,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -83,12 +83,12 @@ export async function cleanFixtures() {
   try {
     for (const row of created.splice(0)) {
       if (row.userId) {
-        await p.auditLog.deleteMany({ where: { userId: row.userId } });
-        await p.user.delete({ where: { id: row.userId } });
+        await p.nhat_ky_hoat_dong.deleteMany({ where: { dinh_danh_tai_khoan: row.userId } });
+        await p.tai_khoan.delete({ where: { dinh_danh: row.userId } });
       }
-      await p.role.delete({ where: { id: row.roleId } });
+      await p.vai_tro.delete({ where: { dinh_danh: row.roleId } });
       if (row.permissionId)
-        await p.permission.delete({ where: { id: row.permissionId } });
+        await p.quyen.delete({ where: { dinh_danh: row.permissionId } });
     }
   } finally {
     await p.$disconnect();

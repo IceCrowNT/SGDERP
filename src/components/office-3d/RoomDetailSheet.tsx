@@ -24,23 +24,23 @@ import {
 } from "lucide-react"
 
 export interface DepartmentEmployee {
-  id: number
-  fullName: string
-  employeeCode: string
-  position: string | null
-  phone: string | null
-  email: string | null
-  avatarUrl: string | null
-  employmentStatus: string
-  departmentId: number | null
+  dinh_danh: number
+  ho_ten: string
+  ma_nhan_su: string
+  chuc_vu: string | null
+  so_dien_thoai: string | null
+  thu_dien_tu: string | null
+  duong_dan_anh_dai_dien: string | null
+  tinh_trang_lam_viec: string
+  dinh_danh_phong_ban: number | null
 }
 
 export interface DepartmentWithEmployees {
-  id: number
-  name: string
-  code: string
-  parentId: number | null
-  employees: DepartmentEmployee[]
+  dinh_danh: number
+  ten_phong_ban: string
+  ma_phong_ban: string
+  dinh_danh_phong_ban_cha: number | null
+  danh_sach_nhan_su: DepartmentEmployee[]
 }
 
 interface RoomDetailSheetProps {
@@ -64,21 +64,21 @@ export function RoomDetailSheet({
 
     // Specific case: Ban Pháp chế + Phòng HCNS
     if (room.id === "t2_hcns_pc") {
-      const depts = departments.filter((d) => d.code === "HCNS" || d.code === "PC")
-      return depts.flatMap((d) => d.employees)
+      const depts = departments.filter((d) => d.ma_phong_ban === "HCNS" || d.ma_phong_ban === "PC")
+      return depts.flatMap((d) => d.danh_sach_nhan_su)
     }
 
     if (!room.deptCode) return []
 
     // Main department
-    const mainDept = departments.find((d) => d.code === room.deptCode)
+    const mainDept = departments.find((d) => d.ma_phong_ban === room.deptCode)
     if (!mainDept) return []
 
     // Child departments (e.g., KD_SM, KD_CSKH under KD)
-    const childDepts = departments.filter((d) => d.parentId === mainDept.id)
+    const childDepts = departments.filter((d) => d.dinh_danh_phong_ban_cha === mainDept.dinh_danh)
     const allRelevantDepts = [mainDept, ...childDepts]
 
-    return allRelevantDepts.flatMap((d) => d.employees)
+    return allRelevantDepts.flatMap((d) => d.danh_sach_nhan_su)
   }, [room, departments])
 
   // Filter users
@@ -87,9 +87,9 @@ export function RoomDetailSheet({
     const q = searchQuery.toLowerCase().trim()
     return matchedUsers.filter(
       (u) =>
-        u.fullName.toLowerCase().includes(q) ||
-        u.employeeCode.toLowerCase().includes(q) ||
-        (u.position && u.position.toLowerCase().includes(q))
+        u.ho_ten.toLowerCase().includes(q) ||
+        u.ma_nhan_su.toLowerCase().includes(q) ||
+        (u.chuc_vu && u.chuc_vu.toLowerCase().includes(q))
     )
   }, [matchedUsers, searchQuery])
 
@@ -161,7 +161,7 @@ export function RoomDetailSheet({
           {filteredUsers.length > 0 ? (
             <div className="space-y-2.5">
               {filteredUsers.map((user) => {
-                const initials = user.fullName
+                const initials = user.ho_ten
                   .split(" ")
                   .slice(-2)
                   .map((n) => n[0])
@@ -170,12 +170,12 @@ export function RoomDetailSheet({
 
                 return (
                   <div
-                    key={user.id}
+                    key={user.dinh_danh}
                     className="group p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 hover:border-slate-600 transition-all duration-200"
                   >
                     <div className="flex items-start gap-3">
                       <Avatar className="w-10 h-10 border border-slate-600/80 shrink-0">
-                        {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.fullName} />}
+                        {user.duong_dan_anh_dai_dien && <AvatarImage src={user.duong_dan_anh_dai_dien} alt={user.ho_ten} />}
                         <AvatarFallback className="bg-gradient-to-br from-red-600 to-rose-700 text-white font-semibold text-xs">
                           {initials}
                         </AvatarFallback>
@@ -184,41 +184,41 @@ export function RoomDetailSheet({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-semibold text-white truncate group-hover:text-sky-300 transition-colors">
-                            {user.fullName}
+                            {user.ho_ten}
                           </p>
                           <span className="text-[11px] font-mono text-slate-400">
-                            ({user.employeeCode})
+                            ({user.ma_nhan_su})
                           </span>
                         </div>
 
                         <p className="text-xs text-amber-400/90 font-medium truncate mt-0.5">
-                          {user.position || "Cán bộ chuyên môn"}
+                          {user.chuc_vu || "Cán bộ chuyên môn"}
                         </p>
 
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-slate-400">
-                          {user.phone && (
+                          {user.so_dien_thoai && (
                             <a
-                              href={`tel:${user.phone}`}
+                              href={`tel:${user.so_dien_thoai}`}
                               className="flex items-center gap-1 hover:text-white transition-colors"
                             >
                               <Phone className="w-3 h-3 text-slate-500" />
-                              {user.phone}
+                              {user.so_dien_thoai}
                             </a>
                           )}
-                          {user.email && (
+                          {user.thu_dien_tu && (
                             <a
-                              href={`mailto:${user.email}`}
+                              href={`mailto:${user.thu_dien_tu}`}
                               className="flex items-center gap-1 hover:text-white transition-colors truncate max-w-[180px]"
                             >
                               <Mail className="w-3 h-3 text-slate-500" />
-                              {user.email}
+                              {user.thu_dien_tu}
                             </a>
                           )}
                         </div>
                       </div>
 
                       <Link
-                        href={`/employees/${user.id}`}
+                        href={`/employees/${user.dinh_danh}`}
                         className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-slate-700 hover:bg-sky-600 text-slate-300 hover:text-white transition-all shrink-0"
                         title="Xem hồ sơ chi tiết"
                       >

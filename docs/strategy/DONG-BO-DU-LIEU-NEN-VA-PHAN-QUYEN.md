@@ -1,5 +1,8 @@
 # Thiết kế đồng bộ Master Data và phân quyền SDG ERP – 1Office
 
+> **Quyết định 03/11/2026:** Phòng ban vận hành độc lập trong ERP, cho phép tạo/sửa/xóa theo HR MANAGE và quản lý cây cha/con. Bỏ đối soát với snapshot 1Office và yêu cầu API đồng bộ cơ cấu; importer cũ đã ngừng. Dữ liệu nguồn chỉ là lịch sử khởi tạo. Quyết định này thay thế các đoạn bên dưới coi 1Office là nguồn quản lý cơ cấu hiện hành hoặc khóa sửa ERP. HR cũng đã độc lập từ 28/10/2026. Xem [kế hoạch HR](../plans/HR-CHECKLIST.md).
+
+
 > **Cập nhật 28/10/2026:** HR chỉ lấy nguồn để khởi tạo/đối chiếu ban đầu (baseline file final 72); từ đây ERP quản lý độc lập, không chạy đồng bộ nhân sự định kỳ hoặc khóa sửa theo nguồn. Các luồng snapshot/API/webhook HR bên dưới là phương án nghiên cứu cũ, không phải kế hoạch hiện hành. Mã ERP do DB tự cấp, bất biến; nguồn và ngày nhập chỉ là provenance. Cơ cấu phòng ban vẫn giữ cây đã chốt, tài khoản và role quản lý riêng.
 
 
@@ -289,7 +292,7 @@ Quy trình phải idempotent: cùng một nguồn, loại thực thể và exter
 
 ## 7. Mô hình dữ liệu mục tiêu
 
-**Quy ước tên DB cập nhật 22/10/2026:** các tên model/field trong tài liệu là tên API Prisma. PostgreSQL dùng tiếng Việt không dấu qua `@@map`/`@map` (ví dụ `Department` → `phong_ban`, `externalId` → `dinh_danh_nguon`). Mapping đầy đủ nằm tại [từ điển DB](../DATABASE-DICTIONARY.md). Các bảng mới trong thiết kế này cũng phải tuân thủ quy tắc đó khi triển khai; đổi tên vật lý không thay đổi ID hoặc nguồn chuẩn 1Office.
+**Quy ước tên DB cập nhật 03/11/2026:** model/field Prisma phải trùng tên bảng/cột PostgreSQL bằng tiếng Việt không dấu, ví dụ `phong_ban.dinh_danh_nguon`. Tên API tiếng Anh trong phần thiết kế lịch sử bên dưới chỉ là tham khảo, không dùng làm quy ước tạo schema mới. Danh mục hiện hành nằm tại [từ điển DB](../DATABASE-DICTIONARY.md); không đổi ID hoặc quyền khi đổi tên.
 
 Schema và tính năng hiện tại đều là bản nháp, nên có thể thay thế toàn bộ nếu phương án được duyệt. Đề xuất dưới đây chia hai bước để việc đánh giá, migration và kiểm chứng dữ liệu rõ ràng hơn.
 

@@ -89,8 +89,10 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
 
 function FormLabel({
   className,
+  required = false,
+  children,
   ...props
-}: React.ComponentProps<typeof LabelPrimitive.Root>) {
+}: React.ComponentProps<typeof LabelPrimitive.Root> & { required?: boolean }) {
   const { error, formItemId } = useFormField()
 
   return (
@@ -100,8 +102,15 @@ function FormLabel({
       className={cn("data-[error=true]:text-destructive", className)}
       htmlFor={formItemId}
       {...props}
-    />
+    >
+      {children}
+      {required && <span aria-hidden="true" className="text-destructive after:content-['*']" />}
+    </Label>
   )
+}
+
+function FormRequiredHint() {
+  return <p className="text-sm text-muted-foreground"><span className="text-destructive">*</span> Trường bắt buộc.</p>
 }
 
 function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
@@ -146,6 +155,7 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
       data-slot="form-message"
+      role="alert"
       id={formMessageId}
       className={cn("text-sm text-destructive", className)}
       {...props}
@@ -164,4 +174,5 @@ export {
   FormDescription,
   FormMessage,
   FormField,
+  FormRequiredHint,
 }

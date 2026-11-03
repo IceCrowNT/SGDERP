@@ -1,5 +1,8 @@
 # Mô hình dữ liệu quản trị và định hướng tích hợp 1Office
 
+> **Quyết định 03/11/2026:** Phòng ban vận hành độc lập trong ERP, cho phép tạo/sửa/xóa theo HR MANAGE và quản lý cây cha/con. Bỏ đối soát với snapshot 1Office và yêu cầu API đồng bộ cơ cấu; importer cũ đã ngừng. Dữ liệu nguồn chỉ là lịch sử khởi tạo. Quyết định này thay thế các đoạn bên dưới coi 1Office là nguồn quản lý cơ cấu hiện hành hoặc khóa sửa ERP. HR cũng đã độc lập từ 28/10/2026. Xem [kế hoạch HR](../plans/HR-CHECKLIST.md).
+
+
 > Cập nhật triển khai 27/10/2026: ERP đã tách Employee (hồ sơ người) và User (tài khoản); dữ liệu khảo sát 1Office bên dưới vẫn là snapshot lịch sử. Xem [thiết kế dữ liệu nền cập nhật](DONG-BO-DU-LIEU-NEN-VA-PHAN-QUYEN.md) và [checklist HR](../plans/HR-CHECKLIST.md). Không truy cập lại 1Office trong lần triển khai này.
 
 **Trạng thái:** Khảo sát kỹ thuật ban đầu, cần chủ sở hữu nghiệp vụ xác nhận  

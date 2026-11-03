@@ -146,7 +146,7 @@ export default async function AuditLogsPage({
               </thead>
               <tbody className="divide-y divide-border/40">
                 {logs.map((log) => {
-                  const initials = log.fullName
+                  const initials = log.ho_ten
                     .split(" ")
                     .filter(Boolean)
                     .slice(-2)
@@ -157,10 +157,10 @@ export default async function AuditLogsPage({
                   const timeStr = new Intl.DateTimeFormat("vi-VN", {
                     dateStyle: "short",
                     timeStyle: "medium",
-                  }).format(new Date(log.createdAt));
+                  }).format(new Date(log.thoi_diem_tao));
 
                   return (
-                    <tr key={log.id} className="hover:bg-muted/20 transition-colors">
+                    <tr key={log.dinh_danh} className="hover:bg-muted/20 transition-colors">
                       <td className="py-3 px-4 whitespace-nowrap text-muted-foreground font-mono text-xs">
                         <div className="flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 opacity-60" />
@@ -176,27 +176,27 @@ export default async function AuditLogsPage({
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-semibold text-foreground leading-tight">{log.fullName}</p>
-                            <p className="text-[11px] text-muted-foreground font-mono">@{log.username}</p>
+                            <p className="font-semibold text-foreground leading-tight">{log.ho_ten}</p>
+                            <p className="text-[11px] text-muted-foreground font-mono">@{log.ten_dang_nhap}</p>
                           </div>
                         </div>
                       </td>
 
                       <td className="py-3 px-4 whitespace-nowrap">
-                        {getActionBadge(log.action)}
+                        {getActionBadge(log.hanh_dong)}
                       </td>
 
                       <td className="py-3 px-4 whitespace-nowrap">
                         <Badge variant="outline" className="text-[10px] uppercase font-mono border-border/60">
-                          {log.module}
+                          {log.phan_he}
                         </Badge>
                       </td>
 
                       <td className="py-3 px-4">
-                        <p className="text-foreground font-medium">{log.description}</p>
-                        {log.targetName && (
+                        <p className="text-foreground font-medium">{log.mo_ta}</p>
+                        {log.ten_doi_tuong && (
                           <p className="text-[11px] text-muted-foreground mt-0.5">
-                            Đối tượng: <span className="font-semibold text-foreground/80">{log.targetName}</span>
+                            Đối tượng: <span className="font-semibold text-foreground/80">{log.ten_doi_tuong}</span>
                           </p>
                         )}
                       </td>
@@ -204,7 +204,7 @@ export default async function AuditLogsPage({
                       <td className="py-3 px-4 whitespace-nowrap hidden md:table-cell text-muted-foreground font-mono text-xs">
                         <div className="flex items-center gap-1.5">
                           <Laptop className="w-3.5 h-3.5 opacity-60" />
-                          <span>{log.ipAddress || "localhost"}</span>
+                          <span>{log.dia_chi_ip || "localhost"}</span>
                         </div>
                       </td>
                     </tr>

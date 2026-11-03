@@ -35,7 +35,6 @@ export default async function DepartmentsPage() {
       <DepartmentManager
         initialDepartments={res.data}
         companyName={res.companyName}
-        comparison={res.comparison}
         canManage={res.canManage}
       />
     </div>

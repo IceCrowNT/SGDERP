@@ -18,41 +18,41 @@ export default async function Office3DPage() {
   if (!hasPermission(session, "HR")) return <p>Không có quyền xem nhân sự.</p>
 
   // Fetch departments with active personnel in the current company
-  const departments = await db.department.findMany({
+  const departments = await db.phong_ban.findMany({
     where: {
-      companyId: session.companyId,
+      dinh_danh_cong_ty: session.companyId,
     },
     include: {
-      employees: {
+      danh_sach_nhan_su: {
         where: {
-          employmentStatus: "ACTIVE",
+          tinh_trang_lam_viec: "ACTIVE",
         },
         select: {
-          id: true,
-          fullName: true,
-          employeeCode: true,
-          position: true,
-          phone: true,
-          email: true,
-          avatarUrl: true,
-          employmentStatus: true,
-          departmentId: true,
+          dinh_danh: true,
+          ho_ten: true,
+          ma_nhan_su: true,
+          chuc_vu: true,
+          so_dien_thoai: true,
+          thu_dien_tu: true,
+          duong_dan_anh_dai_dien: true,
+          tinh_trang_lam_viec: true,
+          dinh_danh_phong_ban: true,
         },
         orderBy: {
-          id: "asc",
+          dinh_danh: "asc",
         },
       },
     },
     orderBy: {
-      id: "asc",
+      dinh_danh: "asc",
     },
   })
 
   // Count total active personnel in company
-  const totalPersonnel = await db.employee.count({
+  const totalPersonnel = await db.nhan_su.count({
     where: {
-      companyId: session.companyId,
-      employmentStatus: "ACTIVE",
+      dinh_danh_cong_ty: session.companyId,
+      tinh_trang_lam_viec: "ACTIVE",
     },
   })
 

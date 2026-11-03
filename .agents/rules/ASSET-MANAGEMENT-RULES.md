@@ -12,7 +12,7 @@
 
 ## 1. Phân biệt chứng từ, số lượng và tài sản cá thể
 
-- Tên model/field dưới đây là API Prisma. Tên bảng/cột PostgreSQL phải dùng tiếng Việt không dấu qua `@@map`/`@map`, theo `DATABASE-RULES.md` và `docs/DATABASE-DICTIONARY.md` (ví dụ `Asset` → `tai_san`, `assetCode` → `ma_tai_san`).
+- Các tên API tiếng Anh bên dưới là thiết kế lịch sử của phân hệ đã tạm hoãn/gỡ. Nếu khôi phục, model/field Prisma phải trùng tên bảng/cột PostgreSQL bằng tiếng Việt không dấu, theo DATABASE-RULES.md và DATABASE-DICTIONARY.md: ví dụ `tai_san.ma_tai_san`, không tạo alias Asset/assetCode qua @map.
 
 - `AssetInventoryDocument` và `AssetInventoryLine` lưu bằng chứng bàn giao/kiểm kê cùng số lượng tổng hợp.
 - `AssetInventoryLine` chỉ lưu số liệu tham khảo/kiểm kê; không thay thế hồ sơ từng tài sản trong vận hành chính thức.

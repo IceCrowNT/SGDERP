@@ -1,258 +1,124 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
-import { logActivity } from "@/lib/audit";
 import {
-  CreateDepartmentSchema,
-  UpdateDepartmentSchema,
-  type CreateDepartmentInput,
-  type UpdateDepartmentInput,
+  CreateDepartmentSchema, UpdateDepartmentSchema,
+  type CreateDepartmentInput, type UpdateDepartmentInput,
 } from "@/lib/validations/department";
 
-const ONE_OFFICE_SYSTEM = "ONE_OFFICE";
-const ROOT_EXTERNAL_IDS = new Set(["0", "23"]);
-
-function normalizeName(value: string | null | undefined) {
-  return (value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase("vi");
+function failure(error: unknown) {
+  const message = error instanceof Prisma.PrismaClientKnownRequestError
+    ? error.code === "P2002" ? "Mã phòng ban đã được sử dụng."
+      : error.code === "P2003" ? "Phòng ban còn dữ liệu liên kết, không thể xóa."
+      : "Không thể lưu phòng ban. Vui lòng thử lại."
+    : error instanceof Error ? error.message : "Không thể xử lý phòng ban.";
+  return { success: false as const, message };
+}
+function refreshDepartments() {
+  for (const path of ["/departments", "/employees", "/accounts", "/office-3d", "/"])
+    revalidatePath(path);
 }
 
-function errorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
-
-export type DepartmentSyncStatus =
-  | "MATCHED"
-  | "NAME_MISMATCH"
-  | "PARENT_MISMATCH"
-  | "UNLINKED";
-
-/** Đọc cơ cấu ERP kèm snapshot đối chiếu 1Office. */
 export async function getDepartments() {
   try {
     const session = await getSession();
-    if (!session?.userId) {
-      return { success: false as const, message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." };
-    }
-    if (!["VIEW", "MANAGE"].includes(session.permissions?.HR ?? "")) {
+    if (!session) return { success: false as const, message: "Phiên đăng nhập đã hết hạn." };
+    if (!["VIEW", "MANAGE"].includes(session.permissions.HR ?? ""))
       return { success: false as const, message: "Bạn không có quyền truy cập danh mục phòng ban." };
-    }
-
-    const company = await db.company.findUnique({ where: { id: session.companyId }, select: { name: true } });
-    const departments = await db.department.findMany({
-      where: { companyId: session.companyId },
-      include: {
-        employees: {
-          where: { companyId: session.companyId },
-          select: { id: true, fullName: true, employeeCode: true, position: true },
-          orderBy: { fullName: "asc" },
+    const company = await db.cong_ty.findUnique({ where: { dinh_danh: session.companyId }, select: { ten_cong_ty: true } });
+    const data = await db.phong_ban.findMany({
+      where: { dinh_danh_cong_ty: session.companyId },
+      select: {
+        dinh_danh: true, ma_phong_ban: true, ten_phong_ban: true, mo_ta: true, dinh_danh_phong_ban_cha: true,
+        danh_sach_nhan_su: {
+          where: { dinh_danh_cong_ty: session.companyId },
+          select: { dinh_danh: true, ho_ten: true, ma_nhan_su: true, chuc_vu: true },
+          orderBy: { ho_ten: "asc" },
         },
-        parent: { select: { id: true, code: true, name: true, externalId: true } },
-        children: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            externalId: true,
-            _count: { select: { employees: true } },
-          },
-        },
-        _count: { select: { employees: true, children: true } },
+        _count: { select: { danh_sach_nhan_su: true, phong_ban_con: true } },
       },
-      orderBy: [{ externalLevel: "asc" }, { parentId: "asc" }, { code: "asc" }],
+      orderBy: { ma_phong_ban: "asc" },
     });
-
-    const data = departments.map((department) => {
-      const linked = department.externalSystem === ONE_OFFICE_SYSTEM && Boolean(department.externalId);
-      const nameMatches = linked && normalizeName(department.name) === normalizeName(department.externalName);
-      const parentMatches = linked
-        ? department.parentId
-          ? department.parent?.externalId === department.externalParentId
-          : ROOT_EXTERNAL_IDS.has(department.externalParentId ?? "")
-        : false;
-
-      let syncStatus: DepartmentSyncStatus = "MATCHED";
-      if (!linked) syncStatus = "UNLINKED";
-      else if (!nameMatches) syncStatus = "NAME_MISMATCH";
-      else if (!parentMatches) syncStatus = "PARENT_MISMATCH";
-
-      return {
-        id: department.id,
-        code: department.code,
-        name: department.name,
-        description: department.description,
-        parentId: department.parentId,
-        parent: department.parent,
-        children: department.children,
-        employees: department.employees,
-        _count: department._count,
-        source: {
-          system: department.externalSystem,
-          id: department.externalId,
-          parentId: department.externalParentId,
-          name: department.externalName,
-          path: department.externalPath,
-          level: department.externalLevel,
-          supervisorName: department.externalSupervisorName,
-          snapshotAt: department.externalSnapshotAt?.toISOString() ?? null,
-        },
-        syncStatus,
-      };
-    });
-
-    const matched = data.filter((department) => department.syncStatus === "MATCHED").length;
-    const linked = data.filter((department) => department.syncStatus !== "UNLINKED").length;
-    const latestSnapshot = data
-      .map((department) => department.source.snapshotAt)
-      .filter((value): value is string => Boolean(value))
-      .sort()
-      .at(-1);
-
-    return {
-      success: true as const,
-      data,
-      companyName: company?.name ?? "Công ty",
-      canManage: session.permissions?.HR === "MANAGE",
-      comparison: {
-        system: "1Office",
-        sourceDepartmentRecords: linked,
-        matched,
-        issues: data.length - matched,
-        snapshotAt: latestSnapshot ?? null,
-      },
-    };
-  } catch (error: unknown) {
-    console.error("Lỗi getDepartments:", error);
-    return { success: false as const, message: errorMessage(error, "Không thể tải danh sách phòng ban.") };
-  }
+    return { success: true as const, data, companyName: company?.ten_cong_ty ?? "Công ty", canManage: session.permissions.HR === "MANAGE" };
+  } catch (error) { return failure(error); }
 }
 
-/** Cơ cấu chính thức phải được tạo tại 1Office rồi nhập lại vào ERP. */
-export async function createDepartment(input: CreateDepartmentInput) {
+async function saveDepartment(input: unknown, updating: boolean) {
   const session = await getSession();
-  if (!session?.userId) return { success: false as const, message: "Phiên đăng nhập đã hết hạn." };
-  if (session.permissions?.HR !== "MANAGE") {
-    return { success: false as const, message: "Bạn không có quyền thêm mới phòng ban." };
-  }
-  const parsed = CreateDepartmentSchema.safeParse(input);
-  if (!parsed.success) return { success: false as const, errors: parsed.error.flatten().fieldErrors };
-  return {
-    success: false as const,
-    message: "1Office là nguồn chuẩn cơ cấu. Hãy tạo đơn vị tại 1Office rồi nhập snapshot mới vào ERP.",
-  };
-}
-
-/** Chỉ sửa metadata nội bộ; tên và quan hệ cha của đơn vị đã liên kết phải theo 1Office. */
-export async function updateDepartment(input: UpdateDepartmentInput) {
+  if (!session) return { success: false as const, message: "Phiên đăng nhập đã hết hạn." };
+  if (session.permissions.HR !== "MANAGE")
+    return { success: false as const, message: "Bạn không có quyền quản lý phòng ban." };
+  const parsed = (updating ? UpdateDepartmentSchema : CreateDepartmentSchema).safeParse(input);
+  if (!parsed.success) return { success: false as const, message: parsed.error.issues[0].message, fieldErrors: parsed.error.flatten().fieldErrors };
+  const values = parsed.data;
+  const id = "id" in values ? values.id as number : undefined;
   try {
-    const session = await getSession();
-    if (!session?.userId) return { success: false as const, message: "Phiên đăng nhập đã hết hạn." };
-    if (session.permissions?.HR !== "MANAGE") {
-      return { success: false as const, message: "Bạn không có quyền chỉnh sửa phòng ban." };
-    }
-
-    const parsed = UpdateDepartmentSchema.safeParse(input);
-    if (!parsed.success) return { success: false as const, errors: parsed.error.flatten().fieldErrors };
-    const { id, name, code, description, parentId } = parsed.data;
-
-    const existing = await db.department.findFirst({
-      where: { id, companyId: session.companyId },
-      include: { parent: { select: { externalId: true } } },
-    });
-    if (!existing) return { success: false as const, message: "Phòng ban không tồn tại." };
-
-    if (existing.externalSystem === ONE_OFFICE_SYSTEM) {
-      if (normalizeName(name) !== normalizeName(existing.externalName)) {
-        return { success: false as const, message: "Tên đơn vị được quản lý tại 1Office và không thể sửa trực tiếp trong ERP." };
+    const saved = await db.$transaction(async (tx) => {
+      // Serialize hierarchy changes so simultaneous moves cannot create a cycle.
+      await tx.$queryRaw`SELECT dinh_danh FROM cong_ty WHERE dinh_danh = ${session.companyId} FOR UPDATE`;
+      const previous = id ? await tx.phong_ban.findFirst({ where: { dinh_danh: id, dinh_danh_cong_ty: session.companyId } }) : null;
+      if (id && !previous) throw Error("Phòng ban không tồn tại.");
+      const parentId = values.parentId ?? null;
+      if (parentId !== null) {
+        const departments = await tx.phong_ban.findMany({ where: { dinh_danh_cong_ty: session.companyId }, select: { dinh_danh: true, dinh_danh_phong_ban_cha: true } });
+        const parents = new Map(departments.map(d => [d.dinh_danh, d.dinh_danh_phong_ban_cha]));
+        if (!parents.has(parentId)) throw Error("Phòng ban cấp trên không hợp lệ.");
+        const visited = new Set<number>();
+        let current: number | null = parentId;
+        while (current !== null) {
+          if (current === id || visited.has(current)) throw Error("Không thể chọn chính phòng ban hoặc đơn vị con làm cấp trên.");
+          if (!parents.has(current)) throw Error("Cây phòng ban cấp trên không hợp lệ.");
+          visited.add(current);
+          current = parents.get(current) ?? null;
+        }
       }
-      const requestedParent = parentId
-        ? await db.department.findFirst({
-            where: { id: parentId, companyId: session.companyId },
-            select: { externalId: true },
-          })
-        : null;
-      const parentMatches = parentId
-        ? requestedParent?.externalId === existing.externalParentId
-        : ROOT_EXTERNAL_IDS.has(existing.externalParentId ?? "");
-      if (!parentMatches) {
-        return { success: false as const, message: "Cấp trên của đơn vị được quản lý tại 1Office và không thể sửa trực tiếp trong ERP." };
-      }
-    }
-
-    if (code !== existing.code) {
-      const duplicate = await db.department.findUnique({
-        where: { companyId_code: { companyId: session.companyId, code } },
-        select: { id: true },
-      });
-      if (duplicate) return { success: false as const, message: `Mã phòng ban "${code}" đã được sử dụng.` };
-    }
-
-    const updated = await db.department.update({
-      where: { id },
-      data: { code, description: description || null, name, parentId: parentId || null },
-      include: { parent: { select: { id: true, code: true, name: true } } },
+      const data = { ten_phong_ban: values.name, ma_phong_ban: values.code, mo_ta: values.description || null, dinh_danh_phong_ban_cha: parentId };
+      const department = id
+        ? await tx.phong_ban.update({ where: { dinh_danh: id, dinh_danh_cong_ty: session.companyId }, data })
+        : await tx.phong_ban.create({ data: { ...data, dinh_danh_cong_ty: session.companyId } });
+      const snapshot = (d: typeof department) => ({ id: d.dinh_danh, name: d.ten_phong_ban, code: d.ma_phong_ban, description: d.mo_ta, parentId: d.dinh_danh_phong_ban_cha });
+      await tx.nhat_ky_hoat_dong.create({ data: {
+        dinh_danh_cong_ty: session.companyId, dinh_danh_tai_khoan: session.userId, ten_dang_nhap: session.username, ho_ten: session.fullName,
+        hanh_dong: id ? "UPDATE" : "CREATE", phan_he: "DEPARTMENT", dinh_danh_doi_tuong: String(department.dinh_danh), ten_doi_tuong: department.ten_phong_ban,
+        mo_ta: `${id ? "Cập nhật" : "Tạo"} phòng ban "${department.ten_phong_ban}" (${department.ma_phong_ban})`,
+        du_lieu_cu: previous ? snapshot(previous) : undefined, du_lieu_moi: snapshot(department),
+      } });
+      return department.dinh_danh;
     });
-
-    await logActivity({
-      userId: session.userId,
-      username: session.username,
-      fullName: session.fullName,
-      companyId: session.companyId,
-      action: "UPDATE",
-      module: "DEPARTMENT",
-      targetId: String(updated.id),
-      targetName: updated.name,
-      description: `Cập nhật metadata ERP của đơn vị "${updated.name}" (${updated.code})`,
-      oldData: existing,
-      newData: updated,
-    });
-
-    revalidatePath("/departments");
-    return { success: true as const, message: "Đã cập nhật metadata ERP của đơn vị." };
-  } catch (error: unknown) {
-    console.error("Lỗi updateDepartment:", error);
-    return { success: false as const, message: errorMessage(error, "Lỗi khi cập nhật phòng ban.") };
-  }
+    refreshDepartments();
+    return { success: true as const, id: saved, message: "Đã lưu phòng ban." };
+  } catch (error) { return failure(error); }
 }
+export async function createDepartment(input: CreateDepartmentInput) { return saveDepartment(input, false); }
+export async function updateDepartment(input: UpdateDepartmentInput) { return saveDepartment(input, true); }
 
 export async function deleteDepartment(id: number) {
+  const session = await getSession();
+  if (!session) return { success: false as const, message: "Phiên đăng nhập đã hết hạn." };
+  if (session.permissions.HR !== "MANAGE") return { success: false as const, message: "Bạn không có quyền quản lý phòng ban." };
+  if (!z.number().int().positive().safeParse(id).success) return { success: false as const, message: "Phòng ban không hợp lệ." };
   try {
-    const session = await getSession();
-    if (!session?.userId) return { success: false as const, message: "Phiên đăng nhập đã hết hạn." };
-    if (session.permissions?.HR !== "MANAGE") {
-      return { success: false as const, message: "Bạn không có quyền xóa phòng ban." };
-    }
-
-    const department = await db.department.findFirst({
-      where: { id, companyId: session.companyId },
-      include: { _count: { select: { employees: true, children: true } } },
+    await db.$transaction(async tx => {
+      await tx.$queryRaw`SELECT dinh_danh FROM cong_ty WHERE dinh_danh = ${session.companyId} FOR UPDATE`;
+      // Block new FK references until the emptiness check and deletion commit.
+      await tx.$queryRaw`SELECT dinh_danh FROM phong_ban WHERE dinh_danh = ${id} AND dinh_danh_cong_ty = ${session.companyId} FOR UPDATE`;
+      const department = await tx.phong_ban.findFirst({ where: { dinh_danh: id, dinh_danh_cong_ty: session.companyId }, include: { _count: { select: { danh_sach_nhan_su: true, phong_ban_con: true } } } });
+      if (!department) throw Error("Phòng ban không tồn tại.");
+      if (department._count.phong_ban_con || department._count.danh_sach_nhan_su)
+        throw Error("Không thể xóa phòng ban đang có đơn vị con hoặc nhân sự. Hãy chuyển các dữ liệu này trước.");
+      await tx.phong_ban.delete({ where: { dinh_danh: id, dinh_danh_cong_ty: session.companyId } });
+      await tx.nhat_ky_hoat_dong.create({ data: {
+        dinh_danh_cong_ty: session.companyId, dinh_danh_tai_khoan: session.userId, ten_dang_nhap: session.username, ho_ten: session.fullName,
+        hanh_dong: "DELETE", phan_he: "DEPARTMENT", dinh_danh_doi_tuong: String(id), ten_doi_tuong: department.ten_phong_ban,
+        mo_ta: `Xóa phòng ban "${department.ten_phong_ban}" (${department.ma_phong_ban})`,
+        du_lieu_cu: { id, code: department.ma_phong_ban, name: department.ten_phong_ban, description: department.mo_ta, parentId: department.dinh_danh_phong_ban_cha },
+      } });
     });
-    if (!department) return { success: false as const, message: "Phòng ban không tồn tại." };
-    if (department.externalSystem === ONE_OFFICE_SYSTEM) {
-      return { success: false as const, message: "Đơn vị đã liên kết 1Office không thể xóa trực tiếp trong ERP." };
-    }
-    if (department._count.children > 0 || department._count.employees > 0) {
-      return { success: false as const, message: "Không thể xóa đơn vị đang có bộ phận con hoặc nhân sự." };
-    }
-
-    await db.department.delete({ where: { id } });
-    await logActivity({
-      userId: session.userId,
-      username: session.username,
-      fullName: session.fullName,
-      companyId: session.companyId,
-      action: "DELETE",
-      module: "DEPARTMENT",
-      targetId: String(id),
-      targetName: department.name,
-      description: `Xóa đơn vị nội bộ chưa liên kết: "${department.name}" (${department.code})`,
-      oldData: department,
-    });
-    revalidatePath("/departments");
+    refreshDepartments();
     return { success: true as const, message: "Đã xóa phòng ban." };
-  } catch (error: unknown) {
-    console.error("Lỗi deleteDepartment:", error);
-    return { success: false as const, message: errorMessage(error, "Lỗi khi xóa phòng ban.") };
-  }
+  } catch (error) { return failure(error); }
 }

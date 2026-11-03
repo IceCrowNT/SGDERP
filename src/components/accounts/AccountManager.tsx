@@ -45,14 +45,14 @@ type Account = NonNullable<
 >[number];
 type Props = {
   accounts: Account[];
-  employees: { id: number; fullName: string; employeeCode: string }[];
-  roles: { id: number; name: string }[];
+  employees: { dinh_danh: number; ho_ten: string; ma_nhan_su: string }[];
+  roles: { dinh_danh: number; ten_vai_tro: string }[];
 };
 export function AccountManager({ accounts, employees, roles }: Props) {
   const [editing, setEditing] = useState<Account | null | undefined>();
   const [search, setSearch] = useState("");
   const rows = accounts.filter((a) =>
-    `${a.username} ${a.employee?.fullName ?? a.displayName}`
+    `${a.ten_dang_nhap} ${a.nhan_su?.ho_ten ?? a.ten_hien_thi}`
       .toLocaleLowerCase("vi")
       .includes(search.toLocaleLowerCase("vi")),
   );
@@ -63,7 +63,7 @@ export function AccountManager({ accounts, employees, roles }: Props) {
           <h1 className="text-2xl font-bold">Tài khoản đăng nhập</h1>
           <p className="text-sm text-muted-foreground">
             {accounts.length} tài khoản ·{" "}
-            {accounts.filter((a) => a.isActive).length} đang mở
+            {accounts.filter((a) => a.cho_phep_dang_nhap).length} đang mở
           </p>
         </div>
         <Button onClick={() => setEditing(null)}>Tạo tài khoản</Button>
@@ -91,15 +91,15 @@ export function AccountManager({ accounts, employees, roles }: Props) {
           </TableHeader>
           <TableBody>
             {rows.map((a) => (
-              <TableRow key={a.id}>
-                <TableCell>{a.username}</TableCell>
+              <TableRow key={a.dinh_danh}>
+                <TableCell>{a.ten_dang_nhap}</TableCell>
                 <TableCell>
-                  {a.employee ? (
+                  {a.nhan_su ? (
                     <>
-                      <p>{a.employee.fullName}</p>
+                      <p>{a.nhan_su.ho_ten}</p>
                       <p className="text-xs text-muted-foreground">
-                        {a.employee.employeeCode}
-                        {a.employee.employmentStatus === "LEFT"
+                        {a.nhan_su.ma_nhan_su}
+                        {a.nhan_su.tinh_trang_lam_viec === "LEFT"
                           ? " · Đã nghỉ việc — cần rà soát truy cập"
                           : ""}
                       </p>
@@ -109,10 +109,10 @@ export function AccountManager({ accounts, employees, roles }: Props) {
                   )}
                 </TableCell>
                 <TableCell>
-                  {a.roles.map((r) => r.role.name).join(", ") ||
+                  {a.danh_sach_vai_tro.map((r) => r.vai_tro.ten_vai_tro).join(", ") ||
                     "Chưa cấp quyền"}
                 </TableCell>
-                <TableCell>{a.isActive ? "Đang mở" : "Đã khóa"}</TableCell>
+                <TableCell>{a.cho_phep_dang_nhap ? "Đang mở" : "Đã khóa"}</TableCell>
                 <TableCell>
                   <Button
                     variant="outline"
@@ -145,7 +145,7 @@ export function AccountManager({ accounts, employees, roles }: Props) {
           </DialogHeader>
           {editing !== undefined && (
             <AccountForm
-              key={editing?.id ?? "new"}
+              key={editing?.dinh_danh ?? "new"}
               account={editing}
               employees={employees}
               roles={roles}
@@ -168,13 +168,13 @@ function AccountForm({
   const form = useForm<AccountInput>({
     resolver: zodResolver(AccountSchema),
     defaultValues: {
-      id: account?.id,
-      username: account?.username ?? "",
-      displayName: account?.displayName ?? "",
-      employeeId: account?.employeeId ?? null,
+      id: account?.dinh_danh,
+      username: account?.ten_dang_nhap ?? "",
+      displayName: account?.ten_hien_thi ?? "",
+      employeeId: account?.dinh_danh_nhan_su ?? null,
       password: "",
-      isActive: account?.isActive ?? true,
-      roleIds: account?.roles.map((r) => r.roleId) ?? [],
+      isActive: account?.cho_phep_dang_nhap ?? true,
+      roleIds: account?.danh_sach_vai_tro.map((r) => r.dinh_danh_vai_tro) ?? [],
     },
   });
   return (
@@ -204,14 +204,14 @@ function AccountForm({
                 value={field.value?.toString() ?? "NONE"}
                 onValueChange={(v) => {
                   field.onChange(v === "NONE" ? null : Number(v));
-                  const employee = employees.find((e) => e.id === Number(v));
-                  if (employee) form.setValue("displayName", employee.fullName);
+                  const employee = employees.find((e) => e.dinh_danh === Number(v));
+                  if (employee) form.setValue("displayName", employee.ho_ten);
                 }}
               >
                 <FormControl>
                   <SelectTrigger className="h-10 w-full min-w-0">
                     <SelectValue>
-                      {employees.find((e) => e.id === field.value)?.fullName ??
+                      {employees.find((e) => e.dinh_danh === field.value)?.ho_ten ??
                         "Chọn nhân sự"}
                     </SelectValue>
                   </SelectTrigger>
@@ -219,8 +219,8 @@ function AccountForm({
                 <SelectContent>
                   <SelectItem value="NONE">Chọn nhân sự</SelectItem>
                   {employees.map((e) => (
-                    <SelectItem key={e.id} value={String(e.id)}>
-                      {e.employeeCode} — {e.fullName}
+                    <SelectItem key={e.dinh_danh} value={String(e.dinh_danh)}>
+                      {e.ma_nhan_su} — {e.ho_ten}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -281,20 +281,20 @@ function AccountForm({
               <div className="space-y-2">
                 {roles.map((r) => (
                   <label
-                    key={r.id}
+                    key={r.dinh_danh}
                     className="flex min-h-10 items-center gap-2"
                   >
                     <Checkbox
-                      checked={field.value.includes(r.id)}
+                      checked={field.value.includes(r.dinh_danh)}
                       onCheckedChange={(v) =>
                         field.onChange(
                           v
-                            ? [...field.value, r.id]
-                            : field.value.filter((id) => id !== r.id),
+                            ? [...field.value, r.dinh_danh]
+                            : field.value.filter((id) => id !== r.dinh_danh),
                         )
                       }
                     />
-                    {r.name}
+                    {r.ten_vai_tro}
                   </label>
                 ))}
               </div>

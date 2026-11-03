@@ -16,7 +16,7 @@ test("reader can search, expand and open personnel without reconciliation contro
   await page.goto("/departments");
   await expect(page.getByRole("heading", { name: "Phòng ban", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Đối soát/ })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /^Thông tin nội bộ/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Sửa phòng ban/ })).toHaveCount(0);
   await page.getByRole("button", { name: /^Mở rộng/ }).first().click();
   const collapse = page.getByRole("button", { name: /^Thu gọn/ }).first();
   await collapse.click();
@@ -34,29 +34,22 @@ test("reader can search, expand and open personnel without reconciliation contro
   await expect(page).toHaveURL(/employees\?departmentId=/);
 });
 
-test("manager sees accurate snapshot wording and editable internal fields", async ({ page, context }) => {
+test("manager can edit organization fields without reconciliation controls", async ({ page, context }) => {
   await session(context, "MANAGE");
   await page.goto("/departments");
-  await page.getByRole("button", { name: "Thông tin nội bộ BAN KIỂM SOÁT", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Thêm phòng ban", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Đối soát/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Sửa phòng ban BAN KIỂM SOÁT", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog.locator("input").first()).toBeDisabled();
-  await expect(dialog.locator('input[name="code"]')).toBeEditable();
-  await page.getByRole("button", { name: "Hủy", exact: true }).click();
-  await page.getByRole("button", { name: /Đối soát/ }).click();
-  await expect(page.getByText(/Đây không phải kiểm tra trực tiếp/)).toBeVisible();
-  await page.getByLabel("Tìm đơn vị đối soát").fill("HCNS");
-  await expect(page.locator("tbody tr")).toHaveCount(1);
-  await expect(page.locator("tbody")).toContainText("Khớp bản đã lưu");
+  await expect(dialog.getByLabel("Tên phòng ban", { exact: true })).toBeEditable();
+  await expect(dialog.getByLabel("Mã phòng ban", { exact: true })).toBeEditable();
+  await expect(dialog.getByRole("combobox", { name: "Phòng ban cấp trên" })).toBeEnabled();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  await page.getByRole("dialog").getByRole("button", { name: /Close|Đóng/ }).click();
-  await page.getByRole("tab", { name: "Danh sách phòng ban" }).click();
+  await page.getByRole("button", { name: "Hủy", exact: true }).click();
   await page.getByLabel("Tìm phòng ban").fill("xyz-no-match");
   await expect(page.getByText("Không tìm thấy phòng ban phù hợp.")).toBeVisible();
-  await page.getByLabel("Tìm phòng ban").fill("");
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
-
 
 test("organization chart supports selection, collapse, zoom and mobile", async ({ page, context }) => {
   await session(context, "VIEW");

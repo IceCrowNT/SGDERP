@@ -1,5 +1,53 @@
 # Kế hoạch quản lý vai trò và phân quyền
 
+## Đồng nhất tên dữ liệu — 03/11/2026
+
+- [x] Model/field Prisma và PostgreSQL dùng cùng tên tiếng Việt không dấu; Studio hiển thị `tai_khoan`, `vai_tro`, `quyen`, `tai_khoan_vai_tro`, `vai_tro_quyen`. Các tên User/Role/UserRole trong phần lịch sử phía dưới là tên API trước refactor.
+- [x] Cập nhật truy vấn gán quyền, dựng session, khóa tài khoản, audit và bảo vệ admin cuối cùng sang schema mới. Giữ nguyên role, permission, tài khoản được gán và hợp đồng JWT; không bổ sung trang /roles hoặc head trong đợt đổi tên.
+- [x] Bộ kiểm thử toàn dự án đạt 23/23; các ca quyền HR, quản trị tài khoản, nhiều tài khoản/người, khóa/thu hồi phiên và bảo vệ admin cuối cùng đều đạt sau refactor. Fingerprint dữ liệu vai trò/quyền/liên kết không thay đổi.
+
+
+## Làm rõ chức vụ, người quản lý và quyền tài khoản — 03/11/2026
+
+- [x] Thống nhất tên vật lý PostgreSQL: User → tai_khoan, UserRole → tai_khoan_vai_tro; mã/tên vai trò → ma_vai_tro/ten_vai_tro, tên quyền → ten_quyen; FK tài khoản → dinh_danh_tai_khoan. Các tên cũ trong phần khảo sát lịch sử bên dưới không còn là tên vật lý hiện hành. Xem từ điển DB; không đổi dữ liệu role/quyền hoặc tên API Prisma.
+- [x] Kiểm tra lại code và DB: 72 hồ sơ, 60 tài khoản, 19 phòng ban tại thời điểm rà soát. `Employee.position` là chức vụ dạng text; chưa có FK người phụ trách phòng hoặc quản lý trực tiếp. Không lấy role DEPT_HEAD để xác nhận ai quản lý phòng nào.
+- [x] `/accounts` đã cho ADMIN/IT_ADMIN gán các vai trò hiện có cho từng tài khoản. `/roles` để tạo vai trò/sửa ma trận quyền chưa triển khai. HR MANAGE không cho phép tự cấp quyền tài khoản.
+- [x] `/employees` đã ẩn nút thêm/sửa và cột thao tác khi thiếu HR:MANAGE; action lưu cũng kiểm tra quyền từ session hiện hành. HR:VIEW chỉ xem; thiếu cả quyền xem thì server từ chối. Cùng quyền HR:MANAGE hiện cũng cho quản lý cơ cấu, chưa tách thành hai quyền riêng.
+- [x] DB hiện có HR_MANAGER và HR_STAFF cùng được HR:MANAGE; DEPT_HEAD chỉ có HR:VIEW. Tên các role cũ dễ bị hiểu thành chức vụ thực tế, đặc biệt ADMIN mang tên “Ban Giám Đốc / Quản Trị Tối Cao”. Chưa đổi tên role, người được gán hoặc quyền hiệu lực trong lần rà soát này.
+- [ ] Đề xuất trong cài đặt phòng ban: chọn **Người phụ trách phòng ban** bằng FK đến nhân sự cùng công ty; lưu tại Department.headEmployeeId theo plan workflow. Chức vụ tự do trên hồ sơ vẫn giữ riêng. Tạo hồ sơ trước rồi chọn người phụ trách; không tự suy từ chữ “Trưởng phòng”.
+- [ ] Đề xuất nếu muốn thao tác từ trang nhân sự: hiển thị phòng đang phụ trách và liên kết tới cài đặt phòng ban; hiển thị các tài khoản của người đó và mở phần gán vai trò trên đúng tài khoản. Chỉ tài khoản có quyền quản trị mới được dùng thao tác cấp quyền; không thêm roleId/isManager lên hồ sơ Employee.
+- [ ] Thứ tự đề xuất: thống nhất thuật ngữ DB/UI → xác định người phụ trách phòng → hoàn thiện UI vai trò và quyền hiệu lực → tích hợp người duyệt vào workflow. Các tính năng mới này chưa được triển khai trong bước giải thích/đổi tên DB.
+
+| Khái niệm trên giao diện | Nơi lưu / quan hệ | Ý nghĩa |
+| --- | --- | --- |
+| Chức vụ | Employee.position | Mô tả công việc, không cấp quyền |
+| Phòng ban | Employee.departmentId → Department | Nơi nhân sự trực thuộc |
+| Người phụ trách phòng ban (đề xuất) | Department.headEmployeeId → Employee | Người chịu trách nhiệm của một phòng; có thể phụ trách nhiều phòng |
+| Vai trò của tài khoản | User → UserRole → Role | Nhóm quyền của tài khoản đang đăng nhập |
+| Quyền quản lý nhân sự | Role → RolePermission → Permission(HR, MANAGE) | Được thêm/sửa hồ sơ trong công ty theo kiểm tra server |
+
+Ví dụ: một người là trưởng phòng Kinh doanh có thể chỉ xem danh sách HR; một chuyên viên HCNS có thể được sửa hồ sơ. Phân công quản lý phòng và quyền sửa danh sách nhân sự là hai quyết định độc lập.
+
+## Thiết kế nền workflow — 02/11/2026
+
+- [x] Lưu [thiết kế workflow sơ khai](WORKFLOW-CHECKLIST.md): 5 bảng nghiệp vụ và head phòng ban tùy chọn; tái sử dụng Employee/User và bốn bảng RBAC, không nhân bản hồ sơ hay tài khoản.
+- [x] Đề xuất quyền WORKFLOW theo hành động, kết hợp người được phân công và trạng thái bước; MANAGE không tự cấp quyền phê duyệt thay người khác. Session cần bổ sung khả năng kiểm tra các hành động này khi triển khai.
+- [x] Phạm vi MVP đề xuất: bước tuần tự APPROVAL/TASK, chọn người cụ thể hoặc head; từ chối kết thúc hồ sơ, lập lại bằng hồ sơ mới liên kết cũ. Các đề xuất “trả lại” trước đây chưa phải cơ chế sửa/gửi lại đã triển khai.
+- [ ] Chốt ma trận quyền pilot và triển khai theo plan workflow. Lần này chỉ thiết kế; chưa đổi schema, role/quyền, session hoặc dữ liệu.
+
+## Đánh giá khả năng phục vụ giao việc và duyệt quy trình — 02/11/2026
+
+**Kết luận:** có nền RBAC để mở rộng, chưa đủ để vận hành quy trình. Đây là đánh giá, chưa thay schema, quyền hoặc triển khai workflow.
+
+- [x] Đọc schema, bộ dựng session và helper phạm vi; truy vấn DB: STAFF có HR:VIEW/TASK:VIEW (40 tài khoản); DEPT_HEAD có HR:VIEW, TASK:VIEW/CREATE/ASSIGN/APPROVE (13 tài khoản). ASSIGN/APPROVE ghi scope DEPARTMENT trong DB.
+- [x] Session hiện chỉ xử lý VIEW/MANAGE, bỏ qua CREATE/ASSIGN/APPROVE và scope. Helper phòng ban chưa có callsite, chỉ lấy con trực tiếp và suy MANAGE thành toàn quyền; không dùng nguyên trạng cho quy trình.
+- [x] Department chưa có FK xác định người phụ trách; UserRole không chỉ rõ quản lý phòng nào. Employee.departmentId là nơi công tác; position và externalSupervisorName là text, không xác định thẩm quyền duyệt. Không coi 13 tài khoản DEPT_HEAD là 13 trưởng phòng đã được xác nhận.
+- [x] Schema chưa có công việc, định nghĩa/bước quy trình, hồ sơ đang chạy hoặc lịch sử quyết định duyệt. AuditLog chung không thay thế trạng thái/bước duyệt nghiệp vụ.
+- [ ] Đề xuất giữ bốn bảng RBAC; triển khai kiểm tra từng hành động và phạm vi tại server. Cân nhắc đặt phạm vi ở lần cấp quyền thay vì Permission toàn cục: unique(module, action) hiện không biểu diễn được cùng quyền nhưng phạm vi khác nhau theo role.
+- [ ] Đề xuất bản đầu: chọn một nhân sự phụ trách mỗi phòng bằng FK cùng công ty; khi cần kiêm nhiệm/nhiều người phụ trách mới bổ sung bảng phân công quản lý. Không suy người duyệt từ tên chức vụ hay chỉ từ role DEPT_HEAD.
+- [ ] Khi triển khai workflow: xác định người duyệt theo bước, kiểm tra tài khoản hiện hành có quyền và gắn đúng người được phân công; lưu người chịu trách nhiệm bằng Employee.id, tài khoản thao tác bằng User.id. Chốt cách chọn tài khoản nhận thông báo khi một người có nhiều tài khoản.
+- [ ] Đề xuất một quy trình pilot: nhân viên gửi yêu cầu → người phụ trách phòng duyệt/trả lại → hoàn tất. Kiểm tra cùng công ty, đúng người/bước/trạng thái và cập nhật nguyên tử để tránh duyệt lặp. Không tự mở quyền duyệt nghiệp vụ cho admin kỹ thuật; người phụ trách vắng/không có tài khoản phải được phân công lại rõ ràng, có lịch sử.
+
 ## Rà soát DB và ưu tiên tài khoản/phân quyền — 31/10/2026
 
 Người phụ trách yêu cầu đọc lại các bảng phân quyền và gỡ các bảng tài sản. Lần này giữ cấu trúc/quyền hiện hành của RBAC; chưa triển khai trang /roles hoặc tự thay quyền tài khoản.

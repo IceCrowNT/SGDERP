@@ -1,5 +1,80 @@
 # QUY TRÌNH & CHECKLIST TRIỂN KHAI PHÂN HỆ QUẢN LÝ NHÂN SỰ & MA TRẬN PHÂN QUYỀN (HR & RBAC MATRIX MODULE)
 
+## Đánh giá đề xuất biểu mẫu hợp nhất nhân sự–tài khoản — 03/11/2026
+
+**Trạng thái: phân tích theo tài liệu chuyên gia do người phụ trách cung cấp; chưa được duyệt triển khai. Không đổi code, schema, dữ liệu hoặc chính sách nghỉ việc trong lần đánh giá này.**
+
+- [x] Đọc tài liệu và đối chiếu schema, validation, action nhân sự/tài khoản, bộ dựng session và kế hoạch workflow. Nhận định “tách màn hình gây cản trở lớn”, “nút gạt là thao tác thừa” và tình huống tuyển dụng tại công trường/cảng là giả thuyết của tài liệu, chưa phải kết quả đo hoặc quy định đã xác nhận tại SDG.
+- [x] Phần đã đáp ứng: hồ sơ không cần tài khoản; chức vụ/liên hệ/ngày/ghi chú được bổ sung sau; mã nhân sự tự cấp, bất biến; công ty lấy từ session; quyền sửa hồ sơ tách quyền quản trị tài khoản. Email/điện thoại hiện không có unique, giá trị rỗng được lưu null.
+
+| Đề xuất chuyên gia | Đánh giá áp dụng cho SDG ERP |
+| --- | --- |
+| Tạo hồ sơ và tài khoản trong cùng màn hình, cùng lần lưu | Phù hợp để đề xuất triển khai; chỉ hiện vùng cấp tài khoản khi người thao tác có quyền quản trị tài khoản. Tạo hồ sơ vẫn cần HR MANAGE. Giữ `/accounts` cho quản trị tập trung. |
+| Chỉ bắt buộc dữ liệu tối thiểu | Giữ cách hiện tại: nhập họ tên, chọn phòng ban; tình trạng có mặc định Đang làm việc và phải hợp lệ. Mã do DB cấp, công ty do server xác định, không thêm hai ô bắt nhập tay. |
+| Khung tài khoản luôn mở, bỏ trống nghĩa là không tạo | Có thể áp dụng khi tạo mới và đủ quyền. Nếu nhập bất kỳ trường tài khoản nào, phải kiểm tra đủ username, mật khẩu khởi tạo và ít nhất một vai trò hợp lệ; không âm thầm bỏ qua dữ liệu nhập dở. Hai vùng cạnh nhau trên desktop, xếp dọc trên mobile. Không coi cấm toggle là tiêu chuẩn bắt buộc. |
+| Gộp hồ sơ và tài khoản vào một bảng | Không phù hợp: một người có 0..N tài khoản, gồm tài khoản cá nhân/admin; tài khoản hệ thống có thể không gắn người. Giữ `nhan_su`, `tai_khoan` và các bảng nối quyền; hợp nhất thao tác không cần hợp nhất bảng. |
+| Vai trò là Ban giám đốc/Trưởng phòng/Nhân viên | Cần phân biệt chức vụ, người phụ trách phòng và nhóm quyền tài khoản. Không suy quyền sửa HR hoặc người duyệt từ tên chức vụ/role. Head vẫn theo đề xuất trong plan workflow. |
+| Chuyển nghỉ việc tự chặn đăng nhập | Có ích nhưng thay chính sách hiện hành. Đề xuất thao tác rõ “Ghi nhận nghỉ việc và khóa các tài khoản liên kết”, chỉ người đủ quyền thực hiện; giữ hồ sơ/lịch sử, khóa toàn bộ tài khoản của người đó và thu hồi phiên. Chưa tự áp dụng quy tắc này. |
+
+Các điều kiện cần thiết nếu duyệt giao diện hợp nhất:
+
+- Tạo mới hồ sơ + tài khoản + gán vai trò + audit trong cùng transaction; lỗi username trùng hoặc role không hợp lệ thì không lưu dở hồ sơ. Giữ dữ liệu form và trả lỗi tại trường để sửa. Không cần bảng mới hoặc migration cho riêng thay đổi giao diện này.
+- Khi sửa người đã có tài khoản: hiển thị danh sách tất cả tài khoản liên kết, chọn đúng tài khoản để sửa/thêm. Mật khẩu trống nghĩa là giữ nguyên; không dùng username trống để xóa, gỡ liên kết hoặc khóa tài khoản cũ. Không trả mật khẩu băm ra form.
+- API/action luôn kiểm tra quyền, cùng công ty và vai trò được phép gán; ẩn vùng cấp quyền trên UI không thay kiểm tra server. Hiện `/accounts` dùng ADMIN/IT_ADMIN; quyền chi tiết vẫn thuộc plan role.
+- Nếu duyệt luồng nghỉ việc: thay đổi trạng thái và khóa tài khoản trong transaction; bảo vệ quản trị cuối cùng, thu hồi phiên đang mở, không tự mở lại tài khoản khi tái tuyển. Tài khoản hệ thống không gắn người phải vẫn hoạt động theo trạng thái tài khoản riêng. Chỉ kiểm tra trạng thái khi đăng nhập mới là chưa đủ.
+- Nhân sự không có tài khoản vẫn là hồ sơ người thật, không mặc định lái xe/bảo vệ/công nhân không được dùng ERP. Workflow tương lai có thể tham chiếu người đó, nhưng tự xử lý/duyệt trên web cần tài khoản hoạt động và quyền phù hợp.
+
+- [ ] Xem xét duyệt trước phần giao diện hợp nhất và validation tạo tài khoản tùy chọn; giữ nguyên DB hiện tại.
+- [ ] Chốt riêng chính sách nghỉ việc–khóa tài khoản và người có quyền thực hiện, trước khi thay quy tắc vận hành.
+
+## Đồng nhất Prisma Studio và PostgreSQL — 03/11/2026
+
+- [x] Người phụ trách yêu cầu đồng bộ cả model/field Prisma với tên vật lý PostgreSQL. Quyết định này thay quy ước giữ model/field tiếng Anh trước đây: dùng tên tiếng Việt không dấu snake_case giống DB, gồm quan hệ hiển thị trong Studio.
+- [x] Lưu bản code/schema trước refactor và fingerprint 9 bảng tại `~/Library/Application Support/SDGERP/backups/prisma-vietnamese-20261103-pVHB0G/`; giữ các thay đổi đang làm trước đó, không chạy seed/import/reset DB.
+- [x] Đổi đồng bộ Prisma Client, truy vấn, dữ liệu trả về, seed/bootstrap, kiểm thử và tài liệu/rule; không thêm lớp alias model tiếng Anh. Cả 9 model, toàn bộ scalar và tên quan hệ hiển thị dùng tiếng Việt không dấu. Form/session giữ hợp đồng cũ, action chuyển tường minh sang trường DB.
+- [x] Prisma validate/generate và TypeScript đạt; migrate diff không có DDL, không cần migration mới. Sau kiểm thử, fingerprint cả 9 bảng khớp trước refactor: 72 người, 60 tài khoản, 19 phòng ban, quyền/liên kết và 137 nhật ký giữ nguyên. Sequence có thể tăng do fixture kiểm thử, không reset.
+- [x] 23/23 Playwright đạt: đăng nhập, nhân sự/tài khoản/phân quyền, CRUD phòng ban, sơ đồ, 3D, form bắt buộc và trang AI đã tạm hoãn. Thêm `database-naming.spec.ts` kiểm tra model/scalar DMMF trùng bảng/cột PostgreSQL để chặn tái xuất hiện hai bộ tên.
+- [x] Đã khởi động lại Studio 5555, dùng Chrome đọc bảng `nhan_su`: 72/72 dòng, thấy các cột `dinh_danh`, `ma_nhan_su`, `ho_ten`, `chuc_vu`; đã xem ảnh kiểm tra trong outputs (không đưa Git). ESLint phần thay đổi không có lỗi; còn 3 cảnh báo biến/import chưa dùng đã có ở audit page/RoomDetailSheet. Diff check đạt.
+
+## Thống nhất thuật ngữ HR, tài khoản và DB — 03/11/2026
+
+- [x] Kiểm tra DB thực tế: 72 nhân sự, 60 tài khoản, 19 phòng ban; các bảng/cột đã Việt hóa, nhưng tên tài khoản và mã nhân sự chưa đồng nhất với giao diện. Bộ đếm này là tại thời điểm kiểm tra, không ghi đè dữ liệu về số phòng của snapshot cũ.
+- [x] Xác nhận quyền HR:MANAGE đang bảo vệ nút thêm/sửa và server; role thuộc tài khoản. Chọn người phụ trách phòng ban vẫn thuộc đề xuất trong [plan phân quyền](ROLE-MANAGEMENT-CHECKLIST.md) và [workflow](WORKFLOW-CHECKLIST.md), chưa thêm head hoặc tự cấp quyền.
+- [x] Backup DB và fingerprint 9 bảng vào thư mục cục bộ `~/Library/Application Support/SDGERP/backups/db-naming-20261103-9qWavy/`; không đưa dữ liệu backup lên Git.
+- [x] Chuẩn bị migration `20261103090000_thong_nhat_ten_nghiep_vu`: chỉ RENAME bảng/cột và cập nhật hàm bảo vệ mã nhân sự. `migrate dev --create-only` bị từ chối vì môi trường không tương tác; dùng SQL tường minh theo DB rules, không dùng SQL drop/create do Prisma suy ra.
+- [x] Thử migration trên bản restore: 9/9 fingerprint giữ nguyên, Prisma diff không khác biệt. Đã áp dụng bằng migrate deploy, generate client và khởi động lại dev/Studio; không reset/drop dữ liệu.
+- [x] 10/10 Playwright đạt (HR độc lập, nhân sự/tài khoản/phân quyền, CRUD phòng ban, 3D); TypeScript, ESLint test sửa và diff check đạt. Sau dọn fixture, cả 9 bảng vẫn cùng fingerprint trước migration: 72 nhân sự, 60 tài khoản, 19 phòng ban, 7 role, 9 quyền, 38 liên kết role–quyền, 68 liên kết tài khoản–role, 137 nhật ký. Sequence mã vẫn chỉ tăng theo kiểm thử, không reset để lấp số trống.
+- [x] Cập nhật schema, rule DB, từ điển DB, kiến trúc và plan HR/role/workflow. Đợt đầu chỉ đổi tên vật lý; yêu cầu tiếp theo đã chốt đổi cả Prisma Studio, xem mục đồng nhất phía trên.
+
+## Dấu bắt buộc và cảnh báo thiếu dữ liệu — 03/11/2026
+
+- [x] Bổ sung rule frontend/backend: dấu `*`, chú thích, aria-required, lỗi theo field tiếng Việt và validation server; không đánh dấu mã tự cấp hoặc trường tùy chọn.
+- [x] Form phòng ban tạo/sửa: tên, mã bắt buộc; cấp trên/mô tả tùy chọn. Form nhân sự tạo/sửa: họ tên, phòng ban, tình trạng làm việc bắt buộc; mã tự sinh, chức vụ/liên hệ/ghi chú/ngày không đổi tính tùy chọn.
+- [x] Bổ sung FormLabel required và FormRequiredHint dùng chung, FormMessage role alert; select nhân sự có ref/onBlur để focus lỗi. Form giữ giá trị khi thiếu/sai, có cảnh báo chung và lỗi dưới trường.
+- [x] Schema/Server Actions HR và phòng ban trả fieldErrors; giao diện gắn lại lỗi server, vẫn chặn payload thiếu dù bỏ qua frontend. Chỉ cập nhật UI/validation, không sửa schema DB, quyền hoặc dữ liệu.
+- [x] 8/8 Playwright đạt (CRUD cơ cấu, HR và 4 ca form bắt buộc). Sau chỉnh focus lỗi server/chốt dấu sao CSS, chạy lại 4/4 ca tạo/sửa đạt; xác nhận dấu sao hiển thị, nhãn truy cập giữ nguyên, aria-required/invalid, focus ô/select lỗi, không POST khi validation client thất bại và không tràn ngang mobile. Đã xem ảnh mobile trong outputs (không đưa Git). Server chặn tên/mã rỗng, tên toàn khoảng trắng, thiếu phòng/tình trạng và trả fieldErrors. TypeScript, ESLint phần thay đổi và diff check đạt; không sửa dữ liệu nghiệp vụ.
+
+## Phòng ban quản lý độc lập — 03/11/2026
+
+**Được yêu cầu triển khai:** ERP quản lý cơ cấu hiện hành. Thay thế các mục lịch sử bên dưới yêu cầu giữ cơ cấu theo 1Office, kiểm tra khớp snapshot hoặc chờ API để nghiệm thu.
+
+- [x] Đọc action/form/schema/seed/importer; xác nhận chưa có API đồng bộ phòng ban, đối soát cũ chỉ so snapshot trong DB.
+- [x] Bỏ DTO/trạng thái/nút đối soát và khóa tên/cấp trên theo nguồn; thêm tạo/sửa/xóa trên UI và server cho HR MANAGE. HR VIEW vẫn chỉ xem.
+- [x] Validation strict, mã duy nhất trong công ty, parent cùng công ty, chặn tự làm cha và chu trình nhiều cấp. Khóa hàng công ty trong transaction để hai lần chuyển đồng thời không tạo vòng lặp.
+- [x] Xóa cần xác nhận; chặn khi còn nhân sự (mọi trạng thái) hoặc đơn vị con. Khóa hàng phòng ban trước kiểm tra/xóa; mutation và AuditLog cùng transaction. Giữ ID và liên kết người khi sửa/chuyển phòng ban.
+- [x] Ngừng importer snapshot và bỏ lệnh npm đồng bộ; seed chỉ khởi tạo cơ cấu khi công ty chưa có phòng ban, nhân sự hoặc nhật ký DEPARTMENT. Không tái tạo đơn vị đã đổi mã/xóa qua ERP. Không chạy seed trên dữ liệu hiện hành.
+- [x] Giữ metadata nguồn trong DB làm lịch sử nhập, không dùng để khóa hoặc yêu cầu khớp; không truy cập 1Office, không xóa/sửa dữ liệu cơ cấu hiện hành trong lúc triển khai. Không thêm schema/migration/head/workflow.
+- [x] 14/14 Playwright đạt: CRUD cả đơn vị có metadata nguồn, giữ metadata/ID, đổi cha, chặn vòng lặp nhiều cấp và chuyển cha đồng thời, mã trùng, tenant, payload sửa nguồn, quyền VIEW/thu hồi, chặn xóa phòng có con hoặc hồ sơ LEFT, audit, mobile, sơ đồ và hồi quy HR/3D. TypeScript, ESLint phần thay đổi và diff check đạt. Sau dọn fixture, công ty thực tế vẫn 18 phòng ban / 72 nhân sự / 60 tài khoản. Seed chỉ được kiểm tra mã/TypeScript, không chạy lại seed trên DB vận hành.
+- [ ] Mapping phòng vật lý 3D còn dựa trên mã phòng ban; đơn vị mới/đổi mã cần cấu hình vị trí riêng ở đợt 3D, không tự suy vị trí từ cây tổ chức. Đây là giới hạn đã có, không đồng nghĩa CRUD gán vị trí tự động.
+
+## Sửa form đăng nhập bị khóa trên địa chỉ loopback — 03/11/2026
+
+- [x] Tái hiện bằng Chrome/Playwright: localhost khởi tạo form bình thường, `127.0.2.2:4000/login` tải HTML/JS nhưng WebSocket HMR bị từ chối, input giữ disabled vì chưa hydrate. Đây là lỗi cấu hình dev origin, không phải khóa tài khoản admin.
+- [x] Đọc hướng dẫn allowedDevOrigins và Client Components của Next trong node_modules. Thêm duy nhất hostname `127.0.2.2` vào next.config.ts; giữ bảo vệ submit trước hydration, không mở wildcard và không thay mật khẩu/quyền/tài khoản.
+- [x] Thêm test hồi quy `tests/e2e/login-origin.spec.ts` cho localhost và 127.0.2.2: nhập cả hai ô, kiểm tra submit/validation phía client, không dùng credential thật.
+- [x] Hai test nhập liệu đạt; request dev asset kèm Origin 127.0.2.2 đổi từ 403 thành 200. Test đăng nhập đã qua bước đăng nhập/khóa tài khoản nhưng dừng ở guard “Local fixture only”; bổ sung đúng địa chỉ loopback 127.0.2.2 vào helper kiểm thử để kiểm tra tiếp thu hồi phiên, không mở cho host ngoài máy.
+- [x] Sau khi cập nhật cả hai guard loopback của helper, test đăng nhập thực tế tại 127.0.2.2, chặn tài khoản khóa và thu hồi phiên đạt 1/1; fixture được dọn sau kiểm thử. Hai test nhập liệu đạt 2/2. TypeScript, ESLint phần thay đổi và diff check đạt. Dev server vẫn chạy cổng 4000; không sửa dữ liệu/quyền/mật khẩu tài khoản vận hành.
+
 ## Kiểm tra sau khi gỡ phân hệ tài sản — 31/10/2026
 
 - [x] DB hiện còn 9 bảng nghiệp vụ; giữ nguyên 72 người, 60 tài khoản và toàn bộ quyền/liên kết. Fingerprint các bảng lõi trước/sau và sau kiểm thử khớp. Các số 17 bảng bên dưới là lịch sử trước khi gỡ tài sản.

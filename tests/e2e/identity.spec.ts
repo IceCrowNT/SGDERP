@@ -12,103 +12,103 @@ let companyId: number,
   adminId: number,
   roleId: number;
 const password = `Test-${randomUUID()}`;
-let admin: { id: number; companyId: number; sessionVersion: number };
+let admin: { dinh_danh: number; dinh_danh_cong_ty: number; phien_ban_dang_nhap: number };
 test.beforeAll(async () => {
-  const company = await p.company.create({
-    data: { name: `Identity test ${run}` },
+  const company = await p.cong_ty.create({
+    data: { ten_cong_ty: `Identity test ${run}` },
   });
-  companyId = company.id;
+  companyId = company.dinh_danh;
   otherCompanyId = (
-    await p.company.create({ data: { name: `Other identity test ${run}` } })
-  ).id;
-  const dept = await p.department.create({
-    data: { companyId, code: "TEST", name: "Phòng kiểm thử" },
+    await p.cong_ty.create({ data: { ten_cong_ty: `Other identity test ${run}` } })
+  ).dinh_danh;
+  const dept = await p.phong_ban.create({
+    data: { dinh_danh_cong_ty: companyId, ma_phong_ban: "TEST", ten_phong_ban: "Phòng kiểm thử" },
   });
-  const person = await p.employee.create({
+  const person = await p.nhan_su.create({
     data: {
-      companyId,
-      departmentId: dept.id,
-      employeeCode: "TEST-PERSON",
-      fullName: "Nhân sự kiểm thử",
-      employmentStatus: "ACTIVE",
+      dinh_danh_cong_ty: companyId,
+      dinh_danh_phong_ban: dept.dinh_danh,
+      ma_nhan_su: "TEST-PERSON",
+      ho_ten: "Nhân sự kiểm thử",
+      tinh_trang_lam_viec: "ACTIVE",
     },
   });
-  personId = person.id;
-  const role = await p.role.create({
-    data: { companyId, code: "ADMIN", name: "Quản trị kiểm thử" },
+  personId = person.dinh_danh;
+  const role = await p.vai_tro.create({
+    data: { dinh_danh_cong_ty: companyId, ma_vai_tro: "ADMIN", ten_vai_tro: "Quản trị kiểm thử" },
   });
-  roleId = role.id;
-  admin = await p.user.create({
+  roleId = role.dinh_danh;
+  admin = await p.tai_khoan.create({
     data: {
-      companyId,
-      employeeId: person.id,
-      username: `identity-admin-${run}`,
-      displayName: person.fullName,
-      password: await bcrypt.hash(password, 10),
-      roles: { create: { roleId } },
+      dinh_danh_cong_ty: companyId,
+      dinh_danh_nhan_su: person.dinh_danh,
+      ten_dang_nhap: `identity-admin-${run}`,
+      ten_hien_thi: person.ho_ten,
+      mat_khau_bam: await bcrypt.hash(password, 10),
+      danh_sach_vai_tro: { create: { dinh_danh_vai_tro: roleId } },
     },
   });
-  adminId = admin.id;
+  adminId = admin.dinh_danh;
 });
 test.afterAll(async () => {
   for (const id of [companyId, otherCompanyId].filter(Boolean)) {
-    await p.auditLog.deleteMany({ where: { companyId: id } });
-    await p.user.deleteMany({ where: { companyId: id } });
-    await p.employee.deleteMany({ where: { companyId: id } });
-    await p.role.deleteMany({ where: { companyId: id } });
-    await p.department.deleteMany({ where: { companyId: id } });
-    await p.company.delete({ where: { id } });
+    await p.nhat_ky_hoat_dong.deleteMany({ where: { dinh_danh_cong_ty: id } });
+    await p.tai_khoan.deleteMany({ where: { dinh_danh_cong_ty: id } });
+    await p.nhan_su.deleteMany({ where: { dinh_danh_cong_ty: id } });
+    await p.vai_tro.deleteMany({ where: { dinh_danh_cong_ty: id } });
+    await p.phong_ban.deleteMany({ where: { dinh_danh_cong_ty: id } });
+    await p.cong_ty.delete({ where: { dinh_danh: id } });
   }
   await p.$disconnect();
 });
 test("DB supports zero/multiple accounts and rejects cross-company links", async () => {
-  const employee = await p.employee.create({
+  const employee = await p.nhan_su.create({
     data: {
-      companyId,
-      employeeCode: "NO-ACCOUNT",
-      fullName: "Người không dùng ERP",
-      employmentStatus: "ACTIVE",
+      dinh_danh_cong_ty: companyId,
+      ma_nhan_su: "NO-ACCOUNT",
+      ho_ten: "Người không dùng ERP",
+      tinh_trang_lam_viec: "ACTIVE",
     },
   });
-  expect(await p.user.count({ where: { employeeId: employee.id } })).toBe(0);
-  const before = await p.employee.count({ where: { companyId } });
-  const account = await p.user.create({
+  expect(await p.tai_khoan.count({ where: { dinh_danh_nhan_su: employee.dinh_danh } })).toBe(0);
+  const before = await p.nhan_su.count({ where: { dinh_danh_cong_ty: companyId } });
+  const account = await p.tai_khoan.create({
     data: {
-      companyId,
-      employeeId: personId,
-      username: `identity-second-${run}`,
-      displayName: "Tài khoản thứ hai",
-      password: "disabled-for-login",
+      dinh_danh_cong_ty: companyId,
+      dinh_danh_nhan_su: personId,
+      ten_dang_nhap: `identity-second-${run}`,
+      ten_hien_thi: "Tài khoản thứ hai",
+      mat_khau_bam: "disabled-for-login",
     },
   });
-  expect(await p.user.count({ where: { employeeId: personId } })).toBe(2);
-  await p.user.update({ where: { id: account.id }, data: { isActive: false } });
-  expect(await p.employee.count({ where: { companyId } })).toBe(before);
+  expect(await p.tai_khoan.count({ where: { dinh_danh_nhan_su: personId } })).toBe(2);
+  await p.tai_khoan.update({ where: { dinh_danh: account.dinh_danh }, data: { cho_phep_dang_nhap: false } });
+  expect(await p.nhan_su.count({ where: { dinh_danh_cong_ty: companyId } })).toBe(before);
   expect(
-    (await p.employee.findUniqueOrThrow({ where: { id: personId } }))
-      .employmentStatus,
+    (await p.nhan_su.findUniqueOrThrow({ where: { dinh_danh: personId } }))
+      .tinh_trang_lam_viec,
   ).toBe("ACTIVE");
   await expect(
-    p.user.create({
+    p.tai_khoan.create({
       data: {
-        companyId: otherCompanyId,
-        employeeId: personId,
-        username: `cross-company-${run}`,
-        displayName: "Invalid",
-        password: "disabled",
+        dinh_danh_cong_ty: otherCompanyId,
+        dinh_danh_nhan_su: personId,
+        ten_dang_nhap: `cross-company-${run}`,
+        ten_hien_thi: "Invalid",
+        mat_khau_bam: "disabled",
       },
     }),
   ).rejects.toMatchObject({ code: "P2003" });
-  const foreignDepartment = await p.department.create({
-    data: { companyId: otherCompanyId, code: "OTHER", name: "Other" },
+  const foreignDepartment = await p.phong_ban.create({
+    data: { dinh_danh_cong_ty: otherCompanyId, ma_phong_ban: "OTHER", ten_phong_ban: "Other" },
   });
   await expect(
-    p.employee.update({
-      where: { id: employee.id },
-      data: { departmentId: foreignDepartment.id },
+    p.nhan_su.update({
+      where: { dinh_danh: employee.dinh_danh },
+      data: { dinh_danh_phong_ban: foreignDepartment.dinh_danh },
     }),
   ).rejects.toMatchObject({ code: "P2003" });
-  await p.user.delete({ where: { id: account.id } });
+  await p.tai_khoan.delete({ where: { dinh_danh: account.dinh_danh } });
 });
 test("UI creates a profile independently and two accounts without extra people", async ({
   page,
@@ -128,11 +128,11 @@ test("UI creates a profile independently and two accounts without extra people",
   await expect(page.getByLabel("Mật khẩu", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Lưu hồ sơ" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  const employee = await p.employee.findFirstOrThrow({
-    where: { companyId, fullName: "Người mới kiểm thử" },
+  const employee = await p.nhan_su.findFirstOrThrow({
+    where: { dinh_danh_cong_ty: companyId, ho_ten: "Người mới kiểm thử" },
   });
-  expect(await p.user.count({ where: { employeeId: employee.id } })).toBe(0);
-  const count = await p.employee.count({ where: { companyId } });
+  expect(await p.tai_khoan.count({ where: { dinh_danh_nhan_su: employee.dinh_danh } })).toBe(0);
+  const count = await p.nhan_su.count({ where: { dinh_danh_cong_ty: companyId } });
   for (const suffix of ["personal", "extra"]) {
     await page.goto("/accounts");
     await page
@@ -140,7 +140,7 @@ test("UI creates a profile independently and two accounts without extra people",
       .click();
     await page.getByRole("combobox", { name: "Nhân sự sở hữu" }).click();
     await page
-      .getByRole("option", { name: new RegExp(employee.employeeCode) })
+      .getByRole("option", { name: new RegExp(employee.ma_nhan_su) })
       .click();
     await page
       .getByLabel("Tên đăng nhập", { exact: true })
@@ -152,10 +152,10 @@ test("UI creates a profile independently and two accounts without extra people",
       page.getByText(`identity-${suffix}-${run}`, { exact: true }),
     ).toBeVisible();
   }
-  expect(await p.user.count({ where: { employeeId: employee.id } })).toBe(2);
-  expect(await p.employee.count({ where: { companyId } })).toBe(count);
+  expect(await p.tai_khoan.count({ where: { dinh_danh_nhan_su: employee.dinh_danh } })).toBe(2);
+  expect(await p.nhan_su.count({ where: { dinh_danh_cong_ty: companyId } })).toBe(count);
   await page.goto("/employees");
-  const row = page.getByRole("row").filter({ hasText: employee.employeeCode });
+  const row = page.getByRole("row").filter({ hasText: employee.ma_nhan_su });
   await expect(row).toContainText("2 tài khoản");
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
@@ -177,10 +177,10 @@ test("UI creates a profile independently and two accounts without extra people",
     ),
   ).toBe(true);
   const html = await page.content();
-  const account = await p.user.findUniqueOrThrow({
-    where: { username: `identity-personal-${run}` },
+  const account = await p.tai_khoan.findUniqueOrThrow({
+    where: { ten_dang_nhap: `identity-personal-${run}` },
   });
-  expect(html).not.toContain(account.password);
+  expect(html).not.toContain(account.mat_khau_bam);
   await page
     .getByRole("row")
     .filter({ hasText: `identity-extra-${run}` })
@@ -189,23 +189,23 @@ test("UI creates a profile independently and two accounts without extra people",
   await page.getByLabel("Cho phép đăng nhập").uncheck();
   await page.getByRole("button", { name: "Lưu tài khoản" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  expect(await p.employee.count({ where: { companyId } })).toBe(count);
+  expect(await p.nhan_su.count({ where: { dinh_danh_cong_ty: companyId } })).toBe(count);
 });
 test("login uses account permissions; blocked or revoked sessions are rejected", async ({
   page,
   context,
 }) => {
-  const user = await p.user.create({
+  const user = await p.tai_khoan.create({
     data: {
-      companyId,
-      employeeId: personId,
-      username: `identity-plain-${run}`,
-      displayName: "Cá nhân",
-      password: await bcrypt.hash(password, 10),
+      dinh_danh_cong_ty: companyId,
+      dinh_danh_nhan_su: personId,
+      ten_dang_nhap: `identity-plain-${run}`,
+      ten_hien_thi: "Cá nhân",
+      mat_khau_bam: await bcrypt.hash(password, 10),
     },
   });
   await page.goto("/login");
-  await page.getByLabel("Tên đăng nhập", { exact: true }).fill(user.username);
+  await page.getByLabel("Tên đăng nhập", { exact: true }).fill(user.ten_dang_nhap);
   await page.getByLabel("Mật khẩu", { exact: true }).fill(password);
   await page.getByRole("button", { name: /Đăng nhập/i }).click();
   await expect(page).toHaveURL(/\/$/);
@@ -213,12 +213,12 @@ test("login uses account permissions; blocked or revoked sessions are rejected",
   await expect(
     page.getByText("Không có quyền quản lý tài khoản."),
   ).toBeVisible();
-  await p.user.update({ where: { id: user.id }, data: { isActive: false } });
+  await p.tai_khoan.update({ where: { dinh_danh: user.dinh_danh }, data: { cho_phep_dang_nhap: false } });
   await page.goto("/employees");
   await expect(page).toHaveURL(/\/login$/);
-  await p.user.update({
-    where: { id: user.id },
-    data: { isActive: true, sessionVersion: { increment: 1 } },
+  await p.tai_khoan.update({
+    where: { dinh_danh: user.dinh_danh },
+    data: { cho_phep_dang_nhap: true, phien_ban_dang_nhap: { increment: 1 } },
   });
   await signAccount(context, user); // old version
   await page.goto("/employees");
@@ -240,7 +240,7 @@ test("last active administrator cannot remove own admin role", async ({
   await expect(
     page.getByText("Phải giữ ít nhất một tài khoản quản trị hoạt động."),
   ).toBeVisible();
-  expect(await p.userRole.count({ where: { userId: adminId, roleId } })).toBe(
+  expect(await p.tai_khoan_vai_tro.count({ where: { dinh_danh_tai_khoan: adminId, dinh_danh_vai_tro: roleId } })).toBe(
     1,
   );
 });
@@ -248,26 +248,26 @@ test("dashboard and 3D count people, including people with no account", async ({
   page,
   context,
 }) => {
-  const added = await p.employee.create({
+  const added = await p.nhan_su.create({
     data: {
-      companyId,
-      employeeCode: "3D-NO-ACCOUNT",
-      fullName: "Nhân sự không tài khoản 3D",
-      employmentStatus: "ACTIVE",
+      dinh_danh_cong_ty: companyId,
+      ma_nhan_su: "3D-NO-ACCOUNT",
+      ho_ten: "Nhân sự không tài khoản 3D",
+      tinh_trang_lam_viec: "ACTIVE",
     },
   });
-  await p.user.create({
+  await p.tai_khoan.create({
     data: {
-      companyId,
-      employeeId: personId,
-      username: `identity-3d-${run}`,
-      displayName: "Tài khoản phụ đã khóa",
-      password: "disabled",
-      isActive: false,
+      dinh_danh_cong_ty: companyId,
+      dinh_danh_nhan_su: personId,
+      ten_dang_nhap: `identity-3d-${run}`,
+      ten_hien_thi: "Tài khoản phụ đã khóa",
+      mat_khau_bam: "disabled",
+      cho_phep_dang_nhap: false,
     },
   });
-  const count = await p.employee.count({
-    where: { companyId, employmentStatus: "ACTIVE" },
+  const count = await p.nhan_su.count({
+    where: { dinh_danh_cong_ty: companyId, tinh_trang_lam_viec: "ACTIVE" },
   });
   await signAccount(context, admin);
   await page.goto("/");
@@ -277,30 +277,30 @@ test("dashboard and 3D count people, including people with no account", async ({
   await page.goto("/office-3d");
   await expect(page.getByRole("heading", { name: /Mô Hình 3D/ })).toBeVisible();
   await expect(page.getByText(`${count} CBNV`, { exact: true })).toBeVisible();
-  expect(await p.user.count({ where: { employeeId: added.id } })).toBe(0);
+  expect(await p.tai_khoan.count({ where: { dinh_danh_nhan_su: added.dinh_danh } })).toBe(0);
 });
 test("HR manager can edit people but cannot administer accounts", async ({
   page,
   context,
 }) => {
-  const permission = await p.permission.findFirstOrThrow({
-    where: { module: "HR", action: "MANAGE" },
+  const permission = await p.quyen.findFirstOrThrow({
+    where: { phan_he: "HR", hanh_dong: "MANAGE" },
   });
-  const role = await p.role.create({
+  const role = await p.vai_tro.create({
     data: {
-      companyId,
-      code: "TEST_HR",
-      name: "HR",
-      permissions: { create: { permissionId: permission.id } },
+      dinh_danh_cong_ty: companyId,
+      ma_vai_tro: "TEST_HR",
+      ten_vai_tro: "HR",
+      danh_sach_quyen: { create: { dinh_danh_quyen: permission.dinh_danh } },
     },
   });
-  const user = await p.user.create({
+  const user = await p.tai_khoan.create({
     data: {
-      companyId,
-      username: `identity-hr-${run}`,
-      displayName: "HR",
-      password: "disabled",
-      roles: { create: { roleId: role.id } },
+      dinh_danh_cong_ty: companyId,
+      ten_dang_nhap: `identity-hr-${run}`,
+      ten_hien_thi: "HR",
+      mat_khau_bam: "disabled",
+      danh_sach_vai_tro: { create: { dinh_danh_vai_tro: role.dinh_danh } },
     },
   });
   await signAccount(context, user);

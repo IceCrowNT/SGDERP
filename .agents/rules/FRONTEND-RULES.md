@@ -88,5 +88,11 @@ Khi xây dựng các tính năng mới (Quản lý công việc, Phê duyệt, N
 - **Quản lý Form Nghiệp vụ:**
   - Form nghiệp vụ bắt buộc sử dụng combo **`React Hook Form`** + **`Zod Resolver`** (`@hookform/resolvers/zod`).
   - Hiển thị lỗi validation rõ ràng ngay dưới từng trường dữ liệu với `<FormMessage />`.
+- **Trường bắt buộc — áp dụng 03/11/2026:**
+  - Mọi trường người dùng bắt buộc nhập/chọn phải có dấu `*` màu `text-destructive` cạnh nhãn và ghi chú `* Trường bắt buộc.` trong form. Dùng `<FormLabel required>` và `<FormRequiredHint />` dùng chung, không tự chèn ký hiệu khác nhau giữa các màn hình.
+  - Input/select bắt buộc có `aria-required="true"`; dấu `*` trang trí dùng `aria-hidden` để giữ nhãn truy cập rõ ràng. SelectTrigger phải nhận ref/onBlur từ field để focus trường lỗi hoạt động.
+  - Đánh dấu đúng theo schema/nghiệp vụ cho từng chế độ tạo/sửa. Trường có giá trị mặc định nhưng vẫn bắt buộc phải đánh dấu; trường hệ thống tự cấp, field readonly không yêu cầu nhập hoặc trường tùy chọn không gắn `*`. Không tự tăng số trường bắt buộc chỉ vì thêm dấu sao.
+  - Gửi thiếu hoặc sai dữ liệu: giữ form/dữ liệu đã nhập, hiển thị lỗi tiếng Việt ngay dưới từng field, `aria-invalid` và liên kết lỗi qua `aria-describedby`; focus trường lỗi đầu tiên và có thông báo chung. Không chỉ đổi màu hoặc dùng toast rồi đóng form.
+  - Dùng chung Zod schema với server. Với RHF/Zod có thể dùng `noValidate` để thống nhất cảnh báo tiếng Việt; không coi HTML `required` hoặc disabled nút Lưu là kiểm tra phía server. Lỗi field từ action được gắn lại bằng `form.setError`; lỗi nghiệp vụ chung vẫn hiển thị thông báo.
 - **Hợp nhất Class an toàn:**
   - Luôn sử dụng hàm helper `cn()` (Tailwind-merge + Clsx) khi truyền hoặc mở rộng `className` để tránh lỗi xung đột CSS specificity.

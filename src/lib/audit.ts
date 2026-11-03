@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
@@ -30,8 +31,8 @@ export interface LogActivityParams {
   targetId?: string | null;
   targetName?: string | null;
   description: string;
-  oldData?: any;
-  newData?: any;
+  oldData?: unknown;
+  newData?: unknown;
 }
 
 /**
@@ -55,8 +56,8 @@ export async function logActivity(params: LogActivityParams) {
 
     // Nếu vẫn không có companyId (ví dụ sự kiện login thất bại), lấy default company
     if (!companyId) {
-      const defaultCompany = await db.company.findFirst({ select: { id: true } });
-      companyId = defaultCompany?.id || 1;
+      const defaultCompany = await db.cong_ty.findFirst({ select: { dinh_danh: true } });
+      companyId = defaultCompany?.dinh_danh || 1;
     }
 
     // Trích xuất IP và User-Agent từ Header
@@ -73,21 +74,21 @@ export async function logActivity(params: LogActivityParams) {
       // Bỏ qua nếu chạy ngoài request context
     }
 
-    await db.auditLog.create({
+    await db.nhat_ky_hoat_dong.create({
       data: {
-        userId: userId || null,
-        username: username || "anonymous",
-        fullName: fullName || "Khách",
-        action: params.action,
-        module: params.module,
-        targetId: params.targetId || null,
-        targetName: params.targetName || null,
-        description: params.description,
-        oldData: params.oldData ? JSON.parse(JSON.stringify(params.oldData)) : undefined,
-        newData: params.newData ? JSON.parse(JSON.stringify(params.newData)) : undefined,
-        ipAddress,
-        userAgent,
-        companyId,
+        dinh_danh_tai_khoan: userId || null,
+        ten_dang_nhap: username || "anonymous",
+        ho_ten: fullName || "Khách",
+        hanh_dong: params.action,
+        phan_he: params.module,
+        dinh_danh_doi_tuong: params.targetId || null,
+        ten_doi_tuong: params.targetName || null,
+        mo_ta: params.description,
+        du_lieu_cu: params.oldData ? JSON.parse(JSON.stringify(params.oldData)) : undefined,
+        du_lieu_moi: params.newData ? JSON.parse(JSON.stringify(params.newData)) : undefined,
+        dia_chi_ip: ipAddress,
+        thong_tin_trinh_duyet: userAgent,
+        dinh_danh_cong_ty: companyId,
       },
     });
   } catch (error) {
@@ -110,37 +111,37 @@ export async function getAuditLogs(params: {
   const limit = Math.min(100, Math.max(1, params.limit || 20));
   const skip = (page - 1) * limit;
 
-  const where: any = {};
+  const where: Prisma.nhat_ky_hoat_dongWhereInput = {};
 
   if (params.module && params.module !== "ALL") {
-    where.module = params.module;
+    where.phan_he = params.module;
   }
 
   if (params.action && params.action !== "ALL") {
-    where.action = params.action;
+    where.hanh_dong = params.action;
   }
 
   if (params.search && params.search.trim()) {
     const q = params.search.trim();
     where.OR = [
-      { fullName: { contains: q, mode: "insensitive" } },
-      { username: { contains: q, mode: "insensitive" } },
-      { description: { contains: q, mode: "insensitive" } },
-      { targetName: { contains: q, mode: "insensitive" } },
+      { ho_ten: { contains: q, mode: "insensitive" } },
+      { ten_dang_nhap: { contains: q, mode: "insensitive" } },
+      { mo_ta: { contains: q, mode: "insensitive" } },
+      { ten_doi_tuong: { contains: q, mode: "insensitive" } },
     ];
   }
 
   const [total, logs] = await Promise.all([
-    db.auditLog.count({ where }),
-    db.auditLog.findMany({
+    db.nhat_ky_hoat_dong.count({ where }),
+    db.nhat_ky_hoat_dong.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: { thoi_diem_tao: "desc" },
       skip,
       take: limit,
       include: {
-        user: {
+        tai_khoan: {
           select: {
-            employee: { select: { employeeCode: true, avatarUrl: true, position: true } },
+            nhan_su: { select: { ma_nhan_su: true, duong_dan_anh_dai_dien: true, chuc_vu: true } },
           },
         },
       },
