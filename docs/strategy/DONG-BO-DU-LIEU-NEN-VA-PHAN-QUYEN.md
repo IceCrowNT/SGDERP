@@ -292,7 +292,7 @@ Quy trình phải idempotent: cùng một nguồn, loại thực thể và exter
 
 ## 7. Mô hình dữ liệu mục tiêu
 
-**Quy ước tên DB cập nhật 03/11/2026:** model/field Prisma phải trùng tên bảng/cột PostgreSQL bằng tiếng Việt không dấu, ví dụ `phong_ban.dinh_danh_nguon`. Tên API tiếng Anh trong phần thiết kế lịch sử bên dưới chỉ là tham khảo, không dùng làm quy ước tạo schema mới. Danh mục hiện hành nằm tại [từ điển DB](../DATABASE-DICTIONARY.md); không đổi ID hoặc quyền khi đổi tên.
+**Quy ước tên DB cập nhật 06/11/2026:** model/field Prisma phải trùng tên bảng/cột PostgreSQL. Bảng và trường nghiệp vụ dùng tiếng Việt không dấu; khóa kỹ thuật phổ biến dùng `id`, `company_id`, `department_id`, `employee_id`, `account_id`, `role_id`, `permission_id`; FK nghiệp vụ phức tạp dùng tiếng Việt + `_id`. Danh mục hiện hành nằm tại [từ điển DB](../DATABASE-DICTIONARY.md); đổi tên không đổi ID hoặc quyền.
 
 Schema và tính năng hiện tại đều là bản nháp, nên có thể thay thế toàn bộ nếu phương án được duyệt. Đề xuất dưới đây chia hai bước để việc đánh giá, migration và kiểm chứng dữ liệu rõ ràng hơn.
 

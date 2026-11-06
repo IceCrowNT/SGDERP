@@ -35,12 +35,14 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 export interface DepartmentItem {
-  dinh_danh: number;
+  id: number;
   ma_phong_ban: string;
   ten_phong_ban: string;
   mo_ta: string | null;
-  dinh_danh_phong_ban_cha: number | null;
-  danh_sach_nhan_su: Array<{ dinh_danh: number; ho_ten: string; ma_nhan_su: string; chuc_vu: string | null }>;
+  parent_id: number | null;
+  nguoi_phu_trach_id: number | null;
+  nguoi_phu_trach: { id: number; ho_ten: string; ma_nhan_su: string; tinh_trang_lam_viec: string } | null;
+  danh_sach_nhan_su: Array<{ id: number; ho_ten: string; ma_nhan_su: string; chuc_vu: string | null }>;
   _count: { danh_sach_nhan_su: number; phong_ban_con: number };
 }
 
@@ -48,23 +50,25 @@ interface DepartmentManagerProps {
   companyName: string;
   initialDepartments: DepartmentItem[];
   canManage: boolean;
+  headCandidates: Array<{ id: number; ho_ten: string; ma_nhan_su: string; tinh_trang_lam_viec: string; phong_ban: { ten_phong_ban: string } | null }>;
 }
 
 export function DepartmentManager({
   initialDepartments,
   companyName,
   canManage,
+  headCandidates,
 }: DepartmentManagerProps) {
   const router = useRouter();
   const [formOpen, setFormOpen] = useState(false);
   const [deletingDepartment, setDeletingDepartment] = useState<DepartmentItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [collapsed, setCollapsed] = useState<Set<number>>(() => new Set(initialDepartments.map((department) => department.dinh_danh)));
+  const [collapsed, setCollapsed] = useState<Set<number>>(() => new Set(initialDepartments.map((department) => department.id)));
   const [editingDepartment, setEditingDepartment] = useState<DepartmentItem | null>(null);
   const [isPending, startTransition] = useTransition();
   const form = useForm<CreateDepartmentInput>({
     resolver: zodResolver(CreateDepartmentSchema),
-    defaultValues: { name: "", code: "", description: "", parentId: null },
+    defaultValues: { name: "", code: "", description: "", parentId: null, headEmployeeId: null },
   });
 
   const totalEmployees = useMemo(
@@ -72,7 +76,7 @@ export function DepartmentManager({
     [initialDepartments]
   );
   const rootDepartments = useMemo(
-    () => initialDepartments.filter((department) => !department.dinh_danh_phong_ban_cha),
+    () => initialDepartments.filter((department) => !department.parent_id),
     [initialDepartments]
   );
   const filteredDepartments = useMemo(() => {
@@ -85,24 +89,24 @@ export function DepartmentManager({
 
   const openForm = (department: DepartmentItem | null) => {
     setEditingDepartment(department);
-    form.reset(department ? { name: department.ten_phong_ban, code: department.ma_phong_ban, description: department.mo_ta ?? "", parentId: department.dinh_danh_phong_ban_cha }
-      : { name: "", code: "", description: "", parentId: null });
+    form.reset(department ? { name: department.ten_phong_ban, code: department.ma_phong_ban, description: department.mo_ta ?? "", parentId: department.parent_id, headEmployeeId: department.nguoi_phu_trach_id }
+      : { name: "", code: "", description: "", parentId: null, headEmployeeId: null });
     setFormOpen(true);
   };
   const excludedParents = new Set<number>();
   if (editingDepartment) {
-    excludedParents.add(editingDepartment.dinh_danh);
+    excludedParents.add(editingDepartment.id);
     for (const id of excludedParents)
-      for (const d of initialDepartments) if (d.dinh_danh_phong_ban_cha === id) excludedParents.add(d.dinh_danh);
+      for (const d of initialDepartments) if (d.parent_id === id) excludedParents.add(d.id);
   }
   const parentLabel = (department: DepartmentItem) => {
     const names = [department.ten_phong_ban];
-    const visited = new Set([department.dinh_danh]);
-    let parent = initialDepartments.find(d => d.dinh_danh === department.dinh_danh_phong_ban_cha);
-    while (parent && !visited.has(parent.dinh_danh)) {
-      visited.add(parent.dinh_danh);
+    const visited = new Set([department.id]);
+    let parent = initialDepartments.find(d => d.id === department.parent_id);
+    while (parent && !visited.has(parent.id)) {
+      visited.add(parent.id);
       names.unshift(parent.ten_phong_ban);
-      parent = initialDepartments.find(d => d.dinh_danh === parent?.dinh_danh_phong_ban_cha);
+      parent = initialDepartments.find(d => d.id === parent?.parent_id);
     }
     return names.join(" / ");
   };
@@ -110,7 +114,7 @@ export function DepartmentManager({
     startTransition(async () => {
       try {
         const result = editingDepartment
-          ? await updateDepartment({ ...values, id: editingDepartment.dinh_danh })
+          ? await updateDepartment({ ...values, id: editingDepartment.id })
           : await createDepartment(values);
         if (!result.success) {
           if ("fieldErrors" in result && result.fieldErrors) {
@@ -134,7 +138,7 @@ export function DepartmentManager({
     if (!deletingDepartment) return;
     startTransition(async () => {
       try {
-        const result = await deleteDepartment(deletingDepartment.dinh_danh);
+        const result = await deleteDepartment(deletingDepartment.id);
         if (!result.success) { toast.error(result.message); return; }
         toast.success(result.message);
         setDeletingDepartment(null);
@@ -143,25 +147,25 @@ export function DepartmentManager({
     });
   };
 
-  const childrenOf = (id: number) => initialDepartments.filter((item) => item.dinh_danh_phong_ban_cha === id);
+  const childrenOf = (id: number) => initialDepartments.filter((item) => item.parent_id === id);
   const branchCount = (department: DepartmentItem, visited = new Set<number>()): number => {
-    if (visited.has(department.dinh_danh)) return 0;
-    const next = new Set(visited).add(department.dinh_danh);
-    return department._count.danh_sach_nhan_su + childrenOf(department.dinh_danh).reduce((sum, child) => sum + branchCount(child, next), 0);
+    if (visited.has(department.id)) return 0;
+    const next = new Set(visited).add(department.id);
+    return department._count.danh_sach_nhan_su + childrenOf(department.id).reduce((sum, child) => sum + branchCount(child, next), 0);
   };
   const branchMatches = (department: DepartmentItem, visited = new Set<number>()): boolean => {
-    if (visited.has(department.dinh_danh)) return false;
-    const next = new Set(visited).add(department.dinh_danh);
-    return filteredDepartments.some((item) => item.dinh_danh === department.dinh_danh) ||
-      childrenOf(department.dinh_danh).some((child) => branchMatches(child, next));
+    if (visited.has(department.id)) return false;
+    const next = new Set(visited).add(department.id);
+    return filteredDepartments.some((item) => item.id === department.id) ||
+      childrenOf(department.id).some((child) => branchMatches(child, next));
   };
   const renderBranch = (department: DepartmentItem, visited = new Set<number>()): React.ReactNode => {
-    if (visited.has(department.dinh_danh) || !branchMatches(department)) return null;
-    const next = new Set(visited).add(department.dinh_danh);
-    const children = childrenOf(department.dinh_danh);
-    const expanded = !collapsed.has(department.dinh_danh);
+    if (visited.has(department.id) || !branchMatches(department)) return null;
+    const next = new Set(visited).add(department.id);
+    const children = childrenOf(department.id);
+    const expanded = !collapsed.has(department.id);
     return (
-      <div key={department.dinh_danh}>
+      <div key={department.id}>
         <div className="flex flex-wrap items-center gap-2 border-b border-border/50 py-3">
           {(children.length > 0 || department.danh_sach_nhan_su.length > 0) && (
             <Button variant="ghost" size="icon" className="size-10 shrink-0"
@@ -169,8 +173,8 @@ export function DepartmentManager({
               aria-expanded={expanded}
               onClick={() => setCollapsed((previous) => {
                 const updated = new Set(previous);
-                if (updated.has(department.dinh_danh)) updated.delete(department.dinh_danh);
-                else updated.add(department.dinh_danh);
+                if (updated.has(department.id)) updated.delete(department.id);
+                else updated.add(department.id);
                 return updated;
               })}>
               {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
@@ -179,9 +183,12 @@ export function DepartmentManager({
           <div className="min-w-0 flex-1 basis-40">
             <p className="break-words font-medium">{department.ten_phong_ban}</p>
             <p className="text-xs text-muted-foreground">{department.ma_phong_ban}</p>
+            <p className="text-xs text-muted-foreground">Phụ trách: {department.nguoi_phu_trach?.ho_ten ?? "Chưa phân công"}
+              {department.nguoi_phu_trach && department.nguoi_phu_trach.tinh_trang_lam_viec !== "ACTIVE" && " · Cần phân công lại"}
+            </p>
           </div>
           <Button variant="ghost" className="h-10" asChild>
-            <Link href={`/employees?departmentId=${department.dinh_danh}`}>
+            <Link href={`/employees?departmentId=${department.id}`}>
               {branchCount(department)} hồ sơ{children.length ? " trong nhánh" : ""}
             </Link>
           </Button>
@@ -197,7 +204,7 @@ export function DepartmentManager({
         {expanded && department.danh_sach_nhan_su.length > 0 && (
           <ul aria-label={`Nhân sự trực thuộc ${department.ten_phong_ban}`} className="ml-2 space-y-1 border-l border-border py-2 pl-3 md:ml-4 md:pl-4">
             {department.danh_sach_nhan_su.map((employee) => (
-              <li key={employee.dinh_danh} className="rounded-lg bg-muted/30 px-3 py-2 text-sm">
+              <li key={employee.id} className="rounded-lg bg-muted/30 px-3 py-2 text-sm">
                 <p className="break-words font-medium">{employee.ho_ten}</p>
                 <p className="break-words text-xs text-muted-foreground">
                   {employee.ma_nhan_su} · {employee.chuc_vu || "Chưa có chức vụ"}
@@ -267,10 +274,23 @@ export function DepartmentManager({
                   <Select value={field.value ? String(field.value) : "root"} onValueChange={value => field.onChange(value === "root" ? null : Number(value))} disabled={isPending}>
                     <FormControl><SelectTrigger className="w-full min-w-0"><SelectValue placeholder="Chọn cấp trên" /></SelectTrigger></FormControl>
                     <SelectContent><SelectItem value="root">Trực thuộc công ty</SelectItem>
-                      {initialDepartments.filter(d => !excludedParents.has(d.dinh_danh)).map(d => <SelectItem key={d.dinh_danh} value={String(d.dinh_danh)}>{parentLabel(d)}</SelectItem>)}
+                      {initialDepartments.filter(d => !excludedParents.has(d.id)).map(d => <SelectItem key={d.id} value={String(d.id)}>{parentLabel(d)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <FormDescription>Không chọn cấp trên nếu đây là đơn vị trực thuộc công ty.</FormDescription><FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="headEmployeeId" render={({ field }) => (
+                <FormItem><FormLabel>Người phụ trách phòng ban</FormLabel>
+                  <Select value={field.value ? String(field.value) : "none"} onValueChange={value => field.onChange(value === "none" ? null : Number(value))} disabled={isPending}>
+                    <FormControl><SelectTrigger ref={field.ref} onBlur={field.onBlur} className="w-full min-w-0"><SelectValue placeholder="Chọn người phụ trách" /></SelectTrigger></FormControl>
+                    <SelectContent><SelectItem value="none">Chưa phân công</SelectItem>
+                      {headCandidates.filter(p => p.tinh_trang_lam_viec === "ACTIVE" || p.id === editingDepartment?.nguoi_phu_trach_id).map(p => (
+                        <SelectItem key={p.id} value={String(p.id)}>{p.ho_ten} · {p.ma_nhan_su} · {p.phong_ban?.ten_phong_ban ?? "Chưa có phòng"}{p.tinh_trang_lam_viec !== "ACTIVE" ? " · Cần phân công lại" : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>Một người có thể phụ trách nhiều phòng. Quyền sử dụng phần mềm được cấp riêng cho tài khoản.</FormDescription><FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="description" render={({ field }) => (

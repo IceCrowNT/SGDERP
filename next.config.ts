@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: { serverActions: { bodySizeLimit: "3mb" } },
   // Local loopback address used to open the app from the IDE/browser.
   // Next dev blocks its HMR connection unless this hostname is explicitly allowed.
   allowedDevOrigins: ["127.0.2.2"],

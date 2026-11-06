@@ -1,258 +1,54 @@
-# Kế hoạch quản lý vai trò và phân quyền
+# Kế hoạch vai trò và phân quyền
 
-## Đồng nhất tên dữ liệu — 03/11/2026
+Cập nhật: **06/11/2026**. Bản đầu `/roles` đã triển khai và kiểm thử đạt. HR/quản trị có phạm vi công ty; workflow có quyền hành động và giới hạn theo hồ sơ.
 
-- [x] Model/field Prisma và PostgreSQL dùng cùng tên tiếng Việt không dấu; Studio hiển thị `tai_khoan`, `vai_tro`, `quyen`, `tai_khoan_vai_tro`, `vai_tro_quyen`. Các tên User/Role/UserRole trong phần lịch sử phía dưới là tên API trước refactor.
-- [x] Cập nhật truy vấn gán quyền, dựng session, khóa tài khoản, audit và bảo vệ admin cuối cùng sang schema mới. Giữ nguyên role, permission, tài khoản được gán và hợp đồng JWT; không bổ sung trang /roles hoặc head trong đợt đổi tên.
-- [x] Bộ kiểm thử toàn dự án đạt 23/23; các ca quyền HR, quản trị tài khoản, nhiều tài khoản/người, khóa/thu hồi phiên và bảo vệ admin cuối cùng đều đạt sau refactor. Fingerprint dữ liệu vai trò/quyền/liên kết không thay đổi.
+## Đã triển khai
 
+- [x] Giữ 4 bảng RBAC và ID hiện có; một tài khoản nhiều role, không cộng quyền giữa các tài khoản của cùng người.
+- [x] `/roles`: tạo/sửa vai trò, ma trận quyền, xem số tài khoản chịu ảnh hưởng, xóa role chưa dùng; chặn xóa role hệ thống.
+- [x] Gán/gỡ vai trò theo tài khoản, xem quyền hiệu lực trước khi lưu; quyền đổi từ request tiếp theo trong phiên đang mở.
+- [x] Thêm WORKFLOW VIEW/CREATE/APPROVE/EXECUTE/MANAGE tại `/roles`, hợp nhất quyền theo tài khoản; không tự cấp cho role hiện có.
+- [x] Tách HR, ACCOUNTS, ROLES, AUDIT; menu, trang và action kiểm tra cùng quyền. Nhật ký chỉ đọc trong công ty được cấp quyền.
+- [x] Bỏ đặc quyền ngầm theo mã ADMIN/IT_ADMIN; migration chuyển quyền quản trị cũ thành quyền DB, không chạy seed lại.
+- [x] Chống sửa vượt quyền ở quản lý tài khoản, gán khác công ty, ghi đè bản cũ và mất quản trị cuối cùng; mutation và audit cùng transaction.
+- [x] Bỏ secret JWT mặc định; seed không phục hồi ma trận quyền đã chỉnh. DB kiểm tra liên kết role cùng công ty và tối đa một vai trò chính.
+- [x] 20 ca E2E (8 phân quyền, 5 vòng đời HR, 6 nhân sự/tài khoản, 1 CRUD phòng ban) và 3 unit đạt sau sửa các lỗi phát hiện. TypeScript, lint phần thay đổi, `git diff --check` đạt; đã xem desktop/mobile, không tràn ngang/lỗi JS.
+- [x] Workflow có 10 E2E và 3 unit riêng (tổng 30 E2E, 6 unit cùng phân quyền); UI lưu được nhóm quyền riêng, không cấp tự động cho tài khoản thật.
+- [x] Đồng bộ quy ước khóa DB: `id`, `account_id`, `role_id`, `permission_id`, `company_id`; trigger cùng công ty/DEFAULT đã cập nhật và dữ liệu phân quyền giữ nguyên sau migration 06/11.
+- [ ] Người phụ trách dùng thử ma trận trên nhóm tài khoản thực tế và nghiệm thu.
 
-## Làm rõ chức vụ, người quản lý và quyền tài khoản — 03/11/2026
+Kiểm tra 06/11: E2E Chrome luồng cấp/gỡ quyền tại `/roles` đạt; tài khoản nhận quyền dùng workflow ngay, thu hồi quyền chặn truy cập, người thiếu quyền không có nút tự cấp. TypeScript, lint phần thay đổi và `git diff --check` đạt. Không sửa dữ liệu/quyền vận hành.
 
-- [x] Thống nhất tên vật lý PostgreSQL: User → tai_khoan, UserRole → tai_khoan_vai_tro; mã/tên vai trò → ma_vai_tro/ten_vai_tro, tên quyền → ten_quyen; FK tài khoản → dinh_danh_tai_khoan. Các tên cũ trong phần khảo sát lịch sử bên dưới không còn là tên vật lý hiện hành. Xem từ điển DB; không đổi dữ liệu role/quyền hoặc tên API Prisma.
-- [x] Kiểm tra lại code và DB: 72 hồ sơ, 60 tài khoản, 19 phòng ban tại thời điểm rà soát. `Employee.position` là chức vụ dạng text; chưa có FK người phụ trách phòng hoặc quản lý trực tiếp. Không lấy role DEPT_HEAD để xác nhận ai quản lý phòng nào.
-- [x] `/accounts` đã cho ADMIN/IT_ADMIN gán các vai trò hiện có cho từng tài khoản. `/roles` để tạo vai trò/sửa ma trận quyền chưa triển khai. HR MANAGE không cho phép tự cấp quyền tài khoản.
-- [x] `/employees` đã ẩn nút thêm/sửa và cột thao tác khi thiếu HR:MANAGE; action lưu cũng kiểm tra quyền từ session hiện hành. HR:VIEW chỉ xem; thiếu cả quyền xem thì server từ chối. Cùng quyền HR:MANAGE hiện cũng cho quản lý cơ cấu, chưa tách thành hai quyền riêng.
-- [x] DB hiện có HR_MANAGER và HR_STAFF cùng được HR:MANAGE; DEPT_HEAD chỉ có HR:VIEW. Tên các role cũ dễ bị hiểu thành chức vụ thực tế, đặc biệt ADMIN mang tên “Ban Giám Đốc / Quản Trị Tối Cao”. Chưa đổi tên role, người được gán hoặc quyền hiệu lực trong lần rà soát này.
-- [ ] Đề xuất trong cài đặt phòng ban: chọn **Người phụ trách phòng ban** bằng FK đến nhân sự cùng công ty; lưu tại Department.headEmployeeId theo plan workflow. Chức vụ tự do trên hồ sơ vẫn giữ riêng. Tạo hồ sơ trước rồi chọn người phụ trách; không tự suy từ chữ “Trưởng phòng”.
-- [ ] Đề xuất nếu muốn thao tác từ trang nhân sự: hiển thị phòng đang phụ trách và liên kết tới cài đặt phòng ban; hiển thị các tài khoản của người đó và mở phần gán vai trò trên đúng tài khoản. Chỉ tài khoản có quyền quản trị mới được dùng thao tác cấp quyền; không thêm roleId/isManager lên hồ sơ Employee.
-- [ ] Thứ tự đề xuất: thống nhất thuật ngữ DB/UI → xác định người phụ trách phòng → hoàn thiện UI vai trò và quyền hiệu lực → tích hợp người duyệt vào workflow. Các tính năng mới này chưa được triển khai trong bước giải thích/đổi tên DB.
+Kiểm tra sau đổi tên DB 06/11: toàn bộ 51 E2E và 9 unit đạt trên tiến trình ứng dụng mới; 9 role, 18 quyền, 45 grant role–quyền và 70 gán tài khoản–role khớp backup.
 
-| Khái niệm trên giao diện | Nơi lưu / quan hệ | Ý nghĩa |
-| --- | --- | --- |
-| Chức vụ | Employee.position | Mô tả công việc, không cấp quyền |
-| Phòng ban | Employee.departmentId → Department | Nơi nhân sự trực thuộc |
-| Người phụ trách phòng ban (đề xuất) | Department.headEmployeeId → Employee | Người chịu trách nhiệm của một phòng; có thể phụ trách nhiều phòng |
-| Vai trò của tài khoản | User → UserRole → Role | Nhóm quyền của tài khoản đang đăng nhập |
-| Quyền quản lý nhân sự | Role → RolePermission → Permission(HR, MANAGE) | Được thêm/sửa hồ sơ trong công ty theo kiểm tra server |
+Sau khi tạo lại database demo cùng ngày: seed hiện có 8 role, 18 quyền, 46 grant và 1 gán role cho tài khoản quản trị; không còn tài khoản thử nghiệm cũ.
 
-Ví dụ: một người là trưởng phòng Kinh doanh có thể chỉ xem danh sách HR; một chuyên viên HCNS có thể được sửa hồ sơ. Phân công quản lý phòng và quyền sửa danh sách nhân sự là hai quyết định độc lập.
+## Quy tắc vận hành
 
-## Thiết kế nền workflow — 02/11/2026
-
-- [x] Lưu [thiết kế workflow sơ khai](WORKFLOW-CHECKLIST.md): 5 bảng nghiệp vụ và head phòng ban tùy chọn; tái sử dụng Employee/User và bốn bảng RBAC, không nhân bản hồ sơ hay tài khoản.
-- [x] Đề xuất quyền WORKFLOW theo hành động, kết hợp người được phân công và trạng thái bước; MANAGE không tự cấp quyền phê duyệt thay người khác. Session cần bổ sung khả năng kiểm tra các hành động này khi triển khai.
-- [x] Phạm vi MVP đề xuất: bước tuần tự APPROVAL/TASK, chọn người cụ thể hoặc head; từ chối kết thúc hồ sơ, lập lại bằng hồ sơ mới liên kết cũ. Các đề xuất “trả lại” trước đây chưa phải cơ chế sửa/gửi lại đã triển khai.
-- [ ] Chốt ma trận quyền pilot và triển khai theo plan workflow. Lần này chỉ thiết kế; chưa đổi schema, role/quyền, session hoặc dữ liệu.
-
-## Đánh giá khả năng phục vụ giao việc và duyệt quy trình — 02/11/2026
-
-**Kết luận:** có nền RBAC để mở rộng, chưa đủ để vận hành quy trình. Đây là đánh giá, chưa thay schema, quyền hoặc triển khai workflow.
-
-- [x] Đọc schema, bộ dựng session và helper phạm vi; truy vấn DB: STAFF có HR:VIEW/TASK:VIEW (40 tài khoản); DEPT_HEAD có HR:VIEW, TASK:VIEW/CREATE/ASSIGN/APPROVE (13 tài khoản). ASSIGN/APPROVE ghi scope DEPARTMENT trong DB.
-- [x] Session hiện chỉ xử lý VIEW/MANAGE, bỏ qua CREATE/ASSIGN/APPROVE và scope. Helper phòng ban chưa có callsite, chỉ lấy con trực tiếp và suy MANAGE thành toàn quyền; không dùng nguyên trạng cho quy trình.
-- [x] Department chưa có FK xác định người phụ trách; UserRole không chỉ rõ quản lý phòng nào. Employee.departmentId là nơi công tác; position và externalSupervisorName là text, không xác định thẩm quyền duyệt. Không coi 13 tài khoản DEPT_HEAD là 13 trưởng phòng đã được xác nhận.
-- [x] Schema chưa có công việc, định nghĩa/bước quy trình, hồ sơ đang chạy hoặc lịch sử quyết định duyệt. AuditLog chung không thay thế trạng thái/bước duyệt nghiệp vụ.
-- [ ] Đề xuất giữ bốn bảng RBAC; triển khai kiểm tra từng hành động và phạm vi tại server. Cân nhắc đặt phạm vi ở lần cấp quyền thay vì Permission toàn cục: unique(module, action) hiện không biểu diễn được cùng quyền nhưng phạm vi khác nhau theo role.
-- [ ] Đề xuất bản đầu: chọn một nhân sự phụ trách mỗi phòng bằng FK cùng công ty; khi cần kiêm nhiệm/nhiều người phụ trách mới bổ sung bảng phân công quản lý. Không suy người duyệt từ tên chức vụ hay chỉ từ role DEPT_HEAD.
-- [ ] Khi triển khai workflow: xác định người duyệt theo bước, kiểm tra tài khoản hiện hành có quyền và gắn đúng người được phân công; lưu người chịu trách nhiệm bằng Employee.id, tài khoản thao tác bằng User.id. Chốt cách chọn tài khoản nhận thông báo khi một người có nhiều tài khoản.
-- [ ] Đề xuất một quy trình pilot: nhân viên gửi yêu cầu → người phụ trách phòng duyệt/trả lại → hoàn tất. Kiểm tra cùng công ty, đúng người/bước/trạng thái và cập nhật nguyên tử để tránh duyệt lặp. Không tự mở quyền duyệt nghiệp vụ cho admin kỹ thuật; người phụ trách vắng/không có tài khoản phải được phân công lại rõ ràng, có lịch sử.
-
-## Rà soát DB và ưu tiên tài khoản/phân quyền — 31/10/2026
-
-Người phụ trách yêu cầu đọc lại các bảng phân quyền và gỡ các bảng tài sản. Lần này giữ cấu trúc/quyền hiện hành của RBAC; chưa triển khai trang /roles hoặc tự thay quyền tài khoản.
-
-### Vì sao cần các bảng này?
-
-| Model / bảng PostgreSQL | Vai trò | Số dòng kiểm tra |
-| --- | --- | ---: |
-| User / nguoi_dung | Tài khoản đăng nhập | 60 |
-| Role / vai_tro | Nhóm quyền, ví dụ HR_MANAGER | 7 |
-| Permission / quyen | Một khả năng, ví dụ HR:MANAGE | 9 |
-| RolePermission / vai_tro_quyen | Vai trò được cấp những quyền nào | 38 |
-| UserRole / nguoi_dung_vai_tro | Tài khoản được gán những vai trò nào | 68 |
-
-Ví dụ hiện có: vai trò HR_MANAGER (ID 8) gắn quyền HR:MANAGE (ID 2) qua một dòng RolePermission (8, 2). UserRole nối tài khoản với vai trò đó. RolePermission không tạo một quyền mới; nó chỉ ghi việc cấp quyền đã có cho vai trò. Khóa kép ngăn cùng cặp bị gán trùng. 68 liên kết trên 60 tài khoản là hợp lệ vì 3 tài khoản có nhiều vai trò, không phải 68 người.
-
-```mermaid
-flowchart LR
-    U["Tài khoản: User"] --> UR["UserRole: tài khoản có vai trò nào"]
-    UR --> R["Role: nhóm quyền"]
-    R --> RP["RolePermission: nhóm được quyền nào"]
-    RP --> P["Permission: việc được phép làm"]
-```
-
-### Dữ liệu hiện hành
-
-| Vai trò | Số tài khoản được gán | Số quyền liên kết |
-| --- | ---: | ---: |
-| ADMIN | 2 | 9 |
-| IT_ADMIN | 3 | 9 |
-| HR_MANAGER | 2 | 6 |
-| HR_STAFF | 2 | 4 |
-| DEPT_HEAD | 13 | 5 |
-| ACCOUNTANT | 6 | 3 |
-| STAFF | 40 | 2 |
-
-Các số tài khoản có chồng lặp; không cộng để tính số người. Không có tài khoản thiếu role hoặc UserRole khác công ty trong lần kiểm tra này.
-
-### Phần thực sự cần làm gọn
-
-1. Có 3 quyền thuộc chức năng đang dùng: HR:VIEW, HR:MANAGE, SYSTEM:MANAGE; 6 quyền thuộc TASK/APPROVAL dự kiến. Nên chỉ đưa chức năng đã hoạt động vào ma trận mặc định, không coi quyền trong DB là bằng chứng đã có chức năng tương ứng.
-2. ADMIN/IT_ADMIN đang được cấp MANAGE bằng code trong readAccountSession; quản trị tài khoản dùng tên role trong canManageAccounts. Vì vậy sửa RolePermission chưa đủ để thu hồi toàn bộ quyền admin. Cần thống nhất quyền hiệu lực trước khi xây UI /roles.
-3. Permission.scope chưa được bộ dựng session áp dụng. Helper getAccessibleDepartmentIds chưa được gọi bởi các trang/action hiện hành. Không coi cấu hình DEPARTMENT trong DB là đã giới hạn theo phòng.
-4. Có 1 tài khoản mang nhiều cờ isPrimary=true. Cờ này không được dùng để tính quyền hiện tại (quyền cộng từ tất cả role); cần quyết định giữ hay bỏ khái niệm “vai trò chính” khi làm giao diện. Chưa sửa dữ liệu.
-5. Tên ADMIN đang trộn “Ban Giám Đốc” với quyền quản trị; quyền kỹ thuật và chức danh cần phân biệt. Không tự cấp role từ phòng ban/chức vụ.
-6. Chặn gán role khác công ty đã có ở server; UserRole hiện chỉ có FK đơn nên DB chưa tự bảo đảm cặp tài khoản/vai trò cùng công ty. Cần xem xét constraint khi hoàn thiện phân quyền.
-
-**Đề xuất:** giữ 4 bảng Role/Permission/RolePermission/UserRole. Làm đơn giản ở giao diện: trang tài khoản chọn vai trò; trang vai trò hiển thị ma trận “Không truy cập / Xem / Quản lý”. Không yêu cầu người vận hành sửa bảng nối trong Studio. Không gộp quyền thành chuỗi/JSON hoặc đặt một roleId duy nhất trên User vì mô hình hiện hỗ trợ nhiều vai trò.
-
-- [x] Đọc schema, truy vấn DB, đối chiếu readAccountSession, canManageAccounts, actions account/HR và scope helper; ghi kết quả phía trên.
-- [x] Ghi nhận ưu tiên user và phân quyền; giữ nguyên 7 role, 9 permission, 38 liên kết role–permission và 68 liên kết user–role trong lượt gỡ tài sản.
-- [x] 9/9 kiểm thử HR/tài khoản/đăng nhập/thu hồi quyền/3D đạt sau khi gỡ tài sản; fingerprint dữ liệu quyền và tài khoản không đổi. Studio 5555 đã tải schema còn 9 model.
-- [ ] Thực hiện trang /roles và thống nhất quyền server theo kế hoạch sau; chưa duyệt thay đổi ma trận quyền trong lần rà soát này.
-
-Các mục khảo sát cũ bên dưới là lịch sử; kết quả 31/10/2026 phía trên là trạng thái mới nhất.
-
-
-## Cập nhật HR độc lập — 28/10/2026
-
-- [x] HR MANAGE sửa hồ sơ và ghi chú dù có nguồn nhập; mã nhân sự do DB cấp và không sửa. HR VIEW không có quyền ghi. Không cấp role từ chức danh/phòng ban.
-- [x] Sau làm sạch theo yêu cầu, giữ 60 tài khoản (gồm admin hệ thống), bỏ 8 tài khoản gắn 8 hồ sơ ngoài final; ID/quyền/mật khẩu của tài khoản giữ lại không đổi. Role vẫn gắn User riêng với Employee.
-- [ ] Trang /roles và phạm vi phân quyền phòng ban vẫn thuộc kế hoạch riêng; thay đổi HR không đồng nghĩa đã hoàn thiện toàn bộ RBAC.
-
-
-## Cập nhật nền tảng được duyệt — 26/10/2026
-
-- [x] Tách `Employee` và `User`; role gắn tài khoản, không gắn người. Một người có thể có tài khoản thường và admin với quyền độc lập.
-- [x] Có `/accounts` cho ADMIN/IT_ADMIN tạo/sửa tài khoản, liên kết người, gán role hiện có, khóa/mở và đổi mật khẩu. HR MANAGE riêng không được quản lý tài khoản.
-- [x] Kiểm tra tài khoản/quyền từ DB ở ranh giới server; tăng phiên bản phiên khi sửa tài khoản, tránh JWT tiếp tục sử dụng quyền cũ. Bảo vệ tài khoản quản trị hoạt động cuối cùng bằng transaction và khóa theo công ty.
-- [ ] `/roles`, sửa ma trận permission, phạm vi quyền theo phòng ban và bỏ hardcode ADMIN/IT_ADMIN vẫn là các bước sau. Không coi `/accounts` là đã hoàn thiện toàn bộ RBAC.
-- Các mục cũ nói “người được gán role” được hiểu là **tài khoản**; UI phải hiển thị thêm người sở hữu để phân biệt nhiều tài khoản của cùng người.
-
-
-**Ngày lập:** 24/10/2026  
-**Trạng thái:** Đã lập kế hoạch theo yêu cầu; chưa triển khai chức năng hoặc thay quyền hiện hành.  
-**Trang dự kiến:** `/roles` — Vai trò và phân quyền.  
-**Mục tiêu:** quản trị viên tạo vai trò, chọn chức năng được sử dụng, gán cho người dùng và kiểm tra quyền thực tế bằng giao diện đơn giản.
-
-## 1. Căn cứ và hiện trạng
-
-- [x] Rà soát tĩnh schema, `src/lib/auth.ts`, `src/lib/permissions.ts`, actions đăng nhập/nhân sự và tài liệu đồng bộ. Chưa kiểm kê quyền đang có trực tiếp trong DB ở bước lập plan.
-- [x] Xác định DB đã có `Role`, `Permission`, `RolePermission`, `UserRole` tương ứng `vai_tro`, `quyen`, `vai_tro_quyen`, `nguoi_dung_vai_tro`; tái sử dụng thay vì tạo hệ role song song.
-- [x] Chưa thấy trang `/roles` hoặc Server Action quản lý role; menu hiện đánh dấu sắp có.
-- [x] Session JWT chứa role và quyền theo module, hạn 7 ngày; đọc session chưa tải lại quyền từ DB. Thu hồi role có thể chưa tác động tới phiên đang mở.
-- [x] Đăng nhập đang cho `ADMIN` và `IT_ADMIN` quyền rộng qua mã role; helper phạm vi còn suy toàn quyền từ MANAGE và phòng con từ cơ cấu. Không coi đó là thiết kế mục tiêu.
-- [x] Actions nhân sự có luồng gán role dưới quyền HR MANAGE; cần kiểm tra và đóng đường gán quyền này khi đưa quản lý role vào sử dụng.
-
-Tham chiếu: [thiết kế dữ liệu nền và RBAC](../strategy/DONG-BO-DU-LIEU-NEN-VA-PHAN-QUYEN.md), [HR](HR-CHECKLIST.md), [DB rules](../../.agents/rules/DATABASE-RULES.md), [backend rules](../../.agents/rules/BACKEND-RULES.md), [frontend rules](../../.agents/rules/FRONTEND-RULES.md).
-
-Rule backend hiện đã dùng quan hệ UserRole → Role → RolePermission → Permission; không có cột permissions JSON trên Role.
-
-## 2. Nguyên tắc nghiệp vụ
-
-1. 1Office cung cấp nhân sự và cơ cấu; quyền sử dụng ERP do ERP quản lý. Không tự sao chép nhóm 1Office thành role ERP.
-2. Phòng ban là nơi trực thuộc; role là quyền thao tác. Không tự cấp quyền vì chức danh, username hoặc thuộc HCNS/IT/Ban lãnh đạo.
-3. Một người có thể có nhiều role. Quyền được cộng theo từng chức năng và phạm vi được cấp; “Không truy cập” là không cấp, không phải phủ định quyền từ role khác.
-4. MANAGE bao gồm VIEW trong cùng chức năng và cùng phạm vi; không đồng nghĩa toàn công ty. Mọi phạm vi đều giới hạn bởi công ty đang quản lý.
-5. Thiếu quyền thì từ chối. Sidebar, URL trực tiếp, Server Action, export, thống kê và 3D phải dùng cùng quy tắc. Ẩn menu không thay thế kiểm tra server.
-6. Gán quyền trực tiếp cho người dùng thông qua role; chưa thêm hệ ngoại lệ riêng cho từng người, quy trình duyệt nhiều tầng hoặc ủy quyền có thời hạn trong bản đầu.
-7. Không sửa dữ liệu tổ chức để phục vụ phân quyền. Không xóa role hệ thống hoặc role đang được sử dụng; không làm mất người quản trị quyền cuối cùng.
-
-## 3. Phạm vi bản đầu
-
-### Màn hình chính
-
-| Khu vực | Nội dung |
+| Quyền | Ý nghĩa |
 | --- | --- |
-| Danh sách vai trò | Tên, mã, số người sử dụng, nhãn vai trò hệ thống; tìm kiếm theo tên/mã |
-| Chi tiết vai trò | Thông tin cơ bản, ma trận quyền, danh sách người được gán |
-| Ma trận quyền | Tên chức năng dễ hiểu; chọn Không truy cập / Xem / Quản lý |
-| Gán người dùng | Tìm theo tên/mã nhân viên, lọc phòng ban; thêm/gỡ role trong cùng công ty |
-| Quyền hiệu lực | Xem quyền cuối cùng của một người và role nào cấp quyền đó |
-| Lưu thay đổi | Hiển thị phần thay đổi và số người bị ảnh hưởng; ghi nhật ký |
+| Nhân sự/phòng ban | Không truy cập / Xem / Quản lý; gồm danh bạ và 3D |
+| Tài khoản | Không truy cập / Quản lý; chỉ sửa/gán quyền nằm trong quyền của người thao tác, trừ người có quyền quản lý phân quyền |
+| Vai trò/phân quyền | Không truy cập / Xem / Quản lý; Quản lý là quyền quản trị nhạy cảm, có thể cấp mọi quyền trong công ty |
+| Nhật ký | Không truy cập / Xem; không cấp quyền sửa/xóa lịch sử |
 
-Không đưa ID DB, ID nguồn 1Office hoặc danh sách mã quyền kỹ thuật lên bảng mặc định. Trên mobile dùng danh sách/card và biểu mẫu một cột.
+- Vai trò không phải chức vụ hoặc người phụ trách phòng; chọn head không tự cấp quyền.
+- MANAGE bao gồm VIEW; riêng workflow không bao gồm CREATE/APPROVE/EXECUTE; quyền nhiều role hợp nhất. Không truy cập là không cấp, không phải phủ định role khác.
+- Phải còn ít nhất một tài khoản mở, người chưa nghỉ việc, có cả ACCOUNTS MANAGE và ROLES MANAGE. Chặn mọi thay đổi làm mất điều kiện này.
+- Nghỉ việc khóa các tài khoản và thu hồi phiên; đi làm lại không tự mở. Gán role không thay trạng thái tài khoản.
+- Mã role bất biến. Quyền TASK/APPROVAL/SYSTEM cũ ngoài ma trận được hiển thị riêng và giữ nguyên khi lưu, không tự đổi APPROVE/ASSIGN thành MANAGE.
+- Migration `20261104110000_quan_ly_vai_tro` thêm quyền/ràng buộc, chuẩn hóa cờ vai trò chính và nhãn ADMIN; không xóa bảng, người hay tài khoản. Có bản sao DB JSON nhất quán, riêng tư trước áp dụng.
 
-### Chức năng cần phân quyền
+Kiểm chứng dữ liệu: 72 nhân sự, 60 tài khoản, 19 phòng ban và dữ liệu công ty không đổi so với backup; các grant cũ giữ nguyên. Đã kiểm tra rollback khi ghi audit lỗi, gán/sửa đồng thời, quyền hiệu lực trong phiên mở và bảo vệ quản trị cuối cùng.
 
-- Danh bạ và cơ cấu tổ chức: xác định quyền đọc và quyền sửa metadata nội bộ; giữ khóa trường nguồn 1Office.
-- Hồ sơ nhân sự/tài khoản: phân biệt sửa hồ sơ, quản trị tài khoản và gán role; không để HR MANAGE tự cấp quyền hệ thống.
-- Quản lý vai trò: quyền riêng `RBAC:MANAGE`, không dùng chung với toàn bộ quyền SYSTEM.
-- Nhật ký hoạt động và công cụ văn bản AI: tách quyền theo chức năng khi triển khai, có kế hoạch chuyển đổi quyền SYSTEM hiện tại.
-- 3D: chỉ hiển thị trường nhân sự/tài sản người dùng được phép xem.
-- Tài sản: dự trù quyền xem/quản lý và phạm vi phòng ban; chưa mở nút cấp quyền cho nghiệp vụ chưa có kiểm tra server.
-- Công việc/phê duyệt hoặc module chưa hoàn thiện: ghi rõ chưa triển khai; không hiển thị như quyền đã hoạt động.
+Kiểm tra bổ sung 05/11: 38 E2E tích hợp + 7 unit đạt; DEFAULT không có quyền nghiệp vụ, trigger chặn cấp grant; quyền workflow hiện cấp tập trung tại `/roles` (điều chỉnh 06/11). Xem [checklist cá nhân](PROFILE-DASHBOARD-CHECKLIST.md).
 
-Tên mã quyền cuối cùng được chốt sau kiểm kê endpoint và dữ liệu hiện hữu ở bước 1; bảng này không tự thay permission đang dùng.
+## Bước sau
 
-## 4. Thiết kế dữ liệu và phạm vi dự kiến
+- [x] Áp dụng [thiết kế DEFAULT và quyền cá nhân](../THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md): nền dashboard/profile cho tài khoản hợp lệ; DEFAULT không cấp HR/workflow, giữ role STAFF cũ. Giữ grant nghiệp vụ hiện tại; không cấp hàng loạt cho tài khoản cũ.
+- [x] Quyền điều phối cấp và gán tại `/roles` bởi ROLES MANAGE; bỏ action tự cấp và xác nhận tại workflow (06/11). Không suy quyền từ tên ADMIN.
+- [x] Workflow giới hạn theo người gửi/người được giao, MANAGE điều phối toàn công ty. Quyền và người phụ trách phòng là hai điều kiện riêng.
+- [ ] Scope phòng ban tổng quát chờ phân hệ cần dùng; chưa mở scope tùy ý trên UI. Không nâng scoped grant cũ thành toàn công ty.
+- [ ] Khi thêm phân hệ, bổ sung quyền vào danh mục do code định nghĩa và kiểm tra server trước khi đưa vào ma trận.
 
-### Bản đầu: quản lý role hiện hữu, quyền hiệu lực và phạm vi công ty
-
-- Giữ ID và liên kết hiện có. Không chạy lại seed nhân sự để cập nhật quyền vì seed có thể ghi đè dữ liệu khác.
-- UI ba mức là cách trình bày; cần mapping tường minh các permission đã tồn tại. Không tự biến APPROVE/ASSIGN/CREATE thành MANAGE rộng hơn khi sửa role.
-- Danh mục quyền do ứng dụng định nghĩa; người quản trị không nhập tùy ý mã module/action.
-- Xem trước chuyển đổi role cũ; giữ quyền chưa hỗ trợ trong UI hoặc chặn sửa kèm giải thích, không âm thầm xóa khi lưu ma trận.
-- `isSystem` bảo vệ vai trò nền tảng; việc thay role quản trị cần kiểm tra riêng. Không dùng nhãn “hệ thống” làm lý do miễn mọi kiểm tra.
-
-### Mở rộng phạm vi phòng ban
-
-- Đề xuất scope gắn vào lần gán role cho người dùng: toàn công ty hoặc tập phòng ban cụ thể; không đặt scope chung trên Permission như hiện tại.
-- Cùng role có thể gán cho đầu mối HCNS hoặc phòng khác với phạm vi khác nhau; không tạo một role cho mỗi phòng.
-- Không tự bao gồm đơn vị con; nếu cần phải chọn rõ phạm vi đó. Người chuyển phòng không tự được thêm quyền.
-- Quyền hiệu lực tính theo cặp quyền–phạm vi, không lấy mức quyền cao nhất nhân với toàn bộ danh sách phòng được xem.
-- Chỉ bật lựa chọn phạm vi khi cả truy vấn và thao tác ghi của module đã hỗ trợ. Bản đầu không giả lập “chỉ phòng mình” bằng việc ẩn menu.
-- Khi cần thêm scope/phiên: lập migration bảo toàn dữ liệu, dùng tên vật lý tiếng Việt, cập nhật từ điển DB. Chưa chốt schema mới hoặc chạy migration trong bước lập plan.
-
-## 5. Các bước thực hiện và đầu ra
-
-### Bước 1 — Kiểm kê và chốt bản quyền hiện hành
-- [ ] Đọc role, permission và số người được gán theo công ty; lập bản đối chiếu không xuất thông tin đăng nhập.
-- [ ] Kiểm kê trang/action hiện có, xác định quyền cần giữ, quyền chưa được thực thi và các đường gán role ngoài `/roles`.
-- [ ] Xác định người quản trị quyền đầu tiên và cách duy trì quyền của họ khi bỏ cơ chế suy từ mã role.
-- [ ] Chốt ma trận chức năng, mapping quyền cũ và phạm vi bản đầu. Đầu ra: bảng chuyển đổi có thể xem xét, không tự thay quyền của mọi người.
-
-### Bước 2 — Quyền server và hiệu lực phiên
-- [ ] Tạo kiểm tra RBAC chuyên biệt, xác minh tài khoản còn hoạt động và công ty tại server.
-- [ ] Chọn cách làm gọn cho quy mô hiện tại: tải quyền hiệu lực từ DB ở các ranh giới cần bảo vệ; JWT dùng nhận diện. Có thể cache trong một request, không cache quyền kéo dài qua việc thu hồi.
-- [ ] Phiên đang mở mất quyền ở request được bảo vệ tiếp theo sau thay đổi; giao diện làm mới theo phản hồi. Không yêu cầu người dùng chờ JWT hết hạn 7 ngày.
-- [ ] Kiểm tra cấu hình SESSION_SECRET và bỏ secret mặc định khi triển khai; không in giá trị bí mật.
-- [ ] Gán/gỡ role, thay permission và nhật ký thực hiện nhất quán trong transaction; kiểm tra bảo vệ admin cuối cùng cả khi có thao tác đồng thời.
-- [ ] Khóa đường tự nâng quyền qua sửa hồ sơ nhân sự; rà soát lựa chọn role khác công ty và payload giả mạo.
-
-### Bước 3 — Giao diện `/roles`
-- [ ] Danh sách, tìm kiếm, tạo/sửa vai trò và bảo vệ mã role hệ thống.
-- [ ] Ma trận Không truy cập / Xem / Quản lý, chỉ liệt kê quyền thực sự hỗ trợ.
-- [ ] Gán/gỡ người dùng; giữ vai trò chính nhất quán nếu còn dùng `isPrimary`.
-- [ ] Xem quyền hiệu lực; cảnh báo phạm vi ảnh hưởng trước khi lưu.
-- [ ] Cập nhật sidebar bỏ “Sắp có”, giới hạn menu theo quyền RBAC; skeleton, trạng thái lưu và thông báo lỗi.
-
-### Bước 4 — Áp dụng đồng bộ cho chức năng hiện có
-- [ ] Rà lại HR, cơ cấu, 3D, nhật ký và AI; thống nhất kiểm tra page/action, tránh chỉ kiểm soát tại giao diện.
-- [ ] Kiểm tra không tự mở quyền AI cho mọi người khi chuyển từ SYSTEM sang quyền riêng.
-- [ ] Bổ sung phạm vi phòng ban cho module cần dùng sau khi có dữ liệu chủ sở hữu và server filter phù hợp; chưa coi là hoàn thành cùng bản đầu.
-
-### Bước 5 — Kiểm thử và chốt pilot
-- [ ] Chạy kiểm thử bên dưới; sửa lỗi và cập nhật tài liệu hướng dẫn ngắn.
-- [ ] Đối chiếu quyền trước/sau của nhóm thử nghiệm, ghi nhận các thay đổi đã được người phụ trách chốt.
-- [ ] Demo tạo vai trò → chọn quyền → gán người dùng → xem menu/dữ liệu → thu hồi trong phiên đang mở.
-- [ ] Chỉ đánh dấu hoàn thiện khi quyền UI và server khớp; chức năng còn giới hạn phải ghi rõ.
-
-Thứ tự ưu tiên: bước 1 → 2 → 3 → kiểm thử bản đầu; phạm vi phòng ban triển khai tiếp theo theo module. Chưa chốt ngày hoàn thành khi chưa có kết quả kiểm kê và ma trận quyền được duyệt.
-
-## 6. Tiêu chí kiểm thử bắt buộc
-
-| Tình huống | Kết quả mong đợi |
-| --- | --- |
-| Không đăng nhập / không quyền RBAC | Không thấy menu; URL và action đều bị chặn |
-| HR MANAGE không có RBAC MANAGE | Không tạo/sửa/gán role qua bất kỳ form/action nào |
-| Người dùng thuộc công ty khác | Không đọc hoặc gán role/người dùng/phòng ban ngoài công ty |
-| Một người có nhiều role | Cộng đúng quyền; không mở rộng scope ngoài các grant |
-| Đổi/gỡ role trong khi đang đăng nhập | Request tiếp theo áp dụng quyền mới; UI không được coi là căn cứ cho phép |
-| Khóa tài khoản | Phiên cũ không tiếp tục thao tác được |
-| Xóa role đang dùng / role hệ thống | Bị chặn, thông báo rõ; không mất gán quyền ngoài ý muốn |
-| Gỡ quyền quản trị cuối cùng, kể cả đồng thời | Bị chặn tại server |
-| Sửa role có permission ngoài UI ba mức | Không tự mất hoặc được mở rộng quyền |
-| Sửa nội dung và ghi audit thất bại | Không để trạng thái cập nhật một phần |
-| Mobile, tìm kiếm và trạng thái rỗng | Dễ dùng, không tràn ngang, không nhầm không có quyền với không có dữ liệu |
-
-Kiểm thử quyền phải có người dùng/role thử thực tế trong DB cô lập, có dọn dữ liệu sau chạy. Session fixture tự ký đơn thuần không đủ xác minh cơ chế tải lại quyền từ DB. Không sử dụng 1Office cho kiểm thử này.
-
-## 7. Quyết định cần chốt khi triển khai
-
-- Ai được quản lý role ngoài tài khoản quản trị hiện tại?
-- Pilot tài sản cấp cho vài người HCNS hay mở nhiều phòng; phòng nào cần chỉ xem hoặc được sửa?
-- Danh bạ/cơ cấu cho toàn công ty hay theo phòng; trường nhân sự nào được hiển thị trên 3D?
-
-Có thể tiếp tục kiểm kê và xây phần nền độc lập với các câu trả lời này. Không tự cấp quyền thật dựa trên suy đoán. Chưa đưa quy trình duyệt nhiều tầng, ủy quyền theo thời hạn hoặc tự đồng bộ role 1Office vào bản đầu.
+Liên quan: [HR](HR-CHECKLIST.md) · [Workflow](WORKFLOW-CHECKLIST.md) · [Backend](../../.agents/rules/BACKEND-RULES.md) · [Kiến trúc](../ARCHITECTURE.md).

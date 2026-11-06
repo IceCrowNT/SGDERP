@@ -19,12 +19,12 @@ export async function fixtureSession(
     const company = await p.cong_ty.findFirstOrThrow();
     const role = await p.vai_tro.create({
       data: {
-        dinh_danh_cong_ty: company.dinh_danh,
+        company_id: company.id,
         ma_vai_tro: `TEST-${randomUUID()}`,
         ten_vai_tro: "Temporary test role",
       },
     });
-    const record: (typeof created)[number] = { roleId: role.dinh_danh };
+    const record: (typeof created)[number] = { roleId: role.id };
     created.push(record);
     if (level !== "NONE") {
       let permission = await p.quyen.findFirst({
@@ -34,10 +34,10 @@ export async function fixtureSession(
         permission = await p.quyen.create({
           data: { phan_he: module, hanh_dong: level, ten_quyen: "Temporary test permission" },
         });
-        record.permissionId = permission.dinh_danh;
+        record.permissionId = permission.id;
       }
       await p.vai_tro_quyen.create({
-        data: { dinh_danh_vai_tro: role.dinh_danh, dinh_danh_quyen: permission.dinh_danh },
+        data: { role_id: role.id, permission_id: permission.id },
       });
     }
     const user = await p.tai_khoan.create({
@@ -45,11 +45,11 @@ export async function fixtureSession(
         ten_dang_nhap: `test-${randomUUID()}`,
         ten_hien_thi: "Temporary test account",
         mat_khau_bam: "disabled-for-login",
-        dinh_danh_cong_ty: company.dinh_danh,
-        danh_sach_vai_tro: { create: { dinh_danh_vai_tro: role.dinh_danh } },
+        company_id: company.id,
+        danh_sach_vai_tro: { create: { role_id: role.id } },
       },
     });
-    record.userId = user.dinh_danh;
+    record.userId = user.id;
     await signAccount(context, user);
   } finally {
     await p.$disconnect();
@@ -57,14 +57,14 @@ export async function fixtureSession(
 }
 export async function signAccount(
   context: BrowserContext,
-  user: { dinh_danh: number; dinh_danh_cong_ty: number; phien_ban_dang_nhap: number },
+  user: { id: number; company_id: number; phien_ban_dang_nhap: number },
 ) {
   const url = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:4000";
   if (!["localhost", "127.0.0.1", "127.0.2.2"].includes(new URL(url).hostname))
     throw Error("Local fixture only");
   const token = await new SignJWT({
-    userId: user.dinh_danh,
-    companyId: user.dinh_danh_cong_ty,
+    userId: user.id,
+    companyId: user.company_id,
     sessionVersion: user.phien_ban_dang_nhap,
   })
     .setProtectedHeader({ alg: "HS256" })
@@ -83,12 +83,12 @@ export async function cleanFixtures() {
   try {
     for (const row of created.splice(0)) {
       if (row.userId) {
-        await p.nhat_ky_hoat_dong.deleteMany({ where: { dinh_danh_tai_khoan: row.userId } });
-        await p.tai_khoan.delete({ where: { dinh_danh: row.userId } });
+        await p.nhat_ky_hoat_dong.deleteMany({ where: { account_id: row.userId } });
+        await p.tai_khoan.delete({ where: { id: row.userId } });
       }
-      await p.vai_tro.delete({ where: { dinh_danh: row.roleId } });
+      await p.vai_tro.delete({ where: { id: row.roleId } });
       if (row.permissionId)
-        await p.quyen.delete({ where: { dinh_danh: row.permissionId } });
+        await p.quyen.delete({ where: { id: row.permissionId } });
     }
   } finally {
     await p.$disconnect();

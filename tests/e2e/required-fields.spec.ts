@@ -16,7 +16,8 @@ for (const editing of [false, true]) {
     const code = dialog.getByLabel("Mã phòng ban", { exact: true });
     await expect(name).toHaveAttribute("aria-required", "true");
     await expect(code).toHaveAttribute("aria-required", "true");
-    await expect(dialog.getByRole("combobox")).not.toHaveAttribute("aria-required", "true");
+    for (const label of ["Phòng ban cấp trên", "Người phụ trách phòng ban"])
+      await expect(dialog.getByRole("combobox", { name: label, exact: true })).not.toHaveAttribute("aria-required", "true");
     await name.fill("   ");
     await code.clear();
     const requests: string[] = [];

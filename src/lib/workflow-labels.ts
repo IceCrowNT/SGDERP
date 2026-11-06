@@ -1,0 +1,26 @@
+export const WORKFLOW_STATUS: Record<string, string> = {
+  DRAFT: "Nháp",
+  PUBLISHED: "Đang phát hành",
+  RETIRED: "Ngừng dùng",
+  IN_PROGRESS: "Đang xử lý",
+  COMPLETED: "Hoàn tất",
+  REJECTED: "Từ chối",
+  CANCELLED: "Đã hủy",
+  WAITING: "Chưa đến lượt",
+  PENDING: "Chờ xử lý",
+  BLOCKED: "Tạm dừng",
+  APPROVED: "Đã duyệt",
+};
+export const WORKFLOW_EVENTS: Record<string, string> = {
+  DRAFT_CREATED: "Tạo hồ sơ nháp",
+  DRAFT_UPDATED: "Cập nhật nháp",
+  SUBMITTED: "Gửi hồ sơ",
+  STEP_ASSIGNED: "Giao bước xử lý",
+  APPROVED: "Duyệt",
+  REJECTED: "Từ chối",
+  TASK_COMPLETED: "Hoàn tất công việc",
+  REASSIGNED: "Chuyển giao",
+  BLOCKED: "Tạm dừng bước",
+  CANCELLED: "Hủy hồ sơ",
+  FINISHED: "Hoàn tất quy trình",
+};

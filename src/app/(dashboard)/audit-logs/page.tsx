@@ -1,8 +1,8 @@
 import { Metadata } from "next";
-import { History, Shield, Search, ArrowLeft, Clock, Laptop, User } from "lucide-react";
+import { History, Shield, Search, ArrowLeft, Clock, Laptop } from "lucide-react";
 import Link from "next/link";
 import { getAuditLogs } from "@/lib/audit";
-import { getSession } from "@/lib/auth";
+import { getSession, hasPermission } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -18,6 +18,7 @@ export default async function AuditLogsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const session = await getSession();
+  if (!hasPermission(session, "AUDIT")) return <p>Không có quyền xem nhật ký.</p>;
   const resolvedParams = await searchParams;
 
   const page = typeof resolvedParams.page === "string" ? parseInt(resolvedParams.page, 10) : 1;
@@ -157,10 +158,10 @@ export default async function AuditLogsPage({
                   const timeStr = new Intl.DateTimeFormat("vi-VN", {
                     dateStyle: "short",
                     timeStyle: "medium",
-                  }).format(new Date(log.thoi_diem_tao));
+                  }).format(new Date(log.created_at));
 
                   return (
-                    <tr key={log.dinh_danh} className="hover:bg-muted/20 transition-colors">
+                    <tr key={log.id} className="hover:bg-muted/20 transition-colors">
                       <td className="py-3 px-4 whitespace-nowrap text-muted-foreground font-mono text-xs">
                         <div className="flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 opacity-60" />

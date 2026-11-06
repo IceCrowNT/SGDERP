@@ -1,10 +1,51 @@
 # TÀI LIỆU KIẾN TRÚC TỔNG THỂ & SỔ BỘ THƯ VIỆN
 
+## Không gian cá nhân — triển khai 05/11/2026
+
+[Thiết kế tài khoản và không gian cá nhân](THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md) triển khai DEFAULT, tự sinh tên đăng nhập, `/profile`, dashboard theo người đăng nhập và quản lý quyền workflow tập trung tại `/roles`. Tái sử dụng bảng hiện có; dự kiến thêm cờ đổi mật khẩu lần đầu và lưu ảnh ngoài Git. Đã thêm cờ `bat_buoc_doi_mat_khau`, `/profile`, GET `/media/avatar/[file]` (phục vụ ảnh có kiểm tra quyền) và các Server Actions cá nhân. Dependency trực tiếp `sharp@0.35.5` giải mã/chuẩn hóa ảnh sang WebP, bỏ metadata, giới hạn 16 triệu pixel; đầu vào 2 MB, body Server Actions 3 MB. Ảnh lưu tại `var/avatars/` ngoài Git; tùy chọn env `AVATAR_STORAGE_DIR` trỏ tới volume bền vững khi triển khai (không thay `.env` hiện tại). Sao lưu thư mục ảnh cùng DB; không đặt vào `public/`. Session đọc cờ đổi mật khẩu từ DB mỗi request; các chức năng nghiệp vụ bị chặn cho tới khi đổi xong. Đổi mật khẩu thu hồi phiên cũ và cấp lại cookie phiên hiện tại. Các mutation profile/role/account cùng khóa hàng công ty trước advisory phân quyền, thống nhất với HR/workflow. Khóa cấp username toàn hệ thống `(260127, 0)` sau khóa công ty/phân quyền; không cộng quyền giữa các tài khoản. Quyền workflow cấp tại `/roles`; màn hình workflow chỉ đọc quyền, không có action tự cấp hoặc xác nhận kích hoạt. Menu workflow chỉ hiện khi có quyền workflow. Dashboard đếm theo người/quyền và phân trang 10 dòng. Kiểm chứng: 38 E2E + 7 unit, TypeScript/lint và schema diff đạt; build Webpack đạt (còn cảnh báo bảo mật Next.js/middleware có sẵn). DB giữ nguyên 73 người, 61 tài khoản, 19 phòng và toàn bộ grant cũ; chỉ thêm DEFAULT không grant. Theo dõi tại [checklist](plans/PROFILE-DASHBOARD-CHECKLIST.md).
+
+## Workflow thử nghiệm — 05/11/2026
+
+- Thêm `src/actions/workflow.ts`, `src/lib/workflow-access.ts`, `src/lib/workflow-labels.ts`, validation dùng chung và `src/components/workflows/`. Route `/workflows` và `/workflows/[id]`, không REST/worker/queue/dependency/env mới.
+- Prisma thêm 5 bảng workflow, tổng 14 bảng; migration `20261105090000_quy_trinh_thu_nghiem` đã chạy toàn chuỗi trên DB tạm rồi áp dụng local sau backup. Không reset, không chạy seed. Backup nhất quán 9 bảng lõi trước migration lưu ngoài repo; vị trí tại `outputs/workflow/backup-path.txt`.
+- Session bổ sung danh sách hành động workflow, `/roles` có nhóm checkbox riêng. Quyền quản lý không duyệt thay; người gửi/người được giao quyết định phạm vi đọc/xử lý. Không tự gán quyền hoặc trưởng phòng thực tế.
+- Phát hành khóa nội dung mẫu; đổi mẫu tạo phiên bản. Hồ sơ chốt phòng người gửi, bước chốt người lúc bắt đầu, thao tác và lịch sử cùng transaction. Hộp việc bản đầu giới hạn 200 hồ sơ gần nhất; chưa có tệp/form động/nhắc việc.
+- Kiểm thử: 10 E2E workflow, 20 E2E hồi quy, 6 unit đạt; TypeScript/lint và schema diff đạt. Build `npm run build -- --webpack` đạt; Turbopack gặp lỗi mở cổng tiến trình xử lý CSS (os error 1). Build còn cảnh báo có sẵn về middleware/Edge và nhắc cập nhật bảo mật Next.js; chưa nâng phiên bản. Kiểm thử tại `tests/e2e/workflow.spec.ts`; ảnh và đầu ra trong `outputs/workflow/`. Sau generate cần khởi động lại dev/Studio nếu đang mở để nạp 14 model mới.
+
+
+## Quản lý vai trò — 04/11/2026
+
+- `/roles` dùng `src/actions/role.ts` và `src/components/roles/RoleManager.tsx`: ma trận, gán/gỡ role, xem quyền hợp nhất. `src/components/ui/skeleton.tsx` dùng cho trạng thái tải trang. `role-catalog.ts` giữ danh mục chức năng hiện hành; `rbac-server.ts` chỉ chứa helper kiểm tra quyền/tính toàn vẹn dùng chung, actions vẫn gọi Prisma trực tiếp.
+- Quyền HR/ACCOUNTS/ROLES/AUDIT lấy từ DB mỗi request; không suy quyền từ mã ADMIN/IT_ADMIN, chức danh hoặc head. Scope hiện hành toàn công ty; quyền scoped cũ không mở truy cập toàn công ty. Các quyền workflow cũ giữ nguyên, chưa đưa vào ma trận.
+- Migration `20261104110000_quan_ly_vai_tro`: thêm bốn quyền, chuyển đặc quyền quản trị ngầm thành gán quyền DB; chuẩn hóa nhãn ADMIN/cờ vai trò chính. Partial unique index và trigger SQL kiểm tra tối đa một role chính, gán role cùng công ty, chặn chuyển công ty tài khoản/role. Không thêm bảng/cột, không đổi ID/mật khẩu; vẫn 9 bảng.
+- Action role/account/HR dùng chung advisory lock theo công ty, kiểm tra lại quyền trong transaction; chống mất quản trị cuối cùng và audit cùng transaction. Sửa role/gán role dùng phiên bản cập nhật để chặn ghi đè; đổi quyền hiệu lực từ request sau. Nhật ký lọc công ty và yêu cầu AUDIT VIEW.
+- `SESSION_SECRET` có sẵn bắt buộc ít nhất 32 ký tự; bỏ fallback công khai. Không đổi giá trị `.env`, không thêm dependency. Seed chỉ cấp ma trận mặc định khi khởi tạo, không phục hồi quyền bị thu hồi.
+- Bản sao trước migration: JSON nhất quán của 9 bảng tại thư mục backup riêng tư ngoài repo; vị trí lưu cục bộ trong `outputs/role-management/backup-path.txt`. Không đưa backup hoặc ảnh kiểm thử lên Git.
+
+
+## Tổ chức kế hoạch — 04/11/2026
+
+[docs/plans/README.md](plans/README.md) là bảng đọc nhanh; sáu checklist chỉ giữ trạng thái hiện hành, việc còn lại và tiêu chí nghiệm thu. Thiết kế bảng/cột và luồng workflow chuyển sang [THIET-KE-QUY-TRINH.md](THIET-KE-QUY-TRINH.md), vẫn là đề xuất chưa triển khai. Không thay mã ứng dụng, DB hoặc thứ tự ưu tiên trong lần rút gọn tài liệu.
+
+
+## Phân công quản lý và vòng đời truy cập — 04/11/2026
+
+- Migration `20261104082452_nguoi_phu_trach_phong` thêm cột nullable/index/FK kép `phong_ban.nguoi_phu_trach_id` → `nhan_su`; Prisma/Studio/PostgreSQL cùng tên. Vẫn 9 bảng, không seed lại hoặc tự gán trưởng phòng từ chức danh.
+- `/departments` chọn người phụ trách cùng công ty; một người phụ trách nhiều phòng. `/employees` hiển thị các phòng phụ trách và hỗ trợ tạo hồ sơ kèm tài khoản tùy chọn cho người đủ quyền; khi sửa thấy các tài khoản liên kết, có thể thêm tài khoản, quản trị tài khoản cũ tại `/accounts`.
+- Lưu nghỉ việc tự khóa các tài khoản đang mở, thu hồi phiên, giữ lịch sử, không tự mở lại khi tái tuyển. Server session kiểm tra cả trạng thái tài khoản và nhân sự LEFT. Mutation HR/account phối hợp advisory lock theo công ty, bảo vệ admin cuối cùng, audit và mutation nguyên tử.
+- Không thêm dependency hoặc biến môi trường. Sau migrate deploy cần prisma generate và khởi động lại dev/Studio để nạp schema mới.
+- Ma trận quyền theo phòng và động cơ workflow chưa triển khai; chọn head không tự cấp quyền phần mềm. Các mô tả lịch sử “sửa hồ sơ không đổi tài khoản” bên dưới được thay thế riêng với tình huống nghỉ việc/cấp tài khoản tùy chọn.
+
+
 ## Thống nhất tên DB với nghiệp vụ — 03/11/2026
 
 Migration `20261103090000_thong_nhat_ten_nghiep_vu` đổi tên `nguoi_dung` → `tai_khoan`, `nguoi_dung_vai_tro` → `tai_khoan_vai_tro`; mã hồ sơ thành `nhan_su.ma_nhan_su`, trạng thái tài khoản thành `cho_phep_dang_nhap`. Tên/mã công ty, phòng ban, vai trò, quyền và FK được làm rõ theo [từ điển DB](DATABASE-DICTIONARY.md). Không thêm bảng, thư viện, biến môi trường hoặc thay quyền.
 
-Yêu cầu tiếp theo cùng ngày đã đồng nhất **model/field Prisma với bảng/cột PostgreSQL**, ví dụ `db.nhan_su` và `nhan_su.ho_ten`. Prisma Studio 5555 hiển thị tiếng Việt không dấu. Bỏ alias model/field Anh–Việt; giữ map của constraint/index lịch sử. Refactor không phát sinh DDL/migration mới; generate client và khởi động lại dev/Studio. Các tên API/tên vật lý cũ trong phần lịch sử phía dưới chỉ mô tả thời điểm trước thay đổi này.
+Yêu cầu tiếp theo cùng ngày đã đồng nhất **model/field Prisma với bảng/cột PostgreSQL**, ví dụ `db.nhan_su` và `nhan_su.ho_ten`. Từ 06/11/2026 áp dụng quy ước lai: bảng và trường nghiệp vụ dùng tiếng Việt không dấu; khóa/trường kỹ thuật phổ biến dùng `id`, `company_id`, `department_id`, `employee_id`, `account_id`, `role_id`, `permission_id`, `created_at`, `updated_at`; FK nghiệp vụ phức tạp dùng tiếng Việt + `_id`. Giữ map của constraint/index lịch sử. Các tên cũ trong phần lịch sử phía dưới chỉ mô tả thời điểm trước thay đổi này.
+
+Migration `20261106113000_quy_uoc_ten_lai` thực hiện toàn bộ bằng đổi tên cột và cập nhật thân trigger, đã thử đủ chuỗi 15 migration trên DB tạm trước khi áp dụng. Sau áp dụng, Prisma diff rỗng, build Webpack và 51 E2E + 9 unit đạt; không thêm dependency hay biến môi trường.
+
+Database local được tạo lại từ đầu ngày 06/11/2026 vì dữ liệu hiện tại chỉ dùng demo. Sau 15 migration và seed: 1 công ty, 18 phòng ban, 72 nhân sự, 1 tài khoản quản trị, 8 vai trò, 18 quyền; các bảng workflow rỗng để cấu hình mẫu demo mới. Bản JSON trước reset được lưu ngoài Git trong thư mục backup cục bộ.
 
 Migration dùng RENAME và sửa hàm trigger bảo vệ mã trong cùng transaction; đã thử trên bản restore với fingerprint 9 bảng không đổi, sau đó áp dụng local. Cần khởi động lại dev server và Studio sau khi generate client để tránh dùng mapping cũ. Giữ nguyên 72 hồ sơ, 60 tài khoản, 19 phòng ban tại thời điểm đổi tên; không chạy lại seed/import.
 
@@ -20,7 +61,7 @@ ERP quản lý tên, mã, mô tả và cây cha/con qua `/departments` với HR 
 
 ## Đề xuất workflow sơ khai — 02/11/2026
 
-[Kế hoạch và thiết kế workflow](plans/WORKFLOW-CHECKLIST.md) đề xuất 5 bảng cho mẫu có phiên bản, bước mẫu, hồ sơ, bước xử lý và lịch sử; tái sử dụng nhân sự/tài khoản/RBAC, bổ sung head phòng ban nếu hỗ trợ tự tìm người duyệt. Bản đầu tuần tự, một người mỗi bước, xử lý bằng Server Actions/Prisma transaction. **Chưa triển khai hoặc migration; DB vẫn 9 bảng nghiệp vụ.** Không cài dependency, đổi môi trường, thêm worker hoặc gọi 1Office trong bước thiết kế.
+[Thiết kế workflow](THIET-KE-QUY-TRINH.md) và [kế hoạch triển khai](plans/WORKFLOW-CHECKLIST.md) đề xuất 5 bảng cho mẫu có phiên bản, bước mẫu, hồ sơ, bước xử lý và lịch sử; tái sử dụng nhân sự/tài khoản/RBAC, bổ sung head phòng ban nếu hỗ trợ tự tìm người duyệt. Bản đầu tuần tự, một người mỗi bước, xử lý bằng Server Actions/Prisma transaction. **Chưa triển khai hoặc migration; DB vẫn 9 bảng nghiệp vụ.** Không cài dependency, đổi môi trường, thêm worker hoặc gọi 1Office trong bước thiết kế.
 
 ## Thu gọn DB, ưu tiên tài khoản và phân quyền — 31/10/2026
 
@@ -128,7 +169,7 @@ Phân hệ tài sản đã được gỡ khỏi DB ngày 31/10/2026 để tập 
 
 ### Quy ước tên vật lý PostgreSQL — 22/10/2026
 
-16 bảng nghiệp vụ và 194 cột được ánh xạ sang tên tiếng Việt không dấu bằng `@@map`/`@map` trong Prisma. Ví dụ `Company` → `cong_ty`, `Department` → `phong_ban`, `User` → `nguoi_dung`, `Asset` → `tai_san`; `companyId` → `dinh_danh_cong_ty`. API Prisma/TypeScript giữ nguyên để các action, seed và giao diện tiếp tục hoạt động. Danh mục đầy đủ tại [DATABASE-DICTIONARY.md](./DATABASE-DICTIONARY.md); quy tắc bắt buộc tại [DATABASE-RULES.md](../.agents/rules/DATABASE-RULES.md). Migration chỉ đổi tên, không chuyển đổi dữ liệu nghiệp vụ.
+16 bảng nghiệp vụ và 194 cột được ánh xạ sang tên tiếng Việt không dấu bằng `@@map`/`@map` trong Prisma. Ví dụ `Company` → `cong_ty`, `Department` → `phong_ban`, `User` → `nguoi_dung`, `Asset` → `tai_san`; `companyId` → `company_id`. API Prisma/TypeScript giữ nguyên để các action, seed và giao diện tiếp tục hoạt động. Danh mục đầy đủ tại [DATABASE-DICTIONARY.md](./DATABASE-DICTIONARY.md); quy tắc bắt buộc tại [DATABASE-RULES.md](../.agents/rules/DATABASE-RULES.md). Migration chỉ đổi tên, không chuyển đổi dữ liệu nghiệp vụ.
 
 ### Nguồn cơ cấu và cách ánh xạ
 
@@ -200,6 +241,7 @@ SGDERP/
 | | `clsx`, `tailwind-merge`, `cva` | Latest | Hợp nhất class style an toàn qua hàm helper `cn()`. |
 | **Không Gian Số 3D** | `three` | `^0.182.0` | **Engine WebGL dựng mô hình Tòa nhà & Mặt bằng 3D Digital Twin.** |
 | | `@types/three` | `^0.182.0` | Type definitions đầy đủ cho Three.js. |
+| **Ảnh đại diện** | `sharp` | `^0.35.5` | Kiểm tra, giới hạn kích thước, chuẩn hóa ảnh cá nhân sang WebP trên server. |
 | **Bảo Mật & Xác Thực** | `jose` | `^6.2.12` | Ký & giải mã JWT Session Cookie cho kiến trúc Edge/Serverless. |
 | | `bcryptjs` | `^3.0.3` | Băm mật khẩu tài khoản người dùng với Salt. |
 | **Form & Xử Lý Dữ Liệu**| `zod` | `^3.25.76` | Xác thực Schema dữ liệu đầu vào phía Server Action. |

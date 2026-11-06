@@ -13,13 +13,13 @@ export default async function AccountsPage() {
   const [result, employees, roles] = await Promise.all([
     getAccounts(),
     db.nhan_su.findMany({
-      where: { dinh_danh_cong_ty: session.companyId },
-      select: { dinh_danh: true, ho_ten: true, ma_nhan_su: true },
+      where: { company_id: session.companyId },
+      select: { id: true, ho_ten: true, ma_nhan_su: true, tinh_trang_lam_viec: true },
       orderBy: { ho_ten: "asc" },
     }),
     db.vai_tro.findMany({
-      where: { dinh_danh_cong_ty: session.companyId },
-      select: { dinh_danh: true, ten_vai_tro: true },
+      where: { company_id: session.companyId },
+      select: { id: true, ten_vai_tro: true },
       orderBy: { ten_vai_tro: "asc" },
     }),
   ]);

@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getSession, hasPermission } from "@/lib/auth";
 
 export type AuditAction =
   | "LOGIN"
@@ -56,8 +56,8 @@ export async function logActivity(params: LogActivityParams) {
 
     // Nếu vẫn không có companyId (ví dụ sự kiện login thất bại), lấy default company
     if (!companyId) {
-      const defaultCompany = await db.cong_ty.findFirst({ select: { dinh_danh: true } });
-      companyId = defaultCompany?.dinh_danh || 1;
+      const defaultCompany = await db.cong_ty.findFirst({ select: { id: true } });
+      companyId = defaultCompany?.id || 1;
     }
 
     // Trích xuất IP và User-Agent từ Header
@@ -76,19 +76,19 @@ export async function logActivity(params: LogActivityParams) {
 
     await db.nhat_ky_hoat_dong.create({
       data: {
-        dinh_danh_tai_khoan: userId || null,
+        account_id: userId || null,
         ten_dang_nhap: username || "anonymous",
         ho_ten: fullName || "Khách",
         hanh_dong: params.action,
         phan_he: params.module,
-        dinh_danh_doi_tuong: params.targetId || null,
+        doi_tuong_id: params.targetId || null,
         ten_doi_tuong: params.targetName || null,
         mo_ta: params.description,
         du_lieu_cu: params.oldData ? JSON.parse(JSON.stringify(params.oldData)) : undefined,
         du_lieu_moi: params.newData ? JSON.parse(JSON.stringify(params.newData)) : undefined,
         dia_chi_ip: ipAddress,
         thong_tin_trinh_duyet: userAgent,
-        dinh_danh_cong_ty: companyId,
+        company_id: companyId,
       },
     });
   } catch (error) {
@@ -111,7 +111,9 @@ export async function getAuditLogs(params: {
   const limit = Math.min(100, Math.max(1, params.limit || 20));
   const skip = (page - 1) * limit;
 
-  const where: Prisma.nhat_ky_hoat_dongWhereInput = {};
+  const session = await getSession();
+  if (!session || !hasPermission(session, "AUDIT")) throw Error("Không có quyền xem nhật ký.");
+  const where: Prisma.nhat_ky_hoat_dongWhereInput = { company_id: session.companyId };
 
   if (params.module && params.module !== "ALL") {
     where.phan_he = params.module;
@@ -135,7 +137,7 @@ export async function getAuditLogs(params: {
     db.nhat_ky_hoat_dong.count({ where }),
     db.nhat_ky_hoat_dong.findMany({
       where,
-      orderBy: { thoi_diem_tao: "desc" },
+      orderBy: { created_at: "desc" },
       skip,
       take: limit,
       include: {

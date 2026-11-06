@@ -10,13 +10,13 @@ export async function bootstrapHrFinal(db: PrismaClient, companyId: number) {
   return db.$transaction(
     async (tx) => {
       // Serialize bootstrap for this company, including concurrent seed processes.
-      const company = await tx.$queryRaw<{ dinh_danh: number }[]>`
-      SELECT dinh_danh FROM cong_ty WHERE dinh_danh = ${companyId} FOR UPDATE`;
+      const company = await tx.$queryRaw<{ id: number }[]>`
+      SELECT id FROM cong_ty WHERE id = ${companyId} FOR UPDATE`;
       if (!company.length) throw Error("Không tìm thấy công ty.");
       if (
-        (await tx.nhan_su.count({ where: { dinh_danh_cong_ty: companyId } })) ||
+        (await tx.nhan_su.count({ where: { company_id: companyId } })) ||
         (await tx.nhat_ky_hoat_dong.findFirst({
-          where: { dinh_danh_cong_ty: companyId, phan_he: "HR", dinh_danh_doi_tuong: INDEPENDENT_HR_MARKER },
+          where: { company_id: companyId, phan_he: "HR", doi_tuong_id: INDEPENDENT_HR_MARKER },
         }))
       ) {
         return { created: 0, skipped: true };
@@ -28,7 +28,7 @@ export async function bootstrapHrFinal(db: PrismaClient, companyId: number) {
         throw Error("File HR khác bản final đã xác nhận.");
       const rows = readHrRows(bytes);
       const departments = await tx.phong_ban.findMany({
-        where: { dinh_danh_cong_ty: companyId },
+        where: { company_id: companyId },
       });
       for (const row of rows) {
         const department = departments.find(
@@ -37,8 +37,8 @@ export async function bootstrapHrFinal(db: PrismaClient, companyId: number) {
         if (!department) throw Error(`Thiếu phòng ban ${row.departmentCode}.`);
         await tx.nhan_su.create({
           data: {
-            dinh_danh_cong_ty: companyId,
-            dinh_danh_phong_ban: department.dinh_danh,
+            company_id: companyId,
+            department_id: department.id,
             ho_ten: row.fullName,
             chuc_vu: row.position,
             ngay_sinh: row.dateOfBirth,
@@ -52,12 +52,12 @@ export async function bootstrapHrFinal(db: PrismaClient, companyId: number) {
       }
       await tx.nhat_ky_hoat_dong.create({
         data: {
-          dinh_danh_cong_ty: companyId,
+          company_id: companyId,
           ten_dang_nhap: "system-bootstrap",
           ho_ten: "Khởi tạo dữ liệu HR",
           hanh_dong: "IMPORT",
           phan_he: "HR",
-          dinh_danh_doi_tuong: INDEPENDENT_HR_MARKER,
+          doi_tuong_id: INDEPENDENT_HR_MARKER,
           mo_ta:
             "Khởi tạo 72 hồ sơ HR một lần; từ đây quản lý độc lập tại ERP.",
           du_lieu_moi: { count: rows.length, source: HR_FILE, sha256: HR_SHA256 },

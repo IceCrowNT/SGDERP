@@ -1,6 +1,25 @@
 # Từ điển dữ liệu — PostgreSQL và Prisma Studio
 
-Cập nhật 03/11/2026: **tên model và trường Prisma trùng tên bảng và cột PostgreSQL**, dùng tiếng Việt không dấu, snake_case. Prisma Studio 5555 hiển thị trực tiếp các tên này. Quy ước cũ giữ Employee/User/fullName trong Prisma đã được thay thế theo yêu cầu người phụ trách.
+## Quy ước tên hiện hành — 06/11/2026
+
+Prisma và PostgreSQL dùng cùng tên. Khóa chính là `id`; khóa ngoại phổ biến là `company_id`, `department_id`, `employee_id`, `account_id`, `role_id`, `permission_id`; thời gian kỹ thuật là `created_at`, `updated_at`. Quan hệ nghiệp vụ phức tạp dùng tiếng Việt không dấu kèm `_id`, như `mau_quy_trinh_id` và `nguoi_duoc_giao_id`. Tên bảng vẫn bằng tiếng Việt không dấu. Migration `20261106113000_quy_uoc_ten_lai` chỉ đổi tên cột, giữ nguyên dữ liệu và tên constraint/index lịch sử.
+
+`dinh_danh_nguon` và `dinh_danh_cap_tren_nguon` là mã truy nguyên từ hệ thống ngoài, không phải khóa nội bộ, nên không đổi tên.
+
+## Tài khoản cá nhân — 05/11/2026
+
+Migration `20261105120000_khong_gian_ca_nhan` thêm `tai_khoan.bat_buoc_doi_mat_khau Boolean @default(false)`; mật khẩu tạm mới/reset đặt true, tài khoản cũ giữ false. Thêm role DEFAULT cho từng công ty, không gán hàng loạt cho tài khoản cũ; trigger chặn cấp quyền nghiệp vụ vào DEFAULT. Profile tái sử dụng ảnh/liên hệ/địa chỉ trong `nhan_su`. Vẫn **14 bảng**, không tạo bảng profile/dashboard. Tên đăng nhập unique toàn hệ thống; khóa cấp tên không đổi ID hoặc mã nhân sự. Chi tiết tại [thiết kế](THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md).
+
+## Workflow — 05/11/2026
+
+Hiện có **14 bảng nghiệp vụ**. Migration thêm 5 bảng workflow và unique `(id, company_id)` trên `tai_khoan`. Giữ dữ liệu lõi; thêm 5 quyền WORKFLOW, không tự cấp cho vai trò. Bảng/cột và ý nghĩa đầy đủ tại [Thiết kế quy trình](THIET-KE-QUY-TRINH.md).
+
+## Cập nhật quyền — 04/11/2026 (lịch sử)
+
+Giữ nguyên tên bảng/cột Việt và 9 bảng. `vai_tro.ma_vai_tro` là mã ổn định, không tự cấp quyền. `quyen` có thêm ACCOUNTS MANAGE, ROLES VIEW/MANAGE, AUDIT VIEW. `la_vai_tro_chinh` chỉ là nhãn chính, tối đa một trên tài khoản; mọi role vẫn cộng quyền. Trigger chặn gán role khác công ty và chuyển công ty role/tài khoản. Quyền theo phòng chưa triển khai; ma trận hiện tại quản lý grant `pham_vi=ALL`, giữ grant cũ khác phạm vi để tra cứu. Không phát sinh mã nhân sự, tài khoản hay bảng mới trong đợt này.
+
+
+Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng và cột PostgreSQL**. Quy ước tiếng Việt hoàn toàn ở thời điểm đó đã được quy ước lai ngày 06/11/2026 phía trên thay thế; Prisma Studio hiển thị trực tiếp tên hiện hành.
 
 ## Danh mục hiện hành
 
@@ -15,8 +34,13 @@ Cập nhật 03/11/2026: **tên model và trường Prisma trùng tên bảng v�
 | Quyền được cấp cho vai trò | `vai_tro_quyen` | RolePermission |
 | Vai trò được gán cho tài khoản | `tai_khoan_vai_tro` | UserRole |
 | Nhật ký hoạt động | `nhat_ky_hoat_dong` | AuditLog |
+| Mẫu và phiên bản quy trình | `mau_quy_trinh` | — |
+| Bước trong mẫu | `buoc_mau_quy_trinh` | — |
+| Hồ sơ/yêu cầu chạy quy trình | `ho_so_quy_trinh` | — |
+| Bước xử lý của từng hồ sơ | `buoc_xu_ly_quy_trinh` | — |
+| Lịch sử xử lý | `lich_su_quy_trinh` | — |
 
-DB có 9 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột người phụ trách và các bảng workflow vẫn chỉ là đề xuất trong [plan workflow](plans/WORKFLOW-CHECKLIST.md).
+DB có 14 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` đã triển khai; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
 
 Các giá trị enum `ACTIVE / LEFT / UNKNOWN`, mã quyền `HR / VIEW / MANAGE`, constraint/index/sequence lịch sử và JSON nhật ký cũ được giữ nguyên. Đây không phải tên bảng/cột. Relation field của Prisma là liên kết, không tạo cột PostgreSQL; tên liên kết cũng dùng tiếng Việt.
 
@@ -24,8 +48,8 @@ Ví dụ truy vấn hiện hành:
 
 ```ts
 await db.nhan_su.findMany({
-  where: { dinh_danh_cong_ty: session.companyId },
-  select: { dinh_danh: true, ma_nhan_su: true, ho_ten: true },
+  where: { company_id: session.companyId },
+  select: { id: true, ma_nhan_su: true, ho_ten: true },
 });
 ```
 
@@ -35,13 +59,13 @@ Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fu
 
 | Cột PostgreSQL = trường Prisma Studio | Kiểu Prisma | Yêu cầu |
 | --- | --- | --- |
-| `dinh_danh` | Int | Khóa chính · Có mặc định |
+| `id` | Int | Khóa chính · Có mặc định |
 | `ten_cong_ty` | String | Không NULL |
 | `ma_so_thue` | String | Có thể trống |
 | `dia_chi` | String | Có thể trống |
 | `dang_hoat_dong` | Boolean | Không NULL · Có mặc định |
-| `thoi_diem_tao` | DateTime | Không NULL · Có mặc định |
-| `thoi_diem_cap_nhat` | DateTime | Không NULL |
+| `created_at` | DateTime | Không NULL · Có mặc định |
+| `updated_at` | DateTime | Không NULL |
 
 | Liên kết trong Prisma Studio (không phải cột vật lý) | Bảng đích | Quan hệ |
 | --- | --- | --- |
@@ -55,7 +79,7 @@ Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fu
 
 | Cột PostgreSQL = trường Prisma Studio | Kiểu Prisma | Yêu cầu |
 | --- | --- | --- |
-| `dinh_danh` | Int | Khóa chính · Có mặc định |
+| `id` | Int | Khóa chính · Có mặc định |
 | `ma_phong_ban` | String | Không NULL |
 | `ten_phong_ban` | String | Không NULL |
 | `mo_ta` | String | Có thể trống |
@@ -67,13 +91,15 @@ Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fu
 | `cap_nguon` | Int | Có thể trống |
 | `ten_nguoi_giam_sat_nguon` | String | Có thể trống |
 | `thoi_diem_chup_du_lieu_nguon` | DateTime | Có thể trống |
-| `dinh_danh_phong_ban_cha` | Int | Có thể trống |
-| `dinh_danh_cong_ty` | Int | Không NULL |
-| `thoi_diem_tao` | DateTime | Không NULL · Có mặc định |
-| `thoi_diem_cap_nhat` | DateTime | Không NULL |
+| `parent_id` | Int | Có thể trống |
+| `nguoi_phu_trach_id` | Int | FK nhân sự cùng công ty; có thể trống, một người phụ trách nhiều phòng |
+| `company_id` | Int | Không NULL |
+| `created_at` | DateTime | Không NULL · Có mặc định |
+| `updated_at` | DateTime | Không NULL |
 
 | Liên kết trong Prisma Studio (không phải cột vật lý) | Bảng đích | Quan hệ |
 | --- | --- | --- |
+| `nguoi_phu_trach` | `nhan_su` | Một bản ghi hoặc trống |
 | `phong_ban_cha` | `phong_ban` | Một bản ghi hoặc trống |
 | `phong_ban_con` | `phong_ban` | Danh sách |
 | `cong_ty` | `cong_ty` | Một bản ghi |
@@ -83,7 +109,7 @@ Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fu
 
 | Cột PostgreSQL = trường Prisma Studio | Kiểu Prisma | Yêu cầu |
 | --- | --- | --- |
-| `dinh_danh` | Int | Khóa chính · Có mặc định |
+| `id` | Int | Khóa chính · Có mặc định |
 | `ma_nhan_su` | String | Không NULL · Có mặc định |
 | `ho_ten` | String | Không NULL |
 | `chuc_vu` | String | Có thể trống |
@@ -101,31 +127,33 @@ Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fu
 | `ngay_chot_nhan_su_hr` | DateTime | Có thể trống |
 | `ghi_chu` | String | Có thể trống |
 | `ghi_chu_nhan_su_hr` | String | Có thể trống |
-| `dinh_danh_cong_ty` | Int | Không NULL |
-| `dinh_danh_phong_ban` | Int | Có thể trống |
-| `thoi_diem_tao` | DateTime | Không NULL · Có mặc định |
-| `thoi_diem_cap_nhat` | DateTime | Không NULL |
+| `company_id` | Int | Không NULL |
+| `department_id` | Int | Có thể trống |
+| `created_at` | DateTime | Không NULL · Có mặc định |
+| `updated_at` | DateTime | Không NULL |
 
 | Liên kết trong Prisma Studio (không phải cột vật lý) | Bảng đích | Quan hệ |
 | --- | --- | --- |
 | `cong_ty` | `cong_ty` | Một bản ghi |
 | `phong_ban` | `phong_ban` | Một bản ghi hoặc trống |
 | `danh_sach_tai_khoan` | `tai_khoan` | Danh sách |
+| `danh_sach_phong_phu_trach` | `phong_ban` | Các phòng người này phụ trách |
 
 ## `tai_khoan` — Tài khoản đăng nhập
 
 | Cột PostgreSQL = trường Prisma Studio | Kiểu Prisma | Yêu cầu |
 | --- | --- | --- |
-| `dinh_danh` | Int | Khóa chính · Có mặc định |
+| `id` | Int | Khóa chính · Có mặc định |
 | `ten_dang_nhap` | String | Không NULL |
 | `mat_khau_bam` | String | Không NULL |
 | `ten_hien_thi` | String | Không NULL |
 | `cho_phep_dang_nhap` | Boolean | Không NULL · Có mặc định |
 | `phien_ban_dang_nhap` | Int | Không NULL · Có mặc định |
-| `dinh_danh_cong_ty` | Int | Không NULL |
-| `dinh_danh_nhan_su` | Int | Có thể trống |
-| `thoi_diem_tao` | DateTime | Không NULL · Có mặc định |
-| `thoi_diem_cap_nhat` | DateTime | Không NULL |
+| `bat_buoc_doi_mat_khau` | Boolean | Mặc định false; true với mật khẩu tạm mới/reset, chặn nghiệp vụ tới khi đổi mật khẩu |
+| `company_id` | Int | Không NULL |
+| `employee_id` | Int | Có thể trống |
+| `created_at` | DateTime | Không NULL · Có mặc định |
+| `updated_at` | DateTime | Không NULL |
 
 | Liên kết trong Prisma Studio (không phải cột vật lý) | Bảng đích | Quan hệ |
 | --- | --- | --- |
@@ -138,14 +166,14 @@ Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fu
 
 | Cột PostgreSQL = trường Prisma Studio | Kiểu Prisma | Yêu cầu |
 | --- | --- | --- |
-| `dinh_danh` | Int | Khóa chính · Có mặc định |
+| `id` | Int | Khóa chính · Có mặc định |
 | `ma_vai_tro` | String | Không NULL |
 | `ten_vai_tro` | String | Không NULL |
 | `mo_ta` | String | Có thể trống |
 | `la_vai_tro_he_thong` | Boolean | Không NULL · Có mặc định |
-| `dinh_danh_cong_ty` | Int | Không NULL |
-| `thoi_diem_tao` | DateTime | Không NULL · Có mặc định |
-| `thoi_diem_cap_nhat` | DateTime | Không NULL |
+| `company_id` | Int | Không NULL |
+| `created_at` | DateTime | Không NULL · Có mặc định |
+| `updated_at` | DateTime | Không NULL |
 
 | Liên kết trong Prisma Studio (không phải cột vật lý) | Bảng đích | Quan hệ |
 | --- | --- | --- |
@@ -157,14 +185,14 @@ Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fu
 
 | Cột PostgreSQL = trường Prisma Studio | Kiểu Prisma | Yêu cầu |
 | --- | --- | --- |
-| `dinh_danh` | Int | Khóa chính · Có mặc định |
+| `id` | Int | Khóa chính · Có mặc định |
 | `phan_he` | String | Không NULL |
 | `hanh_dong` | String | Không NULL |
 | `ten_quyen` | String | Không NULL |
 | `mo_ta` | String | Có thể trống |
 | `pham_vi` | String | Không NULL · Có mặc định |
-| `thoi_diem_tao` | DateTime | Không NULL · Có mặc định |
-| `thoi_diem_cap_nhat` | DateTime | Không NULL |
+| `created_at` | DateTime | Không NULL · Có mặc định |
+| `updated_at` | DateTime | Không NULL |
 
 | Liên kết trong Prisma Studio (không phải cột vật lý) | Bảng đích | Quan hệ |
 | --- | --- | --- |
@@ -174,8 +202,8 @@ Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fu
 
 | Cột PostgreSQL = trường Prisma Studio | Kiểu Prisma | Yêu cầu |
 | --- | --- | --- |
-| `dinh_danh_vai_tro` | Int | Không NULL |
-| `dinh_danh_quyen` | Int | Không NULL |
+| `role_id` | Int | Không NULL |
+| `permission_id` | Int | Không NULL |
 | `thoi_diem_gan` | DateTime | Không NULL · Có mặc định |
 
 | Liên kết trong Prisma Studio (không phải cột vật lý) | Bảng đích | Quan hệ |
@@ -187,8 +215,8 @@ Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fu
 
 | Cột PostgreSQL = trường Prisma Studio | Kiểu Prisma | Yêu cầu |
 | --- | --- | --- |
-| `dinh_danh_tai_khoan` | Int | Không NULL |
-| `dinh_danh_vai_tro` | Int | Không NULL |
+| `account_id` | Int | Không NULL |
+| `role_id` | Int | Không NULL |
 | `la_vai_tro_chinh` | Boolean | Không NULL · Có mặc định |
 | `thoi_diem_gan` | DateTime | Không NULL · Có mặc định |
 
@@ -201,21 +229,21 @@ Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fu
 
 | Cột PostgreSQL = trường Prisma Studio | Kiểu Prisma | Yêu cầu |
 | --- | --- | --- |
-| `dinh_danh` | Int | Khóa chính · Có mặc định |
-| `dinh_danh_tai_khoan` | Int | Có thể trống |
+| `id` | Int | Khóa chính · Có mặc định |
+| `account_id` | Int | Có thể trống |
 | `ten_dang_nhap` | String | Không NULL |
 | `ho_ten` | String | Không NULL |
 | `hanh_dong` | String | Không NULL |
 | `phan_he` | String | Không NULL |
-| `dinh_danh_doi_tuong` | String | Có thể trống |
+| `doi_tuong_id` | String | Có thể trống |
 | `ten_doi_tuong` | String | Có thể trống |
 | `mo_ta` | String | Không NULL |
 | `du_lieu_cu` | Json | Có thể trống |
 | `du_lieu_moi` | Json | Có thể trống |
 | `dia_chi_ip` | String | Có thể trống |
 | `thong_tin_trinh_duyet` | String | Có thể trống |
-| `dinh_danh_cong_ty` | Int | Không NULL |
-| `thoi_diem_tao` | DateTime | Không NULL · Có mặc định |
+| `company_id` | Int | Không NULL |
+| `created_at` | DateTime | Không NULL · Có mặc định |
 
 | Liên kết trong Prisma Studio (không phải cột vật lý) | Bảng đích | Quan hệ |
 | --- | --- | --- |
@@ -224,8 +252,8 @@ Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fu
 
 ## Quy tắc dữ liệu cần giữ
 
-- `nhan_su.ma_nhan_su` tự cấp bởi `tao_ma_nhan_su()`, duy nhất trong công ty, không được sửa; FK dùng `dinh_danh`. Không reset sequence để lấp số trống.
-- `nhan_su.tinh_trang_lam_viec`: ACTIVE = đang làm, LEFT = nghỉ việc, UNKNOWN = chưa xác nhận; độc lập với `tai_khoan.cho_phep_dang_nhap`.
+- `nhan_su.ma_nhan_su` tự cấp bởi `tao_ma_nhan_su()`, duy nhất trong công ty, không được sửa; FK dùng `id`. Không reset sequence để lấp số trống.
+- `nhan_su.tinh_trang_lam_viec`: ACTIVE = đang làm, LEFT = nghỉ việc, UNKNOWN = chưa xác nhận; lưu riêng với `tai_khoan.cho_phep_dang_nhap`. Từ 04/11/2026, lưu LEFT qua ERP tự khóa tài khoản và thu hồi phiên, không tự mở lại khi ACTIVE. Sửa trực tiếp DB không chạy action/audit; session vẫn chặn nhân sự LEFT.
 - Phòng ban và nhân sự quản lý độc lập trong ERP sau khởi tạo. Metadata nguồn chỉ giữ lịch sử, không khóa sửa/đồng bộ 1Office. `ghi_chu` là ghi chú vận hành; `ghi_chu_nhan_su_hr` là ghi chú nguồn.
 - FK nhân sự–phòng ban và tài khoản–nhân sự dùng cặp định danh + công ty. Mọi truy vấn nghiệp vụ cần giới hạn công ty từ phiên đăng nhập.
 - `tai_khoan_vai_tro` và `vai_tro_quyen` dùng khóa chính kép; mỗi cặp chỉ xuất hiện một lần. `la_vai_tro_chinh` không thay thế phép cộng quyền từ các vai trò.

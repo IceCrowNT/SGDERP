@@ -68,7 +68,7 @@ export function LoginForm() {
           toast.success("Đăng nhập thành công!", {
             description: "Đang chuyển hướng vào hệ thống ERP...",
           });
-          router.replace("/");
+          router.replace(result.redirectTo ?? "/");
           router.refresh();
         }
       } catch (error: unknown) {

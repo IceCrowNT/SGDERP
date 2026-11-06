@@ -1,233 +1,270 @@
-import { Metadata } from "next";
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Users, Building2, ShieldCheck, CheckCircle2, ArrowUpRight, Sparkles, UserCheck } from "lucide-react";
-import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
+import type { Prisma } from "@prisma/client";
 import { getSession, hasPermission } from "@/lib/auth";
+import { canWorkflow } from "@/lib/role-catalog";
+import { db } from "@/lib/db";
+import { WORKFLOW_STATUS } from "@/lib/workflow-labels";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
-
-export const metadata: Metadata = {
-  title: "Tổng quan | SDG ERP - Sao Đỏ Group",
-  description: "Trang tổng quan tình hình nhân sự và tổ chức Sao Đỏ Group",
-};
-
-export default async function DashboardPage() {
-  const session = await getSession();
-
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+function recentCutoff() {
+  return new Date(Date.now() - 30 * 86400_000);
+}
+export const metadata = { title: "Bàn làm việc của tôi | SDG ERP" };
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string; page?: string }>;
+}) {
+  const session = await getSession({ allowPasswordChange: true });
   if (!session) redirect("/login");
-  if (!hasPermission(session, "HR")) return <div className="p-6">Xin chào, {session.fullName}. Chọn chức năng được cấp quyền trong menu.</div>;
-  const where = { dinh_danh_cong_ty: session.companyId };
-  // Truy vấn dữ liệu thực tế từ PostgreSQL
-  const [totalUsers, activeUsers, totalDepartments, totalRoles, recentUsers] = await Promise.all([
-    db.nhan_su.count({ where }),
-    db.nhan_su.count({ where: { ...where, tinh_trang_lam_viec: "ACTIVE" } }),
-    db.phong_ban.count({ where }),
-    db.vai_tro.count({ where }),
-    db.nhan_su.findMany({
-      where,
-      take: 6,
-      orderBy: { thoi_diem_tao: "desc" },
-      include: { phong_ban: true },
-    }),
-  ]);
-
-  const activeRate = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 100;
-
-  const statCards = [
+  if (session.mustChangePassword) redirect("/profile");
+  const { view, page } = await searchParams;
+  const workflow = canWorkflow(session.workflowActions);
+  const manage = canWorkflow(session.workflowActions, "MANAGE");
+  const person = session.employeeId
+    ? await db.nhan_su.findFirst({
+        where: {
+          id: session.employeeId,
+          company_id: session.companyId,
+        },
+        select: { tinh_trang_lam_viec: true },
+      })
+    : null;
+  const active = person?.tinh_trang_lam_viec === "ACTIVE";
+  type Panel = {
+    key: string;
+    title: string;
+    where: Prisma.ho_so_quy_trinhWhereInput;
+  };
+  const panels: Panel[] = [];
+  const own = {
+    company_id: session.companyId,
+    nguoi_gui_id: session.employeeId ?? -1,
+  };
+  for (const [key, title, kind, action] of [
+    ["approve", "Chờ tôi duyệt", "APPROVAL", "APPROVE"],
+    ["execute", "Việc tôi cần thực hiện", "TASK", "EXECUTE"],
+  ] as const) {
+    if (active && canWorkflow(session.workflowActions, action))
+      panels.push({
+        key,
+        title,
+        where: {
+          company_id: session.companyId,
+          trang_thai: "IN_PROGRESS",
+          ...(kind === "APPROVAL"
+            ? { nguoi_gui_id: { not: session.employeeId! } }
+            : {}),
+          danh_sach_buoc: {
+            some: {
+              nguoi_duoc_giao_id: session.employeeId!,
+              trang_thai: "PENDING",
+              buoc_mau: { loai_buoc: kind },
+            },
+          },
+        },
+      });
+  }
+  if (workflow && session.employeeId)
+    panels.push(
+      {
+        key: "draft",
+        title: "Bản nháp của tôi",
+        where: { ...own, trang_thai: "DRAFT" },
+      },
+      {
+        key: "sent",
+        title: "Yêu cầu đang xử lý",
+        where: { ...own, trang_thai: "IN_PROGRESS" },
+      },
+      {
+        key: "ended",
+        title: "Kết quả trong 30 ngày",
+        where: {
+          ...own,
+          trang_thai: { in: ["COMPLETED", "REJECTED", "CANCELLED"] },
+          updated_at: { gte: recentCutoff() },
+        },
+      },
+    );
+  if (manage)
+    panels.push({
+      key: "blocked",
+      title: "Điều phối · Hồ sơ tạm dừng",
+      where: {
+        company_id: session.companyId,
+        trang_thai: "IN_PROGRESS",
+        danh_sach_buoc: { some: { trang_thai: "BLOCKED" } },
+      },
+    });
+  const counts = await Promise.all(
+    panels.map((p) => db.ho_so_quy_trinh.count({ where: p.where })),
+  );
+  const selected = panels.find((p) => p.key === view) ?? panels[0];
+  const total = selected ? counts[panels.indexOf(selected)] : 0;
+  const pageCount = Math.max(1, Math.ceil(total / 10));
+  const pageNumber = Math.min(
+    pageCount,
+    Math.max(1, Number.isSafeInteger(Number(page)) ? Number(page) : 1),
+  );
+  const records = selected
+    ? await db.ho_so_quy_trinh.findMany({
+        where: selected.where,
+        take: 10,
+        skip: (pageNumber - 1) * 10,
+        orderBy: [{ updated_at: "desc" }, { id: "desc" }],
+        select: {
+          id: true,
+          ma: true,
+          tieu_de: true,
+          trang_thai: true,
+          updated_at: true,
+        },
+      })
+    : [];
+  const shortcuts = [
+    { href: "/profile", label: "Hồ sơ của tôi", allowed: true },
     {
-      title: "Tổng hồ sơ nhân sự",
-      value: totalUsers.toLocaleString("vi-VN"),
-      subtitle: `${activeUsers} đang làm việc theo hồ sơ`,
-      icon: Users,
-      color: "text-primary",
-      bgColor: "bg-primary/10",
-      progress: activeRate,
+      href: "/workflows",
+      label: workflow ? "Quy trình và yêu cầu" : "Thiết lập quy trình",
+      allowed: workflow || hasPermission(session, "ROLES", "MANAGE"),
+    },
+    {
       href: "/employees",
+      label: "Nhân sự",
+      allowed: hasPermission(session, "HR"),
     },
     {
-      title: "Phòng ban & Ban QLDA",
-      value: totalDepartments.toLocaleString("vi-VN"),
-      subtitle: "Đơn vị trực thuộc tập đoàn",
-      icon: Building2,
-      color: "text-blue-900 dark:text-blue-400",
-      bgColor: "bg-blue-900/10 dark:bg-blue-400/10",
-      progress: 100,
       href: "/departments",
+      label: "Phòng ban",
+      allowed: hasPermission(session, "HR"),
     },
     {
-      title: "Nhóm vai trò (RBAC)",
-      value: totalRoles.toLocaleString("vi-VN"),
-      subtitle: "Ma trận phân quyền hệ thống",
-      icon: ShieldCheck,
-      color: "text-amber-600 dark:text-amber-400",
-      bgColor: "bg-amber-600/10 dark:bg-amber-400/10",
-      progress: 100,
+      href: "/accounts",
+      label: "Tài khoản",
+      allowed: hasPermission(session, "ACCOUNTS", "MANAGE"),
+    },
+    {
       href: "/roles",
+      label: "Vai trò và quyền",
+      allowed: hasPermission(session, "ROLES"),
     },
   ];
-
   return (
-    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
-      {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-primary/95 via-primary to-blue-950 text-primary-foreground shadow-lg shadow-primary/10">
-        <div className="relative z-10 max-w-2xl space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-white text-xs font-medium backdrop-blur-sm">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Sao Đỏ Group ERP v1.0 • Trực tuyến</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight">
-            Xin chào, {session?.fullName || "Quản trị viên"}!
+    <div className="space-y-6">
+      <header className="flex flex-wrap gap-4 items-center rounded-2xl border bg-card p-6">
+        <Avatar className="h-16 w-16">
+          <AvatarImage
+            src={session.avatarUrl ?? undefined}
+            alt={session.fullName}
+          />
+          <AvatarFallback>
+            {session.fullName
+              .split(" ")
+              .slice(-2)
+              .map((n) => n[0])
+              .join("")}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-muted-foreground">Bàn làm việc của tôi</p>
+          <h1 className="text-2xl font-bold break-words">
+            Xin chào, {session.fullName}
           </h1>
-          <p className="text-white/80 text-sm sm:text-base font-normal">
-            Dữ liệu hiện lưu gồm {totalUsers} hồ sơ nhân sự và {totalDepartments} phòng ban trực thuộc.
+          <p className="text-muted-foreground">
+            {[session.position, session.departmentName]
+              .filter(Boolean)
+              .join(" · ") || "Tài khoản nội bộ"}
           </p>
         </div>
-        <div className="absolute -right-8 -bottom-10 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-      </div>
-
-      {/* Real Statistics Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-        {statCards.map((card, i) => (
-          <div
-            key={i}
-            className="p-5 sm:p-6 rounded-2xl border border-border/50 bg-card text-card-foreground shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-1 group relative overflow-hidden"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3.5">
-                <div className={`p-3 rounded-xl ${card.bgColor} ${card.color} group-hover:scale-110 transition-transform duration-300`}>
-                  <card.icon className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">{card.title}</p>
-                  <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">{card.value}</h3>
-                </div>
-              </div>
-              <Link href={card.href} className="text-muted-foreground group-hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-muted/80">
-                <ArrowUpRight className="w-4 h-4" />
-                <span className="sr-only">Xem chi tiết {card.title}</span>
-              </Link>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{card.subtitle}</span>
-                <span className="font-semibold text-foreground">{card.progress}%</span>
-              </div>
-              <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                <div
-                  className="bg-primary h-full rounded-full transition-all duration-700"
-                  style={{ width: `${card.progress}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Grid: Recent Employees + Quick Management Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Employees Table / List */}
-        <div className="lg:col-span-2 rounded-2xl border border-border/50 bg-card p-5 sm:p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-border/50">
-            <div>
-              <h2 className="text-lg font-bold text-foreground">Hồ sơ nhân sự tiêu biểu</h2>
-              <p className="text-xs text-muted-foreground">Các cán bộ nhân viên đã đồng bộ từ CSDL</p>
-            </div>
-            <Button asChild variant="outline" size="sm" className="rounded-xl text-xs h-8">
-              <Link href="/employees">Xem tất cả ({totalUsers})</Link>
-            </Button>
-          </div>
-
-          <div className="divide-y divide-border/40">
-            {recentUsers.map((u) => {
-              const initials = u.ho_ten
-                .split(" ")
-                .filter(Boolean)
-                .slice(-2)
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase();
-
-              return (
-                <div key={u.dinh_danh} className="py-3 flex items-center justify-between gap-3 hover:bg-muted/30 px-2 rounded-xl transition-colors">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Avatar className="h-9 w-9 border border-border/50 shrink-0">
-                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-                        {initials || "NV"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate text-foreground">{u.ho_ten}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {u.chuc_vu || "Nhân viên"} • <span className="text-foreground/75 font-mono">{u.ma_nhan_su}</span>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {u.phong_ban && (
-                      <Badge variant="outline" className="hidden sm:inline-flex text-[11px] font-normal border-border/60">
-                        {u.phong_ban.ten_phong_ban}
-                      </Badge>
-                    )}
-                    <Badge variant={(u.tinh_trang_lam_viec === "ACTIVE") ? "default" : "secondary"} className={`text-[10px] h-5 px-2 ${(u.tinh_trang_lam_viec === "ACTIVE") ? "bg-emerald-600 hover:bg-emerald-600 text-white" : ""}`}>
-                      {u.tinh_trang_lam_viec === "ACTIVE" ? "Đang làm việc" : u.tinh_trang_lam_viec === "LEFT" ? "Đã nghỉ việc" : "Chưa xác nhận"}
-                    </Badge>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <Button asChild variant="outline">
+          <Link href="/profile">Hồ sơ của tôi</Link>
+        </Button>
+      </header>
+      {panels.length > 0 && (
+        <section
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+          aria-label="Tổng quan công việc"
+        >
+          {panels.map((p, i) => (
+            <Link
+              key={p.key}
+              href={`/?view=${p.key}`}
+              aria-current={selected?.key === p.key ? "page" : undefined}
+              className={`rounded-xl border p-5 transition-colors hover:border-primary ${selected?.key === p.key ? "border-primary bg-primary/5" : "bg-card"}`}
+            >
+              <h2 className="text-sm text-muted-foreground">{p.title}</h2>
+              <p className="mt-2 text-3xl font-semibold">{counts[i]}</p>
+            </Link>
+          ))}
+        </section>
+      )}
+      {selected ? (
+        <section className="rounded-xl border bg-card p-5 space-y-4">
+          <h2 className="text-lg font-semibold">{selected.title}</h2>
+          <p className="text-sm text-muted-foreground">
+            {records.length} hồ sơ / {total} hồ sơ phù hợp. Trang {pageNumber}/
+            {pageCount}.
+          </p>
+          {pageCount > 1 && (
+            <nav aria-label="Phân trang hồ sơ" className="flex gap-2">
+              {pageNumber > 1 && (
+                <Button asChild variant="outline">
+                  <Link href={`/?view=${selected.key}&page=${pageNumber - 1}`}>
+                    Trang trước
+                  </Link>
+                </Button>
+              )}
+              {pageNumber < pageCount && (
+                <Button asChild variant="outline">
+                  <Link href={`/?view=${selected.key}&page=${pageNumber + 1}`}>
+                    Trang sau
+                  </Link>
+                </Button>
+              )}
+            </nav>
+          )}
+          {!records.length && (
+            <p className="py-6 text-muted-foreground">
+              Chưa có hồ sơ trong mục này.
+            </p>
+          )}
+          {records.map((r) => (
+            <Link
+              key={r.id}
+              href={`/workflows/${r.id}`}
+              className="block rounded-lg border p-4 transition-colors hover:border-primary"
+            >
+              <p className="font-medium break-words">{r.tieu_de}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {r.ma} · {WORKFLOW_STATUS[r.trang_thai]}
+              </p>
+            </Link>
+          ))}
+        </section>
+      ) : (
+        <section className="rounded-xl border bg-card p-6 space-y-3">
+          <h2 className="font-semibold">Không gian cá nhân của bạn</h2>
+          <p className="text-muted-foreground">
+            Bạn có thể cập nhật thông tin liên hệ, ảnh đại diện và mật khẩu
+            trong hồ sơ cá nhân. Công việc và yêu cầu sẽ xuất hiện khi bạn được
+            cấp quyền sử dụng quy trình.
+          </p>
+        </section>
+      )}
+      <section className="space-y-3">
+        <h2 className="font-semibold">Truy cập nhanh</h2>
+        <div className="flex flex-wrap gap-3">
+          {shortcuts
+            .filter((s) => s.allowed)
+            .map((s) => (
+              <Button key={s.href} asChild variant="outline">
+                <Link href={s.href}>{s.label}</Link>
+              </Button>
+            ))}
         </div>
-
-        {/* System & Architecture Status Card */}
-        <div className="rounded-2xl border border-border/50 bg-card p-5 sm:p-6 shadow-xs space-y-4 flex flex-col justify-between">
-          <div className="space-y-4">
-            <div className="pb-3 border-b border-border/50">
-              <h2 className="text-lg font-bold text-foreground">Trạng thái hệ sinh thái</h2>
-              <p className="text-xs text-muted-foreground">Kiến trúc kỹ thuật SDG ERP</p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 border border-border/40">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <div className="text-xs">
-                  <p className="font-semibold text-foreground">PostgreSQL Multi-tenant</p>
-                  <p className="text-muted-foreground">Đã di trú lược đồ chuẩn Prisma v6</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 border border-border/40">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <div className="text-xs">
-                  <p className="font-semibold text-foreground">Simplified JSON RBAC</p>
-                  <p className="text-muted-foreground">Phân quyền 3 cấp độ (NONE, VIEW, MANAGE)</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 border border-border/40">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <div className="text-xs">
-                  <p className="font-semibold text-foreground">100% TypeScript & Shadcn UI</p>
-                  <p className="text-muted-foreground">Tối ưu tương thích điện thoại & máy tính</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-border/50">
-            <Button asChild className="w-full rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs">
-              <Link href="/employees">
-                <UserCheck className="w-4 h-4 mr-2" />
-                Truy cập Quản lý Nhân sự
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

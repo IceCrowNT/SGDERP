@@ -203,7 +203,7 @@ export function Office3DViewer({
     roomMeshesRef.current = roomMeshes
 
     // Efficient On-Demand Animation Loop
-    let clock = new THREE.Clock()
+    const clock = new THREE.Clock()
     const animate = () => {
       animFrameIdRef.current = requestAnimationFrame(animate)
 

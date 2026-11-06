@@ -3,7 +3,7 @@ import { Sidebar } from "./Sidebar"
 import { Header } from "./Header"
 
 export async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession()
+  const session = await getSession({ allowPasswordChange: true })
 
   return (
     <div className="flex min-h-screen bg-background text-foreground antialiased selection:bg-primary/20">

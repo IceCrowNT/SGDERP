@@ -20,7 +20,7 @@ export default async function Office3DPage() {
   // Fetch departments with active personnel in the current company
   const departments = await db.phong_ban.findMany({
     where: {
-      dinh_danh_cong_ty: session.companyId,
+      company_id: session.companyId,
     },
     include: {
       danh_sach_nhan_su: {
@@ -28,7 +28,7 @@ export default async function Office3DPage() {
           tinh_trang_lam_viec: "ACTIVE",
         },
         select: {
-          dinh_danh: true,
+          id: true,
           ho_ten: true,
           ma_nhan_su: true,
           chuc_vu: true,
@@ -36,22 +36,22 @@ export default async function Office3DPage() {
           thu_dien_tu: true,
           duong_dan_anh_dai_dien: true,
           tinh_trang_lam_viec: true,
-          dinh_danh_phong_ban: true,
+          department_id: true,
         },
         orderBy: {
-          dinh_danh: "asc",
+          id: "asc",
         },
       },
     },
     orderBy: {
-      dinh_danh: "asc",
+      id: "asc",
     },
   })
 
   // Count total active personnel in company
   const totalPersonnel = await db.nhan_su.count({
     where: {
-      dinh_danh_cong_ty: session.companyId,
+      company_id: session.companyId,
       tinh_trang_lam_viec: "ACTIVE",
     },
   })

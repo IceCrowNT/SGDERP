@@ -52,13 +52,13 @@ export async function loginAction(formData: FormData | LoginInput) {
 
     if (!user.cho_phep_dang_nhap) {
       await logActivity({
-        userId: user.dinh_danh,
+        userId: user.id,
         username: user.ten_dang_nhap,
         fullName: user.ten_hien_thi,
-        companyId: user.dinh_danh_cong_ty,
+        companyId: user.company_id,
         action: "LOGIN_FAILED",
         module: "AUTH",
-        targetId: String(user.dinh_danh),
+        targetId: String(user.id),
         targetName: user.ten_hien_thi,
         description: `Đăng nhập thất bại: Tài khoản "${user.ten_dang_nhap}" đang bị khoá.`,
       });
@@ -72,13 +72,13 @@ export async function loginAction(formData: FormData | LoginInput) {
     const isPasswordValid = await bcrypt.compare(cleanPassword, user.mat_khau_bam);
     if (!isPasswordValid) {
       await logActivity({
-        userId: user.dinh_danh,
+        userId: user.id,
         username: user.ten_dang_nhap,
         fullName: user.ten_hien_thi,
-        companyId: user.dinh_danh_cong_ty,
+        companyId: user.company_id,
         action: "LOGIN_FAILED",
         module: "AUTH",
-        targetId: String(user.dinh_danh),
+        targetId: String(user.id),
         targetName: user.ten_hien_thi,
         description: `Đăng nhập thất bại: Sai mật khẩu cho tài khoản "${user.ten_dang_nhap}".`,
       });
@@ -88,7 +88,7 @@ export async function loginAction(formData: FormData | LoginInput) {
       };
     }
 
-    const sessionPayload = await readAccountSession(user.dinh_danh);
+    const sessionPayload = await readAccountSession(user.id);
     if (!sessionPayload) return { success: false, error: "Tài khoản không còn hoạt động." };
 
     // Tạo JWT token và lưu vào HttpOnly Cookie
@@ -97,18 +97,18 @@ export async function loginAction(formData: FormData | LoginInput) {
 
     // Ghi nhật ký Đăng nhập thành công
     await logActivity({
-      userId: user.dinh_danh,
+      userId: user.id,
       username: user.ten_dang_nhap,
       fullName: user.ten_hien_thi,
-      companyId: user.dinh_danh_cong_ty,
+      companyId: user.company_id,
       action: "LOGIN",
       module: "AUTH",
-      targetId: String(user.dinh_danh),
+      targetId: String(user.id),
       targetName: user.ten_hien_thi,
       description: `Đăng nhập thành công vào hệ thống (Chức vụ: ${sessionPayload.position || "Cán bộ nhân viên"})`,
     });
 
-    return { success: true };
+    return { success: true, redirectTo: sessionPayload.mustChangePassword ? "/profile" : "/" };
   } catch (error) {
     console.error("Lỗi khi đăng nhập:", error);
     return {
@@ -119,7 +119,7 @@ export async function loginAction(formData: FormData | LoginInput) {
 }
 
 export async function logoutAction() {
-  const session = await getSession();
+  const session = await getSession({ allowPasswordChange: true });
   if (session) {
     await logActivity({
       userId: session.userId,

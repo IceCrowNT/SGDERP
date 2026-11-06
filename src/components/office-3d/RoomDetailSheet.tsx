@@ -24,7 +24,7 @@ import {
 } from "lucide-react"
 
 export interface DepartmentEmployee {
-  dinh_danh: number
+  id: number
   ho_ten: string
   ma_nhan_su: string
   chuc_vu: string | null
@@ -32,14 +32,14 @@ export interface DepartmentEmployee {
   thu_dien_tu: string | null
   duong_dan_anh_dai_dien: string | null
   tinh_trang_lam_viec: string
-  dinh_danh_phong_ban: number | null
+  department_id: number | null
 }
 
 export interface DepartmentWithEmployees {
-  dinh_danh: number
+  id: number
   ten_phong_ban: string
   ma_phong_ban: string
-  dinh_danh_phong_ban_cha: number | null
+  parent_id: number | null
   danh_sach_nhan_su: DepartmentEmployee[]
 }
 
@@ -75,7 +75,7 @@ export function RoomDetailSheet({
     if (!mainDept) return []
 
     // Child departments (e.g., KD_SM, KD_CSKH under KD)
-    const childDepts = departments.filter((d) => d.dinh_danh_phong_ban_cha === mainDept.dinh_danh)
+    const childDepts = departments.filter((d) => d.parent_id === mainDept.id)
     const allRelevantDepts = [mainDept, ...childDepts]
 
     return allRelevantDepts.flatMap((d) => d.danh_sach_nhan_su)
@@ -170,7 +170,7 @@ export function RoomDetailSheet({
 
                 return (
                   <div
-                    key={user.dinh_danh}
+                    key={user.id}
                     className="group p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 hover:border-slate-600 transition-all duration-200"
                   >
                     <div className="flex items-start gap-3">
@@ -218,7 +218,7 @@ export function RoomDetailSheet({
                       </div>
 
                       <Link
-                        href={`/employees/${user.dinh_danh}`}
+                        href={`/employees/${user.id}`}
                         className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-slate-700 hover:bg-sky-600 text-slate-300 hover:text-white transition-all shrink-0"
                         title="Xem hồ sơ chi tiết"
                       >

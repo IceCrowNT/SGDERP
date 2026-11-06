@@ -1,10 +1,13 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { randomBytes } from "node:crypto";
+import { allocateUsername, defaultRole } from "@/lib/account-defaults";
 import * as bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { AccountSchema, type AccountInput } from "@/lib/validations/user";
+import { assertAssignableRoles, ensureAdministrator } from "@/lib/rbac-server";
 import { canManageAccounts } from "@/lib/account-access";
 
 export async function getAccounts() {
@@ -15,17 +18,22 @@ export async function getAccounts() {
       message: "Không có quyền quản lý tài khoản.",
     };
   const data = await db.tai_khoan.findMany({
-    where: { dinh_danh_cong_ty: session!.companyId },
+    where: { company_id: session!.companyId },
     select: {
-      dinh_danh: true,
+      id: true,
       ten_dang_nhap: true,
       ten_hien_thi: true,
       cho_phep_dang_nhap: true,
-      dinh_danh_nhan_su: true,
+      employee_id: true,
       nhan_su: {
         select: { ho_ten: true, ma_nhan_su: true, tinh_trang_lam_viec: true },
       },
-      danh_sach_vai_tro: { select: { dinh_danh_vai_tro: true, vai_tro: { select: { ten_vai_tro: true } } } },
+      danh_sach_vai_tro: {
+        select: {
+          role_id: true,
+          vai_tro: { select: { ten_vai_tro: true } },
+        },
+      },
     },
     orderBy: { ten_dang_nhap: "asc" },
   });
@@ -37,25 +45,39 @@ export async function saveAccount(input: AccountInput) {
     return { success: false, message: "Không có quyền quản lý tài khoản." };
   const parsed = AccountSchema.safeParse(input);
   if (!parsed.success)
-    return { success: false, message: parsed.error.issues[0].message };
+    return {
+      success: false,
+      message: parsed.error.issues[0].message,
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
   const v = parsed.data;
-  if (!v.id && !v.password)
-    return { success: false, message: "Nhập mật khẩu khởi tạo." };
   if (!v.id && !v.employeeId)
     return {
       success: false,
       message:
         "Chọn nhân sự sở hữu tài khoản. Tài khoản hệ thống hiện có được giữ riêng.",
+      fieldErrors: { employeeId: ["Chọn nhân sự sở hữu tài khoản"] },
     };
-  const password = v.password ? await bcrypt.hash(v.password, 10) : undefined;
+  const initialPassword =
+    v.password || (!v.id ? randomBytes(15).toString("base64url") : undefined);
+  const password = initialPassword
+    ? await bcrypt.hash(initialPassword, 10)
+    : undefined;
+  let credentials: { username: string; password: string } | undefined;
   try {
     await db.$transaction(async (tx) => {
       // Serialize account changes per company, including last-administrator checks.
+      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       const previous = v.id
         ? await tx.tai_khoan.findFirst({
-            where: { dinh_danh: v.id, dinh_danh_cong_ty: session.companyId },
-            select: { dinh_danh: true, ten_dang_nhap: true, dinh_danh_nhan_su: true },
+            where: { id: v.id, company_id: session.companyId },
+            select: {
+              id: true,
+              ten_dang_nhap: true,
+              employee_id: true,
+              danh_sach_vai_tro: true,
+            },
           })
         : null;
       if (v.id && !previous) throw Error("Không tìm thấy tài khoản.");
@@ -63,79 +85,90 @@ export async function saveAccount(input: AccountInput) {
         throw Error("Không thể tự khóa tài khoản đang sử dụng.");
       if (previous && previous.ten_dang_nhap !== v.username)
         throw Error("Tên đăng nhập không thay đổi trong bản này.");
-      if (previous?.dinh_danh_nhan_su && !v.employeeId)
+      if (previous?.employee_id && !v.employeeId)
         throw Error("Tài khoản cá nhân phải có người sở hữu.");
-      if (
-        v.employeeId &&
-        !(await tx.nhan_su.findFirst({
-          where: { dinh_danh: v.employeeId, dinh_danh_cong_ty: session.companyId },
-        }))
-      )
-        throw Error("Nhân sự không thuộc công ty.");
+      if (v.employeeId) {
+        const person = await tx.nhan_su.findFirst({
+          where: {
+            id: v.employeeId,
+            company_id: session.companyId,
+          },
+        });
+        if (!person) throw Error("Nhân sự không thuộc công ty.");
+        if (v.isActive && person.tinh_trang_lam_viec === "LEFT")
+          throw Error("Không thể mở tài khoản của nhân sự đã nghỉ việc.");
+      }
       const ids = [...new Set(v.roleIds)];
-      if (
-        (await tx.vai_tro.count({
-          where: { dinh_danh: { in: ids }, dinh_danh_cong_ty: session.companyId },
-        })) !== ids.length
-      )
-        throw Error("Vai trò không hợp lệ.");
+      await assertAssignableRoles(
+        tx,
+        session,
+        ids,
+        previous?.danh_sach_vai_tro.map((r) => r.role_id) ?? [],
+      );
+      if (!v.id && !ids.length)
+        ids.push(await defaultRole(tx, session.companyId));
+      const person = v.employeeId
+        ? await tx.nhan_su.findFirstOrThrow({
+            where: {
+              id: v.employeeId,
+              company_id: session.companyId,
+            },
+          })
+        : null;
+      const generatedUsername = !v.id
+        ? await allocateUsername(tx, person!.ho_ten, person!.id)
+        : "";
       const data = {
         ten_hien_thi: v.displayName,
-        dinh_danh_nhan_su: v.employeeId,
+        employee_id: v.employeeId,
         cho_phep_dang_nhap: v.isActive,
-        ...(password ? { mat_khau_bam: password } : {}),
+        ...(password
+          ? { mat_khau_bam: password, bat_buoc_doi_mat_khau: true }
+          : {}),
       };
       const account = previous
         ? await tx.tai_khoan.update({
-            where: { dinh_danh: previous.dinh_danh },
+            where: { id: previous.id },
             data: { ...data, phien_ban_dang_nhap: { increment: 1 } },
           })
         : await tx.tai_khoan.create({
             data: {
               ...data,
-              ten_dang_nhap: v.username,
+              ten_dang_nhap: v.username || generatedUsername,
               mat_khau_bam: password!,
-              dinh_danh_cong_ty: session.companyId,
+              company_id: session.companyId,
             },
           });
-      await tx.tai_khoan_vai_tro.deleteMany({ where: { dinh_danh_tai_khoan: account.dinh_danh } });
+      if (initialPassword)
+        credentials = {
+          username: account.ten_dang_nhap,
+          password: initialPassword,
+        };
+      await tx.tai_khoan_vai_tro.deleteMany({
+        where: { account_id: account.id },
+      });
       if (ids.length)
         await tx.tai_khoan_vai_tro.createMany({
           data: ids.map((roleId, i) => ({
-            dinh_danh_tai_khoan: account.dinh_danh,
-            dinh_danh_vai_tro: roleId,
+            account_id: account.id,
+            role_id: roleId,
             la_vai_tro_chinh: i === 0,
           })),
         });
-      const admins = await tx.tai_khoan.count({
-        where: {
-          dinh_danh_cong_ty: session.companyId,
-          cho_phep_dang_nhap: true,
-          danh_sach_vai_tro: {
-            some: {
-              vai_tro: {
-                dinh_danh_cong_ty: session.companyId,
-                ma_vai_tro: { in: ["ADMIN", "IT_ADMIN"] },
-              },
-            },
-          },
-        },
-      });
-      if (!admins)
-        throw Error("Phải giữ ít nhất một tài khoản quản trị hoạt động.");
+      await ensureAdministrator(tx, session.companyId);
       await tx.nhat_ky_hoat_dong.create({
         data: {
-          dinh_danh_tai_khoan: session.userId,
+          account_id: session.userId,
           ten_dang_nhap: session.username,
           ho_ten: session.fullName,
-          dinh_danh_cong_ty: session.companyId,
+          company_id: session.companyId,
           hanh_dong: previous ? "UPDATE" : "CREATE",
           phan_he: "AUTH",
-          dinh_danh_doi_tuong: String(account.dinh_danh),
-          ten_doi_tuong: v.username,
+          doi_tuong_id: String(account.id),
+          ten_doi_tuong: account.ten_dang_nhap,
           mo_ta: `${previous ? "Cập nhật" : "Tạo"} tài khoản; không thay đổi hồ sơ nhân sự.`,
           du_lieu_moi: {
-            dinh_danh_nhan_su: v.employeeId,
+            employee_id: v.employeeId,
             cho_phep_dang_nhap: v.isActive,
             roleIds: ids,
             passwordChanged: Boolean(password),
@@ -143,10 +176,12 @@ export async function saveAccount(input: AccountInput) {
         },
       });
     });
+    revalidatePath("/", "layout");
     revalidatePath("/accounts");
     revalidatePath("/employees");
     return {
       success: true,
+      credentials,
       message:
         "Đã lưu tài khoản. Phiên cũ của tài khoản được sửa sẽ hết hiệu lực.",
     };
@@ -158,7 +193,7 @@ export async function saveAccount(input: AccountInput) {
           ? error.code === "P2002"
             ? "Tên đăng nhập đã tồn tại."
             : "Không thể lưu tài khoản. Vui lòng thử lại."
-          : error instanceof Error
+          : error instanceof Error && error.constructor === Error
             ? error.message
             : "Không thể lưu tài khoản.",
     };

@@ -1,12 +1,17 @@
 # Bối cảnh hiện tại và định hướng số hóa Sao Đỏ Group
 
+> **Quyết định 04/11/2026:** Tách chức vụ text, phân công người phụ trách phòng và quyền tài khoản. Đã có chọn người phụ trách phòng, hỗ trợ kiêm nhiệm; form nhân sự cấp tài khoản tùy chọn khi đủ quyền. Lưu nghỉ việc tự khóa toàn bộ tài khoản liên kết đang mở và thu hồi phiên, không tự mở lại khi tái tuyển. Quyền theo phòng và người duyệt trong workflow vẫn cần triển khai theo plan; không tự suy từ chức danh hoặc gán head hàng loạt.
+
+
 > **Quyết định 03/11/2026:** Phòng ban vận hành độc lập trong ERP, cho phép tạo/sửa/xóa theo HR MANAGE và quản lý cây cha/con. Bỏ đối soát với snapshot 1Office và yêu cầu API đồng bộ cơ cấu; importer cũ đã ngừng. Dữ liệu nguồn chỉ là lịch sử khởi tạo. Quyết định này thay thế các đoạn bên dưới coi 1Office là nguồn quản lý cơ cấu hiện hành hoặc khóa sửa ERP. HR cũng đã độc lập từ 28/10/2026. Xem [kế hoạch HR](../plans/HR-CHECKLIST.md).
 
 
 > **Ưu tiên 31/10/2026:** Tập trung quản lý tài khoản và phân quyền. Đã yêu cầu gỡ các bảng tài sản cùng seed; tài liệu/nguồn giữ tham khảo để xem xét sau. Giữ nhân sự, cơ cấu và 3D nhân sự. Cấu trúc Role/Permission/RolePermission/UserRole được giữ, các điểm cần làm gọn đã ghi trong kế hoạch role.
 
 
-> **Quyết định hiện hành 28/10/2026:** HR hoạt động độc lập sau khởi tạo. 1Office là nguồn đối chiếu ban đầu, file HR final 72 người là baseline; hồ sơ hiện hành được sửa trong ERP theo quyền HR MANAGE, có audit. Không tự đồng bộ HR từ 1Office hoặc ghi đè bằng file nguồn. Mã ERP tự sinh và không điều chỉnh. Đã làm sạch 8 hồ sơ ngoài final và 8 tài khoản tương ứng; giữ 72 người, 60 tài khoản, cơ cấu 18 đơn vị và quyền. Các quyết định nguồn/reset chưa triển khai bên dưới là lịch sử, được thay thế bởi mục này.
+> **Trạng thái demo 06/11/2026:** database local đã được tạo lại từ migration và seed vì dữ liệu chỉ dùng trình diễn. Hiện có baseline HR final 72 người, 18 đơn vị và 1 tài khoản quản trị; số 60 tài khoản trong quyết định 28/10 bên dưới là trạng thái trước reset. Nguyên tắc HR vận hành độc lập và không tự ghi đè từ 1Office vẫn giữ nguyên.
+>
+> **Quyết định 28/10/2026:** HR hoạt động độc lập sau khởi tạo. 1Office là nguồn đối chiếu ban đầu, file HR final 72 người là baseline; hồ sơ hiện hành được sửa trong ERP theo quyền HR MANAGE, có audit. Không tự đồng bộ HR từ 1Office hoặc ghi đè bằng file nguồn. Mã ERP tự sinh và không điều chỉnh. Đã làm sạch 8 hồ sơ ngoài final và 8 tài khoản tương ứng; giữ 72 người, 60 tài khoản, cơ cấu 18 đơn vị và quyền tại thời điểm đó. Các quyết định nguồn/reset chưa triển khai bên dưới là lịch sử.
 
 
 > **Yêu cầu bổ sung 27/10/2026:** Phòng ban phải chọn theo cây cơ cấu hiện có; chức danh là text tự do có thể chỉnh khi tạo/sửa người, không phải role. File HR 72 người là chuẩn khởi tạo. Người phụ trách cho phép cân nhắc làm sạch nhân sự/tài khoản và cơ cấu lại DB nếu cần, đồng thời yêu cầu nhận xét/đánh giá trước. Đã lập [phương án cụ thể trong kế hoạch HR](../plans/HR-CHECKLIST.md); chưa xóa dữ liệu hoặc triển khai phương án trong lượt đánh giá này.

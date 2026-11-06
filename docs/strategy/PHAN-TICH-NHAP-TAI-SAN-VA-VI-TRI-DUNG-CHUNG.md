@@ -78,7 +78,7 @@ Các tên phòng trong file có thể map về đơn vị hiện có: BQL dự �
 
 ## 4. Mô hình quản lý đề xuất: ba thông tin độc lập
 
-1. **Đơn vị quản lý:** chịu trách nhiệm theo dõi/sửa chữa và làm căn cứ phạm vi quyền. Đề xuất thêm `Asset.managingDepartmentId` nullable, cùng công ty, cột tiếng Việt `dinh_danh_phong_ban_quan_ly`. Chỉ gán HCNS/IT khi đã được xác nhận chịu trách nhiệm; không mặc định mọi thiết bị trong file do HCNS sở hữu/quản lý.
+1. **Đơn vị quản lý:** chịu trách nhiệm theo dõi/sửa chữa và làm căn cứ phạm vi quyền. Đề xuất thêm `Asset.managingDepartmentId` nullable, cùng công ty, cột tiếng Việt `phong_ban_quan_ly_id`. Chỉ gán HCNS/IT khi đã được xác nhận chịu trách nhiệm; không mặc định mọi thiết bị trong file do HCNS sở hữu/quản lý.
 2. **Người hoặc đơn vị sử dụng:** tận dụng `currentCustodianId` và `currentDepartmentId`; không bắt buộc người nhận với tài sản chung. Một người có thể dùng nhiều thiết bị. Phòng của người và phòng dùng tài sản không cần lúc nào cũng bằng nhau; chuyển phòng nhân sự không tự chuyển tài sản.
 3. **Vị trí vật lý:** tận dụng `currentLocationId` → PhysicalLocation, độc lập với Department. Vị trí có thể là tòa nhà, tầng, phòng, khu vực, tủ rack, kho; chưa rõ thì để trống để bổ sung, không tạo phòng giả.
 

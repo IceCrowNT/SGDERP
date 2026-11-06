@@ -1,44 +1,5 @@
-import { db } from "@/lib/db";
-import { SessionUser } from "@/lib/auth";
-
-/**
- * Trả về danh sách Department IDs mà user có quyền truy cập dữ liệu (Data Scope Cascade)
- * - Nếu là ADMIN, IT_ADMIN, hoặc có quyền MANAGE ở phân hệ chỉ định: trả về null (toàn quyền truy cập mọi phòng ban).
- * - Nếu là Quản lý cấp Cha: tự động bao quát ID phòng cha + toàn bộ ID bộ phận con trực thuộc.
- * - Nếu là Cán bộ nhân viên: chỉ truy cập trong phạm vi phòng ban / bộ phận của mình.
- */
-export async function getAccessibleDepartmentIds(
-  session: SessionUser,
-  targetModule: "HR" | "TASK" = "HR"
-): Promise<number[] | null> {
-  // 1. Quản trị viên tối cao hoặc có quyền MANAGE phân hệ -> Toàn quyền toàn Tập đoàn
-  if (
-    session.roleCodes.includes("ADMIN") ||
-    session.roleCodes.includes("IT_ADMIN") ||
-    session.permissions[targetModule] === "MANAGE"
-  ) {
-    return null;
-  }
-
-  // 2. Nếu người dùng chưa được gắn phòng ban
-  if (!session.departmentId) {
-    return [];
-  }
-
-  // 3. Truy vấn phòng ban của user kèm toàn bộ các bộ phận con trực thuộc
-  const userDept = await db.phong_ban.findUnique({
-    where: { dinh_danh: session.departmentId },
-    include: {
-      phong_ban_con: {
-        select: { dinh_danh: true },
-      },
-    },
-  });
-
-  if (!userDept) {
-    return [session.departmentId];
-  }
-
-  const childIds = userDept.phong_ban_con.map((c) => c.dinh_danh);
-  return [userDept.dinh_danh, ...childIds];
+import type { SessionUser } from "@/lib/auth";
+/** Company-wide access only. Scoped access is not yet implemented; deny by default. */
+export async function getAccessibleDepartmentIds(session: SessionUser, targetModule: "HR" | "TASK" = "HR"): Promise<number[] | null> {
+  return ["VIEW", "MANAGE"].includes(session.permissions[targetModule] ?? "") ? null : [];
 }

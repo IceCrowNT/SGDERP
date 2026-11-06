@@ -1,7 +1,9 @@
 "use client";
 import { useState, useTransition } from "react";
+import { AccountCredentials } from "./AccountCredentials";
+import { usernameBase } from "@/lib/username";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { getAccounts, saveAccount } from "@/actions/account";
@@ -45,8 +47,13 @@ type Account = NonNullable<
 >[number];
 type Props = {
   accounts: Account[];
-  employees: { dinh_danh: number; ho_ten: string; ma_nhan_su: string }[];
-  roles: { dinh_danh: number; ten_vai_tro: string }[];
+  employees: {
+    id: number;
+    ho_ten: string;
+    ma_nhan_su: string;
+    tinh_trang_lam_viec: string;
+  }[];
+  roles: { id: number; ten_vai_tro: string }[];
 };
 export function AccountManager({ accounts, employees, roles }: Props) {
   const [editing, setEditing] = useState<Account | null | undefined>();
@@ -91,7 +98,7 @@ export function AccountManager({ accounts, employees, roles }: Props) {
           </TableHeader>
           <TableBody>
             {rows.map((a) => (
-              <TableRow key={a.dinh_danh}>
+              <TableRow key={a.id}>
                 <TableCell>{a.ten_dang_nhap}</TableCell>
                 <TableCell>
                   {a.nhan_su ? (
@@ -100,7 +107,7 @@ export function AccountManager({ accounts, employees, roles }: Props) {
                       <p className="text-xs text-muted-foreground">
                         {a.nhan_su.ma_nhan_su}
                         {a.nhan_su.tinh_trang_lam_viec === "LEFT"
-                          ? " · Đã nghỉ việc — cần rà soát truy cập"
+                          ? " · Đã nghỉ việc — không được đăng nhập"
                           : ""}
                       </p>
                     </>
@@ -109,10 +116,13 @@ export function AccountManager({ accounts, employees, roles }: Props) {
                   )}
                 </TableCell>
                 <TableCell>
-                  {a.danh_sach_vai_tro.map((r) => r.vai_tro.ten_vai_tro).join(", ") ||
-                    "Chưa cấp quyền"}
+                  {a.danh_sach_vai_tro
+                    .map((r) => r.vai_tro.ten_vai_tro)
+                    .join(", ") || "Chưa cấp quyền"}
                 </TableCell>
-                <TableCell>{a.cho_phep_dang_nhap ? "Đang mở" : "Đã khóa"}</TableCell>
+                <TableCell>
+                  {a.cho_phep_dang_nhap ? "Đang mở" : "Đã khóa"}
+                </TableCell>
                 <TableCell>
                   <Button
                     variant="outline"
@@ -145,7 +155,7 @@ export function AccountManager({ accounts, employees, roles }: Props) {
           </DialogHeader>
           {editing !== undefined && (
             <AccountForm
-              key={editing?.dinh_danh ?? "new"}
+              key={editing?.id ?? "new"}
               account={editing}
               employees={employees}
               roles={roles}
@@ -165,18 +175,28 @@ function AccountForm({
 }: Omit<Props, "accounts"> & { account: Account | null; done: () => void }) {
   const [pending, start] = useTransition();
   const router = useRouter();
+  const [credentials, setCredentials] = useState<{
+    username: string;
+    password: string;
+  }>();
   const form = useForm<AccountInput>({
     resolver: zodResolver(AccountSchema),
     defaultValues: {
-      id: account?.dinh_danh,
+      id: account?.id,
       username: account?.ten_dang_nhap ?? "",
       displayName: account?.ten_hien_thi ?? "",
-      employeeId: account?.dinh_danh_nhan_su ?? null,
+      employeeId: account?.employee_id ?? null,
       password: "",
       isActive: account?.cho_phep_dang_nhap ?? true,
-      roleIds: account?.danh_sach_vai_tro.map((r) => r.dinh_danh_vai_tro) ?? [],
+      roleIds: account?.danh_sach_vai_tro.map((r) => r.role_id) ?? [],
     },
   });
+  const employeeId = useWatch({ control: form.control, name: "employeeId" });
+  const left =
+    employees.find((e) => e.id === employeeId)?.tinh_trang_lam_viec ===
+    "LEFT";
+  if (credentials)
+    return <AccountCredentials credentials={credentials} done={done} />;
   return (
     <Form {...form}>
       <form
@@ -185,42 +205,68 @@ function AccountForm({
           start(async () => {
             const r = await saveAccount(v);
             if (!r.success) {
+              if ("fieldErrors" in r && r.fieldErrors)
+                for (const [key, messages] of Object.entries(r.fieldErrors)) {
+                  if (messages?.[0])
+                    form.setError(key as keyof AccountInput, {
+                      message: messages[0],
+                    });
+                }
               toast.error(r.message);
               return;
             }
             toast.success(r.message);
             router.refresh();
-            done();
+            if (r.credentials) setCredentials(r.credentials);
+            else done();
           }),
         )}
       >
+        {!account && (
+          <p className="text-sm text-muted-foreground">
+            Tên đăng nhập dự kiến:{" "}
+            {usernameBase(
+              employees.find((e) => e.id === employeeId)?.ho_ten ?? "",
+              employeeId ?? undefined,
+            )}
+            . Để trống tên đăng nhập và mật khẩu để tự cấp. Không chọn vai trò
+            sẽ dùng DEFAULT (chỉ quyền cá nhân).
+          </p>
+        )}
         <FormField
           control={form.control}
           name="employeeId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nhân sự sở hữu</FormLabel>
+              <FormLabel required={!account}>Nhân sự sở hữu</FormLabel>
               <Select
                 value={field.value?.toString() ?? "NONE"}
                 onValueChange={(v) => {
                   field.onChange(v === "NONE" ? null : Number(v));
-                  const employee = employees.find((e) => e.dinh_danh === Number(v));
+                  const employee = employees.find(
+                    (e) => e.id === Number(v),
+                  );
                   if (employee) form.setValue("displayName", employee.ho_ten);
+                  if (employee?.tinh_trang_lam_viec === "LEFT")
+                    form.setValue("isActive", false);
                 }}
               >
                 <FormControl>
                   <SelectTrigger className="h-10 w-full min-w-0">
                     <SelectValue>
-                      {employees.find((e) => e.dinh_danh === field.value)?.ho_ten ??
-                        "Chọn nhân sự"}
+                      {employees.find((e) => e.id === field.value)
+                        ?.ho_ten ?? "Chọn nhân sự"}
                     </SelectValue>
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="NONE">Chọn nhân sự</SelectItem>
                   {employees.map((e) => (
-                    <SelectItem key={e.dinh_danh} value={String(e.dinh_danh)}>
+                    <SelectItem key={e.id} value={String(e.id)}>
                       {e.ma_nhan_su} — {e.ho_ten}
+                      {e.tinh_trang_lam_viec === "LEFT"
+                        ? " · Đã nghỉ việc"
+                        : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -242,7 +288,7 @@ function AccountForm({
             name={name}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{label}</FormLabel>
+                <FormLabel required={name === "displayName"}>{label}</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
@@ -256,6 +302,12 @@ function AccountForm({
             )}
           />
         ))}
+        {left && (
+          <p className="text-sm text-destructive">
+            Nhân sự đã nghỉ việc, tài khoản không được phép đăng nhập. Làm việc
+            trở lại không tự mở tài khoản.
+          </p>
+        )}
         <FormField
           control={form.control}
           name="isActive"
@@ -264,6 +316,7 @@ function AccountForm({
               <FormControl>
                 <Checkbox
                   checked={field.value}
+                  disabled={left}
                   onCheckedChange={(v) => field.onChange(v === true)}
                 />
               </FormControl>
@@ -281,16 +334,16 @@ function AccountForm({
               <div className="space-y-2">
                 {roles.map((r) => (
                   <label
-                    key={r.dinh_danh}
+                    key={r.id}
                     className="flex min-h-10 items-center gap-2"
                   >
                     <Checkbox
-                      checked={field.value.includes(r.dinh_danh)}
+                      checked={field.value.includes(r.id)}
                       onCheckedChange={(v) =>
                         field.onChange(
                           v
-                            ? [...field.value, r.dinh_danh]
-                            : field.value.filter((id) => id !== r.dinh_danh),
+                            ? [...field.value, r.id]
+                            : field.value.filter((id) => id !== r.id),
                         )
                       }
                     />

@@ -20,13 +20,14 @@ async function main() {
       dang_hoat_dong: true,
     },
   });
-  console.log(`✅ Công ty: ${company.ten_cong_ty} (ID: ${company.dinh_danh})`);
+  console.log(`✅ Công ty: ${company.ten_cong_ty} (ID: ${company.id})`);
 
   // 2. Tạo các Nhóm vai trò chuẩn (Roles) tập trung cho HCNS & IT làm nòng cốt
   const roleDefs = [
+    { code: "DEFAULT", name: "Nhân viên cơ bản", description: "Dashboard cá nhân, hồ sơ của tôi và đổi mật khẩu", isSystem: true },
     {
       code: "ADMIN",
-      name: "Ban Giám Đốc / Quản Trị Tối Cao",
+      name: "Quản trị hệ thống",
       description:
         "Toàn quyền quản trị và điều hành toàn bộ các phân hệ trong hệ thống",
       isSystem: true,
@@ -75,25 +76,30 @@ async function main() {
     },
   ];
 
+  // Never restore permissions that administrators changed in the UI.
+  const bootstrapRoles =
+    await prisma.vai_tro.count({ where: { company_id: company.id, ma_vai_tro: { not: "DEFAULT" } } }) === 0 &&
+    await prisma.tai_khoan.count({ where: { company_id: company.id } }) === 0
+    && await prisma.nhat_ky_hoat_dong.count({ where: { company_id: company.id, phan_he: "ROLE" } }) === 0;
   const roleMap: Record<string, number> = {};
   for (const r of roleDefs) {
     const role = await prisma.vai_tro.upsert({
       where: {
-        dinh_danh_cong_ty_ma_vai_tro: {
-          dinh_danh_cong_ty: company.dinh_danh,
+        company_id_ma_vai_tro: {
+          company_id: company.id,
           ma_vai_tro: r.code,
         },
       },
       update: {},
       create: {
-        dinh_danh_cong_ty: company.dinh_danh,
+        company_id: company.id,
         ma_vai_tro: r.code,
         ten_vai_tro: r.name,
         mo_ta: r.description,
         la_vai_tro_he_thong: r.isSystem,
       },
     });
-    roleMap[r.code] = role.dinh_danh;
+    roleMap[r.code] = role.id;
   }
   console.log(
     `✅ Đã khởi tạo ${Object.keys(roleMap).length} Nhóm Vai Trò (Roles).`,
@@ -101,6 +107,10 @@ async function main() {
 
   // 3. Tạo Danh mục Quyền cơ bản (Permissions)
   const permissionDefs = [
+    { module: "ACCOUNTS", action: "MANAGE", name: "Quản lý tài khoản đăng nhập", scope: "ALL" },
+    { module: "ROLES", action: "VIEW", name: "Xem vai trò và quyền hiệu lực", scope: "ALL" },
+    { module: "ROLES", action: "MANAGE", name: "Quản lý vai trò và phân quyền", scope: "ALL" },
+    { module: "AUDIT", action: "VIEW", name: "Xem nhật ký hoạt động", scope: "ALL" },
     { module: "HR", action: "VIEW", name: "Xem danh bạ nhân sự", scope: "ALL" },
     {
       module: "HR",
@@ -169,7 +179,7 @@ async function main() {
         pham_vi: p.scope,
       },
     });
-    permMap[`${p.module}:${p.action}`] = perm.dinh_danh;
+    permMap[`${p.module}:${p.action}`] = perm.id;
   }
   console.log(
     `✅ Đã khởi tạo ${Object.keys(permMap).length} Quyền Phân Hệ (Permissions).`,
@@ -199,22 +209,22 @@ async function main() {
     STAFF: ["HR:VIEW", "TASK:VIEW"],
   };
 
-  for (const [rCode, pKeys] of Object.entries(rolePermMappings)) {
+  if (bootstrapRoles) for (const [rCode, pKeys] of Object.entries(rolePermMappings)) {
     const rId = roleMap[rCode];
     for (const pKey of pKeys) {
       const pId = permMap[pKey];
       if (rId && pId) {
         await prisma.vai_tro_quyen.upsert({
           where: {
-            dinh_danh_vai_tro_dinh_danh_quyen: {
-              dinh_danh_vai_tro: rId,
-              dinh_danh_quyen: pId,
+            role_id_permission_id: {
+              role_id: rId,
+              permission_id: pId,
             },
           },
           update: {},
           create: {
-            dinh_danh_vai_tro: rId,
-            dinh_danh_quyen: pId,
+            role_id: rId,
+            permission_id: pId,
           },
         });
       }
@@ -223,9 +233,9 @@ async function main() {
   console.log(`✅ Đã gán ma trận quyền hạn cho các vai trò.`);
 
   // Only bootstrap organization data on a pristine company. Never recreate renamed/deleted units.
-  const hasOrganizationData = await prisma.phong_ban.count({ where: { dinh_danh_cong_ty: company.dinh_danh } })
-    || await prisma.nhan_su.count({ where: { dinh_danh_cong_ty: company.dinh_danh } })
-    || await prisma.nhat_ky_hoat_dong.count({ where: { dinh_danh_cong_ty: company.dinh_danh, phan_he: "DEPARTMENT" } });
+  const hasOrganizationData = await prisma.phong_ban.count({ where: { company_id: company.id } })
+    || await prisma.nhan_su.count({ where: { company_id: company.id } })
+    || await prisma.nhat_ky_hoat_dong.count({ where: { company_id: company.id, phan_he: "DEPARTMENT" } });
   if (!hasOrganizationData) {
   // 5. Khởi tạo Cơ cấu Tổ chức Phân cấp Cây (6 Phòng ban Cha + Lãnh đạo + Bộ phận Con)
   // 5.1 Các Đơn vị cấp Cha (Cấp 1 - Trực thuộc Tập đoàn)
@@ -282,21 +292,21 @@ async function main() {
   for (const pDept of parentDeptDefs) {
     const dept = await prisma.phong_ban.upsert({
       where: {
-        dinh_danh_cong_ty_ma_phong_ban: {
-          dinh_danh_cong_ty: company.dinh_danh,
+        company_id_ma_phong_ban: {
+          company_id: company.id,
           ma_phong_ban: pDept.code,
         },
       },
       update: {},
       create: {
-        dinh_danh_cong_ty: company.dinh_danh,
+        company_id: company.id,
         ma_phong_ban: pDept.code,
         ten_phong_ban: pDept.name,
         mo_ta: pDept.description,
-        dinh_danh_phong_ban_cha: null,
+        parent_id: null,
       },
     });
-    departmentMap[pDept.name] = dept.dinh_danh;
+    departmentMap[pDept.name] = dept.id;
   }
 
   // 5.2 Khởi tạo các Bộ phận Con chuẩn 100% theo File Excel gốc:
@@ -364,21 +374,21 @@ async function main() {
     const parentId = departmentMap[cDept.parentName];
     const dept = await prisma.phong_ban.upsert({
       where: {
-        dinh_danh_cong_ty_ma_phong_ban: {
-          dinh_danh_cong_ty: company.dinh_danh,
+        company_id_ma_phong_ban: {
+          company_id: company.id,
           ma_phong_ban: cDept.code,
         },
       },
       update: {},
       create: {
-        dinh_danh_cong_ty: company.dinh_danh,
+        company_id: company.id,
         ma_phong_ban: cDept.code,
         ten_phong_ban: cDept.name,
         mo_ta: cDept.description,
-        dinh_danh_phong_ban_cha: parentId,
+        parent_id: parentId,
       },
     });
-    departmentMap[cDept.name] = dept.dinh_danh;
+    departmentMap[cDept.name] = dept.id;
   }
 
   console.log(
@@ -393,6 +403,7 @@ async function main() {
   const defaultPassword = await bcrypt.hash("123456", 10);
 
   // 6.1 Tạo tài khoản Quản trị viên tối cao (Master Admin)
+  const existingAdmin = await prisma.tai_khoan.findUnique({ where: { ten_dang_nhap: "admin" } });
   const adminUser = await prisma.tai_khoan.upsert({
     where: { ten_dang_nhap: "admin" },
     update: {}, // Never reset credentials or change the existing account owner on reseed.
@@ -401,23 +412,23 @@ async function main() {
       mat_khau_bam: defaultPassword,
       ten_hien_thi: "Quản Trị Viên Hệ Thống",
       cho_phep_dang_nhap: true,
-      dinh_danh_cong_ty: company.dinh_danh,
+      company_id: company.id,
     },
   });
 
   const adminRoleId = roleMap["ADMIN"];
-  if (adminRoleId) {
+  if (adminRoleId && !existingAdmin && bootstrapRoles) {
     await prisma.tai_khoan_vai_tro.upsert({
       where: {
-        dinh_danh_tai_khoan_dinh_danh_vai_tro: {
-          dinh_danh_tai_khoan: adminUser.dinh_danh,
-          dinh_danh_vai_tro: adminRoleId,
+        account_id_role_id: {
+          account_id: adminUser.id,
+          role_id: adminRoleId,
         },
       },
       update: { la_vai_tro_chinh: true },
       create: {
-        dinh_danh_tai_khoan: adminUser.dinh_danh,
-        dinh_danh_vai_tro: adminRoleId,
+        account_id: adminUser.id,
+        role_id: adminRoleId,
         la_vai_tro_chinh: true,
       },
     });
@@ -427,7 +438,7 @@ async function main() {
   );
 
   // HR is initialized only once; subsequent seeds preserve all manual changes.
-  const result = await bootstrapHrFinal(prisma, company.dinh_danh);
+  const result = await bootstrapHrFinal(prisma, company.id);
   console.log(
     result.skipped
       ? "Đã có dữ liệu HR: giữ nguyên, không đồng bộ lại từ nguồn."

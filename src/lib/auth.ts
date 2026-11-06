@@ -5,6 +5,8 @@ import { cookies } from "next/headers";
 export type PermissionLevel = "NONE" | "VIEW" | "MANAGE";
 
 export interface SessionUser {
+  workflowActions?: import("@/lib/role-catalog").WorkflowAction[];
+  mustChangePassword?: boolean;
   userId: number;
   employeeId?: number | null;
   sessionVersion?: number;
@@ -24,7 +26,9 @@ const COOKIE_NAME = "sdg_session";
 /**
  * Lấy Session người dùng hiện tại từ Cookie (dùng trong Server Components / Server Actions)
  */
-export async function getSession(): Promise<SessionUser | null> {
+export async function getSession(options?: {
+  allowPasswordChange?: boolean;
+}): Promise<SessionUser | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value;
@@ -33,7 +37,14 @@ export async function getSession(): Promise<SessionUser | null> {
     if (!tokenUser || !Number.isInteger(tokenUser.userId)) return null;
     const { readAccountSession } = await import("@/lib/account-session");
     const current = await readAccountSession(tokenUser.userId);
-    if (!current || current.companyId !== tokenUser.companyId || current.sessionVersion !== (tokenUser.sessionVersion ?? 0)) return null;
+    if (
+      !current ||
+      current.companyId !== tokenUser.companyId ||
+      current.sessionVersion !== (tokenUser.sessionVersion ?? 0)
+    )
+      return null;
+    if (current.mustChangePassword && !options?.allowPasswordChange)
+      return null;
     return current;
   } catch {
     return null;
@@ -68,7 +79,7 @@ export async function deleteSessionCookie() {
 export function hasPermission(
   session: SessionUser | null | undefined,
   module: string,
-  level: "VIEW" | "MANAGE" = "VIEW"
+  level: "VIEW" | "MANAGE" = "VIEW",
 ): boolean {
   if (!session?.permissions) return false;
   const userLevel = session.permissions[module];

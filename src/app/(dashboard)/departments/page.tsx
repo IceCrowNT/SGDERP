@@ -1,3 +1,4 @@
+import { db } from "@/lib/db";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
@@ -30,12 +31,18 @@ export default async function DepartmentsPage() {
     );
   }
 
+  const headCandidates = res.canManage ? await db.nhan_su.findMany({
+    where: { company_id: session.companyId },
+    select: { id: true, ho_ten: true, ma_nhan_su: true, tinh_trang_lam_viec: true, phong_ban: { select: { ten_phong_ban: true } } },
+    orderBy: { ho_ten: "asc" },
+  }) : [];
   return (
     <div className="space-y-6">
       <DepartmentManager
         initialDepartments={res.data}
         companyName={res.companyName}
         canManage={res.canManage}
+        headCandidates={headCandidates}
       />
     </div>
   );

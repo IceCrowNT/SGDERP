@@ -76,3 +76,6 @@ docs/SDGSources
 # Temporary working directories for document generation
 /tmp/
 /temp/
+
+# Private avatar uploads (back up separately from Git)
+/var/

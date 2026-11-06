@@ -11,6 +11,9 @@ export async function middleware(request: NextRequest) {
     const session = await verifySessionToken(token);
     if (session?.userId) {
       isAuthenticated = true;
+      if (session.mustChangePassword && !isLoginPage && !request.nextUrl.pathname.startsWith("/profile") && !request.nextUrl.pathname.startsWith("/media/avatar/")) {
+        return NextResponse.redirect(new URL("/profile", request.url));
+      }
     }
   }
 

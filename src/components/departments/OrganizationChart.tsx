@@ -22,17 +22,17 @@ export function OrganizationChart({ departments, companyName, search }: {
     const visited = new Set<number>();
     let leaf = 0;
     const walk = (department: DepartmentItem, depth: number): Node | null => {
-      if (visited.has(department.dinh_danh)) return null;
-      visited.add(department.dinh_danh);
-      const children = collapsed.has(department.dinh_danh) ? [] : departments.filter(d => d.dinh_danh_phong_ban_cha === department.dinh_danh);
+      if (visited.has(department.id)) return null;
+      visited.add(department.id);
+      const children = collapsed.has(department.id) ? [] : departments.filter(d => d.parent_id === department.id);
       const descendants = children.map(child => walk(child, depth + 1)).filter((n): n is Node => n !== null);
       const x = descendants.length ? (descendants[0].x + descendants[descendants.length - 1].x) / 2 : 24 + leaf++ * 330;
-      const node = { id: department.dinh_danh, department, x, y: 24 + depth * 170 };
+      const node = { id: department.id, department, x, y: 24 + depth * 170 };
       nodes.push(node);
       descendants.forEach(child => edges.push([node, child]));
       return node;
     };
-    const roots = departments.filter(d => d.dinh_danh_phong_ban_cha === null || !departments.some(p => p.dinh_danh === d.dinh_danh_phong_ban_cha));
+    const roots = departments.filter(d => d.parent_id === null || !departments.some(p => p.id === d.parent_id));
     const rootNodes = roots.map(d => walk(d, 1)).filter((n): n is Node => n !== null);
     const company = { id: -1, x: rootNodes.length ? (rootNodes[0].x + rootNodes[rootNodes.length - 1].x) / 2 : 24, y: 24 };
     nodes.push(company);
@@ -51,7 +51,7 @@ export function OrganizationChart({ departments, companyName, search }: {
   const focusResult = () => {
     setCollapsed(new Set());
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      const el = viewport.current?.querySelector(`[data-department-id="${matches[0]?.dinh_danh}"]`);
+      const el = viewport.current?.querySelector(`[data-department-id="${matches[0]?.id}"]`);
       el?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
     }));
   };
@@ -79,18 +79,18 @@ export function OrganizationChart({ departments, companyName, search }: {
         {graph.edges.map(([parent, child]) => <path key={`${parent.id}-${child.id}`} d={`M ${parent.x + 146} ${parent.y + 90} V ${parent.y + 130} H ${child.x + 146} V ${child.y}`} fill="none" className="stroke-border" strokeWidth={2} />)}
         {graph.nodes.map(node => {
           const d = node.department;
-          const hasChildren = d && departments.some(child => child.dinh_danh_phong_ban_cha === d.dinh_danh);
-          const highlighted = d && query && matches.some(m => m.dinh_danh === d.dinh_danh);
-          return <foreignObject key={node.id} x={node.x} y={node.y} width={292} height={100} data-department-id={d?.dinh_danh}>
+          const hasChildren = d && departments.some(child => child.parent_id === d.id);
+          const highlighted = d && query && matches.some(m => m.id === d.id);
+          return <foreignObject key={node.id} x={node.x} y={node.y} width={292} height={100} data-department-id={d?.id}>
             <div className={`flex h-[90px] items-center rounded-xl border border-t-4 bg-card shadow-sm ${highlighted ? "border-primary ring-2 ring-primary/30" : "border-border border-t-primary/70"}`}>
               {d ? <>
                 <Button variant="ghost" className="h-full min-w-0 flex-1 flex-col items-start gap-1 whitespace-normal px-3 text-left" onClick={() => setSelected(d)} aria-label={`Xem nhân sự ${d.ten_phong_ban}`}>
                   <span className="line-clamp-2 text-sm font-semibold">{d.ten_phong_ban}</span>
                   <span className="text-xs font-normal text-muted-foreground">{d.ma_phong_ban} · {d.danh_sach_nhan_su.length} hồ sơ trực thuộc</span>
                 </Button>
-                {hasChildren && <Button variant="ghost" size="icon" className="size-10 shrink-0" aria-label={`${collapsed.has(d.dinh_danh) ? "Mở" : "Thu"} nhánh ${d.ten_phong_ban}`} aria-expanded={!collapsed.has(d.dinh_danh)} onClick={() => setCollapsed(previous => {
-                  const next = new Set(previous); if (next.has(d.dinh_danh)) next.delete(d.dinh_danh); else next.add(d.dinh_danh); return next;
-                })}>{collapsed.has(d.dinh_danh) ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}</Button>}
+                {hasChildren && <Button variant="ghost" size="icon" className="size-10 shrink-0" aria-label={`${collapsed.has(d.id) ? "Mở" : "Thu"} nhánh ${d.ten_phong_ban}`} aria-expanded={!collapsed.has(d.id)} onClick={() => setCollapsed(previous => {
+                  const next = new Set(previous); if (next.has(d.id)) next.delete(d.id); else next.add(d.id); return next;
+                })}>{collapsed.has(d.id) ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}</Button>}
               </> : <p className="px-4 text-sm font-semibold">{companyName}</p>}
             </div>
           </foreignObject>;
@@ -101,7 +101,7 @@ export function OrganizationChart({ departments, companyName, search }: {
     <Dialog open={Boolean(selected)} onOpenChange={open => { if (!open) setSelected(null); }}>
       <DialogContent className="max-h-[85vh] w-[95vw] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle>{selected?.ten_phong_ban}</DialogTitle><DialogDescription>{selected?.danh_sach_nhan_su.length ?? 0} hồ sơ trực thuộc; không bao gồm bộ phận con.</DialogDescription></DialogHeader>
-        {selected?.danh_sach_nhan_su.length ? <ul className="space-y-2">{selected.danh_sach_nhan_su.map(person => <li key={person.dinh_danh} className="rounded-lg border p-3"><p className="font-medium">{person.ho_ten}</p><p className="text-sm text-muted-foreground">{person.ma_nhan_su} · {person.chuc_vu || "Chưa có chức vụ"}</p></li>)}</ul> : <p className="text-sm text-muted-foreground">Chưa có hồ sơ nhân sự trực thuộc.</p>}
+        {selected?.danh_sach_nhan_su.length ? <ul className="space-y-2">{selected.danh_sach_nhan_su.map(person => <li key={person.id} className="rounded-lg border p-3"><p className="font-medium">{person.ho_ten}</p><p className="text-sm text-muted-foreground">{person.ma_nhan_su} · {person.chuc_vu || "Chưa có chức vụ"}</p></li>)}</ul> : <p className="text-sm text-muted-foreground">Chưa có hồ sơ nhân sự trực thuộc.</p>}
       </DialogContent>
     </Dialog>
   </div>;

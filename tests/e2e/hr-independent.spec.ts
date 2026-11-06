@@ -12,7 +12,7 @@ let companyId: number,
   departmentId: number,
   otherDepartmentId: number;
 let personId: number,
-  manager: { dinh_danh: number; dinh_danh_cong_ty: number; phien_ban_dang_nhap: number };
+  manager: { id: number; company_id: number; phien_ban_dang_nhap: number };
 let roleId: number;
 
 test.beforeAll(async () => {
@@ -22,51 +22,51 @@ test.beforeAll(async () => {
         await db.cong_ty.create({
           data: { ten_cong_ty: `HR independent ${label} ${run}` },
         })
-      ).dinh_danh,
+      ).id,
     );
   }
   [companyId, otherCompanyId] = companies;
   departmentId = (
     await db.phong_ban.create({
-      data: { dinh_danh_cong_ty: companyId, ma_phong_ban: "HR", ten_phong_ban: "Phòng nhân sự thử nghiệm" },
+      data: { company_id: companyId, ma_phong_ban: "HR", ten_phong_ban: "Phòng nhân sự thử nghiệm" },
     })
-  ).dinh_danh;
+  ).id;
   otherDepartmentId = (
     await db.phong_ban.create({
       data: {
-        dinh_danh_cong_ty: otherCompanyId,
+        company_id: otherCompanyId,
         ma_phong_ban: "OTHER",
         ten_phong_ban: "Phòng công ty khác",
       },
     })
-  ).dinh_danh;
+  ).id;
   const permission = await db.quyen.findFirstOrThrow({
     where: { phan_he: "HR", hanh_dong: "MANAGE" },
   });
   roleId = (
     await db.vai_tro.create({
       data: {
-        dinh_danh_cong_ty: companyId,
+        company_id: companyId,
         ma_vai_tro: "HR_TEST",
         ten_vai_tro: "HR quản lý",
-        danh_sach_quyen: { create: { dinh_danh_quyen: permission.dinh_danh } },
+        danh_sach_quyen: { create: { permission_id: permission.id } },
       },
     })
-  ).dinh_danh;
+  ).id;
   manager = await db.tai_khoan.create({
     data: {
-      dinh_danh_cong_ty: companyId,
+      company_id: companyId,
       ten_dang_nhap: `hr-independent-${run}`,
       ten_hien_thi: "HR kiểm thử",
       mat_khau_bam: "disabled",
-      danh_sach_vai_tro: { create: { dinh_danh_vai_tro: roleId } },
+      danh_sach_vai_tro: { create: { role_id: roleId } },
     },
   });
   personId = (
     await db.nhan_su.create({
       data: {
-        dinh_danh_cong_ty: companyId,
-        dinh_danh_phong_ban: departmentId,
+        company_id: companyId,
+        department_id: departmentId,
         ho_ten: "Người nhập nguồn thử nghiệm",
         chuc_vu: "Chức danh gốc",
         tinh_trang_lam_viec: "ACTIVE",
@@ -78,16 +78,16 @@ test.beforeAll(async () => {
         dinh_danh_nguon: `fixture-${run}`,
       },
     })
-  ).dinh_danh;
+  ).id;
 });
 test.afterAll(async () => {
   for (const companyId of companies) {
-    await db.nhat_ky_hoat_dong.deleteMany({ where: { dinh_danh_cong_ty: companyId } });
-    await db.tai_khoan.deleteMany({ where: { dinh_danh_cong_ty: companyId } });
-    await db.nhan_su.deleteMany({ where: { dinh_danh_cong_ty: companyId } });
-    await db.vai_tro.deleteMany({ where: { dinh_danh_cong_ty: companyId } });
-    await db.phong_ban.deleteMany({ where: { dinh_danh_cong_ty: companyId } });
-    await db.cong_ty.delete({ where: { dinh_danh: companyId } });
+    await db.nhat_ky_hoat_dong.deleteMany({ where: { company_id: companyId } });
+    await db.tai_khoan.deleteMany({ where: { company_id: companyId } });
+    await db.nhan_su.deleteMany({ where: { company_id: companyId } });
+    await db.vai_tro.deleteMany({ where: { company_id: companyId } });
+    await db.phong_ban.deleteMany({ where: { company_id: companyId } });
+    await db.cong_ty.delete({ where: { id: companyId } });
   }
   await db.$disconnect();
 });
@@ -97,8 +97,8 @@ test("DB allocates unique codes concurrently, protects updates and never reuses 
     Array.from({ length: 12 }, (_, i) =>
       db.nhan_su.create({
         data: {
-          dinh_danh_cong_ty: companyId,
-          dinh_danh_phong_ban: departmentId,
+          company_id: companyId,
+          department_id: departmentId,
           ho_ten: `Concurrent ${i}`,
           tinh_trang_lam_viec: "ACTIVE",
         },
@@ -109,14 +109,14 @@ test("DB allocates unique codes concurrently, protects updates and never reuses 
   for (const e of people) expect(e.ma_nhan_su).toMatch(/^SDG-\d{3,}$/);
   await expect(
     db.nhan_su.update({
-      where: { dinh_danh: people[0].dinh_danh },
+      where: { id: people[0].id },
       data: { ma_nhan_su: "ILLEGAL" },
     }),
   ).rejects.toThrow();
   const old = people[0];
-  await db.nhan_su.delete({ where: { dinh_danh: old.dinh_danh } });
+  await db.nhan_su.delete({ where: { id: old.id } });
   const next = await db.nhan_su.create({
-    data: { dinh_danh_cong_ty: companyId, dinh_danh_phong_ban: departmentId, ho_ten: "After deletion" },
+    data: { company_id: companyId, department_id: departmentId, ho_ten: "After deletion" },
   });
   expect(Number(next.ma_nhan_su.slice(4))).toBeGreaterThan(
     Math.max(...people.map((e) => Number(e.ma_nhan_su.slice(4)))),
@@ -139,7 +139,7 @@ test("HR can edit source-bound person and notes; action rejects code tampering, 
   await page.getByLabel("Tìm nhân sự").fill("Người nhập nguồn thử nghiệm");
   await page.getByRole("button", { name: "Sửa hồ sơ", exact: true }).click();
   const before = await db.nhan_su.findUniqueOrThrow({
-    where: { dinh_danh: personId },
+    where: { id: personId },
   });
   await expect(page.getByRole("dialog")).toContainText(before.ma_nhan_su);
   await expect(page.getByLabel("Mã nhân sự", { exact: true })).toHaveCount(0);
@@ -165,7 +165,7 @@ test("HR can edit source-bound person and notes; action rejects code tampering, 
   const request = await requestPromise;
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const after = await db.nhan_su.findUniqueOrThrow({
-    where: { dinh_danh: personId },
+    where: { id: personId },
   });
   expect(after).toMatchObject({
     ho_ten: "Người đã cập nhật",
@@ -177,9 +177,9 @@ test("HR can edit source-bound person and notes; action rejects code tampering, 
   expect(
     await db.nhat_ky_hoat_dong.count({
       where: {
-        dinh_danh_cong_ty: companyId,
+        company_id: companyId,
         phan_he: "HR",
-        dinh_danh_doi_tuong: String(personId),
+        doi_tuong_id: String(personId),
         hanh_dong: "UPDATE",
       },
     }),
@@ -208,14 +208,14 @@ test("HR can edit source-bound person and notes; action rejects code tampering, 
   );
   const outsider = await db.nhan_su.create({
     data: {
-      dinh_danh_cong_ty: otherCompanyId,
-      dinh_danh_phong_ban: otherDepartmentId,
+      company_id: otherCompanyId,
+      department_id: otherDepartmentId,
       ho_ten: "Người công ty khác",
     },
   });
-  expect(await replay({ id: outsider.dinh_danh })).toContain("Không tìm thấy nhân sự");
+  expect(await replay({ id: outsider.id })).toContain("Không tìm thấy nhân sự");
   await db.tai_khoan_vai_tro.delete({
-    where: { dinh_danh_tai_khoan_dinh_danh_vai_tro: { dinh_danh_tai_khoan: manager.dinh_danh, dinh_danh_vai_tro: roleId } },
+    where: { account_id_role_id: { account_id: manager.id, role_id: roleId } },
   });
   try {
     expect(await replay({ notes: "Không được ghi" })).toContain(
@@ -224,10 +224,10 @@ test("HR can edit source-bound person and notes; action rejects code tampering, 
     await page.goto("/employees");
     await expect(page.getByText("Không có quyền xem nhân sự.")).toBeVisible();
     expect(
-      (await db.nhan_su.findUniqueOrThrow({ where: { dinh_danh: personId } })).ghi_chu,
+      (await db.nhan_su.findUniqueOrThrow({ where: { id: personId } })).ghi_chu,
     ).toBe(after.ghi_chu);
   } finally {
-    await db.tai_khoan_vai_tro.create({ data: { dinh_danh_tai_khoan: manager.dinh_danh, dinh_danh_vai_tro: roleId } });
+    await db.tai_khoan_vai_tro.create({ data: { account_id: manager.id, role_id: roleId } });
   }
 });
 
@@ -235,7 +235,7 @@ test("bootstrap imports final once and never overwrites operational changes", as
   const company = await db.cong_ty.create({
     data: { ten_cong_ty: `HR bootstrap ${run}` },
   });
-  companies.push(company.dinh_danh);
+  companies.push(company.id);
   for (const code of [
     "BLD",
     "BKS",
@@ -248,34 +248,34 @@ test("bootstrap imports final once and never overwrites operational changes", as
     "QLDA_NDV1",
   ]) {
     await db.phong_ban.create({
-      data: { dinh_danh_cong_ty: company.dinh_danh, ma_phong_ban: code, ten_phong_ban: code },
+      data: { company_id: company.id, ma_phong_ban: code, ten_phong_ban: code },
     });
   }
   const results = await Promise.all([
-    bootstrapHrFinal(db, company.dinh_danh),
-    bootstrapHrFinal(db, company.dinh_danh),
+    bootstrapHrFinal(db, company.id),
+    bootstrapHrFinal(db, company.id),
   ]);
   expect(results.map((r) => r.created).sort()).toEqual([0, 72]);
-  expect(await db.tai_khoan.count({ where: { dinh_danh_cong_ty: company.dinh_danh } })).toBe(0);
+  expect(await db.tai_khoan.count({ where: { company_id: company.id } })).toBe(0);
   const person = await db.nhan_su.findFirstOrThrow({
-    where: { dinh_danh_cong_ty: company.dinh_danh },
+    where: { company_id: company.id },
   });
   await db.nhan_su.update({
-    where: { dinh_danh: person.dinh_danh },
+    where: { id: person.id },
     data: {
       ho_ten: "Đã đổi tên nội bộ",
       ghi_chu: "Không được ghi đè",
       chuc_vu: "Chức danh mới",
     },
   });
-  expect(await bootstrapHrFinal(db, company.dinh_danh)).toEqual({
+  expect(await bootstrapHrFinal(db, company.id)).toEqual({
     created: 0,
     skipped: true,
   });
-  expect(await db.nhan_su.count({ where: { dinh_danh_cong_ty: company.dinh_danh } })).toBe(
+  expect(await db.nhan_su.count({ where: { company_id: company.id } })).toBe(
     72,
   );
   expect(
-    (await db.nhan_su.findUniqueOrThrow({ where: { dinh_danh: person.dinh_danh } })).ghi_chu,
+    (await db.nhan_su.findUniqueOrThrow({ where: { id: person.id } })).ghi_chu,
   ).toBe("Không được ghi đè");
 });

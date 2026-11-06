@@ -1,3 +1,4 @@
+import { canManageAccounts } from "@/lib/account-access";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
@@ -51,29 +52,42 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
   }
 
   const departments = await db.phong_ban.findMany({
-    where: { dinh_danh_cong_ty: session.companyId },
-    select: { dinh_danh: true, ten_phong_ban: true, dinh_danh_phong_ban_cha: true },
+    where: { company_id: session.companyId },
+    select: { id: true, ten_phong_ban: true, parent_id: true },
     orderBy: { ten_phong_ban: "asc" },
   });
 
+  const accountAccess = canManageAccounts(session);
+  const roles = accountAccess ? await db.vai_tro.findMany({
+    where: { company_id: session.companyId }, select: { id: true, ten_vai_tro: true }, orderBy: { ten_vai_tro: "asc" },
+  }) : [];
+  const accounts = accountAccess ? await db.tai_khoan.findMany({
+    where: { company_id: session.companyId },
+    select: { id: true, employee_id: true, ten_dang_nhap: true, cho_phep_dang_nhap: true,
+      danh_sach_vai_tro: { select: { vai_tro: { select: { ten_vai_tro: true } } } } },
+    orderBy: { ten_dang_nhap: "asc" },
+  }) : [];
   return (
     <div className="space-y-6">
       <EmployeeManager
         initialEmployees={res.data || []}
         departments={departments.map((department) => {
           const names = [department.ten_phong_ban];
-          const seen = new Set([department.dinh_danh]);
-          let parentId = department.dinh_danh_phong_ban_cha;
+          const seen = new Set([department.id]);
+          let parentId = department.parent_id;
           while (parentId && !seen.has(parentId)) {
             seen.add(parentId);
-            const parent = departments.find((item) => item.dinh_danh === parentId);
+            const parent = departments.find((item) => item.id === parentId);
             if (!parent) break;
             names.unshift(parent.ten_phong_ban);
-            parentId = parent.dinh_danh_phong_ban_cha;
+            parentId = parent.parent_id;
           }
-          return { id: department.dinh_danh, name: names.join(" → ") };
+          return { id: department.id, name: names.join(" → ") };
         })}
         canManage={res.canManage || false}
+        accountAccess={accountAccess}
+        roles={roles}
+        accounts={accounts}
       />
     </div>
   );

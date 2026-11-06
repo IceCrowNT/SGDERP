@@ -11,7 +11,13 @@ datasource db {
 // CORE & TENANT (Công ty thành viên / Chi nhánh trong Tập đoàn)
 // -----------------------------------------------------------------------------
 model cong_ty {
-  dinh_danh      Int     @id(map: "Company_pkey") @default(autoincrement())
+  danh_sach_mau_quy_trinh     mau_quy_trinh[]
+  danh_sach_buoc_mau          buoc_mau_quy_trinh[]
+  danh_sach_ho_so_quy_trinh   ho_so_quy_trinh[]
+  danh_sach_buoc_xu_ly        buoc_xu_ly_quy_trinh[]
+  danh_sach_lich_su_quy_trinh lich_su_quy_trinh[]
+
+  id             Int     @id(map: "Company_pkey") @default(autoincrement())
   ten_cong_ty    String  @db.VarChar(255)
   ma_so_thue     String? @unique(map: "Company_taxCode_key") @db.VarChar(50)
   dia_chi        String? @db.Text
@@ -23,15 +29,17 @@ model cong_ty {
   danh_sach_vai_tro   vai_tro[]
   danh_sach_nhat_ky   nhat_ky_hoat_dong[]
 
-  thoi_diem_tao      DateTime @default(now())
-  thoi_diem_cap_nhat DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 // -----------------------------------------------------------------------------
 // ORGANIZATION (Phòng ban / Ban QLDA / Bộ phận trực thuộc)
 // -----------------------------------------------------------------------------
 model phong_ban {
-  dinh_danh     Int     @id(map: "Department_pkey") @default(autoincrement())
+  danh_sach_ho_so_quy_trinh ho_so_quy_trinh[]
+
+  id            Int     @id(map: "Department_pkey") @default(autoincrement())
   ma_phong_ban  String  @db.VarChar(50)
   ten_phong_ban String  @db.VarChar(255)
   mo_ta         String? @db.Text
@@ -47,22 +55,25 @@ model phong_ban {
   thoi_diem_chup_du_lieu_nguon DateTime?
 
   // Cấu trúc phân cấp Cây Phòng Ban (Cha - Con)
-  dinh_danh_phong_ban_cha Int?
-  phong_ban_cha           phong_ban?  @relation(map: "Department_parentId_fkey", "DepartmentHierarchy", fields: [dinh_danh_phong_ban_cha], references: [dinh_danh], onDelete: SetNull)
-  phong_ban_con           phong_ban[] @relation("DepartmentHierarchy")
+  parent_id     Int?
+  phong_ban_cha phong_ban?  @relation(map: "Department_parentId_fkey", "DepartmentHierarchy", fields: [parent_id], references: [id], onDelete: SetNull)
+  phong_ban_con phong_ban[] @relation("DepartmentHierarchy")
 
-  dinh_danh_cong_ty Int
-  cong_ty           cong_ty @relation(map: "Department_companyId_fkey", fields: [dinh_danh_cong_ty], references: [dinh_danh], onDelete: Restrict)
+  company_id Int
+  cong_ty    cong_ty @relation(map: "Department_companyId_fkey", fields: [company_id], references: [id], onDelete: Restrict)
 
-  danh_sach_nhan_su nhan_su[]
+  danh_sach_nhan_su  nhan_su[] @relation("NhanSuPhongBan")
+  nguoi_phu_trach_id Int?
+  nguoi_phu_trach    nhan_su?  @relation("NguoiPhuTrachPhong", fields: [nguoi_phu_trach_id, company_id], references: [id, company_id], onDelete: Restrict, map: "phong_ban_dinh_danh_nguoi_phu_trach_dinh_danh_cong_ty_fkey")
 
-  thoi_diem_tao      DateTime @default(now())
-  thoi_diem_cap_nhat DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  @@unique([dinh_danh, dinh_danh_cong_ty])
-  @@unique([dinh_danh_cong_ty, ma_phong_ban], map: "Department_companyId_code_key")
-  @@unique([dinh_danh_cong_ty, he_thong_nguon, dinh_danh_nguon], map: "Department_companyId_externalSystem_externalId_key")
-  @@index([dinh_danh_cong_ty, he_thong_nguon], map: "Department_companyId_externalSystem_idx")
+  @@unique([id, company_id], map: "phong_ban_dinh_danh_dinh_danh_cong_ty_key")
+  @@unique([company_id, ma_phong_ban], map: "Department_companyId_code_key")
+  @@unique([company_id, he_thong_nguon, dinh_danh_nguon], map: "Department_companyId_externalSystem_externalId_key")
+  @@index([nguoi_phu_trach_id, company_id], map: "phong_ban_dinh_danh_nguoi_phu_trach_dinh_danh_cong_ty_idx")
+  @@index([company_id, he_thong_nguon], map: "Department_companyId_externalSystem_idx")
   @@index([dinh_danh_cap_tren_nguon], map: "Department_externalParentId_idx")
 }
 
@@ -70,7 +81,12 @@ model phong_ban {
 // IDENTITY & HR PROFILE (Định danh tài khoản & Hồ sơ nhân sự)
 // -----------------------------------------------------------------------------
 model nhan_su {
-  dinh_danh                    Int              @id @default(autoincrement())
+  danh_sach_buoc_chi_dinh     buoc_mau_quy_trinh[]
+  danh_sach_ho_so_gui         ho_so_quy_trinh[]
+  danh_sach_buoc_duoc_giao    buoc_xu_ly_quy_trinh[]
+  danh_sach_lich_su_quy_trinh lich_su_quy_trinh[]
+
+  id                           Int              @id(map: "nhan_su_pkey") @default(autoincrement())
   ma_nhan_su                   String           @default(dbgenerated("tao_ma_nhan_su()")) @db.VarChar(50)
   ho_ten                       String           @db.VarChar(255)
   chuc_vu                      String?          @db.VarChar(100)
@@ -88,19 +104,20 @@ model nhan_su {
   ngay_chot_nhan_su_hr         DateTime?        @db.Date
   ghi_chu                      String?          @db.Text
   ghi_chu_nhan_su_hr           String?          @db.Text
-  dinh_danh_cong_ty            Int
-  cong_ty                      cong_ty          @relation(fields: [dinh_danh_cong_ty], references: [dinh_danh], onDelete: Restrict)
-  dinh_danh_phong_ban          Int?
-  phong_ban                    phong_ban?       @relation(fields: [dinh_danh_phong_ban, dinh_danh_cong_ty], references: [dinh_danh, dinh_danh_cong_ty], onDelete: Restrict)
+  company_id                   Int
+  cong_ty                      cong_ty          @relation(fields: [company_id], references: [id], onDelete: Restrict, map: "nhan_su_dinh_danh_cong_ty_fkey")
+  department_id                Int?
+  phong_ban                    phong_ban?       @relation("NhanSuPhongBan", fields: [department_id, company_id], references: [id, company_id], onDelete: Restrict, map: "nhan_su_dinh_danh_phong_ban_dinh_danh_cong_ty_fkey")
   danh_sach_tai_khoan          tai_khoan[]
-  thoi_diem_tao                DateTime         @default(now())
-  thoi_diem_cap_nhat           DateTime         @updatedAt
+  danh_sach_phong_phu_trach    phong_ban[]      @relation("NguoiPhuTrachPhong")
+  created_at                   DateTime         @default(now())
+  updated_at                   DateTime         @updatedAt
 
-  @@unique([dinh_danh, dinh_danh_cong_ty])
-  @@unique([dinh_danh_cong_ty, ma_nhan_su], map: "nhan_su_dinh_danh_cong_ty_ma_nhan_vien_key")
-  @@unique([dinh_danh_cong_ty, he_thong_nguon, dinh_danh_nguon])
-  @@index([dinh_danh_cong_ty, dinh_danh_phong_ban])
-  @@index([dinh_danh_cong_ty, tinh_trang_lam_viec])
+  @@unique([id, company_id], map: "nhan_su_dinh_danh_dinh_danh_cong_ty_key")
+  @@unique([company_id, ma_nhan_su], map: "nhan_su_dinh_danh_cong_ty_ma_nhan_vien_key")
+  @@unique([company_id, he_thong_nguon, dinh_danh_nguon], map: "nhan_su_dinh_danh_cong_ty_he_thong_nguon_dinh_danh_nguon_key")
+  @@index([company_id, department_id], map: "nhan_su_dinh_danh_cong_ty_dinh_danh_phong_ban_idx")
+  @@index([company_id, tinh_trang_lam_viec], map: "nhan_su_dinh_danh_cong_ty_tinh_trang_lam_viec_idx")
 }
 
 enum EmploymentStatus {
@@ -110,52 +127,58 @@ enum EmploymentStatus {
 }
 
 model tai_khoan {
-  dinh_danh           Int                 @id(map: "User_pkey") @default(autoincrement())
-  ten_dang_nhap       String              @unique(map: "User_username_key") @db.VarChar(100)
-  mat_khau_bam        String              @db.VarChar(255)
-  ten_hien_thi        String              @db.VarChar(255)
-  cho_phep_dang_nhap  Boolean             @default(true)
-  phien_ban_dang_nhap Int                 @default(0)
-  dinh_danh_cong_ty   Int
-  cong_ty             cong_ty             @relation(map: "User_companyId_fkey", fields: [dinh_danh_cong_ty], references: [dinh_danh], onDelete: Restrict)
-  dinh_danh_nhan_su   Int?
-  nhan_su             nhan_su?            @relation(map: "nguoi_dung_dinh_danh_nhan_su_dinh_danh_cong_ty_fkey", fields: [dinh_danh_nhan_su, dinh_danh_cong_ty], references: [dinh_danh, dinh_danh_cong_ty], onDelete: Restrict)
-  danh_sach_vai_tro   tai_khoan_vai_tro[]
-  danh_sach_nhat_ky   nhat_ky_hoat_dong[]
-  thoi_diem_tao       DateTime            @default(now())
-  thoi_diem_cap_nhat  DateTime            @updatedAt
+  danh_sach_mau_quy_trinh     mau_quy_trinh[]
+  danh_sach_ho_so_quy_trinh   ho_so_quy_trinh[]
+  danh_sach_lich_su_quy_trinh lich_su_quy_trinh[]
 
+  id                    Int                 @id(map: "User_pkey") @default(autoincrement())
+  ten_dang_nhap         String              @unique(map: "User_username_key") @db.VarChar(100)
+  mat_khau_bam          String              @db.VarChar(255)
+  ten_hien_thi          String              @db.VarChar(255)
+  cho_phep_dang_nhap    Boolean             @default(true)
+  phien_ban_dang_nhap   Int                 @default(0)
+  bat_buoc_doi_mat_khau Boolean             @default(false)
+  company_id            Int
+  cong_ty               cong_ty             @relation(map: "User_companyId_fkey", fields: [company_id], references: [id], onDelete: Restrict)
+  employee_id           Int?
+  nhan_su               nhan_su?            @relation(map: "nguoi_dung_dinh_danh_nhan_su_dinh_danh_cong_ty_fkey", fields: [employee_id, company_id], references: [id, company_id], onDelete: Restrict)
+  danh_sach_vai_tro     tai_khoan_vai_tro[]
+  danh_sach_nhat_ky     nhat_ky_hoat_dong[]
+  created_at            DateTime            @default(now())
+  updated_at            DateTime            @updatedAt
+
+  @@unique([id, company_id], map: "tai_khoan_dinh_danh_dinh_danh_cong_ty_key")
   @@index([cho_phep_dang_nhap], map: "User_isActive_idx")
-  @@index([dinh_danh_nhan_su, dinh_danh_cong_ty], map: "nguoi_dung_dinh_danh_nhan_su_dinh_danh_cong_ty_idx")
+  @@index([employee_id, company_id], map: "nguoi_dung_dinh_danh_nhan_su_dinh_danh_cong_ty_idx")
 }
 
 // -----------------------------------------------------------------------------
 // RBAC - NHÓM VAI TRÒ (Roles)
 // -----------------------------------------------------------------------------
 model vai_tro {
-  dinh_danh           Int     @id(map: "Role_pkey") @default(autoincrement())
+  id                  Int     @id(map: "Role_pkey") @default(autoincrement())
   ma_vai_tro          String  @db.VarChar(50) // VD: "ADMIN", "DIRECTOR", "DEPT_HEAD", "HR", "ACCOUNTANT", "STAFF"
   ten_vai_tro         String  @db.VarChar(255) // VD: "Ban Giám Đốc", "Trưởng Phòng / Bộ Phận", "Nhân Sự", "Nhân Viên"
   mo_ta               String? @db.Text
   la_vai_tro_he_thong Boolean @default(false) // Vai trò mặc định hệ thống không thể xóa
 
-  dinh_danh_cong_ty Int
-  cong_ty           cong_ty @relation(map: "Role_companyId_fkey", fields: [dinh_danh_cong_ty], references: [dinh_danh], onDelete: Restrict)
+  company_id Int
+  cong_ty    cong_ty @relation(map: "Role_companyId_fkey", fields: [company_id], references: [id], onDelete: Restrict)
 
   danh_sach_quyen     vai_tro_quyen[]
   danh_sach_tai_khoan tai_khoan_vai_tro[]
 
-  thoi_diem_tao      DateTime @default(now())
-  thoi_diem_cap_nhat DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  @@unique([dinh_danh_cong_ty, ma_vai_tro], map: "Role_companyId_code_key")
+  @@unique([company_id, ma_vai_tro], map: "Role_companyId_code_key")
 }
 
 // -----------------------------------------------------------------------------
 // RBAC - DANH MỤC QUYỀN THEO PHÂN HỆ (Module Permissions)
 // -----------------------------------------------------------------------------
 model quyen {
-  dinh_danh Int     @id(map: "Permission_pkey") @default(autoincrement())
+  id        Int     @id(map: "Permission_pkey") @default(autoincrement())
   phan_he   String  @db.VarChar(50) // VD: "HR", "TASK", "SYSTEM", "REPORT"
   hanh_dong String  @db.VarChar(50) // VD: "VIEW", "CREATE", "UPDATE", "DELETE", "APPROVE", "ASSIGN", "MANAGE"
   ten_quyen String  @db.VarChar(255) // Tên hiển thị (VD: "Xem danh bạ nhân sự", "Giao việc phòng ban")
@@ -164,8 +187,8 @@ model quyen {
 
   danh_sach_vai_tro vai_tro_quyen[]
 
-  thoi_diem_tao      DateTime @default(now())
-  thoi_diem_cap_nhat DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   @@unique([phan_he, hanh_dong], map: "Permission_module_action_key")
   @@index([phan_he], map: "Permission_module_idx")
@@ -175,50 +198,50 @@ model quyen {
 // RBAC - LIÊN KẾT VAI TRÒ & QUYỀN HẠN (Role - Permission Matrix)
 // -----------------------------------------------------------------------------
 model vai_tro_quyen {
-  dinh_danh_vai_tro Int
-  vai_tro           vai_tro @relation(map: "RolePermission_roleId_fkey", fields: [dinh_danh_vai_tro], references: [dinh_danh], onDelete: Cascade)
+  role_id Int
+  vai_tro vai_tro @relation(map: "RolePermission_roleId_fkey", fields: [role_id], references: [id], onDelete: Cascade)
 
-  dinh_danh_quyen Int
-  quyen           quyen @relation(map: "RolePermission_permissionId_fkey", fields: [dinh_danh_quyen], references: [dinh_danh], onDelete: Cascade)
+  permission_id Int
+  quyen         quyen @relation(map: "RolePermission_permissionId_fkey", fields: [permission_id], references: [id], onDelete: Cascade)
 
   thoi_diem_gan DateTime @default(now())
 
-  @@id([dinh_danh_vai_tro, dinh_danh_quyen], map: "RolePermission_pkey")
+  @@id([role_id, permission_id], map: "RolePermission_pkey")
 }
 
 // -----------------------------------------------------------------------------
 // RBAC - LIÊN KẾT NGƯỜI DÙNG & VAI TRÒ (User - Role & Kiêm nhiệm)
 // -----------------------------------------------------------------------------
 model tai_khoan_vai_tro {
-  dinh_danh_tai_khoan Int
-  tai_khoan           tai_khoan @relation(map: "UserRole_userId_fkey", fields: [dinh_danh_tai_khoan], references: [dinh_danh], onDelete: Cascade)
+  account_id Int
+  tai_khoan  tai_khoan @relation(map: "UserRole_userId_fkey", fields: [account_id], references: [id], onDelete: Cascade)
 
-  dinh_danh_vai_tro Int
-  vai_tro           vai_tro @relation(map: "UserRole_roleId_fkey", fields: [dinh_danh_vai_tro], references: [dinh_danh], onDelete: Cascade)
+  role_id Int
+  vai_tro vai_tro @relation(map: "UserRole_roleId_fkey", fields: [role_id], references: [id], onDelete: Cascade)
 
   la_vai_tro_chinh Boolean  @default(false) // Vai trò chính hoặc vai trò kiêm nhiệm
   thoi_diem_gan    DateTime @default(now())
 
-  @@id([dinh_danh_tai_khoan, dinh_danh_vai_tro], map: "UserRole_pkey")
+  @@id([account_id, role_id], map: "UserRole_pkey")
 }
 
 // -----------------------------------------------------------------------------
 // AUDIT LOG - NHẬT KÝ KIỂM TOÁN VÀ LỊCH SỬ HOẠT ĐỘNG TOÀN HỆ THỐNG
 // -----------------------------------------------------------------------------
 model nhat_ky_hoat_dong {
-  dinh_danh Int @id(map: "AuditLog_pkey") @default(autoincrement())
+  id Int @id(map: "AuditLog_pkey") @default(autoincrement())
 
   // Định danh người thực hiện
-  dinh_danh_tai_khoan Int?
-  tai_khoan           tai_khoan? @relation(map: "AuditLog_userId_fkey", fields: [dinh_danh_tai_khoan], references: [dinh_danh], onDelete: SetNull)
-  ten_dang_nhap       String     @db.VarChar(100)
-  ho_ten              String     @db.VarChar(255)
+  account_id    Int?
+  tai_khoan     tai_khoan? @relation(map: "AuditLog_userId_fkey", fields: [account_id], references: [id], onDelete: SetNull)
+  ten_dang_nhap String     @db.VarChar(100)
+  ho_ten        String     @db.VarChar(255)
 
   // Chi tiết thao tác & Phân hệ
-  hanh_dong           String  @db.VarChar(50) // LOGIN, LOGOUT, LOGIN_FAILED, CREATE, UPDATE, DELETE, STATUS_CHANGE
-  phan_he             String  @db.VarChar(50) // AUTH, HR, DEPARTMENT, ROLE, TASK, SYSTEM
-  dinh_danh_doi_tuong String? @db.VarChar(100) // ID đối tượng bị tác động
-  ten_doi_tuong       String? @db.VarChar(255) // Tên đối tượng (VD: "Nguyễn Văn A", "Phòng Kế toán")
+  hanh_dong     String  @db.VarChar(50) // LOGIN, LOGOUT, LOGIN_FAILED, CREATE, UPDATE, DELETE, STATUS_CHANGE
+  phan_he       String  @db.VarChar(50) // AUTH, HR, DEPARTMENT, ROLE, TASK, SYSTEM
+  doi_tuong_id  String? @db.VarChar(100) // ID đối tượng bị tác động
+  ten_doi_tuong String? @db.VarChar(255) // Tên đối tượng (VD: "Nguyễn Văn A", "Phòng Kế toán")
 
   // Diễn giải và snapshot dữ liệu
   mo_ta       String @db.Text
@@ -230,11 +253,173 @@ model nhat_ky_hoat_dong {
   thong_tin_trinh_duyet String? @db.Text
 
   // Multi-tenancy
-  dinh_danh_cong_ty Int
-  cong_ty           cong_ty @relation(map: "AuditLog_companyId_fkey", fields: [dinh_danh_cong_ty], references: [dinh_danh], onDelete: Cascade)
+  company_id Int
+  cong_ty    cong_ty @relation(map: "AuditLog_companyId_fkey", fields: [company_id], references: [id], onDelete: Cascade)
 
-  thoi_diem_tao DateTime @default(now())
+  created_at DateTime @default(now())
 
-  @@index([dinh_danh_cong_ty, phan_he, thoi_diem_tao], map: "AuditLog_companyId_module_createdAt_idx")
-  @@index([dinh_danh_tai_khoan], map: "AuditLog_userId_idx")
+  @@index([company_id, phan_he, created_at], map: "AuditLog_companyId_module_createdAt_idx")
+  @@index([account_id], map: "AuditLog_userId_idx")
+}
+
+model mau_quy_trinh {
+  id         Int      @id(map: "mau_quy_trinh_pkey") @default(autoincrement())
+  company_id Int
+  cong_ty    cong_ty  @relation(fields: [company_id], references: [id], onDelete: Restrict, map: "mau_quy_trinh_dinh_danh_cong_ty_fkey")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  ma                  String               @db.VarChar(50)
+  ten                 String               @db.VarChar(255)
+  mo_ta               String?              @db.Text
+  phien_ban           Int                  @default(1)
+  trang_thai          TrangThaiMauQuyTrinh @default(DRAFT)
+  tai_khoan_tao_id    Int
+  tai_khoan_tao       tai_khoan            @relation(fields: [tai_khoan_tao_id, company_id], references: [id, company_id], onDelete: Restrict, map: "mau_quy_trinh_dinh_danh_tai_khoan_tao_dinh_danh_cong_ty_fkey")
+  thoi_diem_phat_hanh DateTime?
+  danh_sach_buoc      buoc_mau_quy_trinh[]
+  danh_sach_ho_so     ho_so_quy_trinh[]
+
+  @@unique([id, company_id], map: "mau_quy_trinh_dinh_danh_dinh_danh_cong_ty_key")
+  @@unique([company_id, ma, phien_ban], map: "mau_quy_trinh_dinh_danh_cong_ty_ma_phien_ban_key")
+}
+
+model buoc_mau_quy_trinh {
+  id         Int      @id(map: "buoc_mau_quy_trinh_pkey") @default(autoincrement())
+  company_id Int
+  cong_ty    cong_ty  @relation(fields: [company_id], references: [id], onDelete: Restrict, map: "buoc_mau_quy_trinh_dinh_danh_cong_ty_fkey")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  mau_quy_trinh_id     Int
+  mau                  mau_quy_trinh          @relation(fields: [mau_quy_trinh_id, company_id], references: [id, company_id], onDelete: Restrict, map: "buoc_mau_quy_trinh_dinh_danh_mau_dinh_danh_cong_ty_fkey")
+  thu_tu               Int
+  ten                  String                 @db.VarChar(255)
+  huong_dan            String?                @db.Text
+  loai_buoc            LoaiBuocQuyTrinh
+  cach_chon_nguoi      CachChonNguoiQuyTrinh
+  nguoi_chi_dinh_id    Int?
+  nguoi_chi_dinh       nhan_su?               @relation(fields: [nguoi_chi_dinh_id, company_id], references: [id, company_id], onDelete: Restrict, map: "buoc_mau_quy_trinh_dinh_danh_nguoi_chi_dinh_dinh_danh_cong_fkey")
+  danh_sach_buoc_xu_ly buoc_xu_ly_quy_trinh[]
+
+  @@unique([id, company_id], map: "buoc_mau_quy_trinh_dinh_danh_dinh_danh_cong_ty_key")
+  @@unique([mau_quy_trinh_id, thu_tu], map: "buoc_mau_quy_trinh_dinh_danh_mau_thu_tu_key")
+  @@unique([id, mau_quy_trinh_id, company_id], map: "buoc_mau_mau_cong_ty_key")
+}
+
+model ho_so_quy_trinh {
+  id         Int      @id(map: "ho_so_quy_trinh_pkey") @default(autoincrement())
+  company_id Int
+  cong_ty    cong_ty  @relation(fields: [company_id], references: [id], onDelete: Restrict, map: "ho_so_quy_trinh_dinh_danh_cong_ty_fkey")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  ma                      String                 @default(dbgenerated("tao_ma_ho_so_quy_trinh()")) @db.VarChar(50)
+  mau_quy_trinh_id        Int
+  mau                     mau_quy_trinh          @relation(fields: [mau_quy_trinh_id, company_id], references: [id, company_id], onDelete: Restrict, map: "ho_so_quy_trinh_dinh_danh_mau_dinh_danh_cong_ty_fkey")
+  tieu_de                 String                 @db.VarChar(255)
+  noi_dung                String                 @db.Text
+  nguoi_gui_id            Int
+  nguoi_gui               nhan_su                @relation(fields: [nguoi_gui_id, company_id], references: [id, company_id], onDelete: Restrict, map: "ho_so_quy_trinh_dinh_danh_nguoi_gui_dinh_danh_cong_ty_fkey")
+  phong_nguoi_gui_id      Int
+  phong_nguoi_gui         phong_ban              @relation(fields: [phong_nguoi_gui_id, company_id], references: [id, company_id], onDelete: Restrict, map: "ho_so_quy_trinh_dinh_danh_phong_nguoi_gui_dinh_danh_cong_t_fkey")
+  tai_khoan_tao_id        Int
+  tai_khoan_tao           tai_khoan              @relation(fields: [tai_khoan_tao_id, company_id], references: [id, company_id], onDelete: Restrict, map: "ho_so_quy_trinh_dinh_danh_tai_khoan_tao_dinh_danh_cong_ty_fkey")
+  trang_thai              TrangThaiHoSoQuyTrinh  @default(DRAFT)
+  thoi_diem_gui           DateTime?
+  thoi_diem_ket_thuc      DateTime?
+  ho_so_truoc_id          Int?
+  ho_so_truoc             ho_so_quy_trinh?       @relation("HoSoLapLai", fields: [ho_so_truoc_id, company_id], references: [id, company_id], onDelete: Restrict, map: "ho_so_quy_trinh_dinh_danh_ho_so_truoc_dinh_danh_cong_ty_fkey")
+  danh_sach_ho_so_lap_lai ho_so_quy_trinh[]      @relation("HoSoLapLai")
+  danh_sach_buoc          buoc_xu_ly_quy_trinh[]
+  danh_sach_lich_su       lich_su_quy_trinh[]
+
+  @@unique([id, company_id], map: "ho_so_quy_trinh_dinh_danh_dinh_danh_cong_ty_key")
+  @@unique([company_id, ma], map: "ho_so_quy_trinh_dinh_danh_cong_ty_ma_key")
+  @@unique([id, mau_quy_trinh_id, company_id], map: "ho_so_mau_cong_ty_key")
+  @@index([company_id, nguoi_gui_id, trang_thai], map: "ho_so_quy_trinh_dinh_danh_cong_ty_dinh_danh_nguoi_gui_trang_idx")
+}
+
+model buoc_xu_ly_quy_trinh {
+  id         Int      @id(map: "buoc_xu_ly_quy_trinh_pkey") @default(autoincrement())
+  company_id Int
+  cong_ty    cong_ty  @relation(fields: [company_id], references: [id], onDelete: Restrict, map: "buoc_xu_ly_quy_trinh_dinh_danh_cong_ty_fkey")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  ho_so_quy_trinh_id    Int
+  mau_quy_trinh_id      Int
+  ho_so                 ho_so_quy_trinh       @relation(fields: [ho_so_quy_trinh_id, mau_quy_trinh_id, company_id], references: [id, mau_quy_trinh_id, company_id], onDelete: Restrict, map: "buoc_xu_ly_ho_so_cung_mau_fkey")
+  buoc_mau_quy_trinh_id Int
+  buoc_mau              buoc_mau_quy_trinh    @relation(fields: [buoc_mau_quy_trinh_id, mau_quy_trinh_id, company_id], references: [id, mau_quy_trinh_id, company_id], onDelete: Restrict, map: "buoc_xu_ly_buoc_mau_fkey")
+  nguoi_duoc_giao_id    Int?
+  nguoi_duoc_giao       nhan_su?              @relation(fields: [nguoi_duoc_giao_id, company_id], references: [id, company_id], onDelete: Restrict, map: "buoc_xu_ly_nguoi_cung_cong_ty_fkey")
+  trang_thai            TrangThaiBuocQuyTrinh @default(WAITING)
+  thoi_diem_bat_dau     DateTime?
+  thoi_diem_ket_thuc    DateTime?
+  ly_do_tam_dung        String?               @db.Text
+  danh_sach_lich_su     lich_su_quy_trinh[]
+
+  @@unique([id, company_id], map: "buoc_xu_ly_quy_trinh_dinh_danh_dinh_danh_cong_ty_key")
+  @@unique([ho_so_quy_trinh_id, buoc_mau_quy_trinh_id], map: "buoc_xu_ly_ho_so_buoc_key")
+  @@unique([id, ho_so_quy_trinh_id, company_id], map: "buoc_xu_ly_ho_so_cong_ty_key")
+  @@index([company_id, nguoi_duoc_giao_id, trang_thai], map: "buoc_xu_ly_hop_viec_idx")
+}
+
+model lich_su_quy_trinh {
+  id         Int      @id(map: "lich_su_quy_trinh_pkey") @default(autoincrement())
+  company_id Int
+  cong_ty    cong_ty  @relation(fields: [company_id], references: [id], onDelete: Restrict, map: "lich_su_quy_trinh_dinh_danh_cong_ty_fkey")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  ho_so_quy_trinh_id        Int
+  ho_so                     ho_so_quy_trinh       @relation(fields: [ho_so_quy_trinh_id, company_id], references: [id, company_id], onDelete: Restrict, map: "lich_su_quy_trinh_dinh_danh_ho_so_dinh_danh_cong_ty_fkey")
+  buoc_xu_ly_quy_trinh_id   Int?
+  buoc_xu_ly                buoc_xu_ly_quy_trinh? @relation(fields: [buoc_xu_ly_quy_trinh_id, ho_so_quy_trinh_id, company_id], references: [id, ho_so_quy_trinh_id, company_id], onDelete: Restrict, map: "lich_su_buoc_cung_ho_so_fkey")
+  tai_khoan_thao_tac_id     Int?
+  tai_khoan_thao_tac        tai_khoan?            @relation(fields: [tai_khoan_thao_tac_id, company_id], references: [id, company_id], onDelete: Restrict, map: "lich_su_tai_khoan_cong_ty_fkey")
+  nhan_su_thao_tac_id       Int?
+  nhan_su_thao_tac          nhan_su?              @relation(fields: [nhan_su_thao_tac_id, company_id], references: [id, company_id], onDelete: Restrict, map: "lich_su_nhan_su_cong_ty_fkey")
+  ten_nguoi_thao_tac_luc_do String                @db.VarChar(255)
+  hanh_dong                 String                @db.VarChar(50)
+  y_kien                    String?               @db.Text
+  chi_tiet                  Json?
+
+  @@unique([id, company_id], map: "lich_su_quy_trinh_dinh_danh_dinh_danh_cong_ty_key")
+  @@index([ho_so_quy_trinh_id, created_at, id], map: "lich_su_ho_so_thoi_diem_idx")
+}
+
+enum TrangThaiMauQuyTrinh {
+  DRAFT
+  PUBLISHED
+  RETIRED
+}
+
+enum LoaiBuocQuyTrinh {
+  APPROVAL
+  TASK
+}
+
+enum CachChonNguoiQuyTrinh {
+  SPECIFIC_EMPLOYEE
+  REQUESTER_DEPARTMENT_HEAD
+}
+
+enum TrangThaiHoSoQuyTrinh {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum TrangThaiBuocQuyTrinh {
+  WAITING
+  PENDING
+  BLOCKED
+  APPROVED
+  REJECTED
+  COMPLETED
+  CANCELLED
 }

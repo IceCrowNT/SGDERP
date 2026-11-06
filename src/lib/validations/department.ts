@@ -10,6 +10,7 @@ export const CreateDepartmentSchema = z.object({
     .max(50, "Mã phòng ban tối đa 50 ký tự")
     .regex(/^[A-Z0-9_-]+$/, "Mã phòng ban chỉ chứa chữ in hoa, số, gạch dưới hoặc gạch nối (VD: HCNS, KD_SM)"),
   description: z.string().trim().max(1000, "Mô tả tối đa 1000 ký tự").optional().nullable(),
+  headEmployeeId: z.number().int().positive("Người phụ trách không hợp lệ").optional().nullable(),
   parentId: z.number().int().positive("Phòng ban cha không hợp lệ").optional().nullable(),
 }).strict();
 

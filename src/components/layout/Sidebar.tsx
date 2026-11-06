@@ -62,6 +62,10 @@ export const menuGroups: MenuGroup[] = [
     ],
   },
   {
+    id: "workflow", title: "QUY TRÌNH", icon: FolderKanban, requiredModule: "WORKFLOW", defaultOpen: true,
+    items: [{label: "Quy trình", href: "/workflows", icon: FolderKanban, badge: "Thử"}],
+  },
+  {
     id: "tasks",
     title: "QUẢN LÝ CÔNG VIỆC",
     icon: ListTodo,
@@ -76,13 +80,12 @@ export const menuGroups: MenuGroup[] = [
     id: "system",
     title: "HỆ THỐNG & CẤU HÌNH",
     icon: ShieldCheck,
-    requiredModule: "SYSTEM",
     defaultOpen: true,
     items: [
       { label: "Tài khoản đăng nhập", href: "/accounts", icon: Users },
-      { label: "Phân quyền vai trò", href: "/roles", icon: ShieldCheck, badge: "Sắp có" },
-      { label: "Nhật ký hoạt động", href: "/audit-logs", icon: History },
-      { label: "Cài đặt chung", href: "/settings", icon: Settings, badge: "Sắp có" },
+      { label: "Phân quyền vai trò", href: "/roles", icon: ShieldCheck, requiredModule: "ROLES" },
+      { label: "Nhật ký hoạt động", href: "/audit-logs", icon: History, requiredModule: "AUDIT" },
+      { label: "Cài đặt chung", href: "/settings", icon: Settings, requiredModule: "SYSTEM", badge: "Sắp có" },
     ],
   },
 ]
@@ -124,12 +127,12 @@ export function NavigationLinks({ session, onNavigate }: NavigationLinksProps) {
   }
 
   // Lọc các nhóm theo quyền session
-  const visibleGroups = menuGroups.filter((group) => {
-    if (!group.requiredModule) return true
-    if (!session?.permissions) return false // Không hiển thị nhóm có quyền khi thiếu session
-    const level = session.permissions[group.requiredModule]
-    return level && level !== "NONE"
-  })
+  const visibleGroups = menuGroups.map(group => ({ ...group, items: group.items.filter(item => {
+    if (session?.mustChangePassword) return false;
+    if (item.href === "/accounts") return canManageAccounts(session);
+    const moduleCode = item.requiredModule ?? group.requiredModule;
+    return !moduleCode || ["VIEW", "MANAGE"].includes(session?.permissions[moduleCode] ?? "");
+  }) })).filter(group => group.items.length > 0);
 
   const isMainActive = pathname === "/"
 
@@ -253,7 +256,7 @@ export function Sidebar({ session }: { session?: SessionUser | null }) {
         .toUpperCase()
     : "AD"
 
-  const primaryRole = session?.roleCodes?.[0] || "ADMIN"
+  const primaryRole = session?.roleCodes?.[0] || "Chưa gán vai trò"
 
   return (
     <aside className="hidden lg:flex w-64 border-r border-border/50 bg-background/80 backdrop-blur-xl h-screen sticky top-0 flex-col shrink-0 z-30 transition-all duration-300">

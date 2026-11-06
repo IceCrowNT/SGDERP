@@ -4,6 +4,12 @@ Tệp quy tắc này là **Nguồn sự thật duy nhất (Single Source of Trut
 
 ---
 
+## Không gian cá nhân — 05/11/2026
+
+- Dashboard là bàn làm việc của người đăng nhập; không dùng thống kê HR toàn công ty hay số mẫu làm mặc định. Ô số đếm và danh sách dùng chung phạm vi quyền, đếm DB độc lập với giới hạn phân trang.
+- Header có liên kết Hồ sơ của tôi và ảnh đại diện. Không hiện ô tìm kiếm/chuông thông báo chưa có chức năng hoặc dấu thông báo giả.
+- Form cấp tài khoản có DEFAULT và tự sinh tên/mật khẩu; mục nâng cao tùy chọn. Sau lưu giữ màn hình bàn giao một lần tới khi người cấp đóng; không lưu credential vào browser storage.
+
 ## 1. Màu Sắc & Nhận Diện Thương Hiệu (Brand Colors & Tokens)
 
 Hệ màu đã được cấu hình trong `src/app/globals.css`. Tuyệt đối tuân theo hệ thống CSS Variables:
@@ -56,6 +62,8 @@ Mọi màn hình và tính năng mới được tạo ra BẮT BUỘC phải tư
 ---
 
 ## 4. Giao Diện Tích Hợp Phân Quyền (Permission-Based UI Rendering)
+
+- Cấp quyền tập trung tại Vai trò và phân quyền. Trang nghiệp vụ dùng quyền đã cấp, không yêu cầu người sử dụng xác nhận kích hoạt hoặc tự cấp quyền.
 
 Khi xây dựng các tính năng mới (Quản lý công việc, Phê duyệt, Nhân sự...):
 - **Hiển thị Nút bấm có Điều kiện:**
