@@ -28,6 +28,7 @@ export const RoleSchema = z
       .optional(),
     permissions: z
       .object({
+        LOCATIONS: level.optional(),
         HR: level,
         ACCOUNTS: z.enum(["NONE", "MANAGE"]),
         ROLES: level,

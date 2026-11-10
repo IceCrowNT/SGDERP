@@ -18,6 +18,7 @@ import {
   Settings,
   ChevronDown,
   Cuboid,
+  MapPin,
   type LucideIcon,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -84,6 +85,7 @@ export const menuGroups: MenuGroup[] = [
     items: [
       { label: "Tài khoản đăng nhập", href: "/accounts", icon: Users },
       { label: "Phân quyền vai trò", href: "/roles", icon: ShieldCheck, requiredModule: "ROLES" },
+      { label: "Vị trí & không gian", href: "/locations", icon: MapPin, requiredModule: "LOCATIONS" },
       { label: "Nhật ký hoạt động", href: "/audit-logs", icon: History, requiredModule: "AUDIT" },
       { label: "Cài đặt chung", href: "/settings", icon: Settings, requiredModule: "SYSTEM", badge: "Sắp có" },
     ],

@@ -21,12 +21,17 @@ Giữ nguyên tên bảng/cột Việt và 9 bảng. `vai_tro.ma_vai_tro` là m�
 
 Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng và cột PostgreSQL**. Quy ước tiếng Việt hoàn toàn ở thời điểm đó đã được quy ước lai ngày 06/11/2026 phía trên thay thế; Prisma Studio hiển thị trực tiếp tên hiện hành.
 
+## Thiết kế chưa triển khai — 10/11/2026
+
+[Tài sản mức 1](plans/ASSET-MANAGEMENT-CHECKLIST.md) dự kiến thêm `loai_tai_san`, `tai_san` và tham chiếu vị trí. FK `nhan_su.vi_tri_lam_viec_id` triển khai ở bước HR sau đó. Các bảng/cột tài sản và FK nhân sự này chưa có; bảng vị trí dùng chung đã triển khai ở danh mục bên dưới.
+
 ## Danh mục hiện hành
 
 | Chức năng / ý nghĩa | Tên chung PostgreSQL và Prisma Studio | Model Prisma trước đây |
 | --- | --- | --- |
 | Công ty | `cong_ty` | Company |
 | Phòng ban | `phong_ban` | Department |
+| Vị trí & không gian dùng chung | `vi_tri` | — |
 | Hồ sơ nhân sự | `nhan_su` | Employee |
 | Tài khoản đăng nhập | `tai_khoan` | User |
 | Vai trò | `vai_tro` | Role |
@@ -40,7 +45,7 @@ Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng v�
 | Bước xử lý của từng hồ sơ | `buoc_xu_ly_quy_trinh` | — |
 | Lịch sử xử lý | `lich_su_quy_trinh` | — |
 
-DB có 14 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` đã triển khai; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
+DB có 15 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` đã triển khai; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
 
 Các giá trị enum `ACTIVE / LEFT / UNKNOWN`, mã quyền `HR / VIEW / MANAGE`, constraint/index/sequence lịch sử và JSON nhật ký cũ được giữ nguyên. Đây không phải tên bảng/cột. Relation field của Prisma là liên kết, không tạo cột PostgreSQL; tên liên kết cũng dùng tiếng Việt.
 
@@ -54,6 +59,22 @@ await db.nhan_su.findMany({
 ```
 
 Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fullName/companyId; Server Action chuyển tường minh sang trường DB. Không tạo model hoặc lớp Prisma alias tiếng Anh song song. Nhãn người dùng trên ERP vẫn là tiếng Việt có dấu.
+
+## `vi_tri` — Vị trí & không gian
+
+| Cột PostgreSQL = trường Prisma | Kiểu | Ý nghĩa |
+| --- | --- | --- |
+| `id` | Int | Khóa chính tự tăng |
+| `company_id` | Int | Công ty sở hữu |
+| `ma_vi_tri` | String | Mã VT tự cấp, bất biến |
+| `ten_vi_tri` | String | Tên vị trí |
+| `loai_vi_tri` | String | Tòa nhà, tầng, phòng, khu vực, chỗ ngồi, điểm đặt thiết bị; DB check giới hạn giá trị |
+| `parent_id` | Int? | Cha cùng bảng/công ty; null là vị trí gốc |
+| `mo_ta` | String? | Hướng dẫn tìm/mô tả |
+| `dang_su_dung` | Boolean | Cho phép bố trí mới |
+| `created_at`, `updated_at` | DateTime | Thời gian tạo/cập nhật |
+
+Quan hệ Prisma: `cong_ty`, `vi_tri_cha`, `danh_sach_vi_tri_con` (không phải cột). Ràng buộc và vòng đời tại [plan vị trí](plans/LOCATION-MANAGEMENT-CHECKLIST.md). Migration `20261110100000_vi_tri_khong_gian` thêm bảng và quyền LOCATIONS, không cấp grant hoặc gán chỗ ngồi.
 
 ## `cong_ty` — Công ty
 

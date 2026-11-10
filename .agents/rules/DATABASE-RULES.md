@@ -52,6 +52,7 @@ Không lưu ở đây: lịch sử migration/reset, kết quả kiểm thử, s�
 | Vai trò, quyền và bảng nối | [Plan phân quyền](../../docs/plans/ROLE-MANAGEMENT-CHECKLIST.md#thiết-kế-db-cần-giữ) |
 | DEFAULT, tên đăng nhập, mật khẩu tạm và profile | [Plan tài khoản/cá nhân](../../docs/plans/PROFILE-DASHBOARD-CHECKLIST.md#thiết-kế-db-cần-giữ) |
 | Mẫu, hồ sơ, bước và lịch sử quy trình | [Plan workflow](../../docs/plans/WORKFLOW-CHECKLIST.md#thiết-kế-db-cần-giữ) |
-| Tài sản tạm hoãn, điều kiện khôi phục | [Plan tài sản](../../docs/plans/ASSET-MANAGEMENT-CHECKLIST.md) |
+| Vị trí & không gian dùng chung | [Plan vị trí](../../docs/plans/LOCATION-MANAGEMENT-CHECKLIST.md) |
+| Thiết kế tài sản mức 1 | [Plan tài sản](../../docs/plans/ASSET-MANAGEMENT-CHECKLIST.md) |
 
 Plan giữ quyết định DB, tiến độ và kết quả liên quan tính năng; thiết kế dài tách ra tài liệu được plan liên kết. Không sao chép lại quy chuẩn chung vào từng plan.

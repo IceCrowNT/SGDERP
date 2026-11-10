@@ -11,6 +11,7 @@ datasource db {
 // CORE & TENANT (Công ty thành viên / Chi nhánh trong Tập đoàn)
 // -----------------------------------------------------------------------------
 model cong_ty {
+  danh_sach_vi_tri vi_tri[]
   danh_sach_mau_quy_trinh     mau_quy_trinh[]
   danh_sach_buoc_mau          buoc_mau_quy_trinh[]
   danh_sach_ho_so_quy_trinh   ho_so_quy_trinh[]
@@ -422,4 +423,25 @@ enum TrangThaiBuocQuyTrinh {
   REJECTED
   COMPLETED
   CANCELLED
+}
+
+// Danh mục không gian vật lý dùng chung; chưa gắn HR/tài sản ở giai đoạn này.
+model vi_tri {
+  id Int @id @default(autoincrement())
+  company_id Int
+  cong_ty cong_ty @relation(fields: [company_id], references: [id], onDelete: Restrict)
+  ma_vi_tri String @default(dbgenerated("tao_ma_vi_tri()")) @db.VarChar(50)
+  ten_vi_tri String @db.VarChar(255)
+  loai_vi_tri String @db.VarChar(30)
+  parent_id Int?
+  vi_tri_cha vi_tri? @relation("CayViTri", fields: [parent_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  danh_sach_vi_tri_con vi_tri[] @relation("CayViTri")
+  mo_ta String? @db.Text
+  dang_su_dung Boolean @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([id, company_id])
+  @@unique([company_id, ma_vi_tri])
+  @@index([company_id, parent_id])
 }

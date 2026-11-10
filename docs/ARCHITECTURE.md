@@ -163,9 +163,16 @@ graph TD
 4. **Điều hành Xe Công Vụ (Fleet Management):** Xếp lịch điều xe đưa đón giữa Tập đoàn và KCN Nam Đình Vũ.
 5. **Cầu nối Phê duyệt Dự án (Executive Bridge):** Luân chuyển hồ sơ, biên bản bàn giao đất, nghiệm thu giữa Tập đoàn và Ban QLDA Nam Đình Vũ.
 
+### Vị trí & không gian — triển khai 10/11/2026
+
+- `/locations` nằm trong Hệ thống & cấu hình, chỉ hiện theo LOCATIONS VIEW/MANAGE. Thêm bảng `vi_tri`, mã tự cấp bất biến, cây cùng công ty, kiểm tra vòng lặp, trạng thái và audit. Không tự cấp quyền hoặc nhập dữ liệu mẫu.
+- Cấu trúc mới: `src/actions/location.ts`, `src/lib/validations/location.ts`, `src/lib/location-tree.ts`, `src/components/locations/LocationManager.tsx`, `src/app/(dashboard)/locations/`; kiểm thử tại `tests/e2e/locations.spec.ts`.
+- Migration `20261110100000_vi_tri_khong_gian` đã áp dụng sau backup/khôi phục thử DB tạm; Prisma Client đã generate. Không cài/gỡ dependency hoặc đổi biến môi trường. Khởi động lại dev/Studio sau thay schema để nạp Client mới.
+- [Plan vị trí](plans/LOCATION-MANAGEMENT-CHECKLIST.md) sở hữu thiết kế và nghiệm thu; HR/tài sản mới dùng danh mục chọn ở bước tích hợp sau, chưa thay mapping 3D.
+
 ### Tài sản và không gian — thiết kế lưu trữ
 
-Phân hệ tài sản đã được gỡ khỏi DB ngày 31/10/2026 để tập trung user/phân quyền. Mô hình cũ, số lượng tham khảo và hướng tích hợp 3D nằm trong [kế hoạch tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md); chúng không mô tả bảng đang hoạt động.
+Phân hệ tài sản cũ đã gỡ khỏi DB ngày 31/10/2026. [Kế hoạch tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md) cập nhật 10/11 thiết kế mức 1: tài sản sở hữu hai bảng `loai_tai_san`, `tai_san`. [Vị trí & không gian](plans/LOCATION-MANAGEMENT-CHECKLIST.md) là phân hệ dùng chung riêng, sở hữu `vi_tri`, menu `/locations` và quyền LOCATIONS; triển khai trước tài sản. HR dự kiến thêm FK vị trí làm việc chính nullable ở bước sau, rồi mới nối 3D; quyền quản lý tài sản không bao gồm sửa cây vị trí. Dùng lại RBAC và nhật ký hiện có. Vật tư tiêu hao tách làm sau. Phần tài sản và liên kết HR/3D vẫn là thiết kế; nền vị trí đã triển khai theo mục trên. Không đổi dependency/môi trường; 3D nhân sự vẫn hoạt động độc lập.
 
 ### Quy ước tên vật lý PostgreSQL — 22/10/2026
 
@@ -181,7 +188,7 @@ Từ 03/11/2026, cả hồ sơ nhân sự và cơ cấu phòng ban đều do ERP
 
 `src/components/ui/feature-overview.tsx` cung cấp thẻ số liệu, hướng dẫn mở rộng, trạng thái trống và avatar chữ cho các màn hình nghiệp vụ. Component chỉ trình bày dữ liệu đã được phân quyền từ màn hình gọi; không truy vấn DB, không cài thư viện hoặc thêm biến môi trường.
 
-Ba rule kỹ thuật Frontend/Backend/Database giữ chuẩn chung. Rule riêng tại `.agents/rules/`: [HR](../.agents/rules/HR-RULES.md), [phân quyền](../.agents/rules/ROLE-MANAGEMENT-RULES.md), [workflow](../.agents/rules/WORKFLOW-RULES.md), [tài khoản/profile/dashboard](../.agents/rules/PROFILE-DASHBOARD-RULES.md), và [tài sản](../.agents/rules/ASSET-MANAGEMENT-RULES.md) đang tạm hoãn. Nghiệp vụ đọc tại rule riêng; thiết kế DB, trạng thái và kiểm thử theo plan liên kết. Định tuyến do `AGENTS.md` quản lý; không thêm dependency hoặc cấu hình chạy khi sắp xếp tài liệu.
+Ba rule kỹ thuật Frontend/Backend/Database giữ chuẩn chung. Rule riêng tại `.agents/rules/`: [HR](../.agents/rules/HR-RULES.md), [phân quyền](../.agents/rules/ROLE-MANAGEMENT-RULES.md), [workflow](../.agents/rules/WORKFLOW-RULES.md), [tài khoản/profile/dashboard](../.agents/rules/PROFILE-DASHBOARD-RULES.md), [tài sản](../.agents/rules/ASSET-MANAGEMENT-RULES.md) mức 1 và [vị trí dùng chung](../.agents/rules/LOCATION-MANAGEMENT-RULES.md). Tài sản ở bước thiết kế; vị trí đã có bản đầu. Nghiệp vụ đọc tại rule riêng; thiết kế DB, trạng thái và kiểm thử theo plan liên kết. Định tuyến do `AGENTS.md` quản lý; không thêm dependency hoặc cấu hình chạy khi sắp xếp tài liệu.
 
 Tài liệu trong `docs/strategy` dùng tên tiếng Việt không dấu, viết hoa và phân cách bằng dấu gạch ngang. File bối cảnh chính là [BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md](./strategy/BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md). Khi đổi tên phải cập nhật các liên kết trong router, checklist và tài liệu liên quan.
 

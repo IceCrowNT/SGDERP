@@ -34,7 +34,7 @@ export default async function AuditLogsPage({
     module: moduleFilter,
   });
 
-  const moduleNames: Record<string, string> = { ALL: "Tất cả", AUTH: "Đăng nhập", HR: "Nhân sự", DEPARTMENT: "Phòng ban", ROLE: "Phân quyền", SYSTEM: "Hệ thống" };
+  const moduleNames: Record<string, string> = { ALL: "Tất cả", AUTH: "Đăng nhập", HR: "Nhân sự", DEPARTMENT: "Phòng ban", ROLE: "Phân quyền", LOCATIONS: "Vị trí & không gian", SYSTEM: "Hệ thống" };
   const getActionBadge = (action: string) => {
     const labels: Record<string, string> = { LOGIN: "Đăng nhập", LOGOUT: "Đăng xuất", LOGIN_FAILED: "Đăng nhập lỗi", CREATE: "Thêm mới", UPDATE: "Cập nhật", DELETE: "Xóa", PERMISSION_CHANGE: "Đổi quyền", STATUS_CHANGE: "Đổi trạng thái", CONSOLIDATE: "Thu gọn vai trò" };
     return <Badge variant={action === "LOGIN_FAILED" || action === "DELETE" ? "destructive" : "secondary"}>{labels[action] ?? action}</Badge>;
@@ -93,7 +93,7 @@ export default async function AuditLogsPage({
         </form>
 
         <div className="flex max-w-full flex-wrap items-center gap-1.5 text-xs">
-          {["ALL", "AUTH", "HR", "DEPARTMENT", "ROLE", "SYSTEM"].map((mod) => {
+          {["ALL", "AUTH", "HR", "DEPARTMENT", "ROLE", "LOCATIONS", "SYSTEM"].map((mod) => {
             const isActive = moduleFilter === mod;
             return (
               <Button

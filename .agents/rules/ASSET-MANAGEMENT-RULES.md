@@ -1,57 +1,25 @@
-# QUY TẮC QUẢN LÝ TÀI SẢN & TÍCH HỢP KHÔNG GIAN 3D
+# QUY TẮC QUẢN LÝ TÀI SẢN
 
-> **TẠM HOÃN — 31/10/2026:** Người phụ trách yêu cầu gỡ toàn bộ bảng tài sản để tập trung user/phân quyền. Các quy tắc dưới đây chỉ dùng tham khảo khi phân hệ được duyệt triển khai lại; không tự khôi phục schema, seed hoặc nhập tài sản. Dữ liệu cũ đã được backup riêng trước khi gỡ. 3D nhân sự hiện không phụ thuộc các bảng này.
+Phạm vi thiết kế hiện hành: **mức 1, quản lý từng thiết bị**. Chưa triển khai schema/UI mới. Tiến độ và thiết kế DB ở [Plan tài sản](../../docs/plans/ASSET-MANAGEMENT-CHECKLIST.md); áp dụng cùng ba rule kỹ thuật chung.
 
+## Hồ sơ thiết bị
 
-## 7. Liên kết người thật — 26/10/2026
+- Mỗi thiết bị là một hồ sơ có mã tự cấp ổn định; số lượng tính từ hồ sơ. Không khôi phục schema/seed nhiều bảng cũ hoặc tự sinh thiết bị theo tổng số trên biên bản tham khảo.
+- Loại tài sản là danh mục; đơn vị quản lý liên kết phòng ban, người sử dụng liên kết nhân sự, vị trí liên kết danh mục không gian vật lý. Không nhập lại tên làm khóa hoặc gắn người dùng thiết bị vào tài khoản đăng nhập.
+- Tình trạng vật lý và hình thức sử dụng là hai trường riêng. Thiếu thông tin là Chưa xác nhận/Chưa xác định, không tự suy còn tốt, dùng chung, đã thu hồi hoặc ngừng dùng.
+- Cá nhân phải có người sử dụng; các hình thức còn lại không gắn người. Chọn mới người đang làm việc cùng công ty. Người nghỉ việc giữ liên kết để xử lý bàn giao, không tự chuyển thiết bị.
+- Danh mục `vi_tri` thuộc [phân hệ vị trí](LOCATION-MANAGEMENT-RULES.md), tài sản chỉ tham chiếu; không tạo bảng danh mục vị trí riêng cho từng phân hệ. Nhân sự có vị trí làm việc chính tùy chọn, thiết bị có vị trí riêng. Vị trí không phải phòng ban. Người chuyển phòng không tự đổi đơn vị quản lý/vị trí thiết bị; AP ở sảnh không cần phòng hoặc nhân sự giả.
+- Mức 1 cập nhật hiện trạng và ghi chú, chưa có phiếu bàn giao, hồ sơ sửa chữa hoặc duyệt. Không xóa cứng hồ sơ; ngừng dùng vẫn giữ mã và lịch sử. Danh mục ngừng dùng không làm mất tham chiếu cũ.
 
-- `Asset.currentCustodian`, `AssetAssignment.assignedToEmployee` và `AssetMaintenance.technician` tham chiếu `Employee`, không phụ thuộc người đó có tài khoản.
-- `assignedBy`, `changedBy`, `requestedBy` giữ tài khoản thao tác `User`. Enum `AssetAssignmentType.USER` giữ nguyên vì tương thích lịch sử; nay chỉ giao cho người, không phải cấp tài khoản.
-- Luôn xác minh nhân sự nhận tài sản cùng công ty; chưa triển khai UI tài sản trong thay đổi tách hồ sơ.
+## Quyền và lịch sử
 
+- ASSETS MANAGE quản lý thiết bị và loại, chỉ chọn vị trí có sẵn; sửa cây vị trí cần LOCATIONS MANAGE. Quyền dự kiến ASSETS VIEW/MANAGE dùng RBAC hiện có; phải triển khai kiểm tra server cùng catalog và UI. Mọi dữ liệu theo công ty của phiên; trường phòng quản lý không tự tạo phạm vi phòng ban.
+- Người có ASSETS MANAGE được chọn người/phòng qua danh mục tối thiểu theo công ty, không phải được xem toàn bộ thông tin HR. Không tự cấp quyền mới cho vai trò hoặc tài khoản hiện có.
+- Mọi thay đổi và nhật ký trước–sau phải lưu cùng transaction. Dùng lại bảng nhật ký, không dùng helper nuốt lỗi cho lịch sử bắt buộc. Chi tiết đọc đúng nhật ký của thiết bị được phép xem; không mở toàn bộ nhật ký hệ thống.
+- Thiết kế bảng/cột, khóa, phân loại đối tượng audit và xử lý đồng thời được quản lý tại plan, không nhân bản tại đây.
 
-## 1. Phân biệt chứng từ, số lượng và tài sản cá thể
+## Giai đoạn sau
 
-- Các tên API tiếng Anh bên dưới là thiết kế lịch sử của phân hệ đã tạm hoãn/gỡ. Nếu khôi phục, model/field Prisma phải trùng tên bảng/cột PostgreSQL theo quy ước lai trong DATABASE-RULES.md và DATABASE-DICTIONARY.md: ví dụ `tai_san.id`, `tai_san.ma_tai_san`, không tạo alias Asset/assetCode qua @map.
-
-- `AssetInventoryDocument` và `AssetInventoryLine` lưu bằng chứng bàn giao/kiểm kê cùng số lượng tổng hợp.
-- `AssetInventoryLine` chỉ lưu số liệu tham khảo/kiểm kê; không thay thế hồ sơ từng tài sản trong vận hành chính thức.
-- Mỗi thiết bị thực tế được quản lý phải có một `Asset` với mã nội bộ duy nhất. Không tự sinh tài sản từ số lượng trên ảnh/biên bản tham khảo; chỉ tạo từ dữ liệu kiểm kê thực tế sau khi tính năng sẵn sàng.
-- Mỗi tài sản tạo từ biên bản phải giữ `sourceLineId` để đối soát số đã cá thể hóa với số trên chứng từ.
-- Biên bản thiếu ngày, bên nhận hoặc chữ ký xác nhận phải giữ trạng thái `DRAFT`.
-
-## 2. Dữ liệu hiện tại và lịch sử
-
-- `Asset.currentLocationId`, `currentCustodianId` và `currentDepartmentId` là snapshot phục vụ truy vấn nhanh.
-- Mọi thay đổi snapshot phải đồng thời đóng bản ghi lịch sử đang mở và tạo `AssetLocationHistory` hoặc `AssetAssignment` mới trong cùng một Prisma transaction.
-- Không xóa lịch sử bàn giao, vị trí hoặc bảo trì. Sửa sai bằng trạng thái/ghi chú và bản ghi điều chỉnh có audit.
-- Một tài sản chỉ có tối đa một vị trí hiện hành và một bàn giao hiện hành tại một thời điểm.
-
-## 3. Tích hợp mô hình 3D
-
-- Dữ liệu nghiệp vụ liên kết với `PhysicalLocation.id`; không liên kết trực tiếp với mesh Three.js hoặc tên phòng.
-- `PhysicalLocation.threeDKey` ánh xạ tới khóa ổn định của đối tượng trong mô hình, ví dụ `t2_hcns_pc`. Thay mô hình 3D không được làm thay đổi lịch sử tài sản.
-- Tọa độ điểm đặt thiết bị là dữ liệu tùy chọn. Khi chưa đo thực tế, chỉ gán tài sản tới phòng/khu vực, không tự suy tọa độ chính xác.
-- Khi hiển thị nhiều thiết bị, dùng marker/instancing và tải theo tầng/phòng; không tạo một mesh chi tiết cho toàn bộ tài sản cùng lúc.
-
-## 4. Toàn vẹn, phân quyền và tenant
-
-- Mọi truy vấn phải lọc `companyId` từ session.
-- MVP dùng hai mức quyền chính: xem tài sản và quản lý tài sản. Chỉ tách quyền chi tiết khi quy trình thực tế yêu cầu.
-- Thông tin cấu hình kỹ thuật chỉ lưu khi có ích cho vận hành và chỉ hiển thị cho người có quyền quản lý tài sản/IT.
-- Mã tài sản, mã bảo trì và code vị trí phải duy nhất trong công ty.
-- Giao tài sản cho người/phòng ban phải xác minh cùng công ty với tài sản.
-- `AssetAssignmentType.USER` yêu cầu người nhận; `DEPARTMENT` yêu cầu phòng nhận; `SHARED` phải có vị trí hoặc phòng quản lý. Kiểm tra bằng Zod trước transaction.
-
-## 5. Bảo trì
-
-- Luồng tối thiểu là báo hỏng, người xử lý, trạng thái và kết quả sửa chữa. Lịch định kỳ, chi phí và nhà cung cấp là trường mở rộng.
-- Hoàn tất bảo trì phải cập nhật tình trạng tài sản và lịch bảo trì tiếp theo trong cùng transaction khi có thay đổi.
-- Chi phí dùng `Decimal`; không dùng số thực JavaScript để cộng tổng tài chính.
-
-## 6. Ngoài phạm vi MVP
-
-- Không xây chức năng chống mất trộm, cảnh báo thất thoát hoặc điều tra trách nhiệm.
-- Không bắt buộc kiểm kê theo chu kỳ khắt khe, dán QR hoặc nhập đủ toàn bộ trường ngay lần đầu; vẫn quản lý mỗi tài sản bằng một hồ sơ riêng.
-- Không xây khấu hao/hạch toán kế toán và quy trình phê duyệt nhiều tầng trong phân hệ tài sản.
-- Chỉ bổ sung các lớp kiểm soát trên khi người sở hữu nghiệp vụ xác nhận có nhu cầu thực tế.
+- Vật tư tiêu hao dùng nhập–xuất–tồn, tách khỏi hồ sơ thiết bị; không thêm bảng vật tư trong mức 1.
+- QR/mã vạch, import/export, bảo trì, license, scope theo phòng và hiển thị tài sản trên 3D triển khai khi có yêu cầu tiếp theo. Khi tích hợp 3D, ánh xạ từ ID vị trí ổn định; không dùng mesh hoặc tên phòng làm khóa nghiệp vụ.
+- Không đưa chống thất thoát, khấu hao hoặc kiểm kê khắt khe vào mức 1.

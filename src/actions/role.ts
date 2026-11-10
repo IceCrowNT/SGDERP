@@ -148,10 +148,11 @@ export async function saveRole(input: unknown) {
       const editable = catalog.filter(
         (p) =>
           isEditableGrant(p) &&
-          (p.phan_he !== "WORKFLOW" || v.workflowActions !== undefined),
+          (p.phan_he !== "WORKFLOW" || v.workflowActions !== undefined) &&
+          (p.phan_he !== "LOCATIONS" || v.permissions.LOCATIONS !== undefined),
       );
       const selected = Object.entries(v.permissions)
-        .filter(([, level]) => level !== "NONE")
+        .filter(([, level]) => level !== undefined && level !== "NONE")
         .map(([module, level]) => {
           const p = editable.find(
             (p) => p.phan_he === module && p.hanh_dong === level,

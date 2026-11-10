@@ -17,6 +17,8 @@ Chuẩn kỹ thuật và trình bày dùng chung cho toàn dự án. Không lưu
 - Màu phải đi kèm chữ/biểu tượng, không là cách duy nhất biểu đạt trạng thái. Nút chỉ có icon cần tên truy cập; hình trang trí dùng `aria-hidden`, hình mang thông tin có mô tả. Bảng/sơ đồ phải đọc được bằng bàn phím và ở kích thước nhỏ.
 - Hình ảnh phải giúp hiểu nội dung, không thêm trang trí làm loãng thông tin. Không hiện lối tắt, bộ lọc hoặc chỉ báo giả chưa có chức năng. Khi có tương tác biểu đồ/lọc, số đếm và danh sách chi tiết phải thống nhất.
 - Màn hình chính ưu tiên nội dung cần để quyết định và thao tác; hướng dẫn dài, mô tả phụ đưa vào phần mở rộng hoặc chi tiết. Không xếp nhiều khối giải thích trước danh sách làm việc.
+- Chỉ hiển thị thông tin có ý nghĩa với người dùng. Mặc định ẩn ID nội bộ/khóa ngoại, phiên bản dữ liệu, tên bảng/trường, metadata đồng bộ và mô tả cơ chế dành cho hệ thống hoặc lập trình viên. Không đưa thông tin kỹ thuật lên bảng, thẻ, form, hướng dẫn hoặc thông báo chỉ vì DB có trường đó.
+- Hiển thị tên dễ hiểu và đường dẫn/ngữ cảnh khi cần phân biệt đối tượng; form cho chọn tên, hệ thống lưu ID phía sau. Mã nghiệp vụ chỉ hiện khi phục vụ tra cứu, phân biệt, đối chiếu hoặc công việc thực tế; nếu chưa có giá trị sử dụng thì ẩn khỏi màn hình chính. Chi tiết kỹ thuật chỉ đặt ở màn hình hỗ trợ chuyên biệt khi có nhu cầu rõ ràng. Việc ẩn thông tin trên giao diện không thay đổi ID, liên kết hoặc dữ liệu lưu trong DB.
 - Bố cục, số liệu và hành vi riêng của màn hình nằm trong rule/thiết kế tính năng, không bổ sung tại mục này.
 
 ## 3. Điều hướng, tải và phản hồi

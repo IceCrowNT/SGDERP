@@ -79,6 +79,9 @@ Kiểm tra bổ sung 05/11: 38 E2E tích hợp + 7 unit đạt; DEFAULT không c
 
 ## Bước sau
 
+- [x] LOCATIONS VIEW/MANAGE đã có migration, catalog, ma trận, seed cài mới và guard `/locations`; không cấp grant vận hành. Payload sửa role từ phiên UI cũ không có LOCATIONS giữ nguyên grant này; UI mới gửi mức quyền tường minh. Kiểm thử ma trận mới và 9 ca phân quyền hồi quy đạt. Thiết kế tại [plan vị trí](LOCATION-MANAGEMENT-CHECKLIST.md).
+- [ ] ASSETS triển khai cùng [tài sản](ASSET-MANAGEMENT-CHECKLIST.md), không bao gồm sửa cây vị trí. HR/ASSETS chọn vị trí theo quyền nghiệp vụ, không tự có LOCATIONS MANAGE.
+
 - [x] Tách ràng buộc DB phân quyền khỏi rule tổng quát; giữ trong mục thiết kế DB của phân hệ, không sửa grant hoặc dữ liệu.
 - [x] Áp dụng [thiết kế DEFAULT và quyền cá nhân](../THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md): nền dashboard/profile cho tài khoản hợp lệ; DEFAULT không cấp HR/workflow, role STAFF mẫu được bỏ theo mục thu gọn ở trên. Giữ grant nghiệp vụ hiện tại; không cấp hàng loạt cho tài khoản cũ.
 - [x] Quyền điều phối cấp và gán tại `/roles` bởi ROLES MANAGE; bỏ action tự cấp và xác nhận tại workflow (06/11). Không suy quyền từ tên ADMIN.

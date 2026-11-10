@@ -55,7 +55,9 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 - [ ] Dùng thử quyền với tài khoản thực tế và cấu hình [workflow đã triển khai thử nghiệm](WORKFLOW-CHECKLIST.md).
 - [ ] Chốt ai được xem trường HR nhạy cảm, phạm vi danh bạ và thông tin hiển thị trên 3D.
 - [ ] Khi cần: xuất–nhập Excel theo mã ERP, xem trước chênh lệch; không ghi đè từ nguồn cũ hoặc dùng STT/tên làm khóa.
-- [ ] Khi mở rộng 3D: tách vị trí vật lý khỏi cơ cấu tổ chức; hiện mapping còn theo mã phòng, chưa tự xử lý đổi mã/phòng mới.
+- [x] Chốt hướng dùng chung bảng `vi_tri` với tài sản; thiết kế tại [plan vị trí](LOCATION-MANAGEMENT-CHECKLIST.md). Dự kiến thêm `nhan_su.vi_tri_lam_viec_id` nullable để gán vị trí chính, không tạo danh mục vị trí nhân sự riêng.
+- [ ] Sau nền vị trí/tài sản: thêm FK vị trí làm việc cùng công ty, Restrict; form HR chọn danh mục tối thiểu theo HR MANAGE, không cấp quyền sửa cây vị trí. Gán vị trí và audit cùng transaction, khóa theo plan vị trí; bổ sung chặn xóa/ngừng dùng vị trí còn nhân sự ở mọi trạng thái. Kiểm thử cấp/thu hồi quyền, khác công ty và gán đồng thời với ngừng dùng/xóa.
+- [ ] Bước riêng sau đó: lập plan 3D và chuyển sang đọc vị trí đã xác nhận. Hiện 3D vẫn ghép mã phòng trong code; không tự gán vị trí theo chức vụ/phòng công tác.
 
 ## Thiết kế DB cần giữ
 
@@ -65,7 +67,7 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 - `ma_nhan_su` bắt buộc, unique trong công ty, cấp bằng `so_thu_tu_ma_nhan_su`/`tao_ma_nhan_su()`, bất biến qua trigger `ma_nhan_su_bat_bien`. Không dùng STT, tên hoặc mã phòng làm định danh; export giữ mã dạng text. Import theo mã phải báo mã lạ/trùng/mâu thuẫn; import không mã cần đối chiếu trước. Định danh nguồn unique theo phạm vi công ty/hệ thống nguồn như schema.
 - Phòng ban có mã unique trong công ty; mutation khóa hàng `cong_ty`, rồi khóa phân quyền `(260126, companyId)` khi cần, kiểm tra cây và ghi audit cùng transaction. Xóa phải khóa phòng và kiểm tra không còn con/nhân sự ở bất kỳ trạng thái nào; không dùng SetNull để đẩy con ra cấp công ty.
 - HR final là nguồn khởi tạo, ERP quản lý độc lập. Các trường `tep_nguon_nhan_su_hr`, `ngay_chot_nhan_su_hr`, `ghi_chu_nhan_su_hr`, `he_thong_nguon`, `dinh_danh_nguon`, `thoi_diem_chup_du_lieu_nguon` chỉ truy nguyên; `ghi_chu` là nội dung vận hành chỉnh được. Không khóa trường theo nguồn, suy danh tính từ mapping chưa xác minh hoặc suy nghỉ việc do thiếu trong export. Ngày Excel đọc theo UTC calendar date.
-- Seed HR chỉ bootstrap khi chưa có hồ sơ và marker; seed cơ cấu chỉ khởi tạo khi chưa có phòng, người hoặc nhật ký DEPARTMENT. Không chạy lại importer cũ, tạo tài khoản hàng loạt hay tái tạo dữ liệu đã dọn. Tài sản đã gỡ và tạm hoãn theo [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md).
+- Seed HR chỉ bootstrap khi chưa có hồ sơ và marker; seed cơ cấu chỉ khởi tạo khi chưa có phòng, người hoặc nhật ký DEPARTMENT. Không chạy lại importer cũ, tạo tài khoản hàng loạt hay tái tạo dữ liệu đã dọn. Bảng tài sản cũ đã gỡ; thiết kế mới chưa triển khai theo [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md).
 
 Chi tiết cột ở [Từ điển DB](../DATABASE-DICTIONARY.md); quy chuẩn kỹ thuật ở [Rule DB](../../.agents/rules/DATABASE-RULES.md). Lịch sử làm sạch/chuyển đổi đã hoàn thành không phải hướng dẫn chạy lại.
 
