@@ -1,106 +1,56 @@
-# QUY CHUẨN FRONTEND & THIẾT KẾ GIAO DIỆN (FRONTEND, UI THEME & RESPONSIVE RULES)
+# QUY CHUẨN FRONTEND VÀ TRÌNH BÀY GIAO DIỆN
 
-Tệp quy tắc này là **Nguồn sự thật duy nhất (Single Source of Truth)** cho toàn bộ giao diện người dùng (UI/UX), kiến trúc mã nguồn Frontend, nhận diện thương hiệu và thiết kế đáp ứng đa thiết bị của Sao Đỏ Group (SDG). Mọi AI Agent và lập trình viên bắt buộc phải tuân thủ nghiêm ngặt.
+Chuẩn kỹ thuật và trình bày dùng chung cho toàn dự án. Không lưu bố cục, dữ liệu, quyền hoặc cấu hình riêng của một tính năng tại đây. Nghiệp vụ riêng đọc theo [AGENTS.md](../../AGENTS.md); tiến độ/kết quả thuộc plan tương ứng.
 
----
+## 1. Nhận diện và thành phần dùng chung
 
-## Không gian cá nhân — 05/11/2026
+- Dùng Tailwind CSS và theme tokens trong `src/app/globals.css` làm nguồn giá trị màu: `primary` cho hành động/nhấn thương hiệu, `accent` cho điểm nhấn phụ, `background/card/muted/foreground/border` cho nền/chữ/viền. Kiểm tra cả chế độ sáng và tối.
+- Không hardcode màu HEX trong JSX, không inline màu hoặc tạo class CSS riêng thay cho utility. Dùng `cn()` khi ghép/mở rộng class để tránh xung đột.
+- Thành phần cơ bản (Button, Input, Select, Dialog, Checkbox, Tabs…) dùng từ `@/components/ui/`; không tạo bản thô `<input>/<select>/<button>` trong màn hình nghiệp vụ. Nội dung, bảng và sơ đồ dùng cấu trúc HTML/SVG có ngữ nghĩa phù hợp.
+- Card/panel/dialog dùng viền mềm và bo góc nhất quán; header/navbar có thể dùng nền mờ theo theme. Tương tác có focus rõ và chuyển trạng thái mượt (`transition-all duration-200`); không để hiệu ứng cản thao tác.
 
-- Dashboard là bàn làm việc của người đăng nhập; không dùng thống kê HR toàn công ty hay số mẫu làm mặc định. Ô số đếm và danh sách dùng chung phạm vi quyền, đếm DB độc lập với giới hạn phân trang.
-- Header có liên kết Hồ sơ của tôi và ảnh đại diện. Không hiện ô tìm kiếm/chuông thông báo chưa có chức năng hoặc dấu thông báo giả.
-- Form cấp tài khoản có DEFAULT và tự sinh tên/mật khẩu; mục nâng cao tùy chọn. Sau lưu giữ màn hình bàn giao một lần tới khi người cấp đóng; không lưu credential vào browser storage.
+## 2. Trình bày trực quan
 
-## 1. Màu Sắc & Nhận Diện Thương Hiệu (Brand Colors & Tokens)
+- Áp dụng toàn dự án: ưu tiên thông tin dễ quét mắt, giảm đoạn chữ dài bằng hình thức phù hợp với nội dung; không bắt mọi màn hình phải có biểu đồ.
+- Bảng dùng so sánh/tra cứu nhiều bản ghi; sơ đồ/cây dùng cho cấu trúc, quan hệ và luồng; biểu đồ dùng cho số liệu; biểu tượng, hình minh họa dùng hỗ trợ nhận biết chức năng hoặc trạng thái trống. Nội dung ngắn, rõ thì giữ dạng chữ.
+- Chỉ dùng dữ liệu thật trong phạm vi người dùng được phép xem. Biểu đồ phải có nhãn, đơn vị, khoảng thời gian và thang đo phù hợp; không tạo số mẫu, tiến độ giả hoặc cộng nhóm chồng lấn. Phân biệt số 0, chưa có dữ liệu và không có quyền.
+- Màu phải đi kèm chữ/biểu tượng, không là cách duy nhất biểu đạt trạng thái. Nút chỉ có icon cần tên truy cập; hình trang trí dùng `aria-hidden`, hình mang thông tin có mô tả. Bảng/sơ đồ phải đọc được bằng bàn phím và ở kích thước nhỏ.
+- Hình ảnh phải giúp hiểu nội dung, không thêm trang trí làm loãng thông tin. Không hiện lối tắt, bộ lọc hoặc chỉ báo giả chưa có chức năng. Khi có tương tác biểu đồ/lọc, số đếm và danh sách chi tiết phải thống nhất.
+- Màn hình chính ưu tiên nội dung cần để quyết định và thao tác; hướng dẫn dài, mô tả phụ đưa vào phần mở rộng hoặc chi tiết. Không xếp nhiều khối giải thích trước danh sách làm việc.
+- Bố cục, số liệu và hành vi riêng của màn hình nằm trong rule/thiết kế tính năng, không bổ sung tại mục này.
 
-Hệ màu đã được cấu hình trong `src/app/globals.css`. Tuyệt đối tuân theo hệ thống CSS Variables:
+## 3. Điều hướng, tải và phản hồi
 
-- **Primary (Sao Đỏ Red):** `#da241b` — Màu đỏ thương hiệu chủ đạo. Dùng cho nút bấm hành động chính (Primary Action), thẻ trạng thái nổi bật, active states, điểm nhấn logo. Dùng class: `bg-primary`, `text-primary`, `hover:bg-primary/90`.
-- **Accent / Secondary (Sao Đỏ Navy):** `#003388` — Màu xanh navy thương hiệu. Dùng cho sidebar, header phụ, thẻ tag thông tin, icon phụ trợ. Dùng class: `bg-accent`, `text-accent`, `text-blue-900`.
-- **Màu nền & Thẻ (Background & Surface):** Tuân theo theme tokens `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground` (tự động thích ứng Light Mode / Dark Mode).
-- **RÀNG BUỘC CẤM:**
-  - **CẤM** hardcode mã màu HEX trực tiếp trong JSX (ví dụ: cấm `text-[#da241b]`, `bg-[#003388]`).
-  - **CẤM** viết CSS inline kiểu `style={{ color: 'red' }}`.
-  - **CẤM** tạo các class CSS "chế" như `<div className="my-custom-box">`. 100% sử dụng Tailwind CSS Utility classes.
+- Điều hướng nội bộ dùng `next/link`, không dùng `<a>` gây tải lại trang. Liên kết ngoài/tải file có hành vi phù hợp riêng; không ép dùng router nội bộ cho mọi URL.
+- Mutation nội bộ qua Server Actions theo [rule Backend](BACKEND-RULES.md), cập nhật giao diện không tải lại toàn trang.
+- Tải dữ liệu dùng Skeleton; submit có pending/spinner và chặn gửi lặp. Phản hồi kết quả bằng sonner/toast, kết hợp lỗi tại field khi cần. Trạng thái trống và lỗi phải có lời giải thích, thao tác phù hợp.
+- Thao tác bị chặn phải có lý do đọc được và bước xử lý nếu có. Không chỉ làm mờ nút hoặc dựa vào tooltip rê chuột; hướng dẫn phải dùng được trên điện thoại và bàn phím.
 
----
+## 4. Responsive và khả năng sử dụng
 
-## 2. Thẩm Mỹ & Trải Nghiệm Người Dùng (UI/UX & Aesthetics)
+- Mobile-first, độ rộng co giãn; không có phần tử cố định gây tràn ngang toàn trang. Sidebar cố định trên desktop `lg:`, thu vào menu/Sheet ở màn hình nhỏ.
+- Bảng trên mobile ưu tiên thẻ nếu vẫn giữ được ngữ nghĩa; khi cần bảng dùng vùng cuộn ngang có kiểm soát. Sơ đồ/biểu đồ rộng cần cách xem phù hợp, không buộc toàn trang cuộn ngang.
+- Form một cột trên điện thoại, tăng cột khi đủ chỗ. Dialog khoảng `w-[95vw]`, `max-h-[85vh] overflow-y-auto`; nút lưu phải tiếp cận được khi mở bàn phím.
+- Nút/icon thao tác trên mobile tối thiểu 40×40px; input dùng cỡ chữ dễ đọc, ưu tiên `text-base` trên mobile. Không coi `text-sm` 14px là bảo đảm tránh trình duyệt tự zoom.
+- Kiểm tra chữ dài, dữ liệu trống, trạng thái tải/lỗi, sáng/tối, focus và thao tác bàn phím; không chỉ xem một ảnh desktop có dữ liệu mẫu.
 
-- **Ngôn ngữ thiết kế hiện đại & Tối giản (Modern Glassmorphism):**
-  - Sử dụng viền mềm `border-border/50` kết hợp bo góc nhất quán `rounded-xl` hoặc `rounded-2xl` cho các Card, Panel, Dialog.
-  - Áp dụng hiệu ứng mờ kính `bg-background/80 backdrop-blur-md` cho Header cố định hoặc Navbar.
-- **Tương tác mượt mà (Micro-animations):**
-  - Mọi trạng thái tương tác (hover, active, focus) đều phải có hiệu ứng chuyển đổi mượt: `transition-all duration-200`.
-- **Trải nghiệm 100% AJAX (SPA Standard):**
-  - Không bao giờ sử dụng thẻ `<a>` thuần túy gây tải lại trang (Full Page Reload). Luôn dùng `<Link href="...">` từ `next/link`.
-  - Mọi thao tác gửi biểu mẫu (Form Submission) phải thực hiện qua Server Actions hoặc fetch API ngầm (No reload).
-- **Trạng thái phản hồi (Feedback & Loading States):**
-  - Khi tải dữ liệu: Bắt buộc dùng **Skeleton Loading** (`@/components/ui/skeleton`), không để màn hình trống trơn.
-  - Khi submit dữ liệu: Bắt buộc hiển thị spinner hoặc disable nút kèm trạng thái `isPending`.
-  - Thông báo kết quả: Sử dụng `sonner` hoặc toast component để phản hồi kết quả thao tác cho người dùng.
+## 5. Quyền và Server/Client Components
 
----
+- Chỉ hiện menu/nút khi có quyền hành động tương ứng. Quyền do server xác định; ẩn nút không thay kiểm tra server. Người truy cập trực tiếp khi thiếu quyền nhận thông báo/chuyển hướng phù hợp.
+- Không suy quyền từ tên role/chức vụ hoặc gom mọi thao tác thành MANAGE. Ma trận nghiệp vụ và luồng cấp quyền theo [rule phân quyền](ROLE-MANAGEMENT-RULES.md) và rule phân hệ.
+- Page/layout là Server Components. Chỉ dùng `"use client"` ở component con cần state/effect/sự kiện trình duyệt; không đặt ở page. Đọc tài liệu Next.js cục bộ trước khi đổi mã theo `AGENTS.md`.
 
-## 3. Thiết Kế Đáp Ứng & Trải Nghiệm Di Động (Responsive & Mobile-First)
+## 6. Form, trường bắt buộc và validation
 
-Mọi màn hình và tính năng mới được tạo ra BẮT BUỘC phải tương thích hoàn hảo trên cả điện thoại (Mobile), máy tính bảng (Tablet) và máy tính (Desktop):
+- Form nghiệp vụ dùng React Hook Form + Zod Resolver. Dùng chung schema với server; lỗi field hiển thị qua `FormMessage`.
+- Trường người dùng bắt buộc nhập/chọn có dấu `*` bằng `FormLabel required` và ghi chú `FormRequiredHint`. Không gắn dấu sao cho trường readonly/hệ thống tự cấp hoặc trường tùy chọn; trường mặc định bắt buộc vẫn cần giá trị hợp lệ.
+- Có `aria-required`, `aria-invalid`, liên kết lỗi `aria-describedby`; dấu sao trang trí dùng `aria-hidden`. SelectTrigger nhận ref/onBlur của field để focus đúng ô lỗi.
+- Thiếu/sai dữ liệu: giữ form và nội dung đã nhập, hiển thị lỗi tiếng Việt ngay dưới field, focus lỗi đầu tiên và thông báo chung. Không chỉ đổi màu hoặc hiện toast rồi đóng form.
+- Có thể dùng `noValidate` để thống nhất thông báo RHF/Zod. HTML `required` hoặc nút disabled không thay validation server. Lỗi `fieldErrors` từ action gắn bằng `form.setError`; lỗi nghiệp vụ chung vẫn hiển thị rõ.
 
-- **Bố cục Khung & Navigation:**
-  - Trên Desktop (`lg:` trở lên): Sidebar cố định bên trái (Fixed/Sticky Sidebar).
-  - Trên Mobile / Tablet (`< 1024px`): Sidebar tự động ẩn và chuyển thành Menu Hamburger; khi bấm sẽ mở ra dưới dạng Mobile Drawer (`Sheet` từ `@/components/ui/sheet`).
-  - Luôn sử dụng độ rộng co giãn: `w-full max-w-...`. **CẤM** gán chiều rộng cố định bằng pixel (như `w-[800px]`, `min-w-[1000px]` ngoài vùng cuộn) gây tràn ngang màn hình điện thoại.
-- **Xử lý Bảng Dữ Liệu (Data Grid) trên Mobile:**
-  - **Ưu tiên:** Tự động chuyển đổi dạng dòng của Bảng thành Thẻ thông tin (Card View) ở màn hình nhỏ (`block md:hidden`) và hiển thị dạng Bảng ở màn hình lớn (`hidden md:table`).
-  - **Dự phòng:** Bắt buộc bọc bảng trong container cuộn ngang an toàn (`overflow-x-auto relative w-full`).
-- **Form & Modal Popups:**
-  - Bố cục Form luôn hiển thị 1 cột trên điện thoại (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3`).
-  - Hộp thoại Dialog trên điện thoại phải chiếm `w-[95vw]` và có giới hạn chiều cao `max-h-[85vh] overflow-y-auto` để không bị bàn phím ảo che mất nút Lưu.
-- **Kích thước vùng chạm cảm ứng (Touch Targets):**
-  - Mọi nút bấm, icon thao tác (sửa, xóa, xem) trên mobile phải có kích thước tối thiểu `40x40px` (`h-10 min-w-10`) để người dùng dễ bấm chính xác bằng ngón tay.
-  - Font-size ô input tối thiểu `text-sm` (14px) để tránh việc trình duyệt tự động zoom màn hình trên điện thoại.
+## 7. Tra cứu nghiệp vụ riêng
 
----
-
-## 4. Giao Diện Tích Hợp Phân Quyền (Permission-Based UI Rendering)
-
-- Cấp quyền tập trung tại Vai trò và phân quyền. Trang nghiệp vụ dùng quyền đã cấp, không yêu cầu người sử dụng xác nhận kích hoạt hoặc tự cấp quyền.
-
-Khi xây dựng các tính năng mới (Quản lý công việc, Phê duyệt, Nhân sự...):
-- **Hiển thị Nút bấm có Điều kiện:**
-  - Tuyệt đối KHÔNG hiển thị các nút hành động nhạy cảm (như "Thêm mới", "Sửa", "Xóa", "Duyệt", "Giao việc") nếu người dùng không sở hữu quyền tương ứng.
-  - Sử dụng kiểm tra quyền trực tiếp từ Session truyền xuống:
-    ```tsx
-    {session.permissions.HR === "MANAGE" && (
-      <Button className="bg-primary">Thêm nhân sự</Button>
-    )}
-    ```
-- **Chặn Truy cập Giao diện (Route Guard):**
-  - Nếu người dùng truy cập trực tiếp vào đường dẫn không có quyền (ví dụ `/settings` hoặc `/roles`): Phải chuyển hướng hoặc hiển thị màn hình thông báo "Không có quyền truy cập" (403 Forbidden Component).
-
----
-
-## 5. Kiến Trúc Next.js App Router (Server vs Client Component)
-
-- **Default Server Components:** Mặc định toàn bộ Page (`page.tsx`) và Layout (`layout.tsx`) phải là Server Components để tối ưu hóa SEO và tải dữ liệu trực tiếp trên Server.
-- **Client Components cấp lá (Leaf Nodes):**
-  - Chỉ đặt chỉ thị `"use client"` ở các component trực tiếp chứa state (`useState`, `useReducer`), vòng đời (`useEffect`), hoặc nhận tương tác DOM (`onClick`, `onChange`).
-  - **CẤM:** Đặt `"use client"` ở đầu tệp `page.tsx`. Phải bọc phần tương tác thành các Client Component con và nhúng vào Server Component.
-
----
-
-## 6. Tiêu Chuẩn Thành Phần & Biểu Mẫu (Shadcn/UI & Forms)
-
-- **100% Sử dụng Shadcn/UI:**
-  - Mọi thành phần giao diện cơ bản (Button, Input, Select, Dialog, Sheet, DropdownMenu, Checkbox, Switch, Tabs...) **BẮT BUỘC** import từ `@/components/ui/`.
-  - **CẤM** sử dụng thẻ HTML thô sơ như `<input>`, `<select>`, `<button>` trực tiếp trong code.
-- **Quản lý Form Nghiệp vụ:**
-  - Form nghiệp vụ bắt buộc sử dụng combo **`React Hook Form`** + **`Zod Resolver`** (`@hookform/resolvers/zod`).
-  - Hiển thị lỗi validation rõ ràng ngay dưới từng trường dữ liệu với `<FormMessage />`.
-- **Trường bắt buộc — áp dụng 03/11/2026:**
-  - Mọi trường người dùng bắt buộc nhập/chọn phải có dấu `*` màu `text-destructive` cạnh nhãn và ghi chú `* Trường bắt buộc.` trong form. Dùng `<FormLabel required>` và `<FormRequiredHint />` dùng chung, không tự chèn ký hiệu khác nhau giữa các màn hình.
-  - Input/select bắt buộc có `aria-required="true"`; dấu `*` trang trí dùng `aria-hidden` để giữ nhãn truy cập rõ ràng. SelectTrigger phải nhận ref/onBlur từ field để focus trường lỗi hoạt động.
-  - Đánh dấu đúng theo schema/nghiệp vụ cho từng chế độ tạo/sửa. Trường có giá trị mặc định nhưng vẫn bắt buộc phải đánh dấu; trường hệ thống tự cấp, field readonly không yêu cầu nhập hoặc trường tùy chọn không gắn `*`. Không tự tăng số trường bắt buộc chỉ vì thêm dấu sao.
-  - Gửi thiếu hoặc sai dữ liệu: giữ form/dữ liệu đã nhập, hiển thị lỗi tiếng Việt ngay dưới từng field, `aria-invalid` và liên kết lỗi qua `aria-describedby`; focus trường lỗi đầu tiên và có thông báo chung. Không chỉ đổi màu hoặc dùng toast rồi đóng form.
-  - Dùng chung Zod schema với server. Với RHF/Zod có thể dùng `noValidate` để thống nhất cảnh báo tiếng Việt; không coi HTML `required` hoặc disabled nút Lưu là kiểm tra phía server. Lỗi field từ action được gắn lại bằng `form.setError`; lỗi nghiệp vụ chung vẫn hiển thị thông báo.
-- **Hợp nhất Class an toàn:**
-  - Luôn sử dụng hàm helper `cn()` (Tailwind-merge + Clsx) khi truyền hoặc mở rộng `className` để tránh lỗi xung đột CSS specificity.
+- [HR/phòng ban](HR-RULES.md): trường hồ sơ, nguồn dữ liệu, người phụ trách và nghiệp vụ nghỉ việc.
+- [Phân quyền](ROLE-MANAGEMENT-RULES.md): ma trận quyền, gán role và phạm vi quản trị.
+- [Tài khoản/Profile/Dashboard](PROFILE-DASHBOARD-RULES.md): mặc định cấp tài khoản, bàn giao, profile và bàn làm việc cá nhân.
+- [Workflow](WORKFLOW-RULES.md): mẫu quy trình, người được giao và quyền duyệt/thực hiện.

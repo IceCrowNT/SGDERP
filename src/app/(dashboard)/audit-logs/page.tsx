@@ -1,10 +1,12 @@
 import { Metadata } from "next";
-import { History, Shield, Search, ArrowLeft, Clock, Laptop } from "lucide-react";
+import { History, Shield, Search, ArrowLeft, Clock, Laptop, Users } from "lucide-react";
 import Link from "next/link";
 import { getAuditLogs } from "@/lib/audit";
 import { getSession, hasPermission } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FeatureOverview, PersonInitials } from "@/components/ui/feature-overview";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export const metadata: Metadata = {
@@ -32,23 +34,10 @@ export default async function AuditLogsPage({
     module: moduleFilter,
   });
 
+  const moduleNames: Record<string, string> = { ALL: "Tất cả", AUTH: "Đăng nhập", HR: "Nhân sự", DEPARTMENT: "Phòng ban", ROLE: "Phân quyền", SYSTEM: "Hệ thống" };
   const getActionBadge = (action: string) => {
-    switch (action) {
-      case "LOGIN":
-        return <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white font-medium">Đăng nhập</Badge>;
-      case "LOGOUT":
-        return <Badge variant="secondary" className="font-medium">Đăng xuất</Badge>;
-      case "LOGIN_FAILED":
-        return <Badge variant="destructive" className="font-medium">Đăng nhập lỗi</Badge>;
-      case "CREATE":
-        return <Badge className="bg-blue-600 hover:bg-blue-600 text-white font-medium">Thêm mới</Badge>;
-      case "UPDATE":
-        return <Badge className="bg-amber-600 hover:bg-amber-600 text-white font-medium">Cập nhật</Badge>;
-      case "DELETE":
-        return <Badge className="bg-rose-600 hover:bg-rose-600 text-white font-medium">Xoá</Badge>;
-      default:
-        return <Badge variant="outline">{action}</Badge>;
-    }
+    const labels: Record<string, string> = { LOGIN: "Đăng nhập", LOGOUT: "Đăng xuất", LOGIN_FAILED: "Đăng nhập lỗi", CREATE: "Thêm mới", UPDATE: "Cập nhật", DELETE: "Xóa", PERMISSION_CHANGE: "Đổi quyền", STATUS_CHANGE: "Đổi trạng thái", CONSOLIDATE: "Thu gọn vai trò" };
+    return <Badge variant={action === "LOGIN_FAILED" || action === "DELETE" ? "destructive" : "secondary"}>{labels[action] ?? action}</Badge>;
   };
 
   return (
@@ -71,38 +60,39 @@ export default async function AuditLogsPage({
             Nhật ký hoạt động hệ thống
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Ghi vết kiểm toán tự động mọi thao tác người dùng, đăng nhập và biến động dữ liệu toàn tập đoàn
+            Lịch sử thao tác trong phạm vi công ty của bạn
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="px-3.5 py-1.5 rounded-xl bg-card border border-border/50 shadow-xs flex items-center gap-2 text-xs">
-            <Shield className="w-4 h-4 text-primary" />
-            <span className="text-muted-foreground">Tổng số bản ghi:</span>
-            <span className="font-bold text-foreground font-mono">{pagination.total.toLocaleString("vi-VN")}</span>
-          </div>
-        </div>
+
       </div>
 
+      <FeatureOverview items={[
+        { label: "Bản ghi khớp bộ lọc", value: pagination.total, icon: History },
+        { label: "Bản ghi trên trang", value: logs.length, icon: Shield },
+        { label: "Tên đăng nhập trên trang", value: new Set(logs.map((log) => log.ten_dang_nhap)).size, icon: Users },
+      ]} />
       {/* Filter Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-card p-3 rounded-2xl border border-border/50 shadow-xs">
-        <form method="GET" className="flex-1 flex gap-2">
+        <form method="GET" className="flex min-w-0 flex-1 gap-2">
+          <input type="hidden" name="module" value={moduleFilter} />
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
+            <Input
+              aria-label="Tìm nhật ký"
               type="text"
               name="search"
               defaultValue={search}
               placeholder="Tìm theo người thực hiện, nội dung hoặc đối tượng..."
-              className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl bg-muted/40 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+              className="h-10 pl-9 text-base sm:text-sm"
             />
           </div>
-          <Button type="submit" size="sm" className="rounded-xl px-4 text-xs font-semibold">
+          <Button type="submit" size="sm" className="h-10 rounded-xl px-4 text-xs font-semibold">
             Tìm kiếm
           </Button>
         </form>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 text-xs">
+        <div className="flex max-w-full flex-wrap items-center gap-1.5 text-xs">
           {["ALL", "AUTH", "HR", "DEPARTMENT", "ROLE", "SYSTEM"].map((mod) => {
             const isActive = moduleFilter === mod;
             return (
@@ -111,10 +101,10 @@ export default async function AuditLogsPage({
                 asChild
                 variant={isActive ? "default" : "ghost"}
                 size="sm"
-                className={`rounded-xl text-xs h-8 px-3 ${isActive ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
+                className={`rounded-xl text-xs h-10 px-3 ${isActive ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}`}
               >
                 <Link href={`/audit-logs?module=${mod}${search ? `&search=${encodeURIComponent(search)}` : ""}`}>
-                  {mod === "ALL" ? "Tất cả" : mod}
+                  {moduleNames[mod] ?? mod}
                 </Link>
               </Button>
             );
@@ -133,7 +123,7 @@ export default async function AuditLogsPage({
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
                 <tr className="border-b border-border/50 bg-muted/30 text-muted-foreground text-[11px] font-bold uppercase tracking-wider">
@@ -158,6 +148,7 @@ export default async function AuditLogsPage({
                   const timeStr = new Intl.DateTimeFormat("vi-VN", {
                     dateStyle: "short",
                     timeStyle: "medium",
+                    timeZone: "Asia/Ho_Chi_Minh",
                   }).format(new Date(log.created_at));
 
                   return (
@@ -189,12 +180,12 @@ export default async function AuditLogsPage({
 
                       <td className="py-3 px-4 whitespace-nowrap">
                         <Badge variant="outline" className="text-[10px] uppercase font-mono border-border/60">
-                          {log.phan_he}
+                          {moduleNames[log.phan_he] ?? log.phan_he}
                         </Badge>
                       </td>
 
                       <td className="py-3 px-4">
-                        <p className="text-foreground font-medium">{log.mo_ta}</p>
+                        {log.mo_ta.length > 140 ? <details><summary className="cursor-pointer font-medium">{log.mo_ta.slice(0, 90)}…</summary><p className="mt-2 break-words text-sm">{log.mo_ta}</p></details> : <p className="text-foreground font-medium">{log.mo_ta}</p>}
                         {log.ten_doi_tuong && (
                           <p className="text-[11px] text-muted-foreground mt-0.5">
                             Đối tượng: <span className="font-semibold text-foreground/80">{log.ten_doi_tuong}</span>
@@ -205,7 +196,7 @@ export default async function AuditLogsPage({
                       <td className="py-3 px-4 whitespace-nowrap hidden md:table-cell text-muted-foreground font-mono text-xs">
                         <div className="flex items-center gap-1.5">
                           <Laptop className="w-3.5 h-3.5 opacity-60" />
-                          <span>{log.dia_chi_ip || "localhost"}</span>
+                          <span>{log.dia_chi_ip || "Không ghi nhận"}</span>
                         </div>
                       </td>
                     </tr>
@@ -215,6 +206,17 @@ export default async function AuditLogsPage({
             </table>
           </div>
         )}
+
+        <div className="space-y-3 p-3 md:hidden">
+          {logs.map((log) => <article key={log.id} className="space-y-3 rounded-xl border bg-card p-4">
+            <div className="flex items-center gap-3"><PersonInitials name={log.ho_ten} /><div className="min-w-0"><h2 className="break-words font-semibold">{log.ho_ten}</h2><p className="break-all text-xs text-muted-foreground">@{log.ten_dang_nhap}</p></div></div>
+            <div className="flex flex-wrap gap-2">{getActionBadge(log.hanh_dong)}<Badge variant="outline">{moduleNames[log.phan_he] ?? log.phan_he}</Badge></div>
+            {log.mo_ta.length > 140 ? <details className="text-sm"><summary className="cursor-pointer break-words">{log.mo_ta.slice(0, 90)}…</summary><p className="mt-2 break-words">{log.mo_ta}</p></details> : <p className="text-sm break-words">{log.mo_ta}</p>}
+            {log.ten_doi_tuong && <p className="text-xs text-muted-foreground break-words">Đối tượng: {log.ten_doi_tuong}</p>}
+            <p className="flex items-center gap-2 text-xs text-muted-foreground"><Clock className="size-3.5" aria-hidden="true" />{new Date(log.created_at).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}</p>
+            <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">Thông tin kết nối</summary><p className="mt-2 break-all">IP: {log.dia_chi_ip || "Không ghi nhận"}</p></details>
+          </article>)}
+        </div>
 
         {/* Pagination */}
         {pagination.totalPages > 1 && (

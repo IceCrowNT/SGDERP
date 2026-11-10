@@ -8,12 +8,8 @@ import {
   Building2, 
   Users, 
   Layers, 
-  Sparkles, 
   Compass, 
   MapPin, 
-  CheckCircle2,
-  ChevronRight,
-  Maximize2
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,7 +35,7 @@ export function Office3DClientWrapper({
   return (
     <div className="relative flex flex-col h-[calc(100vh-4rem)] w-full overflow-hidden bg-slate-950">
       {/* Top Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-3.5 bg-slate-900/95 border-b border-slate-800 z-10 shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 bg-slate-900/95 border-b border-slate-800 z-10 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center text-white shadow-lg shadow-red-900/20">
             <Building2 className="w-5 h-5" />
@@ -47,24 +43,24 @@ export function Office3DClientWrapper({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-bold text-white tracking-tight">
-                Mô Hình 3D Digital Twin Tòa Nhà Sao Đỏ
+                Bản đồ 3D tòa nhà
               </h1>
               <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] py-0">
                 Dữ liệu ERP
               </Badge>
             </div>
             <p className="text-xs text-slate-400">
-              Sơ đồ không gian 3 tầng • Tích hợp nhân sự & phòng ban thực tế từ hệ thống
+              Chọn tầng và phòng để xem nhân sự
             </p>
           </div>
         </div>
 
         {/* Stats Summary Badges */}
-        <div className="flex items-center gap-3">
+        <div className="flex max-w-full flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
             <Layers className="w-4 h-4 text-sky-400" />
             <span className="text-slate-400">Quy mô:</span>
-            <strong className="text-white">3 Tầng</strong>
+            <strong className="text-white">{FLOORS_CONFIG.length} tầng</strong>
           </div>
 
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
@@ -93,7 +89,7 @@ export function Office3DClientWrapper({
         />
 
         {/* Bottom Horizontal Quick Room Selector Carousel */}
-        <div className="absolute bottom-14 left-4 right-4 pointer-events-none z-10 hidden md:block">
+        <div className="absolute bottom-14 left-4 right-4 pointer-events-none z-10">
           <div className="flex items-center gap-2 overflow-x-auto py-2 px-3 bg-slate-900/80 backdrop-blur-md border border-slate-800/90 rounded-xl shadow-2xl pointer-events-auto scrollbar-none">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
               <Compass className="w-3.5 h-3.5 text-red-500" />
@@ -102,10 +98,13 @@ export function Office3DClientWrapper({
             {currentFloorRooms.map((room) => {
               const isSelected = selectedRoom?.id === room.id
               return (
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Xem phòng ${room.name}, tầng ${room.floor}`}
                   key={room.id}
                   onClick={() => setSelectedRoom(room)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium shrink-0 transition-all ${
+                  className={`flex items-center gap-1.5 h-10 px-3 rounded-lg text-xs font-medium shrink-0 transition-all ${
                     isSelected
                       ? "bg-red-600 text-white shadow-md shadow-red-900/30 scale-105"
                       : "bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/50"
@@ -117,7 +116,7 @@ export function Office3DClientWrapper({
                   />
                   <span>{room.name}</span>
                   <span className="text-[10px] opacity-70">T{room.floor}</span>
-                </button>
+                </Button>
               )
             })}
           </div>

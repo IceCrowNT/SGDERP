@@ -3,12 +3,13 @@ import { useState, useTransition, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { GitBranch, Plus } from "lucide-react";
+import { GitBranch, Plus, FileText, Inbox, Clock, ListChecks, ArrowRight } from "lucide-react";
 import {
   getWorkflowWorkspace,
   changeWorkflowTemplate,
 } from "@/actions/workflow";
 import { canWorkflow } from "@/lib/role-catalog";
+import { FeatureOverview, EmptyPanel } from "@/components/ui/feature-overview";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -56,9 +57,7 @@ export function WorkflowWorkspace({ data }: { data: Data }) {
     return (
       <div className="space-y-3 mt-4">
         {!rows.length && (
-          <p className="rounded-xl border p-6 text-muted-foreground">
-            Chưa có hồ sơ.
-          </p>
+          <EmptyPanel title="Chưa có hồ sơ." description={mode === "inbox" ? "Các bước được giao cho bạn sẽ xuất hiện tại đây." : "Hồ sơ trong phạm vi được xem sẽ xuất hiện tại đây."} />
         )}
         {rows.map((r) => (
           <Link
@@ -67,7 +66,7 @@ export function WorkflowWorkspace({ data }: { data: Data }) {
             className="block rounded-xl border bg-card p-4 hover:border-primary/40 transition-all duration-200"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-semibold break-words">{r.title}</h2>
+              <h2 className="flex items-start gap-2 font-semibold break-words"><FileText className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />{r.title}</h2>
               <Badge variant="secondary">
                 {r.blocked ? "Cần chuyển giao" : WORKFLOW_STATUS[r.status]}
               </Badge>
@@ -117,6 +116,13 @@ export function WorkflowWorkspace({ data }: { data: Data }) {
           )}
         </div>
       </div>
+      <FeatureOverview items={[
+        { label: "Hồ sơ trong danh sách", value: data.records.length, icon: FileText },
+        { label: "Được giao · đang xử lý", value: data.records.filter((r) => r.assigneeId === data.employeeId && r.status === "IN_PROGRESS").length, icon: Inbox },
+        { label: "Đang xử lý trong danh sách", value: data.records.filter((r) => r.status === "IN_PROGRESS").length, icon: Clock },
+        { label: "Mẫu đã phát hành", value: data.templates.filter((t) => t.status === "PUBLISHED").length, icon: ListChecks },
+      ]} />
+      <p className="text-xs text-muted-foreground">Số hồ sơ tính trong tối đa 200 bản ghi được tải theo quyền của bạn; các nhóm có thể trùng nhau.</p>
       {!data.templates.some((t) => t.status === "PUBLISHED") && (
         <p className="rounded-xl border bg-muted/30 p-4 text-sm">
           Chưa có mẫu được phát hành. Người quản lý quy trình cần tạo mẫu, chọn
@@ -172,14 +178,12 @@ export function WorkflowWorkspace({ data }: { data: Data }) {
                 {t.code}
                 {t.description && ` · ${t.description}`}
               </p>
-              <ol className="text-sm space-y-2">
+              <ol className="grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-3" aria-label={`Các bước của ${t.name}`}>
                 {t.steps.map((b, i) => (
-                  <li key={b.id}>
-                    {i + 1}. {b.name} ·{" "}
-                    {b.kind === "APPROVAL" ? "Duyệt" : "Thực hiện"} ·{" "}
-                    {b.assignment === "REQUESTER_DEPARTMENT_HEAD"
-                      ? "Phụ trách phòng người gửi"
-                      : b.employeeName}
+                  <li key={b.id} className="flex items-start gap-3 rounded-xl border bg-muted/20 p-3">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">{i + 1}</span>
+                    <div className="min-w-0 flex-1"><p className="font-medium break-words">{b.name}</p><Badge variant="outline" className="my-1">{b.kind === "APPROVAL" ? "Duyệt" : "Thực hiện"}</Badge><p className="text-xs text-muted-foreground">{b.assignment === "REQUESTER_DEPARTMENT_HEAD" ? "Phụ trách phòng người gửi" : b.employeeName || "Chưa phân công"}</p></div>
+                    {i < t.steps.length - 1 && <ArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
                   </li>
                 ))}
               </ol>

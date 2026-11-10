@@ -77,6 +77,8 @@ Truy cập từ menu người dùng ở góc phải và nút **Hồ sơ của t�
 
 **Bố cục:** lời chào + phòng/chức vụ → đang đến lượt tôi → việc cần xử lý gần nhất → yêu cầu của tôi → thông báo → lối tắt theo quyền. Mọi số đếm lấy từ DB, không tạo số mẫu hoặc tiến độ giả.
 
+Giao diện 09/11: thẻ số liệu kèm biểu tượng; danh sách dạng bảng trên desktop, thẻ trên mobile, trạng thái có màu và chữ. Cột bên cạnh chứa biểu đồ thanh ba nhóm yêu cầu cá nhân (nháp, đang xử lý, kết quả 30 ngày) và lối tắt dạng ô. Thanh biểu đồ cùng thang đo theo nhóm lớn nhất, bấm để lọc danh sách; không phải tỷ lệ hoàn thành. Không cộng các ô thành tổng vì phạm vi có thể giao nhau. Khi không có dữ liệu dùng minh họa và hướng dẫn ngắn; tài khoản không có workflow không hiện biểu đồ nghiệp vụ. Chưa triển khai thông báo.
+
 | Khối | Dữ liệu và điều kiện hiển thị |
 | --- | --- |
 | Xin chào / Hồ sơ của tôi | Mọi tài khoản hợp lệ; không cần HR VIEW |

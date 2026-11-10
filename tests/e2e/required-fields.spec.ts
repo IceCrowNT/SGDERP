@@ -38,7 +38,11 @@ for (const editing of [false, true]) {
   test(`employee ${editing ? "edit" : "create"}: required labels and missing name/department`, async ({ page, context }) => {
     await fixtureSession(context, "HR", "MANAGE");
     await page.goto("/employees");
-    if (editing) await page.getByRole("button", { name: "Sửa hồ sơ", exact: true }).first().click();
+    if (editing) {
+      await page.getByRole("button", { name: "Xem tất cả nhân sự", exact: true }).click();
+      await page.getByRole("button", { name: /^Xem hồ sơ / }).first().click();
+      await page.getByRole("button", { name: "Sửa hồ sơ", exact: true }).click();
+    }
     else await page.getByRole("button", { name: "Thêm nhân sự", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.locator('[data-slot="form-label"] span[aria-hidden="true"]')).toHaveCount(3);

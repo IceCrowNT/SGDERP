@@ -210,8 +210,10 @@ test("UI creates a profile independently and two accounts without extra people",
     await p.nhan_su.count({ where: { company_id: companyId } }),
   ).toBe(count);
   await page.goto("/employees");
-  const row = page.getByRole("row").filter({ hasText: employee.ma_nhan_su });
-  await expect(row).toContainText("2 tài khoản");
+  await page.getByLabel("Tìm nhân sự").fill(employee.ma_nhan_su);
+  await page.getByRole("button", { name: `Xem hồ sơ ${employee.ho_ten}`, exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("2 tài khoản");
+  await page.getByRole("button", { name: "Đóng hồ sơ", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(
@@ -339,7 +341,7 @@ test("HR list and 3D count people, including people with no account", async ({
     page.getByText(new RegExp(`${count} đang làm việc theo hồ sơ`)),
   ).toBeVisible();
   await page.goto("/office-3d");
-  await expect(page.getByRole("heading", { name: /Mô Hình 3D/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bản đồ 3D tòa nhà" })).toBeVisible();
   await expect(page.getByText(`${count} CBNV`, { exact: true })).toBeVisible();
   expect(
     await p.tai_khoan.count({ where: { employee_id: added.id } }),

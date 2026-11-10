@@ -2,7 +2,22 @@
 
 Cập nhật: **06/11/2026**. Nền chức năng đã triển khai, đang ở mức thử nghiệm. Database local vừa được tạo lại cho demo: **72 nhân sự, 1 tài khoản quản trị, 18 phòng ban**; đây không phải số lượng cố định của hệ thống.
 
+Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
+
+## Danh bạ theo phòng ban — 09/11/2026
+
+- [x] Mặc định xem thẻ phòng cấp trên; mở phòng thấy bộ phận con và nhân sự trong nhánh. Số người tính theo hồ sơ, ghi rõ phạm vi cả đơn vị con; người phụ trách lấy từ quan hệ DB.
+- [x] Tìm toàn công ty có hỗ trợ không dấu, lọc tình trạng; danh bạ 12 người/trang, bảng 15 người/trang. Hồ sơ xem bên phải; chỉ HR MANAGE thấy sửa. Giữ bộ lọc, trang, vị trí và focus khi đóng hồ sơ. Avatar dùng ảnh đã có hoặc chữ viết tắt; thông tin tài khoản chi tiết vẫn cần quyền riêng.
+- [x] 20 E2E liên quan đạt (18 hồi quy HR/tài khoản/form + 2 danh bạ); hai ca danh bạ chạy lại đạt sau chỉnh focus. Kiểm tra nhánh cha/con, head kiêm nhiệm, không suy head từ chức vụ, tìm không dấu toàn công ty, tình trạng, người chưa gắn phòng, liên kết có bộ lọc, phân trang và HR VIEW. Chrome desktop/mobile/sáng/tối không tràn ngang hoặc lỗi console; TypeScript/lint đạt. Không đổi schema, mutation hoặc quyền.
+
+## Đồng bộ giao diện — 09/11/2026
+
+- [x] Phòng ban có số liệu cơ cấu/người phụ trách, giữ cây và sơ đồ hiện có. Giao diện nhân sự tiếp tục được thu gọn theo mục Danh bạ ở trên; không đổi quyền, nguồn hoặc dữ liệu.
+- [x] TypeScript/lint đạt; nhóm nhân sự/tài khoản chạy lại 14/14 E2E đạt sau sửa bảng responsive dùng chung DOM. Kiểm tra Chrome desktop/mobile: nhân sự, phòng ban không tràn ngang; tìm kiếm và cây giữ nguyên hành vi.
+
 ## Đã hoàn thành
+
+- [x] Tách nghiệp vụ khỏi rule Frontend/Backend chung sang `HR-RULES.md`; đăng ký router, giữ quyết định DB trong plan. Chỉ sắp xếp tài liệu, không thay tính năng.
 
 - [x] Nhập danh sách HR final 72 người; nhân sự và phòng ban vận hành độc lập trong ERP, không chờ API hoặc đối soát 1Office.
 - [x] Tách `nhan_su` và `tai_khoan`: một người có 0..N tài khoản, số người không tính từ số tài khoản.
@@ -29,6 +44,11 @@ Cập nhật: **06/11/2026**. Nền chức năng đã triển khai, đang ở m�
 
 ## Việc tiếp theo
 
+- [x] Tách quyết định DB của HR/phòng ban khỏi rule DB tổng quát; tập trung ở mục dưới, giữ nguyên schema và dữ liệu.
+
+- [x] Ghi nhận nhu cầu báo cáo HCNS dùng chung trên web: nhập dạng bảng, xuất Excel, trưởng phòng chốt bản gửi lãnh đạo và truy vết từng thay đổi. Đã đối chiếu schema/audit hiện có; đây là khảo sát, chưa duyệt triển khai.
+- [x] Ngày 09/11/2026 đọc file `docs/bao-cao/BC tuan P.HCNS (26.10-30.10.2026).xlsx` bằng thư viện `xlsx` có sẵn theo chấp thuận của người dùng, không cài dependency hoặc sửa file nguồn. Có 1 sheet (`Sheet1`), vùng khai báo A2:O50 nhưng nội dung chỉ ở A:H, 41 vùng gộp, không có công thức. Ba phần: công việc đã thực hiện, đề xuất/kiến nghị (đang trống), kế hoạch tuần tới. Cột H “Người thực hiện” bị ẩn; có công việc nhiều dòng chi tiết và tên người dạng text/nhiều người. Đã kiểm tra dữ liệu và metadata, chưa render để kiểm chứng bố cục in.
+- [ ] Chốt mức tương thích Excel và quyền sửa chung hay theo phần. Theo mẫu đã đọc, đề xuất bảng nhập liệu theo ba phần, nhóm nghiệp vụ và công việc có dòng chi tiết mang ID ổn định; chưa cần bộ tính công thức. Phương án tối thiểu đang đề xuất: một bảng báo cáo chứa JSON có ID dòng/phiên bản, tái sử dụng nhật ký trước–sau; lưu dữ liệu và audit cùng transaction, chống ghi đè, giữ snapshot bản chốt. Không dùng helper audit nuốt lỗi cho luồng bắt buộc lưu lịch sử. Kiểm tra lại ngày nhập và đánh số nhóm trong nguồn trước khi chuẩn hóa; không tự gán tài khoản theo tên viết ngắn. Khi được yêu cầu triển khai, lập checklist phân hệ riêng và đăng ký router.
 - [x] Áp dụng [thiết kế tài khoản mặc định/profile](PROFILE-DASHBOARD-CHECKLIST.md): tự sinh tên, DEFAULT không bắt chọn role; giữ tùy chọn chỉ tạo người và kiểm tra riêng quyền cấp tài khoản.
 - [ ] Người phụ trách xác nhận và chọn head thực tế cho các phòng; không tự gán hàng loạt.
 - [x] Triển khai bản đầu [vai trò và phân quyền](ROLE-MANAGEMENT-CHECKLIST.md).
@@ -36,6 +56,18 @@ Cập nhật: **06/11/2026**. Nền chức năng đã triển khai, đang ở m�
 - [ ] Chốt ai được xem trường HR nhạy cảm, phạm vi danh bạ và thông tin hiển thị trên 3D.
 - [ ] Khi cần: xuất–nhập Excel theo mã ERP, xem trước chênh lệch; không ghi đè từ nguồn cũ hoặc dùng STT/tên làm khóa.
 - [ ] Khi mở rộng 3D: tách vị trí vật lý khỏi cơ cấu tổ chức; hiện mapping còn theo mã phòng, chưa tự xử lý đổi mã/phòng mới.
+
+## Thiết kế DB cần giữ
+
+- `nhan_su` là người thật; `tai_khoan.employee_id` nullable, không unique (0..N tài khoản/người). Không khôi phục các cột `legacy*` đã bỏ hoặc chép hồ sơ người vào tài khoản; `ten_hien_thi` là nhãn tài khoản. Nhật ký hoạt động tham chiếu tài khoản, không dùng số tài khoản làm số nhân sự.
+- Nhân sự gắn phòng bằng `(department_id, company_id)`; tài khoản gắn người bằng `(employee_id, company_id)`. Phòng là nút của cây cùng công ty; chức vụ chỉ là text. `nguoi_phu_trach_id` nullable, FK kép cùng công ty, Restrict, không unique: một người có thể phụ trách nhiều phòng, kể cả phòng khác nơi công tác. Chỉ chọn mới người ACTIVE; nghỉ việc giữ liên kết để bàn giao, không tự chọn người thay.
+- `tinh_trang_lam_viec` ACTIVE/LEFT/UNKNOWN độc lập `cho_phep_dang_nhap`. Action ghi nhận LEFT khóa mọi tài khoản đang mở, tăng phiên bản phiên và ghi audit cùng transaction; ACTIVE/UNKNOWN không tự mở lại. Không có trigger DB tự khóa tài khoản; session vẫn kiểm tra LEFT. Khóa riêng tài khoản không đổi trạng thái người.
+- `ma_nhan_su` bắt buộc, unique trong công ty, cấp bằng `so_thu_tu_ma_nhan_su`/`tao_ma_nhan_su()`, bất biến qua trigger `ma_nhan_su_bat_bien`. Không dùng STT, tên hoặc mã phòng làm định danh; export giữ mã dạng text. Import theo mã phải báo mã lạ/trùng/mâu thuẫn; import không mã cần đối chiếu trước. Định danh nguồn unique theo phạm vi công ty/hệ thống nguồn như schema.
+- Phòng ban có mã unique trong công ty; mutation khóa hàng `cong_ty`, rồi khóa phân quyền `(260126, companyId)` khi cần, kiểm tra cây và ghi audit cùng transaction. Xóa phải khóa phòng và kiểm tra không còn con/nhân sự ở bất kỳ trạng thái nào; không dùng SetNull để đẩy con ra cấp công ty.
+- HR final là nguồn khởi tạo, ERP quản lý độc lập. Các trường `tep_nguon_nhan_su_hr`, `ngay_chot_nhan_su_hr`, `ghi_chu_nhan_su_hr`, `he_thong_nguon`, `dinh_danh_nguon`, `thoi_diem_chup_du_lieu_nguon` chỉ truy nguyên; `ghi_chu` là nội dung vận hành chỉnh được. Không khóa trường theo nguồn, suy danh tính từ mapping chưa xác minh hoặc suy nghỉ việc do thiếu trong export. Ngày Excel đọc theo UTC calendar date.
+- Seed HR chỉ bootstrap khi chưa có hồ sơ và marker; seed cơ cấu chỉ khởi tạo khi chưa có phòng, người hoặc nhật ký DEPARTMENT. Không chạy lại importer cũ, tạo tài khoản hàng loạt hay tái tạo dữ liệu đã dọn. Tài sản đã gỡ và tạm hoãn theo [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md).
+
+Chi tiết cột ở [Từ điển DB](../DATABASE-DICTIONARY.md); quy chuẩn kỹ thuật ở [Rule DB](../../.agents/rules/DATABASE-RULES.md). Lịch sử làm sạch/chuyển đổi đã hoàn thành không phải hướng dẫn chạy lại.
 
 ## Kiểm chứng gần nhất
 

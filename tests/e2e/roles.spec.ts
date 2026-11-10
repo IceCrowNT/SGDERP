@@ -566,3 +566,28 @@ test("audit write failure rolls back the role and its grants", async ({
     await db.$executeRawUnsafe(`DROP FUNCTION ${trigger}()`);
   }
 });
+
+test("guided deletion shows linked accounts, permits reassignment, then deletes the unused role", async ({ page, context }) => {
+  const roleId = await makeRole("DELETE_GUIDED", [["HR", "VIEW"]]);
+  const member = await makeAccount("delete-guided", roleId);
+  await signAccount(context, admin);
+  await page.goto("/roles");
+  await page.getByRole("button", { name: "Xóa vai trò DELETE_GUIDED", exact: true }).click();
+  await expect(page.getByRole("dialog").getByRole("list", { name: "Tài khoản đang dùng vai trò" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Xác nhận xóa", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: `Đổi vai trò của ${member.ten_dang_nhap}`, exact: true }).click();
+  await page.getByRole("checkbox", { name: "DELETE_GUIDED DELETE_GUIDED", exact: true }).uncheck();
+  await page.getByRole("button", { name: "Lưu phân quyền", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect.poll(() => db.tai_khoan_vai_tro.count({ where: { role_id: roleId } })).toBe(0);
+  // Wait for refreshed membership data before opening the second confirmation.
+  const card = page.locator("section").filter({ has: page.getByRole("heading", { name: "DELETE_GUIDED", exact: true }) });
+  await expect(card.getByText("0 tài khoản", { exact: true })).toBeVisible();
+  await card.getByRole("button", { name: "Xóa vai trò DELETE_GUIDED", exact: true }).click();
+  await page.getByRole("button", { name: "Xác nhận xóa", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect.poll(() => db.vai_tro.count({ where: { id: roleId } })).toBe(0);
+  expect(await db.tai_khoan.count({ where: { id: member.id } })).toBe(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

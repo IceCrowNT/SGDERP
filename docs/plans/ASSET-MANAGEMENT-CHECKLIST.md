@@ -2,6 +2,11 @@
 
 Cập nhật: **04/11/2026**. **TẠM HOÃN** để tập trung nhân sự/tài khoản/phân quyền. Đã gỡ 8 bảng và seed tài sản ngày 31/10; không tự khôi phục hoặc nhập thiết bị. 3D nhân sự vẫn hoạt động.
 
+## Đồng bộ giao diện — 09/11/2026
+
+- [x] Chỉ cập nhật giao diện 3D nhân sự: tiêu đề gọn, thanh số liệu co giãn, chọn phòng nhanh dùng Button trên mobile, nhãn tầng/camera ngắn rõ. Không sửa mô hình, mapping vị trí hoặc khôi phục tài sản.
+- [x] Chrome desktop/mobile: canvas hiển thị, đổi tầng và chọn phòng mở đúng hộp thông tin; không tràn ngang. Ca E2E đếm người trong HR/3D chạy lại đạt; TypeScript/lint đạt.
+
 ## Đã có để tham khảo
 
 - [x] Phân tích ảnh bàn giao: 11 nhóm, 90 thiết bị ở mức tổng hợp; không phải kiểm kê tài sản cá thể đã xác nhận.

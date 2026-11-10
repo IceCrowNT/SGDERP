@@ -1,5 +1,7 @@
 "use client";
 
+import { FeatureOverview, FeatureHelp } from "@/components/ui/feature-overview";
+import { Users, UserCheck } from "lucide-react";
 import { OrganizationChart } from "./OrganizationChart";
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
@@ -224,15 +226,20 @@ export function DepartmentManager({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2"><h1 className="flex items-center gap-2 text-2xl font-bold">
           <FolderTree className="size-6 text-primary" />Phòng ban
         </h1>
         <p className="text-sm text-muted-foreground">
           {initialDepartments.length} đơn vị · {totalEmployees} hồ sơ nhân sự
         </p>
-        {canManage && <Button onClick={() => openForm(null)}><Plus className="size-4" />Thêm phòng ban</Button>}
+        </div>{canManage && <Button onClick={() => openForm(null)}><Plus className="size-4" />Thêm phòng ban</Button>}
       </div>
+      <FeatureOverview items={[
+        { label: "Đơn vị trong cơ cấu", value: initialDepartments.length, icon: FolderTree },
+        { label: "Hồ sơ trực thuộc", value: totalEmployees, icon: Users },
+        { label: "Đã gắn người phụ trách", value: initialDepartments.filter((d) => d.nguoi_phu_trach_id !== null).length, icon: UserCheck },
+      ]} />
       <div className="relative max-w-xl">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input aria-label="Tìm phòng ban" value={searchTerm} onChange={(event) => { setSearchTerm(event.target.value); setCollapsed(new Set()); }}
@@ -250,7 +257,7 @@ export function DepartmentManager({
                 : rootDepartments.map((root) => renderBranch(root))}
             </CardContent>
           </Card>
-          <p className="mt-3 text-xs text-muted-foreground">Mở nhánh để xem nhân sự trực thuộc và bộ phận con. Bấm số hồ sơ để mở danh bạ. Số liệu chưa thể hiện trạng thái đang làm việc.</p>
+          <div className="mt-3"><FeatureHelp title="Cách đọc cơ cấu"><p>Mở nhánh để xem nhân sự trực thuộc và bộ phận con. Bấm số hồ sơ để mở danh bạ. Số liệu bao gồm mọi tình trạng làm việc; người phụ trách không tự được cấp quyền.</p></FeatureHelp></div>
         </TabsContent>
         <TabsContent value="chart"><OrganizationChart departments={initialDepartments} companyName={companyName} search={searchTerm} /></TabsContent>
       </Tabs>

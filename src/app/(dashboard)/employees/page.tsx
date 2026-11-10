@@ -33,9 +33,7 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
     : undefined;
 
   // Lấy danh sách nhân sự ban đầu
-  const res = await getEmployees({
-    departmentId: deptFilterId,
-  });
+  const res = await getEmployees();
 
   if (!res.success) {
     return (
@@ -58,19 +56,35 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
   });
 
   const accountAccess = canManageAccounts(session);
-  const roles = accountAccess ? await db.vai_tro.findMany({
-    where: { company_id: session.companyId }, select: { id: true, ten_vai_tro: true }, orderBy: { ten_vai_tro: "asc" },
-  }) : [];
-  const accounts = accountAccess ? await db.tai_khoan.findMany({
-    where: { company_id: session.companyId },
-    select: { id: true, employee_id: true, ten_dang_nhap: true, cho_phep_dang_nhap: true,
-      danh_sach_vai_tro: { select: { vai_tro: { select: { ten_vai_tro: true } } } } },
-    orderBy: { ten_dang_nhap: "asc" },
-  }) : [];
+  const roles = accountAccess
+    ? await db.vai_tro.findMany({
+        where: { company_id: session.companyId },
+        select: { id: true, ten_vai_tro: true },
+        orderBy: { ten_vai_tro: "asc" },
+      })
+    : [];
+  const accounts = accountAccess
+    ? await db.tai_khoan.findMany({
+        where: { company_id: session.companyId },
+        select: {
+          id: true,
+          employee_id: true,
+          ten_dang_nhap: true,
+          cho_phep_dang_nhap: true,
+          danh_sach_vai_tro: {
+            select: { vai_tro: { select: { ten_vai_tro: true } } },
+          },
+        },
+        orderBy: { ten_dang_nhap: "asc" },
+      })
+    : [];
   return (
     <div className="space-y-6">
       <EmployeeManager
+        key={`${deptFilterId ?? "all"}:${resolvedParams?.search ?? ""}`}
         initialEmployees={res.data || []}
+        initialDepartmentId={deptFilterId}
+        initialSearch={resolvedParams?.search ?? ""}
         departments={departments.map((department) => {
           const names = [department.ten_phong_ban];
           const seen = new Set([department.id]);
@@ -82,7 +96,12 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
             names.unshift(parent.ten_phong_ban);
             parentId = parent.parent_id;
           }
-          return { id: department.id, name: names.join(" → ") };
+          return {
+            id: department.id,
+            name: names.join(" → "),
+            shortName: department.ten_phong_ban,
+            parentId: department.parent_id,
+          };
         })}
         canManage={res.canManage || false}
         accountAccess={accountAccess}

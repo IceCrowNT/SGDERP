@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { ShieldCheck, Plus, Search } from "lucide-react";
+import { ShieldCheck, Plus, Search, Users, LockKeyhole, SlidersHorizontal, ArrowRight, KeyRound, Trash2 } from "lucide-react";
 import {
   getRoles,
   saveRole,
@@ -139,23 +139,31 @@ export function RoleManager({ data }: { data: Data }) {
           </Button>
         )}
       </div>
-      <p className="text-sm text-muted-foreground">
-        Quyền gắn với từng tài khoản. Chức vụ và người phụ trách phòng được quản
-        lý riêng tại hồ sơ, cơ cấu phòng ban.
-      </p>
-      <div className="rounded-xl border bg-muted/30 p-4 text-sm">
-        Nhân sự và quản trị áp dụng trong công ty. Quy trình giới hạn theo người
-        gửi/người được giao; chỉ người điều phối được xem toàn công ty.
+      <div className="grid grid-cols-3 gap-2 sm:gap-3" aria-label="Tổng quan vai trò">
+        {[
+          { label: "Vai trò tùy chỉnh", value: data.roles.filter((r) => !r.system).length, icon: SlidersHorizontal },
+          { label: "Vai trò hệ thống", value: data.roles.filter((r) => r.system).length, icon: LockKeyhole },
+          { label: "Tài khoản đã gán vai trò", value: data.accounts.filter((a) => a.roleIds.length > 0).length, icon: Users },
+        ].map(({ label, value, icon: Icon }) => (
+          <div key={label} className="flex flex-col items-start gap-2 rounded-xl border bg-card p-3 sm:flex-row sm:items-center sm:gap-3 sm:p-4">
+            <span className="hidden rounded-xl bg-primary/10 p-3 text-primary sm:block"><Icon className="size-5" aria-hidden="true" /></span>
+            <div><p className="text-2xl font-semibold tabular-nums">{value}</p><p className="text-xs text-muted-foreground sm:text-sm">{label}</p></div>
+          </div>
+        ))}
       </div>
-      {data.canManage && (
-        <p className="text-sm text-muted-foreground">
-          Để dùng thử quy trình, cấp quyền trong nhóm “Quy trình và duyệt công
-          việc” của vai trò, rồi gán cho từng tài khoản.{" "}
-          <Link href="/workflows" className="text-primary">
-            Mở quy trình →
-          </Link>
-        </p>
-      )}
+      <details className="rounded-xl border bg-muted/20 px-4 py-3 text-sm">
+        <summary className="cursor-pointer font-medium focus-visible:outline-ring">Cách cấp quyền và xóa vai trò</summary>
+        <div className="mt-3 space-y-3">
+          <ol className="flex flex-wrap items-center gap-2" aria-label="Quan hệ phân quyền">
+            <li className="flex items-center gap-2"><Users className="size-4" aria-hidden="true" />Tài khoản</li>
+            <li className="flex items-center gap-2"><ArrowRight className="size-4" aria-hidden="true" /><ShieldCheck className="size-4" aria-hidden="true" />Vai trò</li>
+            <li className="flex items-center gap-2"><ArrowRight className="size-4" aria-hidden="true" /><KeyRound className="size-4" aria-hidden="true" />Quyền sử dụng</li>
+          </ol>
+          <p className="text-muted-foreground">Vai trò tùy chỉnh được xóa sau khi gỡ khỏi mọi tài khoản. Vai trò hệ thống được giữ lại.</p>
+          <p className="text-muted-foreground">Chức vụ và người phụ trách phòng được quản lý riêng. Quyền nhân sự áp dụng trong công ty; quyền quy trình còn phụ thuộc hồ sơ và người được giao.</p>
+          {data.canManage && <Link href="/workflows" className="inline-flex items-center gap-2 text-primary">Mở quy trình <ArrowRight className="size-4" aria-hidden="true" /></Link>}
+        </div>
+      </details>
       <div className="relative max-w-xl">
         <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
         <Input
@@ -175,62 +183,59 @@ export function RoleManager({ data }: { data: Data }) {
             Quyền của tài khoản
           </TabsTrigger>
         </TabsList>
-        <TabsContent value="roles" className="space-y-3 mt-4">
+        <TabsContent value="roles" className="grid grid-cols-1 gap-4 mt-4 lg:grid-cols-2 2xl:grid-cols-3">
           {data.roles
             .filter((r) => matches(`${r.name} ${r.code}`))
             .map((role) => (
               <section
                 key={role.id}
-                className="rounded-xl border bg-card p-4 space-y-3"
+                className="flex min-w-0 flex-col rounded-xl border bg-card p-4"
               >
-                <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-                  <div>
-                    <h2 className="font-semibold">{role.name}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {role.code} · {role.accountCount} tài khoản{" "}
-                      {role.system && "· Vai trò hệ thống"}
-                    </p>
+                <div className="flex items-start gap-3">
+                  <span className="rounded-lg bg-muted p-2 text-primary"><ShieldCheck className="size-5" aria-hidden="true" /></span>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-semibold break-words">{role.name}</h2>
+                    <p className="text-xs text-muted-foreground break-all">{role.code}</p>
                   </div>
-                  <div className="flex gap-2">
+                  {role.system && <Badge variant="secondary" className="shrink-0"><LockKeyhole className="size-3" aria-hidden="true" /> Hệ thống</Badge>}
+                </div>
+                <div className="my-4 flex items-center gap-2 text-sm text-muted-foreground">
+                  <Users className="size-4" aria-hidden="true" />
+                  {role.accountCount} tài khoản
+                </div>
+                <PermissionSummary levels={role.permissions} actions={role.workflowActions} />
+                {role.description && (
+                  <details className="mt-3 text-sm text-muted-foreground">
+                    <summary className="cursor-pointer focus-visible:outline-ring">Mô tả vai trò</summary>
+                    <p className="mt-2 break-words">{role.description}</p>
+                  </details>
+                )}
+                <div className="mt-auto pt-4">
+                  <div className="flex flex-wrap gap-2 border-t pt-3">
                     <Button
                       variant="outline"
                       className="h-10"
-                      disabled={!ready || role.code === "DEFAULT"}
+                      disabled={!ready}
                       onClick={() => setEditing(role)}
-                      aria-label={`${data.canManage ? "Sửa" : "Xem"} vai trò ${role.name}`}
+                      aria-label={`${data.canManage && role.code !== "DEFAULT" ? "Sửa" : "Xem"} vai trò ${role.name}`}
                     >
-                      {data.canManage ? "Sửa quyền" : "Xem quyền"}
+                      <SlidersHorizontal className="size-4" aria-hidden="true" />
+                      {data.canManage && role.code !== "DEFAULT" ? "Sửa quyền" : "Xem quyền"}
                     </Button>
                     {data.canManage && !role.system && (
                       <Button
                         variant="outline"
                         className="h-10 text-destructive"
-                        disabled={role.accountCount > 0}
-                        title={
-                          role.accountCount
-                            ? "Gỡ khỏi tài khoản trước khi xóa"
-                            : undefined
-                        }
-                        onClick={() => {
-                          setError("");
-                          setRemoving(role);
-                        }}
+                        disabled={!ready}
+                        onClick={() => { setError(""); setRemoving(role); }}
                         aria-label={`Xóa vai trò ${role.name}`}
                       >
-                        Xóa
+                        <Trash2 className="size-4" aria-hidden="true" /> Xóa
                       </Button>
                     )}
                   </div>
+                  {role.system && <p className="mt-2 text-xs text-muted-foreground">Vai trò hệ thống · Không thể xóa</p>}
                 </div>
-                {role.description && (
-                  <p className="text-sm text-muted-foreground break-words">
-                    {role.description}
-                  </p>
-                )}
-                <PermissionSummary
-                  levels={role.permissions}
-                  actions={role.workflowActions}
-                />
               </section>
             ))}
           {!data.roles.some((r) => matches(`${r.name} ${r.code}`)) && (
@@ -306,7 +311,7 @@ export function RoleManager({ data }: { data: Data }) {
           {editing !== undefined && (
             <RoleForm
               role={editing}
-              canManage={data.canManage}
+              canManage={data.canManage && editing?.code !== "DEFAULT"}
               done={() => {
                 setEditing(undefined);
                 router.refresh();
@@ -321,14 +326,25 @@ export function RoleManager({ data }: { data: Data }) {
           if (!pending && !open) setRemoving(null);
         }}
       >
-        <DialogContent className="w-[95vw] sm:max-w-lg">
+        <DialogContent className="w-[95vw] sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Xóa vai trò</DialogTitle>
             <DialogDescription>
-              Xóa “{removing?.name}”? Chỉ vai trò không thuộc hệ thống và chưa
-              gắn tài khoản mới được xóa.
+              {removing?.accountCount
+                ? `“${removing.name}” đang được ${removing.accountCount} tài khoản sử dụng. Gỡ vai trò khỏi các tài khoản bên dưới trước khi xóa.`
+                : `Xóa “${removing?.name}”? Vai trò này chưa được gán cho tài khoản nào.`}
             </DialogDescription>
           </DialogHeader>
+          {removing && removing.accountCount > 0 && (
+            <ul className="space-y-2" aria-label="Tài khoản đang dùng vai trò">
+              {data.accounts.filter((a) => a.roleIds.includes(removing.id)).map((a) => (
+                <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+                  <div className="min-w-0"><p className="font-medium break-words">{a.name}</p><p className="text-sm text-muted-foreground break-all">{a.username}</p></div>
+                  <Button variant="outline" className="h-10" onClick={() => { setRemoving(null); setAccount(a); }} aria-label={`Đổi vai trò của ${a.username}`}>Đổi vai trò</Button>
+                </li>
+              ))}
+            </ul>
+          )}
           {error && (
             <p role="alert" className="text-destructive text-sm">
               {error}
@@ -344,7 +360,7 @@ export function RoleManager({ data }: { data: Data }) {
             </Button>
             <Button
               variant="destructive"
-              disabled={pending}
+              disabled={pending || Boolean(removing?.accountCount)}
               onClick={() =>
                 start(async () => {
                   if (!removing) return;

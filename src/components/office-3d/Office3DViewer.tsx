@@ -443,25 +443,26 @@ export function Office3DViewer({
       {/* Top Floating Control Bar */}
       <div className="absolute top-4 left-4 right-4 flex flex-wrap items-center justify-between gap-3 pointer-events-none z-20">
         {/* Floor Filter Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900/85 backdrop-blur-md border border-slate-800 rounded-xl shadow-xl pointer-events-auto">
+        <div className="flex max-w-full items-center gap-1.5 overflow-x-auto p-1 bg-slate-900/85 backdrop-blur-md border border-slate-800 rounded-xl shadow-xl pointer-events-auto">
           <Button
             size="sm"
             variant={activeFloor === "all" ? "default" : "ghost"}
-            className={activeFloor === "all" ? "bg-red-600 hover:bg-red-700 text-white font-medium" : "text-slate-300 hover:text-white"}
+            className={activeFloor === "all" ? "h-10 shrink-0 bg-red-600 hover:bg-red-700 text-white font-medium" : "h-10 shrink-0 text-slate-300 hover:bg-slate-800 hover:text-white"}
             onClick={() => onSelectFloor?.("all")}
           >
             <Layers className="w-3.5 h-3.5 mr-1.5" />
-            Toàn Tòa Nhà
+            Tất cả tầng
           </Button>
           {FLOORS_CONFIG.map((f) => (
             <Button
               key={f.floor}
               size="sm"
               variant={activeFloor === f.floor ? "default" : "ghost"}
-              className={activeFloor === f.floor ? "bg-red-600 hover:bg-red-700 text-white font-medium" : "text-slate-300 hover:text-white"}
+              className={activeFloor === f.floor ? "h-10 shrink-0 bg-red-600 hover:bg-red-700 text-white font-medium" : "h-10 shrink-0 text-slate-300 hover:bg-slate-800 hover:text-white"}
+              aria-label={`Tầng ${f.floor}: ${f.name}`}
               onClick={() => onSelectFloor?.(f.floor)}
             >
-              T{f.floor}: {f.name}
+              Tầng {f.floor}
             </Button>
           ))}
         </div>
@@ -471,7 +472,7 @@ export function Office3DViewer({
           <Button
             size="sm"
             variant={isExploded ? "default" : "outline"}
-            className={isExploded ? "bg-amber-600 hover:bg-amber-700 text-white" : "border-slate-700 text-slate-300 hover:text-white"}
+            className={isExploded ? "h-10 bg-amber-600 hover:bg-amber-700 text-white" : "h-10 bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"}
             onClick={onToggleExploded}
             title="Tách rời các tầng"
           >
@@ -484,9 +485,9 @@ export function Office3DViewer({
           <Button
             size="sm"
             variant="ghost"
-            className="text-slate-300 hover:text-white px-2.5"
+            className="size-10 text-slate-300 hover:bg-slate-800 hover:text-white px-2.5"
             onClick={() => setCameraPreset("iso")}
-            title="Góc 3D Isometric"
+            title="Góc 3D Isometric" aria-label="Góc 3D Isometric"
           >
             <Compass className="w-4 h-4" />
           </Button>
@@ -494,9 +495,9 @@ export function Office3DViewer({
           <Button
             size="sm"
             variant="ghost"
-            className="text-slate-300 hover:text-white px-2.5"
+            className="size-10 text-slate-300 hover:bg-slate-800 hover:text-white px-2.5"
             onClick={() => setCameraPreset("top")}
-            title="Mặt bằng Top-down"
+            title="Mặt bằng Top-down" aria-label="Mặt bằng nhìn từ trên"
           >
             <Eye className="w-4 h-4" />
           </Button>
@@ -504,9 +505,9 @@ export function Office3DViewer({
           <Button
             size="sm"
             variant="ghost"
-            className="text-slate-300 hover:text-white px-2.5"
+            className="size-10 text-slate-300 hover:bg-slate-800 hover:text-white px-2.5"
             onClick={() => setCameraPreset("front")}
-            title="Góc sảnh chính"
+            title="Góc sảnh chính" aria-label="Góc sảnh chính"
           >
             <RotateCcw className="w-4 h-4" />
           </Button>
@@ -514,9 +515,9 @@ export function Office3DViewer({
       </div>
 
       {/* Bottom Hint Banner */}
-      <div className="absolute bottom-4 left-4 flex items-center gap-2 pointer-events-none z-10 text-xs text-slate-400 bg-slate-900/80 backdrop-blur-sm border border-slate-800/80 px-3 py-1.5 rounded-lg shadow-lg">
+      <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2 pointer-events-none z-10 text-xs text-slate-400 bg-slate-900/80 backdrop-blur-sm border border-slate-800/80 px-3 py-1.5 rounded-lg shadow-lg">
         <Info className="w-3.5 h-3.5 text-sky-400" />
-        <span>Kéo chuột xoay 360° • Cuộn chuột zoom • Click vào phòng để xem danh sách nhân sự</span>
+        <span>Kéo để xoay · Cuộn/chụm để thu phóng · Chọn phòng để xem</span>
       </div>
     </div>
   )

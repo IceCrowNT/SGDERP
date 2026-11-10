@@ -2,11 +2,21 @@
 
 Cập nhật: **06/11/2026**. **Bản thử nghiệm tuần tự đã triển khai và kiểm thử đạt; chờ cấu hình người dùng thực tế. Đã chốt hướng thiết kế trình tạo quy trình kéo thả, luồng sử dụng mẫu, thông báo và dashboard; chưa triển khai phần mở rộng.** Thiết kế chi tiết tại [Thiết kế quy trình](../THIET-KE-QUY-TRINH.md).
 
+Rule nghiệp vụ: [WORKFLOW-RULES](../../.agents/rules/WORKFLOW-RULES.md).
+
+## Đồng bộ giao diện — 09/11/2026
+
+- [x] Workspace có thẻ số liệu trong tối đa 200 hồ sơ được tải (ghi rõ phạm vi, không thay số đếm dashboard); bước mẫu dạng ô đánh số, chi tiết hồ sơ dạng timeline có nhãn trạng thái. Trạng thái trống/thiếu quyền có biểu tượng; không đổi quyền hoặc logic quy trình.
+- [x] Nhóm workflow 10/10 E2E đạt; kiểm tra workspace và ảnh chi tiết quy trình trên desktop/mobile. TypeScript/lint đạt; giữ quyền, chuyển bước và lịch sử xử lý.
+
 ## Bản đầu
 
 `/workflows`: tạo mẫu có phiên bản → phát hành → nhân sự gửi hồ sơ → duyệt/thực hiện tuần tự → kết quả và lịch sử. Luồng hỗ trợ IT được kiểm thử bằng công ty và tài khoản giả; chưa gán người hoặc quyền cho dữ liệu vận hành.
 
+- [x] Tách nghiệp vụ khỏi rule Frontend/Backend chung sang `WORKFLOW-RULES.md`; đăng ký router, giữ quyết định DB trong plan. Chỉ sắp xếp tài liệu, không thay tính năng.
+
 - [x] 5 bảng tiếng Việt, thêm vào 9 bảng lõi; migration chạy trên DB tạm trước khi áp dụng local sau backup. Không seed lại HR/tài khoản/quyền đang có.
+- [x] Tách ràng buộc DB workflow khỏi rule tổng quát; tập trung tại mục thiết kế DB bên dưới, không đổi động cơ quy trình.
 - [x] `/roles` chọn riêng VIEW, CREATE, APPROVE, EXECUTE, MANAGE; server kiểm tra quyền **và** quan hệ hồ sơ/người được giao.
 - [x] Mẫu nháp, phát hành, ngừng dùng, sao chép phiên bản; mẫu đã phát hành bất biến, một bản phát hành cho mỗi mã/công ty.
 - [x] Hồ sơ nháp, gửi, từ chối, lập lại thành hồ sơ mới; hộp việc, chi tiết, lịch sử. Chỉ lấy tối đa 200 hồ sơ được cập nhật gần nhất theo phạm vi quyền.
@@ -41,6 +51,14 @@ Sau khi tạo lại database demo cùng ngày: 5 bảng workflow đã được t
 `pham_vi=ALL` chỉ xác nhận grant workflow hợp lệ trong tenant; quyền VIEW vẫn có bộ lọc theo hồ sơ, không có nghĩa thấy tất cả. Chưa xây scope phòng ban tổng quát. Chức vụ và head không tự cấp quyền.
 
 Chưa gồm tệp đính kèm, biểu mẫu động, duyệt song song, điều kiện, hạn mức tiền, ủy quyền, nhắc việc/email hoặc kéo–thả trong mã nguồn hiện tại. Không tạo hai nơi phê duyệt chính thức cho cùng hồ sơ với 1Office.
+
+## Thiết kế DB cần giữ
+
+- Bản tuần tự gồm `mau_quy_trinh`, `buoc_mau_quy_trinh`, `ho_so_quy_trinh`, `buoc_xu_ly_quy_trinh`, `lich_su_quy_trinh`. FK kép bảo đảm cùng công ty, bước thuộc đúng mẫu/hồ sơ, dùng Restrict; `tai_khoan` có unique `(id, company_id)` để tham chiếu cùng công ty.
+- Migration `20261105090000_quy_trinh_thu_nghiem` thêm bảng/enum/ràng buộc và 5 quyền WORKFLOW, không cấp role tự động. Mã hồ sơ do sequence `so_thu_tu_ho_so_quy_trinh` cấp; không thay ID/mã dữ liệu lõi.
+- Partial unique: một mẫu PUBLISHED cho mỗi mã/công ty; một bước PENDING/BLOCKED cho mỗi hồ sơ. Trigger giữ mẫu/bước phát hành bất biến, nội dung hồ sơ đã gửi và lịch sử chỉ ghi thêm. Chuyển trạng thái, thứ tự bước và quyền vẫn kiểm tra trong transaction action.
+- Lịch sử giữ tài khoản, nhân sự và tên tại thời điểm thao tác; thời gian cập nhật chỉ cấp khi tạo. Không sửa/xóa qua ứng dụng; kiểm thử chỉ dọn tenant giả trong transaction riêng, không tắt trigger cho kết nối ứng dụng.
+- Thứ tự khóa: hàng công ty → advisory phân quyền `(260126, companyId)` → hàng hồ sơ. Trạng thái, phân công và lịch sử cùng commit. Schema/luồng chi tiết tại [Thiết kế quy trình](../THIET-KE-QUY-TRINH.md); phần kéo thả bên dưới còn là kế hoạch.
 
 ## Hướng mở rộng trình thiết kế kéo thả
 

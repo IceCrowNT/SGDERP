@@ -137,6 +137,7 @@ test("HR can edit source-bound person and notes; action rejects code tampering, 
   await signAccount(context, manager);
   await page.goto("/employees");
   await page.getByLabel("Tìm nhân sự").fill("Người nhập nguồn thử nghiệm");
+  await page.getByRole("button", { name: /^Xem hồ sơ / }).click();
   await page.getByRole("button", { name: "Sửa hồ sơ", exact: true }).click();
   const before = await db.nhan_su.findUniqueOrThrow({
     where: { id: personId },

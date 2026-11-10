@@ -472,7 +472,7 @@ test("dashboard counts all own records beyond 200; sibling without workflow sees
   await signAccount(context, plain);
   await page.goto("/?view=draft");
   await expect(
-    page.getByRole("link", { name: "Bản nháp của tôi 205" }),
+    page.getByRole("region", { name: "Tổng quan công việc" }).getByRole("link", { name: "Bản nháp của tôi 205" }),
   ).toBeVisible();
   await expect(
     page.getByText("10 hồ sơ / 205 hồ sơ phù hợp. Trang 1/21."),
@@ -494,7 +494,7 @@ test("dashboard counts all own records beyond 200; sibling without workflow sees
     page.getByRole("heading", { name: "Không gian cá nhân của bạn" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Bản nháp của tôi 205" }),
+    page.getByRole("region", { name: "Tổng quan công việc" }).getByRole("link", { name: "Bản nháp của tôi 205" }),
   ).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(

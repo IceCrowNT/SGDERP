@@ -19,7 +19,7 @@
 - Quyền HR/ACCOUNTS/ROLES/AUDIT lấy từ DB mỗi request; không suy quyền từ mã ADMIN/IT_ADMIN, chức danh hoặc head. Scope hiện hành toàn công ty; quyền scoped cũ không mở truy cập toàn công ty. Các quyền workflow cũ giữ nguyên, chưa đưa vào ma trận.
 - Migration `20261104110000_quan_ly_vai_tro`: thêm bốn quyền, chuyển đặc quyền quản trị ngầm thành gán quyền DB; chuẩn hóa nhãn ADMIN/cờ vai trò chính. Partial unique index và trigger SQL kiểm tra tối đa một role chính, gán role cùng công ty, chặn chuyển công ty tài khoản/role. Không thêm bảng/cột, không đổi ID/mật khẩu; vẫn 9 bảng.
 - Action role/account/HR dùng chung advisory lock theo công ty, kiểm tra lại quyền trong transaction; chống mất quản trị cuối cùng và audit cùng transaction. Sửa role/gán role dùng phiên bản cập nhật để chặn ghi đè; đổi quyền hiệu lực từ request sau. Nhật ký lọc công ty và yêu cầu AUDIT VIEW.
-- `SESSION_SECRET` có sẵn bắt buộc ít nhất 32 ký tự; bỏ fallback công khai. Không đổi giá trị `.env`, không thêm dependency. Seed chỉ cấp ma trận mặc định khi khởi tạo, không phục hồi quyền bị thu hồi.
+- `SESSION_SECRET` có sẵn bắt buộc ít nhất 32 ký tự; bỏ fallback công khai. Không đổi giá trị `.env`, không thêm dependency. Seed chỉ cấp ma trận mặc định khi khởi tạo, không phục hồi quyền bị thu hồi. Bộ khởi tạo hiện còn ADMIN/DEFAULT/HR_MANAGER; HCNS là role tùy chỉnh, seed không tạo lại role nghiệp vụ đã xóa. Cách bổ sung quyền tính năng mới theo [plan phân quyền](plans/ROLE-MANAGEMENT-CHECKLIST.md#khi-thêm-tính-năng-hoặc-quyền-mới).
 - Bản sao trước migration: JSON nhất quán của 9 bảng tại thư mục backup riêng tư ngoài repo; vị trí lưu cục bộ trong `outputs/role-management/backup-path.txt`. Không đưa backup hoặc ảnh kiểm thử lên Git.
 
 
@@ -179,12 +179,16 @@ Từ 03/11/2026, cả hồ sơ nhân sự và cơ cấu phòng ban đều do ERP
 
 ## 2. BẢN ĐỒ CẤU TRÚC THƯ MỤC DỰ ÁN
 
+`src/components/ui/feature-overview.tsx` cung cấp thẻ số liệu, hướng dẫn mở rộng, trạng thái trống và avatar chữ cho các màn hình nghiệp vụ. Component chỉ trình bày dữ liệu đã được phân quyền từ màn hình gọi; không truy vấn DB, không cài thư viện hoặc thêm biến môi trường.
+
+Ba rule kỹ thuật Frontend/Backend/Database giữ chuẩn chung. Rule riêng tại `.agents/rules/`: [HR](../.agents/rules/HR-RULES.md), [phân quyền](../.agents/rules/ROLE-MANAGEMENT-RULES.md), [workflow](../.agents/rules/WORKFLOW-RULES.md), [tài khoản/profile/dashboard](../.agents/rules/PROFILE-DASHBOARD-RULES.md), và [tài sản](../.agents/rules/ASSET-MANAGEMENT-RULES.md) đang tạm hoãn. Nghiệp vụ đọc tại rule riêng; thiết kế DB, trạng thái và kiểm thử theo plan liên kết. Định tuyến do `AGENTS.md` quản lý; không thêm dependency hoặc cấu hình chạy khi sắp xếp tài liệu.
+
 Tài liệu trong `docs/strategy` dùng tên tiếng Việt không dấu, viết hoa và phân cách bằng dấu gạch ngang. File bối cảnh chính là [BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md](./strategy/BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md). Khi đổi tên phải cập nhật các liên kết trong router, checklist và tài liệu liên quan.
 
 ```
 SGDERP/
 ├── .agents/                          # Quy tắc & Kỹ năng dành cho AI Agent
-│   └── rules/                        # [3 TRỤ CỘT] DATABASE-RULES, BACKEND-RULES, FRONTEND-RULES
+│   └── rules/                        # 3 rule kỹ thuật chung + rule nghiệp vụ từng phân hệ
 ├── docs/                             # Tài liệu nghiệp vụ & Kế hoạch
 │   ├── ARCHITECTURE.md               # [TỆP NÀY] Kiến trúc tổng thể & Sổ bộ thư viện
 │   ├── plans/                        # Kế hoạch & Checklist phân hệ (HR-CHECKLIST.md...)

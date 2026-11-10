@@ -1,6 +1,30 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import {
+  Users,
+  Plus,
+  Building2,
+  ChevronRight,
+  ChevronLeft,
+  ArrowLeft,
+  ArrowRight,
+  LayoutGrid,
+  List,
+  Search,
+  Pencil,
+  X,
+} from "lucide-react";
+import { EmptyPanel } from "@/components/ui/feature-overview";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetClose,
+} from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AccountCredentials } from "@/components/accounts/AccountCredentials";
 import { usernameBase } from "@/lib/username";
@@ -68,7 +92,12 @@ type AccountOptions = {
     danh_sach_vai_tro: Array<{ vai_tro: { ten_vai_tro: string } }>;
   }>;
 };
-type Department = { id: number; name: string };
+type Department = {
+  id: number;
+  name: string;
+  shortName: string;
+  parentId: number | null;
+};
 const statuses = {
   ACTIVE: "Đang làm việc",
   LEFT: "Đã nghỉ việc",
@@ -81,27 +110,143 @@ export function EmployeeManager({
   accountAccess,
   roles,
   accounts,
+  initialDepartmentId,
+  initialSearch = "",
 }: {
   initialEmployees: Employee[];
   departments: Department[];
   canManage: boolean;
+  initialDepartmentId?: number;
+  initialSearch?: string;
 } & AccountOptions) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const [status, setStatus] = useState("ALL");
-  const [editing, setEditing] = useState<Employee | null | undefined>();
-  const rows = initialEmployees.filter(
-    (e) =>
-      (status === "ALL" || e.tinh_trang_lam_viec === status) &&
-      `${e.ho_ten} ${e.ma_nhan_su} ${e.phong_ban?.ten_phong_ban ?? ""}`
-        .toLocaleLowerCase("vi")
-        .includes(search.toLocaleLowerCase("vi")),
+  const [departmentId, setDepartmentId] = useState(
+    initialSearch
+      ? "ALL"
+      : initialDepartmentId
+        ? String(initialDepartmentId)
+        : "ALL",
   );
+  const [view, setView] = useState<"directory" | "table">("directory");
+  const [showPeople, setShowPeople] = useState(false);
+  const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const detailTrigger = useRef<HTMLElement | null>(null);
+  const [editing, setEditing] = useState<Employee | null | undefined>();
+  const selected = initialEmployees.find((e) => e.id === selectedId);
+  const department = departments.find((d) => String(d.id) === departmentId);
+  const normalize = (text: string) =>
+    text
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/gi, "d")
+      .toLocaleLowerCase("vi")
+      .trim();
+  const query = normalize(search);
+  const branchIds = (id: number) => {
+    const ids = new Set([id]);
+    for (const parentId of ids)
+      for (const d of departments) if (d.parentId === parentId) ids.add(d.id);
+    return ids;
+  };
+  const scope = department ? branchIds(department.id) : new Set<number>();
+  const statusRows = initialEmployees.filter(
+    (e) => status === "ALL" || e.tinh_trang_lam_viec === status,
+  );
+  const rows = statusRows.filter(
+    (e) =>
+      (departmentId === "ALL" ||
+        (departmentId === "UNASSIGNED"
+          ? !e.department_id
+          : scope.has(e.department_id ?? -1))) &&
+      normalize(
+        `${e.ho_ten} ${e.ma_nhan_su} ${e.chuc_vu ?? ""} ${e.phong_ban?.ten_phong_ban ?? ""}`,
+      ).includes(query),
+  );
+  const pageSize = view === "table" ? 15 : 12;
+  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const visibleRows = rows.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+  const overview =
+    view === "directory" && departmentId === "ALL" && !query && !showPeople;
+  const childDepartments = departments.filter((d) =>
+    department
+      ? d.parentId === department.id
+      : !d.parentId || !departments.some((parent) => parent.id === d.parentId),
+  );
+  const headFor = (id: number) =>
+    initialEmployees.find((e) =>
+      e.danh_sach_phong_phu_trach.some((d) => d.id === id),
+    );
+  const chooseDepartment = (id: string) => {
+    setDepartmentId(id);
+    setSearch("");
+    setShowPeople(id !== "ALL");
+    setPage(1);
+  };
+  const openPerson = (id: number) => {
+    detailTrigger.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    setSelectedId(id);
+  };
+  const departmentCard = (d: Department) => {
+    const ids = branchIds(d.id);
+    const count = statusRows.filter((e) =>
+      ids.has(e.department_id ?? -1),
+    ).length;
+    const head = headFor(d.id);
+    return (
+      <Button
+        key={d.id}
+        variant="outline"
+        aria-label={`Xem phòng ${d.shortName}`}
+        onClick={() => chooseDepartment(String(d.id))}
+        className="group h-auto min-w-0 flex-col items-stretch justify-start gap-4 whitespace-normal rounded-2xl p-5 text-left shadow-none hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
+      >
+        <span className="flex items-start justify-between gap-3">
+          <span className="rounded-xl bg-primary/10 p-2.5 text-primary">
+            <Building2 className="size-5" aria-hidden="true" />
+          </span>
+          <ChevronRight
+            className="mt-2 size-4 text-muted-foreground transition-transform group-hover:translate-x-1"
+            aria-hidden="true"
+          />
+        </span>
+        <span className="min-h-10 font-semibold leading-5">{d.shortName}</span>
+        <span>
+          <span className="text-2xl font-semibold tabular-nums">{count}</span>
+          <span className="ml-2 text-sm text-muted-foreground">
+            người{ids.size > 1 ? " trong nhánh" : " trực thuộc"}
+          </span>
+        </span>
+        {ids.size > 1 && (
+          <span className="-mt-3 text-xs text-muted-foreground">
+            Gồm {ids.size - 1} đơn vị con
+          </span>
+        )}
+        <span className="mt-auto border-t pt-3 text-xs text-muted-foreground">
+          {head
+            ? `Phụ trách: ${head.ho_ten}${head.tinh_trang_lam_viec !== "ACTIVE" ? " · cần xác nhận lại" : ""}`
+            : "Chưa phân công người phụ trách"}
+        </span>
+      </Button>
+    );
+  };
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Hồ sơ nhân sự</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="flex items-center gap-2 text-2xl font-bold">
+            <Users className="size-6 text-primary" aria-hidden="true" />
+            Hồ sơ nhân sự
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             {initialEmployees.length} hồ sơ ·{" "}
             {
               initialEmployees.filter((e) => e.tinh_trang_lam_viec === "ACTIVE")
@@ -111,110 +256,484 @@ export function EmployeeManager({
           </p>
         </div>
         {canManage && (
-          <Button onClick={() => setEditing(null)}>Thêm nhân sự</Button>
+          <Button className="min-h-10" onClick={() => setEditing(null)}>
+            <Plus aria-hidden="true" />
+            Thêm nhân sự
+          </Button>
         )}
       </div>
-      <p className="text-sm text-muted-foreground">
-        Nhân sự và tài khoản đăng nhập được quản lý riêng. Hồ sơ chưa xác nhận
-        không tính vào số đang làm việc. Hồ sơ được quản lý trực tiếp tại ERP
-        sau lần nhập dữ liệu ban đầu.
-      </p>
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Input
-          aria-label="Tìm nhân sự"
-          placeholder="Tìm tên, mã hoặc phòng ban"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger
-            className="h-10 w-full sm:w-56"
-            aria-label="Tình trạng làm việc"
+      <div className="flex flex-col gap-3 rounded-xl border bg-card p-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              className="absolute left-3 top-3 size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              className="pl-9 text-base"
+              aria-label="Tìm nhân sự"
+              placeholder="Tìm người trong toàn công ty…"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setDepartmentId("ALL");
+                setPage(1);
+              }}
+            />
+          </div>
+          <Select
+            value={status}
+            onValueChange={(value) => {
+              setStatus(value);
+              setPage(1);
+            }}
           >
-            <SelectValue>
-              {status === "ALL"
-                ? "Tất cả tình trạng"
-                : statuses[status as keyof typeof statuses]}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">Tất cả tình trạng</SelectItem>
-            {Object.entries(statuses).map(([key, label]) => (
-              <SelectItem key={key} value={key}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <SelectTrigger
+              className="h-10 w-full sm:w-52"
+              aria-label="Tình trạng làm việc"
+            >
+              <SelectValue>
+                {status === "ALL"
+                  ? "Tất cả tình trạng"
+                  : statuses[status as keyof typeof statuses]}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Tất cả tình trạng</SelectItem>
+              {Object.entries(statuses).map(([key, label]) => (
+                <SelectItem key={key} value={key}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div
+            className="inline-flex gap-1 rounded-lg bg-muted p-1"
+            role="group"
+            aria-label="Cách xem nhân sự"
+          >
+            <Button
+              className="min-h-10"
+              variant={view === "directory" ? "outline" : "ghost"}
+              aria-pressed={view === "directory"}
+              onClick={() => {
+                setView("directory");
+                setPage(1);
+              }}
+            >
+              <LayoutGrid aria-hidden="true" />
+              Danh bạ
+            </Button>
+            <Button
+              className="min-h-10"
+              variant={view === "table" ? "outline" : "ghost"}
+              aria-pressed={view === "table"}
+              onClick={() => {
+                setView("table");
+                setPage(1);
+              }}
+            >
+              <List aria-hidden="true" />
+              Bảng
+            </Button>
+          </div>
+          {view === "table" ? (
+            <Select value={departmentId} onValueChange={chooseDepartment}>
+              <SelectTrigger
+                className="h-10 w-full min-w-0 sm:max-w-sm"
+                aria-label="Lọc phòng ban"
+              >
+                <SelectValue>
+                  {department?.name ??
+                    (departmentId === "UNASSIGNED"
+                      ? "Chưa gắn phòng ban"
+                      : "Tất cả phòng ban")}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tất cả phòng ban</SelectItem>
+                {departments.map((d) => (
+                  <SelectItem key={d.id} value={String(d.id)}>
+                    {d.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value="UNASSIGNED">Chưa gắn phòng ban</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : overview ? (
+            <Button
+              className="min-h-10"
+              variant="ghost"
+              onClick={() => {
+                setShowPeople(true);
+                setPage(1);
+              }}
+            >
+              Xem tất cả nhân sự
+              <ArrowRight aria-hidden="true" />
+            </Button>
+          ) : (
+            <Button
+              className="min-h-10"
+              variant="ghost"
+              onClick={() => chooseDepartment("ALL")}
+            >
+              <ArrowLeft aria-hidden="true" />
+              Các phòng ban
+            </Button>
+          )}
+        </div>
       </div>
-      <div className="overflow-x-auto rounded-xl border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nhân sự</TableHead>
-              <TableHead>Phòng ban / Chức vụ</TableHead>
-              <TableHead>Tình trạng làm việc</TableHead>
-              <TableHead>Tài khoản</TableHead>
-              {canManage && <TableHead>Thao tác</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((e) => (
-              <TableRow key={e.id}>
-                <TableCell>
-                  <p className="font-medium">{e.ho_ten}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {e.ma_nhan_su}
-                  </p>
-                </TableCell>
-                <TableCell>
-                  <p>{e.phong_ban?.ten_phong_ban ?? "Chọn phòng ban"}</p>
-                  <p className="text-xs text-muted-foreground">{e.chuc_vu}</p>
-                  {e.danh_sach_phong_phu_trach.length > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Phụ trách:{" "}
-                      {e.danh_sach_phong_phu_trach
-                        .map((d) => d.ten_phong_ban)
-                        .join(", ")}
-                    </p>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">
-                    {statuses[e.tinh_trang_lam_viec]}
-                  </Badge>
-                  {e.ghi_chu && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {e.ghi_chu}
-                    </p>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {e._count.danh_sach_tai_khoan
-                    ? `${e._count.danh_sach_tai_khoan} tài khoản`
-                    : "Chưa có tài khoản"}
-                </TableCell>
-                {canManage && (
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      className="h-10"
-                      onClick={() => setEditing(e)}
-                    >
-                      Sửa hồ sơ
-                    </Button>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-            {!rows.length && (
-              <TableRow>
-                <TableCell colSpan={5}>Không tìm thấy nhân sự.</TableCell>
-              </TableRow>
+      {overview ? (
+        <section aria-label="Danh bạ phòng ban" className="space-y-4">
+          <div>
+            <h2 className="font-semibold">Chọn phòng ban</h2>
+            <p className="text-sm text-muted-foreground">
+              Mở một phòng để xem nhân sự và các bộ phận trực thuộc.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {childDepartments.map(departmentCard)}
+            {initialEmployees.some((e) => !e.department_id) && (
+              <Button
+                variant="outline"
+                onClick={() => chooseDepartment("UNASSIGNED")}
+                className="h-auto min-h-40 flex-col gap-2 whitespace-normal rounded-2xl p-5"
+              >
+                <Users aria-hidden="true" />
+                <span>Chưa gắn phòng ban</span>
+                <span>
+                  {statusRows.filter((e) => !e.department_id).length} người
+                </span>
+              </Button>
             )}
-          </TableBody>
-        </Table>
-      </div>
+          </div>
+          {!departments.length && !initialEmployees.length && (
+            <EmptyPanel
+              title="Chưa có dữ liệu nhân sự"
+              description="Phòng ban và nhân sự sẽ xuất hiện tại đây khi được tạo."
+            />
+          )}
+        </section>
+      ) : (
+        <section aria-label="Danh sách nhân sự" className="space-y-4">
+          <div className="space-y-2">
+            {department?.parentId && (
+              <Button
+                variant="ghost"
+                className="min-h-10"
+                onClick={() => chooseDepartment(String(department.parentId))}
+              >
+                <ArrowLeft aria-hidden="true" />
+                Phòng ban cấp trên
+              </Button>
+            )}
+            <h2 className="font-semibold">
+              {query
+                ? "Kết quả tìm kiếm toàn công ty"
+                : (department?.shortName ??
+                  (departmentId === "UNASSIGNED"
+                    ? "Chưa gắn phòng ban"
+                    : "Tất cả nhân sự"))}
+            </h2>
+            <p className="text-sm text-muted-foreground" role="status">
+              {rows.length
+                ? `Hiển thị ${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, rows.length)} / ${rows.length} hồ sơ`
+                : "0 hồ sơ"}
+              {department && scope.size > 1 ? " · gồm các đơn vị con" : ""}
+              {status !== "ALL"
+                ? ` · ${statuses[status as keyof typeof statuses]}`
+                : ""}
+            </p>
+            {department && (
+              <p className="text-sm text-muted-foreground">
+                {headFor(department.id)
+                  ? `Người phụ trách: ${headFor(department.id)!.ho_ten}`
+                  : "Chưa phân công người phụ trách"}
+              </p>
+            )}
+          </div>
+          {view === "directory" &&
+            department &&
+            childDepartments.length > 0 && (
+              <div
+                className="flex flex-wrap gap-2"
+                aria-label="Bộ phận trực thuộc"
+              >
+                {childDepartments.map((d) => (
+                  <Button
+                    key={d.id}
+                    variant="outline"
+                    className="h-auto min-h-10 max-w-full whitespace-normal text-left"
+                    onClick={() => chooseDepartment(String(d.id))}
+                  >
+                    <Building2 aria-hidden="true" />
+                    {d.shortName}
+                    <ChevronRight aria-hidden="true" />
+                  </Button>
+                ))}
+              </div>
+            )}
+          {!rows.length ? (
+            <EmptyPanel
+              title="Không tìm thấy nhân sự."
+              description="Thử tên, mã khác hoặc chọn lại bộ lọc tình trạng."
+            />
+          ) : view === "directory" ? (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {visibleRows.map((e) => (
+                <Button
+                  key={e.id}
+                  variant="outline"
+                  aria-label={`Xem hồ sơ ${e.ho_ten}`}
+                  onClick={() => openPerson(e.id)}
+                  className="h-auto min-w-0 items-start justify-start gap-3 whitespace-normal rounded-xl p-4 text-left shadow-none hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
+                >
+                  <EmployeeAvatar employee={e} />
+                  <span className="min-w-0 flex-1 space-y-1">
+                    <span className="block font-semibold">{e.ho_ten}</span>
+                    <span className="block text-sm font-normal text-muted-foreground">
+                      {e.chuc_vu || "Chưa cập nhật chức vụ"}
+                    </span>
+                    <span className="block text-xs font-normal text-muted-foreground">
+                      {e.phong_ban?.ten_phong_ban ?? "Chưa gắn phòng ban"}
+                    </span>
+                    {e.danh_sach_phong_phu_trach.some((d) =>
+                      department
+                        ? d.id === department.id
+                        : d.id === e.department_id,
+                    ) && <Badge variant="outline">Người phụ trách</Badge>}
+                    {e.tinh_trang_lam_viec !== "ACTIVE" && (
+                      <Badge variant="secondary">
+                        {statuses[e.tinh_trang_lam_viec]}
+                      </Badge>
+                    )}
+                  </span>
+                  <ChevronRight
+                    className="mt-2 size-4 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl md:border">
+              <Table role="table" className="block md:table">
+                <TableHeader className="sr-only md:not-sr-only md:table-header-group">
+                  <TableRow>
+                    <TableHead>Nhân sự</TableHead>
+                    <TableHead>Phòng ban</TableHead>
+                    <TableHead>Chức vụ</TableHead>
+                    <TableHead>Tình trạng làm việc</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody
+                  role="rowgroup"
+                  className="grid gap-3 p-1 md:table-row-group md:p-0 [&_td]:block [&_td]:whitespace-normal md:[&_td]:table-cell"
+                >
+                  {visibleRows.map((e) => (
+                    <TableRow
+                      key={e.id}
+                      role="row"
+                      className="block cursor-pointer rounded-xl bg-card p-3 ring-1 ring-border md:table-row md:rounded-none md:p-0 md:ring-0"
+                      onClick={() => openPerson(e.id)}
+                    >
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          className="h-auto max-w-full justify-start gap-2 whitespace-normal px-0 text-left hover:bg-transparent"
+                          aria-label={`Xem hồ sơ ${e.ho_ten}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openPerson(e.id);
+                          }}
+                        >
+                          <EmployeeAvatar employee={e} />
+                          <span>
+                            <span className="block font-medium">
+                              {e.ho_ten}
+                            </span>
+                            <span className="block text-xs font-normal text-muted-foreground">
+                              {e.ma_nhan_su}
+                            </span>
+                          </span>
+                        </Button>
+                      </TableCell>
+                      <TableCell>
+                        {e.phong_ban?.ten_phong_ban ?? "Chưa gắn phòng ban"}
+                      </TableCell>
+                      <TableCell>{e.chuc_vu || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {statuses[e.tinh_trang_lam_viec]}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          {pageCount > 1 && (
+            <nav
+              className="flex items-center justify-center gap-3"
+              aria-label="Phân trang nhân sự"
+            >
+              <Button
+                variant="outline"
+                className="min-h-10"
+                disabled={currentPage <= 1}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                <ChevronLeft aria-hidden="true" />
+                Trước
+              </Button>
+              <span className="text-sm tabular-nums">
+                Trang {currentPage} / {pageCount}
+              </span>
+              <Button
+                variant="outline"
+                className="min-h-10"
+                disabled={currentPage >= pageCount}
+                onClick={() => setPage(currentPage + 1)}
+              >
+                Sau
+                <ChevronRight aria-hidden="true" />
+              </Button>
+            </nav>
+          )}
+        </section>
+      )}
+      <Sheet
+        open={Boolean(selected)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedId(null);
+        }}
+      >
+        <SheetContent
+          showCloseButton={false}
+          className="w-full overflow-y-auto sm:max-w-lg"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (editing === undefined)
+              detailTrigger.current?.focus({ preventScroll: true });
+          }}
+        >
+          {selected && (
+            <>
+              <SheetHeader className="border-b p-5 pr-16">
+                <SheetTitle>Hồ sơ nhân sự</SheetTitle>
+                <SheetDescription>{selected.ma_nhan_su}</SheetDescription>
+              </SheetHeader>
+              <SheetClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-lg"
+                  className="absolute right-3 top-3"
+                  aria-label="Đóng hồ sơ"
+                >
+                  <X aria-hidden="true" />
+                </Button>
+              </SheetClose>
+              <div className="space-y-6 px-5 pb-6">
+                <div className="flex items-start gap-3">
+                  <EmployeeAvatar employee={selected} />
+                  <div className="min-w-0">
+                    <h3 className="text-xl font-semibold break-words">
+                      {selected.ho_ten}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {selected.chuc_vu || "Chưa cập nhật chức vụ"}
+                    </p>
+                    <Badge variant="secondary" className="mt-2">
+                      {statuses[selected.tinh_trang_lam_viec]}
+                    </Badge>
+                  </div>
+                </div>
+                <dl className="grid gap-4 rounded-xl border p-4 text-sm sm:grid-cols-2">
+                  {[
+                    ["Phòng ban", selected.phong_ban?.ten_phong_ban],
+                    ["Điện thoại", selected.so_dien_thoai],
+                    ["Email", selected.thu_dien_tu],
+                    ["Địa chỉ", selected.dia_chi],
+                    ["Ngày sinh", displayDate(selected.ngay_sinh)],
+                    ["Ngày vào làm", displayDate(selected.ngay_vao_lam)],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <dt className="text-xs text-muted-foreground">{label}</dt>
+                      <dd className="mt-1 break-words">
+                        {value || "Chưa cập nhật"}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                {selected.danh_sach_phong_phu_trach.length > 0 && (
+                  <section>
+                    <h4 className="mb-2 text-sm font-semibold">
+                      Phòng ban phụ trách
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selected.danh_sach_phong_phu_trach.map((d) => (
+                        <Badge
+                          className="whitespace-normal"
+                          variant="outline"
+                          key={d.id}
+                        >
+                          {d.ten_phong_ban}
+                        </Badge>
+                      ))}
+                    </div>
+                  </section>
+                )}
+                <section className="space-y-2 text-sm">
+                  <h4 className="font-semibold">Ghi chú</h4>
+                  <p className="whitespace-pre-wrap break-words text-muted-foreground">
+                    {selected.ghi_chu || "Chưa có ghi chú."}
+                  </p>
+                </section>
+                <section className="space-y-2 rounded-xl bg-muted/40 p-4 text-sm">
+                  <h4 className="font-semibold">Tài khoản liên kết</h4>
+                  <p>
+                    {selected._count.danh_sach_tai_khoan
+                      ? `${selected._count.danh_sach_tai_khoan} tài khoản`
+                      : "Chưa có tài khoản"}
+                  </p>
+                  {accountAccess &&
+                    accounts
+                      .filter((a) => a.employee_id === selected.id)
+                      .map((a) => (
+                        <div
+                          key={a.id}
+                          className="flex flex-wrap items-center justify-between gap-2 border-t pt-2"
+                        >
+                          <span className="break-all">{a.ten_dang_nhap}</span>
+                          <Badge variant="outline">
+                            {a.cho_phep_dang_nhap
+                              ? "Được đăng nhập"
+                              : "Đã khóa"}
+                          </Badge>
+                        </div>
+                      ))}
+                </section>
+                {canManage && (
+                  <Button
+                    className="min-h-10 w-full"
+                    onClick={() => {
+                      setEditing(selected);
+                      setSelectedId(null);
+                    }}
+                  >
+                    <Pencil aria-hidden="true" />
+                    Sửa hồ sơ
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
       <Dialog
         open={editing !== undefined}
         onOpenChange={(open) => {
@@ -246,6 +765,26 @@ export function EmployeeManager({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+function displayDate(value: Date | null) {
+  return value
+    ? new Date(value).toLocaleDateString("vi-VN", { timeZone: "UTC" })
+    : null;
+}
+function EmployeeAvatar({ employee }: { employee: Employee }) {
+  return (
+    <Avatar className="size-11" aria-hidden="true">
+      <AvatarImage src={employee.duong_dan_anh_dai_dien ?? undefined} alt="" />
+      <AvatarFallback className="bg-primary/10 text-primary">
+        {employee.ho_ten
+          .trim()
+          .split(/\s+/)
+          .slice(-2)
+          .map((p) => p[0])
+          .join("")}
+      </AvatarFallback>
+    </Avatar>
   );
 }
 function EmployeeForm({
@@ -291,9 +830,7 @@ function EmployeeForm({
     name: ["createAccount", "fullName", "employmentStatus"],
   });
   const leaving = employmentStatus === "LEFT";
-  const linkedAccounts = accounts.filter(
-    (a) => a.employee_id === employee?.id,
-  );
+  const linkedAccounts = accounts.filter((a) => a.employee_id === employee?.id);
   const fields = [
     { name: "fullName", label: "Họ và tên" },
     { name: "position", label: "Chức vụ" },
@@ -637,16 +1174,12 @@ function EmployeeForm({
                                     <Checkbox
                                       disabled={pending}
                                       checked={
-                                        field.value?.includes(r.id) ??
-                                        false
+                                        field.value?.includes(r.id) ?? false
                                       }
                                       onCheckedChange={(checked) =>
                                         field.onChange(
                                           checked
-                                            ? [
-                                                ...(field.value ?? []),
-                                                r.id,
-                                              ]
+                                            ? [...(field.value ?? []), r.id]
                                             : (field.value ?? []).filter(
                                                 (id) => id !== r.id,
                                               ),

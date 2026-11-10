@@ -22,57 +22,20 @@ async function main() {
   });
   console.log(`✅ Công ty: ${company.ten_cong_ty} (ID: ${company.id})`);
 
-  // 2. Tạo các Nhóm vai trò chuẩn (Roles) tập trung cho HCNS & IT làm nòng cốt
+  // 2. Chỉ khởi tạo bộ vai trò tối thiểu; vai trò nghiệp vụ tùy chỉnh tại /roles.
   const roleDefs = [
     { code: "DEFAULT", name: "Nhân viên cơ bản", description: "Dashboard cá nhân, hồ sơ của tôi và đổi mật khẩu", isSystem: true },
     {
       code: "ADMIN",
       name: "Quản trị hệ thống",
-      description:
-        "Toàn quyền quản trị và điều hành toàn bộ các phân hệ trong hệ thống",
-      isSystem: true,
-    },
-    {
-      code: "IT_ADMIN",
-      name: "Quản Trị Kỹ Thuật & CNTT (HCNS)",
-      description:
-        "Quản trị hệ thống, tài khoản, phân quyền, cấu hình và giám sát nhật ký hoạt động",
+      description: "Quản lý tài khoản, phân quyền, nhân sự và xem nhật ký; quyền mới được cấp riêng tại /roles",
       isSystem: true,
     },
     {
       code: "HR_MANAGER",
-      name: "Trưởng Phòng Hành Chính Nhân Sự",
-      description:
-        "Toàn quyền quản lý danh bạ, hồ sơ nhân sự, phòng ban và phân công công việc",
-      isSystem: true,
-    },
-    {
-      code: "HR_STAFF",
-      name: "Chuyên Viên Hành Chính Nhân Sự",
-      description:
-        "Cập nhật hồ sơ nhân sự, danh bạ nội bộ và hợp đồng lao động",
-      isSystem: true,
-    },
-    {
-      code: "DEPT_HEAD",
-      name: "Trưởng Phòng / Bộ Phận / Ban QLDA",
-      description:
-        "Tra cứu danh bạ toàn công ty, quản lý và điều phối công việc đơn vị phụ trách",
-      isSystem: true,
-    },
-    {
-      code: "ACCOUNTANT",
-      name: "Kế Toán Viên / Kế Toán Trưởng",
-      description:
-        "Tra cứu danh bạ đối soát nhân sự, theo dõi công việc tài chính",
-      isSystem: true,
-    },
-    {
-      code: "STAFF",
-      name: "Cán Bộ Nhân Viên",
-      description:
-        "Tra cứu danh bạ nội bộ, xem thông tin cá nhân và báo cáo tiến độ công việc",
-      isSystem: true,
+      name: "Quản lý hành chính nhân sự",
+      description: "Quản lý hồ sơ nhân sự và cơ cấu phòng ban; không tự cấp quyền tài khoản hoặc quyền duyệt",
+      isSystem: false,
     },
   ];
 
@@ -83,6 +46,11 @@ async function main() {
     && await prisma.nhat_ky_hoat_dong.count({ where: { company_id: company.id, phan_he: "ROLE" } }) === 0;
   const roleMap: Record<string, number> = {};
   for (const r of roleDefs) {
+    // Do not recreate a business role deliberately removed from an existing company.
+    const existing = await prisma.vai_tro.findUnique({
+      where: { company_id_ma_vai_tro: { company_id: company.id, ma_vai_tro: r.code } },
+    });
+    if (!existing && !bootstrapRoles && r.code !== "DEFAULT") continue;
     const role = await prisma.vai_tro.upsert({
       where: {
         company_id_ma_vai_tro: {
@@ -118,48 +86,14 @@ async function main() {
       name: "Quản lý hồ sơ nhân sự & cơ cấu phòng ban",
       scope: "ALL",
     },
-    {
-      module: "TASK",
-      action: "VIEW",
-      name: "Xem danh sách công việc",
-      scope: "ALL",
-    },
-    {
-      module: "TASK",
-      action: "CREATE",
-      name: "Tạo công việc mới",
-      scope: "ALL",
-    },
-    {
-      module: "TASK",
-      action: "ASSIGN",
-      name: "Giao việc cho nhân sự",
-      scope: "DEPARTMENT",
-    },
-    {
-      module: "TASK",
-      action: "APPROVE",
-      name: "Nghiệm thu / Phê duyệt công việc",
-      scope: "DEPARTMENT",
-    },
-    {
-      module: "TASK",
-      action: "MANAGE",
-      name: "Toàn quyền quản trị phân hệ công việc",
-      scope: "ALL",
-    },
-    {
-      module: "SYSTEM",
-      action: "MANAGE",
-      name: "Cấu hình hệ thống & phân quyền",
-      scope: "ALL",
-    },
-    {
-      module: "APPROVAL",
-      action: "MANAGE",
-      name: "Quản lý quy trình phê duyệt",
-      scope: "ALL",
-    },
+    // Workflow permissions exist in the catalog, but are not granted by default.
+    ...[
+      ["VIEW", "Xem hồ sơ quy trình liên quan"],
+      ["CREATE", "Tạo và gửi hồ sơ quy trình"],
+      ["APPROVE", "Duyệt bước được giao"],
+      ["EXECUTE", "Thực hiện bước được giao"],
+      ["MANAGE", "Quản lý mẫu và điều phối quy trình"],
+    ].map(([action, name]) => ({ module: "WORKFLOW", action, name, scope: "ALL" })),
   ];
 
   const permMap: Record<string, number> = {};
@@ -187,26 +121,8 @@ async function main() {
 
   // 4. Liên kết Quyền với Vai Trò (RolePermission)
   const rolePermMappings: Record<string, string[]> = {
-    ADMIN: Object.keys(permMap),
-    IT_ADMIN: Object.keys(permMap),
-    HR_MANAGER: [
-      "HR:VIEW",
-      "HR:MANAGE",
-      "TASK:VIEW",
-      "TASK:CREATE",
-      "TASK:ASSIGN",
-      "TASK:APPROVE",
-    ],
-    HR_STAFF: ["HR:VIEW", "HR:MANAGE", "TASK:VIEW", "TASK:CREATE"],
-    DEPT_HEAD: [
-      "HR:VIEW",
-      "TASK:VIEW",
-      "TASK:CREATE",
-      "TASK:ASSIGN",
-      "TASK:APPROVE",
-    ],
-    ACCOUNTANT: ["HR:VIEW", "TASK:VIEW", "TASK:CREATE"],
-    STAFF: ["HR:VIEW", "TASK:VIEW"],
+    ADMIN: ["ACCOUNTS:MANAGE", "ROLES:MANAGE", "AUDIT:VIEW", "HR:MANAGE"],
+    HR_MANAGER: ["HR:MANAGE"],
   };
 
   if (bootstrapRoles) for (const [rCode, pKeys] of Object.entries(rolePermMappings)) {

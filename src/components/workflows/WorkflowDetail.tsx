@@ -1,6 +1,8 @@
 "use client";
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { CheckCircle2, Clock, AlertCircle, ListChecks, History, UserRound, Building2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import type {
   getWorkflowDetail,
@@ -85,9 +87,7 @@ export function WorkflowDetail({
         </div>
         <Badge variant="secondary">{WORKFLOW_STATUS[r.status]}</Badge>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Người gửi: {r.requester} · Phòng nguồn: {r.department}
-      </p>
+      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground"><span className="flex items-center gap-2"><UserRound className="size-4" aria-hidden="true" />Người gửi: {r.requester}</span><span className="flex items-center gap-2"><Building2 className="size-4" aria-hidden="true" />Phòng nguồn: {r.department}</span></div>
       {r.previousId && (
         <Link
           className="text-sm text-primary"
@@ -182,7 +182,7 @@ export function WorkflowDetail({
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-xl border p-5 space-y-4">
-          <h2 className="font-semibold">Các bước xử lý</h2>
+          <h2 className="flex items-center gap-2 font-semibold"><ListChecks className="size-5 text-primary" aria-hidden="true" />Các bước xử lý</h2>
           {(r.steps.length
             ? r.steps
             : r.template.steps.map((b) => ({
@@ -199,8 +199,9 @@ export function WorkflowDetail({
           ).map((b, i) => (
             <div
               key={b.id}
-              className="border-l-2 border-primary/30 pl-4 space-y-1"
+              className={cn("relative ml-3 border-l-2 py-2 pl-6 space-y-1", b.status === "PENDING" ? "border-primary bg-primary/5" : "border-border")}
             >
+              <span className="absolute -left-3 top-2 rounded-full bg-card p-0.5 text-primary" aria-hidden="true">{["APPROVED", "COMPLETED"].includes(b.status) ? <CheckCircle2 className="size-5" /> : ["BLOCKED", "REJECTED"].includes(b.status) ? <AlertCircle className="size-5" /> : <Clock className="size-5" />}</span>
               <div className="flex flex-wrap gap-2 items-center">
                 <h3 className="font-medium">
                   {i + 1}. {b.name}
@@ -220,7 +221,8 @@ export function WorkflowDetail({
           ))}
         </section>
         <section className="rounded-xl border p-5 space-y-4">
-          <h2 className="font-semibold">Lịch sử xử lý</h2>
+          <h2 className="flex items-center gap-2 font-semibold"><History className="size-5 text-primary" aria-hidden="true" />Lịch sử xử lý</h2>
+          {!r.history.length && <p className="text-sm text-muted-foreground">Chưa có thao tác xử lý.</p>}
           {r.history.map((h) => (
             <div key={h.id} className="border-l-2 pl-4 space-y-1">
               <p className="text-sm font-medium">

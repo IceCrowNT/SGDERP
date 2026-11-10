@@ -1,5 +1,8 @@
 "use client";
 import { useState, useTransition } from "react";
+import { KeyRound, LockKeyhole, UserCheck, Users, Plus } from "lucide-react";
+import { FeatureOverview, FeatureHelp, PersonInitials, EmptyPanel } from "@/components/ui/feature-overview";
+import { Badge } from "@/components/ui/badge";
 import { AccountCredentials } from "./AccountCredentials";
 import { usernameBase } from "@/lib/username";
 import { useRouter } from "next/navigation";
@@ -67,27 +70,31 @@ export function AccountManager({ accounts, employees, roles }: Props) {
     <div className="space-y-5">
       <div className="flex flex-wrap justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Tài khoản đăng nhập</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold"><KeyRound className="size-6 text-primary" aria-hidden="true" />Tài khoản đăng nhập</h1>
           <p className="text-sm text-muted-foreground">
             {accounts.length} tài khoản ·{" "}
             {accounts.filter((a) => a.cho_phep_dang_nhap).length} đang mở
           </p>
         </div>
-        <Button onClick={() => setEditing(null)}>Tạo tài khoản</Button>
+        <Button onClick={() => setEditing(null)}><Plus aria-hidden="true" />Tạo tài khoản</Button>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Một nhân sự có thể có nhiều tài khoản với quyền riêng. Khóa tài khoản
-        không thay đổi tình trạng làm việc.
-      </p>
+      <FeatureOverview items={[
+        { label: "Tổng tài khoản", value: accounts.length, icon: KeyRound },
+        { label: "Đang mở", value: accounts.filter((a) => a.cho_phep_dang_nhap).length, icon: UserCheck },
+        { label: "Đã khóa", value: accounts.filter((a) => !a.cho_phep_dang_nhap).length, icon: LockKeyhole },
+        { label: "Đã liên kết nhân sự", value: accounts.filter((a) => a.nhan_su).length, icon: Users },
+      ]} />
+      <FeatureHelp title="Tài khoản và quyền truy cập"><p>Một nhân sự có thể có nhiều tài khoản với quyền riêng. Khóa tài khoản không thay đổi tình trạng làm việc. Người đã nghỉ việc không được đăng nhập dù tài khoản chưa khóa.</p></FeatureHelp>
       <Input
         aria-label="Tìm tài khoản"
         placeholder="Tìm tên đăng nhập hoặc người sở hữu"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
-      <div className="overflow-x-auto rounded-xl border">
-        <Table>
-          <TableHeader>
+      <p className="text-xs text-muted-foreground" role="status">Hiển thị {rows.length} / {accounts.length} tài khoản</p>
+      <div className="rounded-xl md:border">
+        <Table role="table" className="block md:table">
+          <TableHeader className="sr-only md:not-sr-only md:table-header-group">
             <TableRow>
               <TableHead>Tên đăng nhập</TableHead>
               <TableHead>Người sở hữu</TableHead>
@@ -96,10 +103,10 @@ export function AccountManager({ accounts, employees, roles }: Props) {
               <TableHead>Thao tác</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody role="rowgroup" className="grid gap-3 p-1 md:table-row-group md:p-0 [&_td]:block [&_td]:whitespace-normal md:[&_td]:table-cell">
             {rows.map((a) => (
-              <TableRow key={a.id}>
-                <TableCell>{a.ten_dang_nhap}</TableCell>
+              <TableRow key={a.id} role="row" className="block rounded-xl bg-card p-3 ring-1 ring-border md:table-row md:rounded-none md:p-0 md:ring-0">
+                <TableCell><div className="flex items-center gap-2"><PersonInitials name={a.nhan_su?.ho_ten ?? a.ten_hien_thi} /><span className="break-all font-medium">{a.ten_dang_nhap}</span></div></TableCell>
                 <TableCell>
                   {a.nhan_su ? (
                     <>
@@ -116,12 +123,10 @@ export function AccountManager({ accounts, employees, roles }: Props) {
                   )}
                 </TableCell>
                 <TableCell>
-                  {a.danh_sach_vai_tro
-                    .map((r) => r.vai_tro.ten_vai_tro)
-                    .join(", ") || "Chưa cấp quyền"}
+                  <div className="flex flex-wrap gap-1">{a.danh_sach_vai_tro.map((r) => <Badge key={r.vai_tro.ten_vai_tro} variant="secondary">{r.vai_tro.ten_vai_tro}</Badge>)}{!a.danh_sach_vai_tro.length && "Chưa cấp quyền"}</div>
                 </TableCell>
                 <TableCell>
-                  {a.cho_phep_dang_nhap ? "Đang mở" : "Đã khóa"}
+                  <Badge variant={a.cho_phep_dang_nhap ? "secondary" : "outline"}>{a.cho_phep_dang_nhap ? "Đang mở" : "Đã khóa"}</Badge>
                 </TableCell>
                 <TableCell>
                   <Button
@@ -137,6 +142,7 @@ export function AccountManager({ accounts, employees, roles }: Props) {
           </TableBody>
         </Table>
       </div>
+      {!rows.length && <EmptyPanel title="Không tìm thấy tài khoản" description="Thử tìm tên đăng nhập hoặc người sở hữu khác." />}
       <Dialog
         open={editing !== undefined}
         onOpenChange={(open) => {

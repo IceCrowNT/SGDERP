@@ -1,5 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
+import { UserRound, Building2, BriefcaseBusiness, BadgeCheck, ContactRound, LockKeyhole } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -64,7 +66,7 @@ export function ProfileManager({ data }: { data: Profile }) {
   }
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Hồ sơ của tôi</h1>
+      <h1 className="flex items-center gap-2 text-2xl font-bold"><UserRound className="size-6 text-primary" aria-hidden="true" />Hồ sơ của tôi</h1>
       {data.mustChangePassword && (
         <p
           role="alert"
@@ -81,12 +83,11 @@ export function ProfileManager({ data }: { data: Profile }) {
         </Avatar>
         <div className="min-w-0 flex-1">
           <h2 className="text-xl font-semibold break-words">{data.name}</h2>
-          <p className="text-muted-foreground">
+          <p className="mt-2 flex items-start gap-2 text-muted-foreground"><BriefcaseBusiness className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             {p?.chuc_vu || "Tài khoản nội bộ"}
           </p>
-          <p className="text-sm text-muted-foreground">
-            {p?.phong_ban?.ten_phong_ban}
-          </p>
+          {p?.phong_ban && <p className="mt-1 flex items-start gap-2 text-sm text-muted-foreground"><Building2 className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{p.phong_ban.ten_phong_ban}</p>}
+          <div className="mt-3 flex flex-wrap gap-2"><Badge variant="secondary">@{data.username}</Badge>{p && <Badge variant="outline">{p.ma_nhan_su}</Badge>}</div>
         </div>
         {p && !data.mustChangePassword && (
           <form
@@ -145,7 +146,7 @@ export function ProfileManager({ data }: { data: Profile }) {
             setErrors({});
           }}
         >
-          Thông tin cá nhân
+          <ContactRound className="size-4" aria-hidden="true" />Thông tin cá nhân
         </Button>
         <Button
           role="tab"
@@ -156,17 +157,17 @@ export function ProfileManager({ data }: { data: Profile }) {
             setErrors({});
           }}
         >
-          Tài khoản và mật khẩu
+          <LockKeyhole className="size-4" aria-hidden="true" />Tài khoản và mật khẩu
         </Button>
       </div>
       {tab === "personal" && !data.mustChangePassword ? (
         <div className="grid gap-5 lg:grid-cols-2">
           <section className="rounded-xl border bg-card p-5">
-            <h2 className="mb-4 font-semibold">Thông tin nhân sự</h2>
+            <h2 className="mb-4 flex items-center gap-2 font-semibold"><BadgeCheck className="size-5 text-primary" aria-hidden="true" />Thông tin nhân sự</h2>
             {p ? (
               <dl className="grid gap-4 sm:grid-cols-2">
                 {Object.entries(readOnly).map(([k, v]) => (
-                  <div key={k}>
+                  <div key={k} className="rounded-lg bg-muted/30 p-3">
                     <dt className="text-sm text-muted-foreground">{k}</dt>
                     <dd className="break-words">{v || "Chưa cập nhật"}</dd>
                   </div>
@@ -194,7 +195,7 @@ export function ProfileManager({ data }: { data: Profile }) {
                 })
               }
             >
-              <h2 className="font-semibold">Thông tin liên hệ</h2>
+              <h2 className="flex items-center gap-2 font-semibold"><ContactRound className="size-5 text-primary" aria-hidden="true" />Thông tin liên hệ</h2>
               {(
                 [
                   { key: "phone", label: "Điện thoại", value: p.so_dien_thoai },

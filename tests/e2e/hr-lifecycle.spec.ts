@@ -45,6 +45,7 @@ async function person(name: string, status: "ACTIVE" | "LEFT" = "ACTIVE") {
 async function edit(page: Page, name: string) {
   await page.goto("/employees");
   await page.getByLabel("Tìm nhân sự").fill(name);
+  await page.getByRole("button", { name: /^Xem hồ sơ / }).click();
   await page.getByRole("button", { name: "Sửa hồ sơ", exact: true }).click();
 }
 async function save(page: Page) {
