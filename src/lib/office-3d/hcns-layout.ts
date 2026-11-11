@@ -93,11 +93,7 @@ export const HCNS_LAYOUT = [
 ] as const;
 
 export type EquipmentKind =
-  | "pc"
-  | "laptop"
-  | "printer"
-  | "scanner"
-  | "access-point";
+  "pc" | "laptop" | "printer" | "scanner" | "access-point";
 export type RoomPoint = {
   key: string;
   locationId?: number;
@@ -121,6 +117,32 @@ export type HcnsRoomData = {
   canViewEmployees: boolean;
   canManageEmployees: boolean;
 };
+
+// A visual offset from the desk, not another HR/location assignment.
+export function personOffset(
+  slot: (typeof HCNS_LAYOUT)[number],
+  index: number,
+  count: number,
+): [number, number, number] {
+  return [
+    (index - (Math.min(count, 3) - 1) / 2) * 0.48,
+    0,
+    slot.depth / 2 + 0.3,
+  ];
+}
+export function personRoomPosition(
+  slot: (typeof HCNS_LAYOUT)[number],
+  index: number,
+  count: number,
+): [number, number, number] {
+  const [x, , z] = personOffset(slot, index, count);
+  const angle = (slot.facingDegrees * Math.PI) / 180;
+  return [
+    slot.x + Math.cos(angle) * x + Math.sin(angle) * z,
+    1.65,
+    slot.z - Math.sin(angle) * x + Math.cos(angle) * z,
+  ];
+}
 
 // A temporary illustration from location notes, never an asset inventory/count.
 export function equipmentFromNote(note: string | null): EquipmentKind[] {

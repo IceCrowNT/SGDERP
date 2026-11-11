@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { HCNS_URL } from "@/lib/office-3d/building-navigation";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -219,7 +220,7 @@ export function LocationManager({
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" asChild className="min-h-10">
-            <Link href="/office-3d/hcns">
+            <Link href={HCNS_URL}>
               <Building2 className="size-4" />Xem phòng HCNS 3D
             </Link>
           </Button>

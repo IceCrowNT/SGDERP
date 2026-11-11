@@ -1,8 +1,13 @@
 "use client";
-import { useState, useTransition } from "react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Building2,
   Layers3,
@@ -13,6 +18,7 @@ import {
   Plus,
   Minus,
   ArrowUpRight,
+  ArrowLeft,
   MousePointer2,
   Users,
   MapPin,
@@ -32,6 +38,27 @@ import {
 } from "@/lib/office-3d/building-layout";
 import type { BuildingData } from "@/lib/office-3d/building-mapping";
 import type { BuildingCamera } from "./BuildingCanvas";
+import {
+  buildingUrl,
+  readBuildingNavigation,
+  type BuildingNavigation,
+} from "@/lib/office-3d/building-navigation";
+import { HcnsRoomPanel } from "../hcns/HcnsRoomPanel";
+const DEFAULT_CAMERA: BuildingCamera = {
+  view: "overview",
+  sequence: 0,
+  zoom: 1,
+};
+const NAVIGATION_EVENT = "sdg-office-3d-navigate";
+function subscribeNavigation(listener: () => void) {
+  window.addEventListener("popstate", listener);
+  window.addEventListener(NAVIGATION_EVENT, listener);
+  return () => {
+    window.removeEventListener("popstate", listener);
+    window.removeEventListener(NAVIGATION_EVENT, listener);
+  };
+}
+const currentQuery = () => window.location.search;
 const Model = dynamic(() => import("./BuildingCanvas"), {
   ssr: false,
   loading: () => (
@@ -44,25 +71,89 @@ const normalize = (s: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/đ/gi, "d")
     .toLowerCase();
-export function BuildingExplorer({
-  building,
-  initialFloor = "all",
-  initialRoom = null,
-}: {
-  building: BuildingData;
-  initialFloor?: FloorSelection;
-  initialRoom?: string | null;
-}) {
+export function BuildingExplorer({ building }: { building: BuildingData }) {
   const router = useRouter();
+  const params = useSearchParams();
+  // History changes must update the selected point immediately, even while
+  // Next's transition is waiting for a server action to finish.
+  const query = useSyncExternalStore(subscribeNavigation, currentQuery, () =>
+    params.size ? `?${params.toString()}` : "",
+  );
+  const navigation = readBuildingNavigation(new URLSearchParams(query));
+  const { floor, room: selected } = navigation;
+  const detail = navigation.detail && Boolean(building.hcns);
+  const scope = detail ? "room:hcns" : `floor:${floor}`;
   const [pending, start] = useTransition();
-  const [floor, setFloor] = useState<FloorSelection>(initialFloor),
-    [selected, setSelected] = useState<string | null>(initialRoom),
-    [search, setSearch] = useState("");
-  const [command, setCommand] = useState<BuildingCamera>({
-    view: "overview",
-    sequence: 0,
-    zoom: 1,
-  });
+  const [search, setSearch] = useState("");
+  const [selectedPerson, setSelectedPerson] = useState<{
+    point: string;
+    id: number;
+  } | null>(null);
+  const personId =
+    detail && selectedPerson?.point === navigation.point
+      ? selectedPerson.id
+      : null;
+  const [commands, setCommands] = useState<Record<string, BuildingCamera>>({});
+  const command = commands[scope] ?? DEFAULT_CAMERA;
+  function setCommand(update: (c: BuildingCamera) => BuildingCamera) {
+    setCommands((old) => ({
+      ...old,
+      [scope]: update(old[scope] ?? DEFAULT_CAMERA),
+    }));
+  }
+  function navigate(next: BuildingNavigation) {
+    const url = buildingUrl(next);
+    if (`${window.location.pathname}${window.location.search}` !== url)
+      window.history.pushState(null, "", url);
+    window.dispatchEvent(new Event(NAVIGATION_EVENT));
+    setSearch("");
+  }
+  function enterRoom() {
+    if (!building.hcns) return;
+    setSelectedPerson(null);
+    navigate({
+      floor: 2,
+      room: HCNS_BUILDING_KEY,
+      detail: true,
+      point: "hcns-01",
+    });
+  }
+  function leaveRoom() {
+    navigate({ floor: 2, room: HCNS_BUILDING_KEY, detail: false, point: null });
+  }
+  function choosePoint(point: string) {
+    setSelectedPerson(null);
+    navigate({ ...navigation, point });
+  }
+  function choosePerson(point: string, id: number) {
+    setSelectedPerson({ point, id });
+    navigate({ ...navigation, point });
+  }
+  useEffect(() => {
+    function escape(event: KeyboardEvent) {
+      if (event.key !== "Escape" || event.defaultPrevented || !detail) return;
+      if (
+        document.querySelector('[role="dialog"]') ||
+        (event.target instanceof HTMLElement &&
+          (event.target.matches("input,textarea,select") ||
+            event.target.isContentEditable))
+      )
+        return;
+      window.history.pushState(
+        null,
+        "",
+        buildingUrl({
+          floor: 2,
+          room: HCNS_BUILDING_KEY,
+          detail: false,
+          point: null,
+        }),
+      );
+      window.dispatchEvent(new Event(NAVIGATION_EVENT));
+    }
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [detail]);
   const room = building.rooms.find((r) => r.key === selected);
   const shape = BUILDING_ROOMS.find((r) => r.key === selected);
   const visible = building.rooms.filter(
@@ -72,38 +163,29 @@ export function BuildingExplorer({
       normalize(r.name).includes(normalize(search)),
   );
   function changeFloor(next: FloorSelection) {
-    setFloor(next);
-    setSelected(null);
-    setSearch("");
-    setCommand((c) => ({
-      view: "overview",
-      sequence: c.sequence + 1,
-      zoom: 1,
-    }));
+    if (detail && next === 2) {
+      leaveRoom();
+      return;
+    }
+    navigate({ floor: next, room: null, detail: false, point: null });
   }
   function choose(key: string) {
-    const s = BUILDING_ROOMS.find((r) => r.key === key);
-    if (!s) return;
-    setFloor(s.floor);
-    setSelected(key);
-    setSearch("");
-    setCommand((c) => ({
-      view: c.view === "top" ? "top" : "overview",
-      key,
-      sequence: c.sequence + 1,
-      zoom: 1,
-    }));
+    const shape = BUILDING_ROOMS.find((r) => r.key === key);
+    if (!shape) return;
+    navigate({ floor: shape.floor, room: key, detail: false, point: null });
   }
   function view(next: BuildingCamera["view"]) {
-    if (next === "top" && floor === "all") {
-      setFloor(2);
-      setSelected(null);
-    }
-    setCommand((c) => ({
-      view: next,
-      key: selected ?? undefined,
-      sequence: c.sequence + 1,
-      zoom: 1,
+    const targetScope = next === "top" && floor === "all" ? "floor:2" : scope;
+    if (targetScope !== scope)
+      navigate({ floor: 2, room: null, detail: false, point: null });
+    setCommands((old) => ({
+      ...old,
+      [targetScope]: {
+        view: next,
+        key: detail ? (navigation.point ?? undefined) : (selected ?? undefined),
+        sequence: (old[targetScope]?.sequence ?? 0) + 1,
+        zoom: 1,
+      },
     }));
   }
   return (
@@ -113,11 +195,13 @@ export function BuildingExplorer({
           <div className="flex items-center gap-3">
             <Building2 className="size-7 text-primary" />
             <h1 className="text-2xl font-bold tracking-tight">
-              Bản đồ 3D tòa nhà
+              {detail ? "Không gian HCNS" : "Bản đồ 3D tòa nhà"}
             </h1>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            {building.name} · 3 tầng trong mô hình
+            {detail
+              ? building.hcns?.path
+              : `${building.name} · 3 tầng trong mô hình`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -128,7 +212,7 @@ export function BuildingExplorer({
             onClick={() => start(() => router.refresh())}
           >
             <RefreshCw className={cn("size-4", pending && "animate-spin")} />
-            Cập nhật
+            {detail ? "Cập nhật dữ liệu" : "Cập nhật"}
           </Button>
           {building.canManage && (
             <Button variant="outline" asChild className="min-h-10">
@@ -140,7 +224,47 @@ export function BuildingExplorer({
           )}
         </div>
       </header>
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <nav
+        aria-label="Cấp xem không gian"
+        className="flex flex-wrap items-center gap-1 text-sm"
+      >
+        <Button
+          variant="ghost"
+          className="min-h-10"
+          onClick={() => changeFloor("all")}
+        >
+          Tòa nhà
+        </Button>
+        {floor !== "all" && (
+          <>
+            <span aria-hidden="true">/</span>
+            <Button
+              variant="ghost"
+              className="min-h-10"
+              onClick={() => changeFloor(floor)}
+            >
+              Tầng {floor}
+            </Button>
+          </>
+        )}
+        {detail && (
+          <>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page" className="px-2 font-medium">
+              HCNS
+            </span>
+            <Button
+              variant="outline"
+              className="ml-auto min-h-10"
+              onClick={leaveRoom}
+            >
+              <ArrowLeft className="size-4" />
+              Trở lại tầng 2
+            </Button>
+          </>
+        )}
+      </nav>
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <section
           aria-label="Mô hình tòa nhà"
           className="min-w-0 self-start overflow-hidden rounded-2xl border bg-muted/25"
@@ -248,10 +372,7 @@ export function BuildingExplorer({
             </div>
           </div>
           <div
-            className={cn(
-              "relative sm:h-[600px] xl:h-[660px]",
-              floor === "all" ? "h-[420px]" : "h-[320px]",
-            )}
+            className={cn("relative sm:h-[600px] xl:h-[660px]", "h-[440px]")}
             data-testid="building-canvas-container"
           >
             <Model
@@ -261,12 +382,21 @@ export function BuildingExplorer({
               command={command}
               onSelect={choose}
               onFloor={changeFloor}
+              detail={detail}
+              point={detail ? navigation.point : null}
+              onPoint={choosePoint}
+              onEnter={enterRoom}
+              person={personId}
+              onPerson={choosePerson}
             />
           </div>
           <footer className="flex flex-wrap justify-between gap-2 border-t bg-card px-4 py-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-2">
               <MousePointer2 className="size-4" />
-              Kéo để xoay · Cuộn/chụm để thu phóng
+              {detail
+                ? "Chọn bàn hoặc người · Esc để về tầng"
+                : "Nhấp đúp HCNS để vào phòng"}{" "}
+              · Kéo để xoay · Cuộn/chụm để thu phóng
             </span>
             <span>Bố cục tham khảo · Kích thước ước lượng</span>
           </footer>
@@ -275,7 +405,14 @@ export function BuildingExplorer({
           className="min-w-0 space-y-4"
           aria-label="Phòng và thông tin không gian"
         >
-          {room && shape ? (
+          {detail && building.hcns ? (
+            <HcnsRoomPanel
+              room={building.hcns}
+              selected={navigation.point}
+              onSelect={choosePoint}
+              personId={personId}
+            />
+          ) : room && shape ? (
             <section
               className="space-y-4 rounded-2xl border bg-card p-4"
               aria-label="Thông tin phòng"
@@ -293,11 +430,13 @@ export function BuildingExplorer({
                 </p>
               </div>
               {room.key === HCNS_BUILDING_KEY && building.hcns && (
-                <Button asChild className="min-h-11 w-full">
-                  <Link href="/office-3d/hcns">
-                    Vào phòng HCNS · 10 vị trí
-                    <ArrowUpRight className="size-4" />
-                  </Link>
+                <Button
+                  variant="outline"
+                  className="min-h-11 w-full"
+                  onClick={enterRoom}
+                >
+                  Vào phòng HCNS · 10 vị trí
+                  <ArrowUpRight className="size-4" />
                 </Button>
               )}
               {room.description && (
@@ -370,64 +509,66 @@ export function BuildingExplorer({
               )}
             </section>
           )}
-          <section
-            className="rounded-2xl border bg-card p-4"
-            aria-label="Danh sách phòng"
-          >
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <h2 className="font-semibold">
-                {floor === "all"
-                  ? "Các không gian"
-                  : building.floors.find((f) => f.floor === floor)?.name}
-              </h2>
-              <Badge variant="secondary">{visible.length}</Badge>
-            </div>
-            <div className="relative mb-3">
-              <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
-              <Input
-                aria-label="Tìm phòng trong mô hình"
-                placeholder="Tìm phòng…"
-                className="pl-9 text-base"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="max-h-96 space-y-1 overflow-y-auto">
-              {visible.map((r) => {
-                const s = BUILDING_ROOMS.find((v) => v.key === r.key)!;
-                return (
-                  <Button
-                    key={r.key}
-                    variant={selected === r.key ? "secondary" : "ghost"}
-                    aria-label={`Xem phòng ${r.name}, tầng ${s.floor}`}
-                    aria-pressed={selected === r.key}
-                    className="h-auto min-h-12 w-full justify-start whitespace-normal px-2 py-2 text-left"
-                    onClick={() => choose(r.key)}
-                  >
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">
-                      {BUILDING_ROOMS.indexOf(s) + 1}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium">
-                        {r.name}
+          {!detail && (
+            <section
+              className="rounded-2xl border bg-card p-4"
+              aria-label="Danh sách phòng"
+            >
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="font-semibold">
+                  {floor === "all"
+                    ? "Các không gian"
+                    : building.floors.find((f) => f.floor === floor)?.name}
+                </h2>
+                <Badge variant="secondary">{visible.length}</Badge>
+              </div>
+              <div className="relative mb-3">
+                <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
+                <Input
+                  aria-label="Tìm phòng trong mô hình"
+                  placeholder="Tìm phòng…"
+                  className="pl-9 text-base"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <div className="max-h-96 space-y-1 overflow-y-auto">
+                {visible.map((r) => {
+                  const s = BUILDING_ROOMS.find((v) => v.key === r.key)!;
+                  return (
+                    <Button
+                      key={r.key}
+                      variant={selected === r.key ? "secondary" : "ghost"}
+                      aria-label={`Xem phòng ${r.name}, tầng ${s.floor}`}
+                      aria-pressed={selected === r.key}
+                      className="h-auto min-h-12 w-full justify-start whitespace-normal px-2 py-2 text-left"
+                      onClick={() => choose(r.key)}
+                    >
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">
+                        {BUILDING_ROOMS.indexOf(s) + 1}
                       </span>
-                      <span className="block text-xs font-normal text-muted-foreground">
-                        Tầng {s.floor}
-                        {r.key === HCNS_BUILDING_KEY && building.hcns
-                          ? " · Có nội thất chi tiết"
-                          : ""}
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium">
+                          {r.name}
+                        </span>
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          Tầng {s.floor}
+                          {r.key === HCNS_BUILDING_KEY && building.hcns
+                            ? " · Có nội thất chi tiết"
+                            : ""}
+                        </span>
                       </span>
-                    </span>
-                  </Button>
-                );
-              })}
-              {!visible.length && (
-                <p className="py-4 text-sm text-muted-foreground">
-                  Không tìm thấy phòng phù hợp.
-                </p>
-              )}
-            </div>
-          </section>
+                    </Button>
+                  );
+                })}
+                {!visible.length && (
+                  <p className="py-4 text-sm text-muted-foreground">
+                    Không tìm thấy phòng phù hợp.
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
           <details className="rounded-xl border bg-card p-3 text-xs leading-5 text-muted-foreground">
             <summary className="cursor-pointer font-medium text-foreground">
               Về mô hình này

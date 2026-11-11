@@ -1,3 +1,4 @@
+import { chooseRoomPoint } from "../helpers/office-3d";
 import { test, expect, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { readFile } from "node:fs/promises";
@@ -143,26 +144,26 @@ test("explore three floors, enter HCNS, return and use mobile without errors", a
   await page
     .getByRole("button", { name: "Đặt lại góc nhìn", exact: true })
     .click();
-  await page.getByRole("link", { name: /Vào phòng HCNS/ }).click();
+  await page.getByRole("button", { name: /Vào phòng HCNS/ }).click();
   await expect(
     page.getByRole("heading", { name: "Không gian HCNS", exact: true }),
   ).toBeVisible({ timeout: 90000 });
-  await expect(page.locator("canvas[data-room-ready=true]")).toBeVisible({ timeout: 90000 });
-  await page
-    .getByRole("button", { name: "Chọn Vị trí 07", exact: true })
-    .click();
+  await expect(page.locator("canvas[data-building-ready=true]")).toBeVisible({
+    timeout: 90000,
+  });
+  await chooseRoomPoint(page, "Vị trí 07");
   await expect(
     page.getByRole("region", { name: "Nhân sự tại vị trí" }),
   ).toContainText(name);
   await page
-    .getByRole("link", { name: "Tòa nhà · Tầng 2", exact: true })
+    .getByRole("button", { name: "Trở lại tầng 2", exact: true })
     .click();
   await expect(
     page.getByRole("region", { name: "Thông tin phòng" }),
   ).toContainText(roomName);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
-    page.getByRole("link", { name: /Vào phòng HCNS/ }),
+    page.getByRole("button", { name: /Vào phòng HCNS/ }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -238,7 +239,7 @@ test("building uses workplace links, reflects DB changes, and drops stale room h
     await expect(panel).toContainText("Chưa có dữ liệu vị trí");
     await expect(panel).not.toContainText(name);
     await expect(
-      page.getByRole("link", { name: /Vào phòng HCNS/ }),
+      page.getByRole("button", { name: /Vào phòng HCNS/ }),
     ).toHaveCount(0);
   } finally {
     await db.vi_tri.update({
@@ -317,6 +318,6 @@ test("WebGL failure keeps floor selection and accessible room information", asyn
     page.getByRole("region", { name: "Thông tin phòng" }),
   ).toContainText(name);
   await expect(
-    page.getByRole("link", { name: /Vào phòng HCNS/ }),
+    page.getByRole("button", { name: /Vào phòng HCNS/ }),
   ).toBeVisible();
 });

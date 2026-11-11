@@ -1,3 +1,4 @@
+import { chooseRoomPoint, openRoomLocations } from "../helpers/office-3d";
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { readFile } from "node:fs/promises";
@@ -63,9 +64,10 @@ test("HCNS shows ten DB locations, notes, camera controls and responsive layouts
   await expect(
     page.getByRole("heading", { name: "Không gian HCNS", exact: true }),
   ).toBeVisible();
-  await expect(page.locator("canvas[data-room-ready=true]")).toBeVisible({
+  await expect(page.locator("canvas[data-building-ready=true]")).toBeVisible({
     timeout: 60000,
   });
+  await openRoomLocations(page);
   await expect(page.getByRole("button", { name: /^Chọn Vị trí/ })).toHaveCount(
     10,
   );
@@ -91,13 +93,15 @@ test("HCNS shows ten DB locations, notes, camera controls and responsive layouts
   ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Tập trung", exact: true }).click();
   await page
-    .getByRole("button", { name: "Đưa góc nhìn về toàn phòng", exact: true })
+    .getByRole("button", { name: "Đặt lại góc nhìn", exact: true })
     .click();
-  await page
-    .getByRole("button", { name: "Trên mô hình: Vị trí 07", exact: true })
-    .click();
+  await chooseRoomPoint(page, "Vị trí 07");
   await expect(
-    page.getByRole("button", { name: "Chọn Vị trí 07", exact: true }),
+    page.getByRole("button", {
+      name: "Chọn Vị trí 07",
+      exact: true,
+      includeHidden: true,
+    }),
   ).toHaveAttribute("aria-pressed", "true");
   await page
     .getByRole("button", { name: "Cập nhật dữ liệu", exact: true })
@@ -115,12 +119,21 @@ test("HCNS shows ten DB locations, notes, camera controls and responsive layouts
   }
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.getByRole("button", { name: "Mặt bằng", exact: true }).click();
+  await openRoomLocations(page);
   await page
-    .getByRole("button", { name: "Chọn Vị trí 03", exact: true })
+    .getByRole("button", {
+      name: "Chọn Vị trí 03",
+      exact: true,
+      includeHidden: true,
+    })
     .focus();
   await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("button", { name: "Chọn Vị trí 03", exact: true }),
+    page.getByRole("button", {
+      name: "Chọn Vị trí 03",
+      exact: true,
+      includeHidden: true,
+    }),
   ).toHaveAttribute("aria-pressed", "true");
   expect(errors).toEqual([]);
 });
@@ -164,7 +177,7 @@ test("HCNS hides data from unprivileged accounts and invalid tenant sessions", a
   await signAccount(context, { ...viewer, company_id: 2147483646 });
   await page.goto("/office-3d/hcns");
   await expect(
-    page.getByText("Chưa thể mở phòng HCNS", { exact: true }),
+    page.getByText("Chưa thể mở mô hình tòa nhà", { exact: true }),
   ).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(0);
   await expect(
@@ -198,9 +211,7 @@ test("HCNS retains accessible data when WebGL is unavailable", async ({
   await expect(
     page.getByText(/Không thể hiển thị 3D trên trình duyệt này/),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Chọn Vị trí 06", exact: true })
-    .click();
+  await chooseRoomPoint(page, "Vị trí 06");
   await expect(
     page.getByRole("region", { name: "Chi tiết vị trí" }),
   ).toContainText("máy in");

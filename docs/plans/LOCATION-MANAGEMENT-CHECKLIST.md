@@ -73,7 +73,7 @@ Nhân sự có một vị trí làm việc chính; một vị trí có thể ch�
 - [X] Kiểm thử VIEW/MANAGE/không quyền (kể cả chỉ có HR MANAGE), thu hồi quyền, URL/action trực tiếp, khác công ty, mã đồng thời và audit rollback. Tiêm lỗi audit giới hạn trong công ty kiểm thử: action thất bại giữ nguyên dữ liệu/version.
 - [X] Kiểm thử hai chuyển cha đồng thời không tạo chu trình, xác nhận chuyển nhánh, đường dẫn/tìm không dấu, chặn ngừng dùng/xóa còn vị trí con, không chọn cha đã ngừng dùng, version cũ và lịch sử còn sau xóa. Chrome desktop/mobile/sáng/tối, focus khi đóng chi tiết đạt. Ca liên kết HR đã kiểm tra ở migration `20261110160000_vi_tri_lam_viec_nhan_su`: cùng công ty/loại/trạng thái, giữ liên kết người LEFT, chặn xóa/ngừng dùng và gán đồng thời; chạy trên DB tạm. Tài sản kiểm tra sau khi triển khai.
 - [X] 3 ca `locations.spec.ts` và 9 ca phân quyền hồi quy đạt; TypeScript/lint, Prisma validate và schema diff đạt. Tại thời điểm dọn fixture: fingerprint 14 bảng cũ giữ nguyên, 0 vị trí/0 grant LOCATIONS; số liệu này không phải trạng thái cố định sau khi người dùng nhập dữ liệu. Đã mở Chrome kiểm tra Studio cổng 5555: `All Models` có `vi_tri`, mở được các cột `ma_vi_tri`, `ten_vi_tri`; đúng DB `sdg_erp`, không cần chạy lại migration. Tab cũ cần tải lại danh sách model. Nhật ký/ảnh kiểm thử/backup chỉ ở `outputs/locations/`.
-- [X] Theo yêu cầu cụ thể và bản phác, thêm 10 vị trí con dưới Phòng Hành Chính Tổng Hợp có sẵn; 5 vị trí có ghi chú thiết bị/người dùng, 5 chưa có thông tin. Backup trước nhập, giữ nguyên 7 vị trí cũ; không tạo tài sản hoặc gán nhân sự. `/locations` có lối vào bản thử HCNS. Tài khoản xem thử đã có LOCATIONS MANAGE; lần này không cấp/sửa quyền.
+- [X] Theo yêu cầu cụ thể và bản phác, thêm 10 vị trí con dưới Phòng Hành Chính Tổng Hợp có sẵn; 5 vị trí có ghi chú thiết bị/người dùng, 5 chưa có thông tin. Backup trước nhập, giữ nguyên 7 vị trí cũ; không tạo tài sản hoặc gán nhân sự. `/locations` có lối vào HCNS trong viewer `/office-3d` dùng chung với tòa nhà. Tài khoản xem thử đã có LOCATIONS MANAGE; lần này không cấp/sửa quyền.
 - [X] HR đã có gán/chuyển/gỡ vị trí; action và DB bảo vệ vị trí còn nhân sự ở mọi trạng thái. 8 E2E HR/danh bạ/HCNS trên DB tạm đạt; dữ liệu/sequence vận hành không bị dùng làm fixture. Chi tiết tại plan HR.
 - [ ] Người phụ trách xem bản thử và chỉnh bố trí thực tế trước khi mở rộng sang các phòng khác. Không tự nhập hàng loạt từ 3D hoặc 1Office.
 
@@ -84,5 +84,5 @@ flowchart TB
     V["Vị trí & không gian — bảng vi_tri"] --> C["Tòa nhà → Tầng → Phòng / Sảnh → Chỗ ngồi / Điểm đặt thiết bị"]
     N["Nhân sự: vi_tri_lam_viec_id"] --> V
     T["Tài sản: vi_tri_id"] --> V
-    V --> D["3D đọc 10 vị trí HCNS — bản thử riêng"]
+    V --> D["3D tòa nhà đọc vị trí — chi tiết 10 điểm HCNS"]
 ```

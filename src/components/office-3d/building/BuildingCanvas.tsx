@@ -2,14 +2,15 @@
 import {
   Component,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
   type RefObject,
 } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { CameraControls } from "@react-three/drei";
-import { Vector3 } from "three";
+import { CameraControls, CameraControlsImpl } from "@react-three/drei";
+import { Vector3, type Camera } from "three";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -18,9 +19,13 @@ import {
   floorElevation,
   type FloorSelection,
   type FloorNumber,
+  HCNS_PLACEMENT,
+  HCNS_BUILDING_KEY,
 } from "@/lib/office-3d/building-layout";
 import type { BuildingData } from "@/lib/office-3d/building-mapping";
 import { BuildingModel } from "./BuildingModel";
+import { hcnsWorldPoint } from "@/lib/office-3d/building-navigation";
+import { HCNS_LAYOUT, personRoomPosition } from "@/lib/office-3d/hcns-layout";
 import { materials } from "../hcns/RoomFurniture";
 
 export type BuildingCamera = {
@@ -36,6 +41,12 @@ type Props = {
   command: BuildingCamera;
   onSelect: (key: string) => void;
   onFloor: (floor: FloorNumber) => void;
+  detail: boolean;
+  point: string | null;
+  onPoint: (key: string) => void;
+  onEnter: (key: string) => void;
+  person: number | null;
+  onPerson: (key: string, id: number) => void;
 };
 function Fallback() {
   return (
@@ -60,14 +71,132 @@ class SceneBoundary extends Component<
     return this.state.failed ? <Fallback /> : this.props.children;
   }
 }
-function CameraRig({ command, floor }: Pick<Props, "command" | "floor">) {
+// Demand rendering can wake after minutes of idle time. Never integrate that
+// entire interval into a new camera movement. Drei supports a custom controls impl.
+class DemandCameraControls extends CameraControlsImpl {
+  override update(delta: number) {
+    return super.update(Math.min(delta, 1 / 30));
+  }
+}
+function roomFitZoom(camera: Camera, size: { width: number; height: number }) {
+  const inverse = camera.quaternion.clone().invert();
+  const corners = [-4.6, 4.6].flatMap((x) =>
+    [-6.7, 7].flatMap((z) =>
+      [0, 2.4].map((y) =>
+        new Vector3(...hcnsWorldPoint(x, y, z)).applyQuaternion(inverse),
+      ),
+    ),
+  );
+  const width =
+    Math.max(...corners.map((v) => v.x)) - Math.min(...corners.map((v) => v.x));
+  const height =
+    Math.max(...corners.map((v) => v.y)) - Math.min(...corners.map((v) => v.y));
+  return Math.min(size.width / (width + 2), size.height / (height + 2));
+}
+function CameraRig({
+  command,
+  floor,
+  detail,
+}: Pick<Props, "command" | "floor" | "detail">) {
   const ref = useRef<CameraControls>(null);
-  const { size, gl } = useThree();
+  const { size, gl, camera } = useThree();
+  const scope = detail ? "room:hcns" : `floor:${floor}`;
+  const previous = useRef<{
+    scope: string;
+    command: BuildingCamera;
+    width: number;
+    height: number;
+  } | null>(null);
+  const saved = useRef(
+    new Map<
+      string,
+      { json: string; width: number; height: number; command: BuildingCamera }
+    >(),
+  );
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
-    const animate = !window.matchMedia("(prefers-reduced-motion: reduce)")
-      .matches;
+    const old = previous.current;
+    const animate =
+      Boolean(old) &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (old && old.scope !== scope) {
+      // Snapshot the actual view, including a mouse orbit still decelerating.
+      c.stop();
+      saved.current.set(old.scope, {
+        json: c.toJSON(),
+        width: old.width,
+        height: old.height,
+        command: old.command,
+      });
+    }
+    previous.current = {
+      scope,
+      command,
+      width: size.width,
+      height: size.height,
+    };
+    const cached = saved.current.get(scope);
+    if (!detail && old && old.scope !== scope && cached?.command === command) {
+      const state = JSON.parse(cached.json);
+      state.zoom *= Math.min(
+        size.width / cached.width,
+        size.height / cached.height,
+      );
+      c.fromJSON(JSON.stringify(state), animate);
+      return;
+    }
+    if (old?.scope === scope && old.command === command) {
+      void c.zoomTo(
+        camera.zoom *
+          (detail
+            ? roomFitZoom(camera, size) / roomFitZoom(camera, old)
+            : Math.min(size.width / old.width, size.height / old.height)),
+        false,
+      );
+      return;
+    }
+    if (
+      old?.scope === scope &&
+      old.command.sequence === command.sequence &&
+      old.command.zoom !== command.zoom
+    ) {
+      void c.zoomTo((camera.zoom * command.zoom) / old.command.zoom, animate);
+      return;
+    }
+    if (detail && old && old.scope !== scope) {
+      // Translate and zoom from the current pose. Do not rotate to a second
+      // prebuilt room camera when entering the same embedded geometry.
+      const target = new Vector3(...hcnsWorldPoint(0, 0.8, 0.3));
+      const offset = c
+        .getPosition(new Vector3(), false)
+        .sub(c.getTarget(new Vector3(), false));
+      const position = target.clone().add(offset);
+      void c.setLookAt(...position.toArray(), ...target.toArray(), animate);
+      void c.zoomTo(roomFitZoom(camera, size), animate);
+      return;
+    }
+    if (detail) {
+      const slot = HCNS_LAYOUT.find((p) => p.key === command.key);
+      let position: [number, number, number] = [15, 18, 20];
+      let target: [number, number, number] = [0, 0, 0];
+      let zoom = Math.min(size.width / 18.5, size.height / 17);
+      if (command.view === "top") {
+        position = [0, 24, 0.01];
+        zoom = Math.min(size.width / 11.5, size.height / 16.5);
+      } else if (command.view === "focus" && slot) {
+        position = [slot.x + 8, 12, slot.z + 10];
+        target = [slot.x, 0.7, slot.z];
+        zoom = Math.min(size.width / 5, size.height / 6);
+      }
+      void c.setLookAt(
+        ...hcnsWorldPoint(...position),
+        ...hcnsWorldPoint(...target),
+        animate,
+      );
+      void c.zoomTo((zoom / HCNS_PLACEMENT.scale) * command.zoom, animate);
+      return;
+    }
     const room = BUILDING_ROOMS.find((r) => r.key === command.key);
     let zoom = Math.min(
       size.width / 68,
@@ -95,7 +224,7 @@ function CameraRig({ command, floor }: Pick<Props, "command" | "floor">) {
       void c.setLookAt(60, targetY + 46, 65, 0, targetY, 0, animate);
     }
     void c.zoomTo(Math.max(3, zoom * command.zoom), animate);
-  }, [command, floor, size.width, size.height]);
+  }, [scope, command, detail, floor, size, camera]);
   useEffect(() => {
     gl.domElement.setAttribute("aria-label", "Mô hình 3D tòa nhà Sao Đỏ");
     gl.domElement.setAttribute("data-building-ready", "true");
@@ -107,67 +236,72 @@ function CameraRig({ command, floor }: Pick<Props, "command" | "floor">) {
     <CameraControls
       ref={ref}
       makeDefault
-      smoothTime={0.3}
+      impl={DemandCameraControls}
+      smoothTime={0.36}
       minPolarAngle={0}
       maxPolarAngle={Math.PI / 2.12}
       minZoom={3}
-      maxZoom={100}
+      maxZoom={220}
     />
   );
 }
-const labelKeys = [
-  ...BUILDING_FLOORS.map((floor) => `floor-${floor.floor}`),
-  ...BUILDING_ROOMS.map((room) => room.key),
-];
+type LabelAnchor = {
+  key: string;
+  at: [number, number, number];
+  point?: string;
+  priority?: number;
+};
 function ProjectedLabels({
   elements,
-  floor,
-  show,
+  anchors,
   ready,
 }: {
   elements: RefObject<Map<string, HTMLElement>>;
-  floor: FloorSelection;
-  show: string[];
+  anchors: LabelAnchor[];
   ready: boolean;
 }) {
   const v = useRef(new Vector3());
   const invalidate = useThree((s) => s.invalidate);
   useEffect(() => {
     invalidate();
-  }, [ready, show, floor, invalidate]);
+  }, [ready, anchors, invalidate]);
   useFrame(({ camera, size }) => {
-    for (const key of labelKeys) {
-      const element = elements.current.get(key);
+    camera.updateMatrixWorld();
+    const boxes: { x: number; y: number; w: number; h: number }[] = [];
+    for (const element of elements.current.values())
+      element.style.visibility = "hidden";
+    for (const anchor of [...anchors].sort(
+      (a, b) => (b.priority ?? 0) - (a.priority ?? 0),
+    )) {
+      const element = elements.current.get(anchor.key);
       if (!element) continue;
-      const room = BUILDING_ROOMS.find((r) => r.key === key);
-      const f = BUILDING_FLOORS.find((r) => `floor-${r.floor}` === key);
-      const p = room
-        ? v.current
-            .set(
-              room.x,
-              0.45,
-              room.key === "t2_hcns_pc"
-                ? room.z + room.depth / 2 + 0.6
-                : room.z,
-            )
-            .project(camera)
-        : f
-          ? v.current
-              .set(-22, floorElevation(f.floor, floor) + 0.6, 17)
-              .project(camera)
-          : null;
-      const visible =
-        p &&
-        show.includes(key) &&
-        p.z >= -1 &&
-        p.z <= 1 &&
-        Math.abs(p.x) < 1 &&
-        Math.abs(p.y) < 1;
-      element.style.visibility = visible ? "visible" : "hidden";
-      if (p) {
-        element.style.left = `${((p.x + 1) * size.width) / 2}px`;
-        element.style.top = `${((1 - p.y) * size.height) / 2}px`;
-      }
+      const p = v.current.set(...anchor.at).project(camera);
+      if (p.z < -1 || p.z > 1 || Math.abs(p.x) >= 1 || Math.abs(p.y) >= 1)
+        continue;
+      if (anchor.point && camera.zoom < 24) continue;
+      const w = element.offsetWidth,
+        h = element.offsetHeight;
+      const x = Math.max(
+        w / 2 + 4,
+        Math.min(size.width - w / 2 - 4, ((p.x + 1) * size.width) / 2),
+      );
+      const y = ((1 - p.y) * size.height) / 2 - (anchor.point ? 24 : 0);
+      if (y < h / 2 || y > size.height - h / 2) continue;
+      // Name labels are secondary to the actual mesh. Keep them from covering
+      // one another; the full list remains available beside the canvas.
+      if (
+        anchor.point &&
+        boxes.some(
+          (b) =>
+            Math.abs(b.x - x) < (b.w + w) / 2 + 6 &&
+            Math.abs(b.y - y) < (b.h + h) / 2 + 6,
+        )
+      )
+        continue;
+      element.style.visibility = "visible";
+      element.style.left = `${x}px`;
+      element.style.top = `${y}px`;
+      boxes.push({ x, y, w, h });
     }
   });
   return null;
@@ -176,6 +310,27 @@ export default function BuildingCanvas(props: Props) {
   const [ready, setReady] = useState(false),
     [lost, setLost] = useState(false);
   const elements = useRef(new Map<string, HTMLElement>());
+  const [hovered, setHovered] = useState<string | null>(null);
+  const pickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (pickTimer.current) clearTimeout(pickTimer.current);
+    },
+    [],
+  );
+  function pickRoom(key: string) {
+    if (pickTimer.current) clearTimeout(pickTimer.current);
+    // A first click must not move the all-floor target before the second click.
+    if (props.floor === "all")
+      pickTimer.current = setTimeout(() => props.onSelect(key), 300);
+    else props.onSelect(key);
+  }
+  function enterRoom(key: string) {
+    if (pickTimer.current) clearTimeout(pickTimer.current);
+    if (props.floor === "all") props.onSelect(key);
+    else if (key === HCNS_BUILDING_KEY && props.building.hcns)
+      props.onEnter(key);
+  }
   const canvas = useRef<HTMLCanvasElement | null>(null);
   const lostHandler = useRef((e: Event) => {
     e.preventDefault();
@@ -186,14 +341,78 @@ export default function BuildingCanvas(props: Props) {
     return () =>
       canvas.current?.removeEventListener("webglcontextlost", handler);
   }, []);
-  const shown =
-    props.floor === "all"
-      ? BUILDING_FLOORS.map((f) => `floor-${f.floor}`)
-      : props.command.view === "focus" && props.selected
-        ? [props.selected]
-        : BUILDING_ROOMS.filter((r) => r.floor === props.floor).map(
-            (r) => r.key,
-          );
+  const people = useMemo(
+    () =>
+      props.building.hcns?.canViewEmployees
+        ? props.building.hcns.points
+            .filter((p) => p.state === "active")
+            .flatMap((p) => {
+              const slot = HCNS_LAYOUT.find((s) => s.key === p.key)!;
+              const occupants = p.occupants ?? [];
+              const result = occupants.slice(0, 3).map((person, index) => ({
+                key: `person:${p.key}:${person.id}`,
+                point: p.key,
+                id: person.id,
+                name: person.name,
+                at: hcnsWorldPoint(
+                  ...personRoomPosition(slot, index, occupants.length),
+                ),
+              }));
+              if (occupants.length > 3)
+                result.push({
+                  key: `group:${p.key}`,
+                  point: p.key,
+                  id: 0,
+                  name: `+${occupants.length - 3} người`,
+                  at: hcnsWorldPoint(slot.x, 1.3, slot.z),
+                });
+              return result;
+            })
+        : [],
+    [props.building.hcns],
+  );
+  const anchors = useMemo<LabelAnchor[]>(() => {
+    if (props.detail)
+      return people.map((p) => ({
+        ...p,
+        priority:
+          p.id === props.person
+            ? 3
+            : p.point === hovered
+              ? 2
+              : p.point === props.point
+                ? 1
+                : 0,
+      }));
+    if (props.floor === "all")
+      return BUILDING_FLOORS.map((f) => ({
+        key: `floor-${f.floor}`,
+        at: [-22, floorElevation(f.floor, props.floor) + 0.6, 17],
+      }));
+    return BUILDING_ROOMS.filter(
+      (r) =>
+        r.floor === props.floor &&
+        (props.command.view !== "focus" ||
+          !props.selected ||
+          r.key === props.selected),
+    ).map((r) => ({
+      key: r.key,
+      at: [
+        r.x,
+        0.45,
+        r.key === HCNS_BUILDING_KEY ? r.z + r.depth / 2 + 0.6 : r.z,
+      ],
+    }));
+  }, [
+    props.detail,
+    props.floor,
+    props.command.view,
+    props.selected,
+    props.point,
+    props.person,
+    people,
+    hovered,
+  ]);
   const register = (key: string, element: HTMLElement | null) => {
     if (element) elements.current.set(key, element);
     else elements.current.delete(key);
@@ -201,7 +420,12 @@ export default function BuildingCanvas(props: Props) {
   if (lost) return <Fallback />;
   return (
     <SceneBoundary>
-      <div className="relative h-full w-full">
+      <div
+        className={cn(
+          "relative h-full w-full",
+          props.detail && hovered && "cursor-pointer",
+        )}
+      >
         <Canvas
           orthographic
           camera={{ position: [60, 56, 65], zoom: 9, near: 0.1, far: 300 }}
@@ -235,17 +459,56 @@ export default function BuildingCanvas(props: Props) {
             shadow-normalBias={0.045}
             shadow-bias={-0.0001}
           />
-          <BuildingModel {...props} />
-          <CameraRig floor={props.floor} command={props.command} />
+          <BuildingModel
+            {...props}
+            onSelect={pickRoom}
+            onEnter={enterRoom}
+            hovered={hovered}
+            onHover={setHovered}
+          />
+          <CameraRig
+            floor={props.floor}
+            command={props.command}
+            detail={props.detail}
+          />
           <ProjectedLabels
             elements={elements}
-            floor={props.floor}
-            show={shown}
+            anchors={anchors}
             ready={ready}
           />
         </Canvas>
         {ready && (
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            {props.detail &&
+              people.map((p) => (
+                <Button
+                  key={p.key}
+                  ref={(el) => register(p.key, el)}
+                  variant={
+                    props.person === p.id && props.point === p.point
+                      ? "default"
+                      : "outline"
+                  }
+                  className="pointer-events-auto invisible absolute h-auto min-h-10 max-w-40 -translate-x-1/2 -translate-y-1/2 rounded-xl px-2 py-1 text-xs shadow-sm"
+                  data-person-marker={p.id ? "person" : "group"}
+                  aria-label={
+                    p.id
+                      ? `Xem nhân sự ${p.name}`
+                      : `Xem tất cả nhân sự tại vị trí này`
+                  }
+                  onPointerEnter={() => setHovered(p.point)}
+                  onPointerLeave={() => setHovered(null)}
+                  onFocus={() => setHovered(p.point)}
+                  onBlur={() => setHovered(null)}
+                  onClick={() =>
+                    p.id
+                      ? props.onPerson(p.point, p.id)
+                      : props.onPoint(p.point)
+                  }
+                >
+                  <span className="truncate">{p.name}</span>
+                </Button>
+              ))}
             {BUILDING_FLOORS.map((f) => (
               <Button
                 key={f.floor}
@@ -266,7 +529,8 @@ export default function BuildingCanvas(props: Props) {
                 title={r.name}
                 aria-label={`Trên mô hình: ${r.name}`}
                 aria-pressed={r.key === props.selected}
-                onClick={() => props.onSelect(r.key)}
+                onClick={() => pickRoom(r.key)}
+                onDoubleClick={() => enterRoom(r.key)}
                 className={cn(
                   "pointer-events-auto invisible absolute h-auto min-h-10 max-w-40 -translate-x-1/2 -translate-y-1/2 whitespace-normal rounded-xl border px-2 py-1.5 text-xs shrink-0 shadow-sm max-sm:size-10 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none max-sm:hover:bg-transparent",
                   r.key === props.selected

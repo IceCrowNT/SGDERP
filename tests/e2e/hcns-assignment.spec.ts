@@ -1,8 +1,10 @@
+import { chooseRoomPoint } from "../helpers/office-3d";
 import { test, expect, type Page, type Request } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { signAccount } from "../helpers/account-fixture";
+import { HCNS_URL } from "../../src/lib/office-3d/building-navigation";
 
 const db = new PrismaClient();
 test.skip(
@@ -25,6 +27,9 @@ const panel = (page: Page) =>
 async function choose(page: Page) {
   await page.getByRole("button", { name: "Gán nhân sự", exact: true }).click();
   await page.getByRole("textbox", { name: "Tìm nhân sự để gán" }).fill(name);
+  await expect(
+    page.getByRole("button", { name: `Gán ${name}`, exact: true }),
+  ).toBeEnabled();
   await page.getByRole("button", { name: `Gán ${name}`, exact: true }).click();
 }
 async function replay(page: Page, payload: unknown) {
@@ -115,7 +120,8 @@ test("assign, confirm transfer and clear directly in 3D; refresh keeps selection
   page.on("pageerror", (e) => errors.push(e.message));
   await signAccount(context, manager);
   await page.goto("/office-3d/hcns");
-  await expect(page.locator("canvas[data-room-ready=true]")).toBeVisible({
+  await expect(page).toHaveURL(/\/office-3d\?.*mode=room/);
+  await expect(page.locator("canvas[data-building-ready=true]")).toBeVisible({
     timeout: 90000,
   });
   await page.getByRole("button", { name: "Mặt bằng", exact: true }).click();
@@ -128,13 +134,11 @@ test("assign, confirm transfer and clear directly in 3D; refresh keeps selection
   request = await sent;
   await expect(panel(page)).toContainText(name);
   expect((await person()).vi_tri_lam_viec_id).toBe(seat1);
-  await expect(page).toHaveURL(/\/office-3d\/hcns$/);
+  await expect(page).toHaveURL(/\/office-3d\?.*mode=room/);
   await expect(
     page.getByRole("button", { name: "Mặt bằng", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  await page
-    .getByRole("button", { name: "Trên mô hình: Vị trí 02", exact: true })
-    .click();
+  await chooseRoomPoint(page, "Vị trí 02");
   await choose(page);
   const confirm = page.getByRole("dialog", { name: "Chuyển vị trí nhân sự?" });
   await expect(confirm).toContainText("Vị trí 01");
@@ -148,7 +152,11 @@ test("assign, confirm transfer and clear directly in 3D; refresh keeps selection
   await expect(panel(page)).toContainText(name);
   expect((await person()).vi_tri_lam_viec_id).toBe(seat2);
   await expect(
-    page.getByRole("button", { name: "Chọn Vị trí 02", exact: true }),
+    page.getByRole("button", {
+      name: "Chọn Vị trí 02",
+      exact: true,
+      includeHidden: true,
+    }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Gán nhân sự", exact: true }).click();
   await expect(
@@ -204,9 +212,11 @@ test("3D and location panel share assignments; stale forms cannot overwrite a mo
   });
   await signAccount(context, manager);
   await page.goto("/office-3d/hcns");
-  await page
-    .getByRole("button", { name: "Chọn Vị trí 02", exact: true })
-    .click();
+  await expect(page).toHaveURL(/\/office-3d\?.*mode=room/);
+  await expect(page.locator("canvas[data-building-ready=true]")).toBeVisible({
+    timeout: 90000,
+  });
+  await chooseRoomPoint(page, "Vị trí 02");
   await choose(page);
   await db.nhan_su.update({
     where: { id: personId },
@@ -236,9 +246,11 @@ test("read-only, location-only and other company accounts cannot assign or recei
 }) => {
   await signAccount(context, reader);
   await page.goto("/office-3d/hcns");
-  await page
-    .getByRole("button", { name: "Chọn Vị trí 02", exact: true })
-    .click();
+  await expect(page).toHaveURL(/\/office-3d\?.*mode=room/);
+  await expect(page.locator("canvas[data-building-ready=true]")).toBeVisible({
+    timeout: 90000,
+  });
+  await chooseRoomPoint(page, "Vị trí 02");
   await expect(panel(page)).toContainText(name);
   await expect(
     page.getByRole("button", { name: "Gán nhân sự", exact: true }),
@@ -251,13 +263,15 @@ test("read-only, location-only and other company accounts cannot assign or recei
   };
   expect(await replay(page, payload)).toContain("Không có quyền sửa nhân sự");
   await signAccount(context, locationsOnly);
-  const response = await page.goto("/office-3d/hcns");
+  const response = await page.goto(HCNS_URL);
+  await expect(page).toHaveURL(/\/office-3d\?.*mode=room/);
   expect(await response!.text()).not.toContain(name);
   await expect(panel(page)).toHaveCount(0);
   await signAccount(context, foreign);
   await page.goto("/office-3d/hcns");
+  await expect(page).toHaveURL(/\/office-3d\?.*mode=room/);
   await expect(
-    page.getByText("Chưa thể mở phòng HCNS", { exact: true }),
+    page.getByText("Chưa thể mở mô hình tòa nhà", { exact: true }),
   ).toBeVisible();
   expect(await replay(page, payload)).toContain("Không tìm thấy nhân sự");
   expect((await person()).vi_tri_lam_viec_id).toBe(seat2);
@@ -269,9 +283,18 @@ test("equipment, inactive and unlinked points offer no assignment; revoked HR pe
 }) => {
   await signAccount(context, manager);
   await page.goto("/office-3d/hcns");
-  await page
-    .getByRole("button", { name: "Chọn Vị trí 06", exact: true })
-    .click();
+  await expect(page).toHaveURL(/\/office-3d\?.*mode=room/);
+  await expect(page.locator("canvas[data-building-ready=true]")).toBeVisible({
+    timeout: 90000,
+  });
+  await chooseRoomPoint(page, "Vị trí 06");
+  await expect(
+    page.getByRole("button", {
+      name: "Chọn Vị trí 06",
+      exact: true,
+      includeHidden: true,
+    }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(
     page.getByRole("button", { name: "Gán nhân sự", exact: true }),
   ).toHaveCount(0);
@@ -286,6 +309,10 @@ test("equipment, inactive and unlinked points offer no assignment; revoked HR pe
     data: { dang_su_dung: false },
   });
   await page.reload();
+  await expect(page.locator("canvas[data-building-ready=true]")).toBeVisible({
+    timeout: 90000,
+  });
+  await chooseRoomPoint(page, "Vị trí 01");
   await expect(
     page.getByRole("region", { name: "Chi tiết vị trí" }),
   ).toContainText("Đã ngừng sử dụng");

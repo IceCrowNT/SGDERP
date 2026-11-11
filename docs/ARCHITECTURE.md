@@ -1,15 +1,23 @@
 # TÀI LIỆU KIẾN TRÚC TỔNG THỂ & SỔ BỘ THƯ VIỆN
 
+## Viewer 3D thống nhất — 11/11/2026
+
+- `OfficePerson.tsx` sở hữu hình người cách điệu dùng chung hình học/vật liệu; dữ liệu từ liên kết HR–vị trí sẵn có. Chọn bàn/người trực tiếp, nhãn tên chiếu từ cùng phép biến đổi với model và tránh chồng nhau; danh sách vị trí làm đường truy cập thay thế. Không thêm bảng hoặc thư viện.
+- CameraControls dùng `impl` của Drei để giới hạn bước thời gian khi vẽ trở lại sau khoảng nghỉ. Nhấp đúp phòng HCNS trong tầng giữ hướng camera và phóng tới nội thất đang nhúng; vật liệu không gian xung quanh mờ dần. Camera trở lại góc tầng đã lưu, hỗ trợ giảm chuyển động; hình người không có vòng hoạt ảnh riêng. Kiểm chứng và giới hạn tại [plan 3D](plans/OFFICE-3D-CHECKLIST.md).
+
+- `/office-3d` sở hữu một `BuildingCanvas`; chế độ toàn nhà/tầng/phòng và điểm chọn lưu trong URL qua History API tích hợp Next Router. `building-navigation.ts` kiểm tra tham số và chuyển tọa độ HCNS sang tọa độ tòa nhà. Viewer theo dõi URL bằng `useSyncExternalStore` để điểm chọn đổi ngay cả khi Next Router đang chờ Server Action; History API vẫn giữ Back/Forward và không tạo nguồn trạng thái thứ hai. Camera giữ góc/zoom theo cấp xem; cập nhật dữ liệu không khởi tạo lại renderer.
+- Đã tách bảng chi tiết từ viewer HCNS thành `HcnsRoomPanel.tsx`, chỉ tải lựa chọn gán người khi mở phòng với HR MANAGE. Giữ `LocationPeople`/action gán dùng chung. `/office-3d/hcns` là đường dẫn tương thích chuyển về viewer chung; bỏ `HcnsRoomCanvas` và `HcnsRoomExplorer`, giữ model/nội thất. Không đổi DB, dependency hoặc biến môi trường. Kiểm chứng tại [plan 3D](plans/OFFICE-3D-CHECKLIST.md).
+
 ## Tòa nhà 3D cùng phong cách HCNS — 10/11/2026
 
 - `/office-3d` dùng `getOfficeBuilding`, `building-layout.ts`/`building-mapping.ts` và các component trong `src/components/office-3d/building/`. Viewer tải client, Fiber/Drei, camera trực giao, `frameloop="demand"`, DPR tối đa 1,5; bỏ viewer Three.js thủ công và `RoomDetailSheet` ghép người theo phòng ban.
-- `HcnsRoomModel.tsx` dùng chung hình học HCNS cho tòa nhà và trang chi tiết; góc xoay/thu đồng tỷ lệ nằm trong cấu hình hình học. `/office-3d/hcns` quay về tầng 2/phòng HCNS qua query của trang tòa nhà.
+- `HcnsRoomModel.tsx` giữ một instance nội thất trong tòa nhà; góc xoay/thu đồng tỷ lệ nằm trong cấu hình hình học. Chi tiết phòng chuyển camera trong cùng viewer, theo thiết kế ở đầu tài liệu.
 - Ánh xạ riêng `var/office-3d/building.json` (ngoài Git, sao lưu cùng `hcns.json` và DB) nối ID tòa nhà/tầng/phòng đã kiểm chứng. Không tự tạo vị trí hoặc đoán phòng họp từ tên. Khi triển khai trên môi trường khác phải cấp ánh xạ đúng DB; thiếu/sai công ty hiển thị chưa thiết lập.
 - Cả menu/page/action tòa nhà dùng LOCATIONS; HR riêng cho người ACTIVE có FK nằm trong nhánh vị trí đã xác nhận. Không đếm nhân sự công ty như người trong tòa nhà, không truy vấn tài sản. Không đổi schema, migration, dependency, biến môi trường hoặc cấp quyền.
 
 ## Liên kết nhân sự và vị trí hai chiều — 10/11/2026
 
-- `/locations` và bảng chi tiết `/office-3d/hcns` dùng chung `LocationPeople.tsx` cho tìm/gán/chuyển/bỏ gán nhân sự. Trang HCNS chỉ nạp lựa chọn nhân sự ACTIVE khi có HR MANAGE, liên kết điểm qua ID đã xác minh; người chỉ xem vẫn nhận danh sách tại điểm. `assignEmployeeLocation` cập nhật duy nhất FK vị trí, dùng cùng kiểm tra chuyển/phiên bản với form HR; mutation vẫn Prisma trực tiếp trong action. Danh sách tối thiểu cần HR VIEW, thay đổi cần HR MANAGE; không thêm schema/dependency.
+- `/locations` và bảng chi tiết HCNS trong `/office-3d` dùng chung `LocationPeople.tsx` cho tìm/gán/chuyển/bỏ gán nhân sự. Trang HCNS chỉ nạp lựa chọn nhân sự ACTIVE khi có HR MANAGE, liên kết điểm qua ID đã xác minh; người chỉ xem vẫn nhận danh sách tại điểm. `assignEmployeeLocation` cập nhật duy nhất FK vị trí, dùng cùng kiểm tra chuyển/phiên bản với form HR; mutation vẫn Prisma trực tiếp trong action. Danh sách tối thiểu cần HR VIEW, thay đổi cần HR MANAGE; không thêm schema/dependency.
 - Xóa vị trí xem trước danh sách bị ảnh hưởng, kiểm tra lại phiên bản vị trí và tập người trong khóa công ty/phân quyền; tự đặt FK về null và ghi audit từng người + vị trí trong một transaction. Giữ schema/FK Restrict/trigger, không migration hoặc đổi quyền. Không truy vấn bảng tài sản chưa có.
 - `tsconfig.json` loại các thư mục đầu ra/tạm khỏi kiểm tra TypeScript; bản sao app dùng kiểm thử nằm trong `outputs/`, không bị biên dịch như nguồn ứng dụng. Không thêm thư viện hoặc biến môi trường vận hành.
 
@@ -195,7 +203,7 @@ graph TD
 
 ### Tài sản và không gian — thiết kế lưu trữ
 
-Phân hệ tài sản cũ đã gỡ khỏi DB ngày 31/10/2026. [Kế hoạch tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md) cập nhật 10/11 thiết kế mức 1: tài sản sở hữu hai bảng `loai_tai_san`, `tai_san`. [Vị trí & không gian](plans/LOCATION-MANAGEMENT-CHECKLIST.md) là phân hệ dùng chung riêng, sở hữu `vi_tri`, menu `/locations` và quyền LOCATIONS; triển khai trước tài sản. HR đã có FK vị trí làm việc chính nullable; quyền quản lý tài sản không bao gồm sửa cây vị trí. Dùng lại RBAC và nhật ký hiện có. Vật tư tiêu hao tách làm sau. Tài sản vẫn là thiết kế. Bản 3D HCNS đọc vị trí/ghi chú và người ACTIVE đã gán theo quyền HR, chưa có hồ sơ tài sản; 3D nhân sự cũ vẫn hoạt động độc lập.
+Phân hệ tài sản cũ đã gỡ khỏi DB ngày 31/10/2026. [Kế hoạch tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md) cập nhật 10/11 thiết kế mức 1: tài sản sở hữu hai bảng `loai_tai_san`, `tai_san`. [Vị trí & không gian](plans/LOCATION-MANAGEMENT-CHECKLIST.md) là phân hệ dùng chung riêng, sở hữu `vi_tri`, menu `/locations` và quyền LOCATIONS; triển khai trước tài sản. HR đã có FK vị trí làm việc chính nullable; quyền quản lý tài sản không bao gồm sửa cây vị trí. Dùng lại RBAC và nhật ký hiện có. Vật tư tiêu hao tách làm sau. Tài sản vẫn là thiết kế. Bản 3D HCNS đọc vị trí/ghi chú và người ACTIVE đã gán theo quyền HR, chưa có hồ sơ tài sản; khung 3D nhân sự cũ đã được thay bằng viewer tòa nhà dùng vị trí chung.
 
 ### Quy ước tên vật lý PostgreSQL — 22/10/2026
 

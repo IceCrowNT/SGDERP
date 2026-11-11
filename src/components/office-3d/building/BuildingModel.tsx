@@ -1,5 +1,8 @@
 "use client";
 import { RoundedBox } from "@react-three/drei";
+import { useRef, useState, type ReactNode } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Group, Mesh, type Material } from "three";
 import {
   BUILDING_ROOMS,
   BUILDING_FLOORS,
@@ -22,6 +25,72 @@ const palette = {
   mutedFloor: "#dedbd5",
   railing: "#a49a8c",
 };
+function ContextLayer({
+  detail,
+  children,
+}: {
+  detail: boolean;
+  children: ReactNode;
+}) {
+  const ref = useRef<Group>(null);
+  const opacity = useRef(detail ? 0 : 1);
+  const [initialVisible] = useState(!detail);
+  const originals = useRef(
+    new WeakMap<
+      Material,
+      { opacity: number; transparent: boolean; depthWrite: boolean }
+    >(),
+  );
+  useFrame(({ invalidate }, delta) => {
+    const group = ref.current;
+    if (!group) return;
+    const target = detail ? 0 : 1;
+    if (opacity.current === target && group.visible === Boolean(target)) return;
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    opacity.current = reduce
+      ? target
+      : Math.max(
+          0,
+          Math.min(
+            1,
+            opacity.current +
+              ((detail ? -1 : 1) * Math.min(delta, 1 / 30)) / 0.65,
+          ),
+        );
+    group.visible = opacity.current > 0;
+    group.traverse((node) => {
+      if (!(node instanceof Mesh)) return;
+      for (const material of Array.isArray(node.material)
+        ? node.material
+        : [node.material]) {
+        let original = originals.current.get(material);
+        if (!original) {
+          original = {
+            opacity: material.opacity,
+            transparent: material.transparent,
+            depthWrite: material.depthWrite,
+          };
+          originals.current.set(material, original);
+        }
+        const transparent = opacity.current < 1 || original.transparent;
+        if (material.transparent !== transparent) {
+          material.transparent = transparent;
+          material.needsUpdate = true;
+        }
+        material.opacity = original.opacity * opacity.current;
+        material.depthWrite = opacity.current === 1 && original.depthWrite;
+      }
+    });
+    if (opacity.current !== target) invalidate();
+  });
+  return (
+    <group ref={ref} visible={initialVisible}>
+      {children}
+    </group>
+  );
+}
 function FloorSlab({ atrium }: { atrium: boolean }) {
   const pieces = atrium
     ? [
@@ -239,64 +308,102 @@ export function BuildingModel({
   floor,
   selected,
   onSelect,
+  detail,
+  point,
+  onPoint,
+  onEnter,
+  hovered,
+  onHover,
+  person,
+  onPerson,
 }: {
   building: BuildingData;
   floor: FloorSelection;
   selected: string | null;
   onSelect: (key: string) => void;
+  detail: boolean;
+  point: string | null;
+  onPoint: (key: string) => void;
+  onEnter: (key: string) => void;
+  hovered: string | null;
+  onHover: (key: string | null) => void;
+  person: number | null;
+  onPerson: (key: string, id: number) => void;
 }) {
   return (
     <group>
-      {BUILDING_FLOORS.filter((f) => floor === "all" || floor === f.floor).map(
-        (f) => (
-          <group
-            key={f.floor}
-            position={[0, floorElevation(f.floor, floor), 0]}
-          >
+      {BUILDING_FLOORS.map((f) => (
+        <group
+          key={f.floor}
+          visible={floor === "all" || floor === f.floor}
+          position={[0, floorElevation(f.floor, floor), 0]}
+        >
+          <ContextLayer detail={detail}>
             <FloorSlab atrium={f.floor === 2} />
-            {BUILDING_ROOMS.filter((r) => r.floor === f.floor).map((room) => (
-              <group
-                key={room.key}
-                position={[room.x, 0, room.z]}
-                userData={{ objectKey: room.key }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (event.delta < 5) onSelect(room.key);
-                }}
-              >
-                {room.key === HCNS_BUILDING_KEY && building.hcns ? (
-                  <>
-                    <Block
-                      at={[0, 0.07, 0]}
-                      size={[room.width, 0.08, room.depth]}
-                      color={selected === room.key ? m.selected : m.floor}
-                      shadow={false}
-                    />
-                    <group
-                      position={[0, 0.28, 0]}
-                      rotation={[0, HCNS_PLACEMENT.rotation, 0]}
-                      scale={HCNS_PLACEMENT.scale}
-                    >
-                      <HcnsRoomModel points={building.hcns.points} />
-                    </group>
-                  </>
-                ) : (
-                  <RoomEnvelope room={room} selected={selected === room.key} />
-                )}
-                {/* Invisible pick surface covers open spaces and the atrium without inventing a floor. */}
-                <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                  <planeGeometry args={[room.width, room.depth]} />
-                  <meshBasicMaterial
-                    transparent
-                    opacity={0}
-                    depthWrite={false}
+          </ContextLayer>
+          {BUILDING_ROOMS.filter((r) => r.floor === f.floor).map((room) => (
+            <group
+              key={room.key}
+              position={[room.x, 0, room.z]}
+              userData={{ objectKey: room.key }}
+              onDoubleClick={
+                detail || (floor !== "all" && floor !== f.floor)
+                  ? undefined
+                  : (event) => {
+                      event.stopPropagation();
+                      if (event.delta < 5) onEnter(room.key);
+                    }
+              }
+              onClick={
+                detail || (floor !== "all" && floor !== f.floor)
+                  ? undefined
+                  : (event) => {
+                      event.stopPropagation();
+                      if (event.delta < 5) onSelect(room.key);
+                    }
+              }
+            >
+              {room.key === HCNS_BUILDING_KEY && building.hcns ? (
+                <>
+                  <Block
+                    at={[0, 0.07, 0]}
+                    size={[room.width, 0.08, room.depth]}
+                    color={
+                      !detail && selected === room.key ? m.selected : m.floor
+                    }
+                    shadow={false}
                   />
-                </mesh>
-              </group>
-            ))}
-          </group>
-        ),
-      )}
+                  <group
+                    position={[0, 0.28, 0]}
+                    rotation={[0, HCNS_PLACEMENT.rotation, 0]}
+                    scale={HCNS_PLACEMENT.scale}
+                  >
+                    <HcnsRoomModel
+                      points={building.hcns.points}
+                      selected={detail ? point : null}
+                      onSelect={detail ? onPoint : undefined}
+                      hovered={hovered}
+                      onHover={detail ? onHover : undefined}
+                      person={person}
+                      onPerson={detail ? onPerson : undefined}
+                      canViewEmployees={building.hcns.canViewEmployees}
+                    />
+                  </group>
+                </>
+              ) : (
+                <ContextLayer detail={detail}>
+                  <RoomEnvelope room={room} selected={selected === room.key} />
+                </ContextLayer>
+              )}
+              {/* Invisible pick surface covers open spaces and the atrium without inventing a floor. */}
+              <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[room.width, room.depth]} />
+                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      ))}
     </group>
   );
 }
