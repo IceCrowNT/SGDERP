@@ -1,65 +1,45 @@
-import { Metadata } from "next"
-import { redirect } from "next/navigation"
-import { getSession, hasPermission } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { Office3DClientWrapper } from "@/components/office-3d/Office3DClientWrapper"
+import type { Metadata } from "next";
+import { getOfficeBuilding } from "@/actions/office-building";
+import { EmptyPanel } from "@/components/ui/feature-overview";
+import { BuildingExplorer } from "@/components/office-3d/building/BuildingExplorer";
+import {
+  BUILDING_ROOMS,
+  type FloorSelection,
+} from "@/lib/office-3d/building-layout";
 
 export const metadata: Metadata = {
-  title: "Bản Đồ 3D Tòa Nhà Sao Đỏ | SDG ERP",
-  description: "Mô hình 3D Digital Twin không gian làm việc 3 tầng tích hợp sơ đồ phòng ban và nhân sự thực tế",
-}
-
-export default async function Office3DPage() {
-  const session = await getSession()
-  if (!session) {
-    redirect("/login")
-  }
-
-  if (!hasPermission(session, "HR")) return <p>Không có quyền xem nhân sự.</p>
-
-  // Fetch departments with active personnel in the current company
-  const departments = await db.phong_ban.findMany({
-    where: {
-      company_id: session.companyId,
-    },
-    include: {
-      danh_sach_nhan_su: {
-        where: {
-          tinh_trang_lam_viec: "ACTIVE",
-        },
-        select: {
-          id: true,
-          ho_ten: true,
-          ma_nhan_su: true,
-          chuc_vu: true,
-          so_dien_thoai: true,
-          thu_dien_tu: true,
-          duong_dan_anh_dai_dien: true,
-          tinh_trang_lam_viec: true,
-          department_id: true,
-        },
-        orderBy: {
-          id: "asc",
-        },
-      },
-    },
-    orderBy: {
-      id: "asc",
-    },
-  })
-
-  // Count total active personnel in company
-  const totalPersonnel = await db.nhan_su.count({
-    where: {
-      company_id: session.companyId,
-      tinh_trang_lam_viec: "ACTIVE",
-    },
-  })
-
+  title: "Bản đồ 3D tòa nhà Sao Đỏ | SDG ERP",
+  description: "Khám phá ba tầng và không gian HCNS theo vị trí đã xác nhận.",
+};
+export default async function Office3DPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ floor?: string; room?: string }>;
+}) {
+  const result = await getOfficeBuilding();
+  if (!result.success)
+    return (
+      <EmptyPanel
+        title="Chưa thể mở mô hình tòa nhà"
+        description={result.message}
+      />
+    );
+  const query = await searchParams;
+  const room = BUILDING_ROOMS.find((r) => r.key === query.room);
+  const floor: FloorSelection =
+    room?.floor ??
+    (query.floor === "1"
+      ? 1
+      : query.floor === "2"
+        ? 2
+        : query.floor === "3"
+          ? 3
+          : "all");
   return (
-    <Office3DClientWrapper
-      departments={departments}
-      totalPersonnel={totalPersonnel}
+    <BuildingExplorer
+      building={result.building}
+      initialFloor={floor}
+      initialRoom={room?.key ?? null}
     />
-  )
+  );
 }

@@ -109,6 +109,8 @@ model nhan_su {
   cong_ty                      cong_ty          @relation(fields: [company_id], references: [id], onDelete: Restrict, map: "nhan_su_dinh_danh_cong_ty_fkey")
   department_id                Int?
   phong_ban                    phong_ban?       @relation("NhanSuPhongBan", fields: [department_id, company_id], references: [id, company_id], onDelete: Restrict, map: "nhan_su_dinh_danh_phong_ban_dinh_danh_cong_ty_fkey")
+  vi_tri_lam_viec_id            Int?
+  vi_tri_lam_viec               vi_tri?          @relation("ViTriNhanSu", fields: [vi_tri_lam_viec_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
   danh_sach_tai_khoan          tai_khoan[]
   danh_sach_phong_phu_trach    phong_ban[]      @relation("NguoiPhuTrachPhong")
   created_at                   DateTime         @default(now())
@@ -118,6 +120,7 @@ model nhan_su {
   @@unique([company_id, ma_nhan_su], map: "nhan_su_dinh_danh_cong_ty_ma_nhan_vien_key")
   @@unique([company_id, he_thong_nguon, dinh_danh_nguon], map: "nhan_su_dinh_danh_cong_ty_he_thong_nguon_dinh_danh_nguon_key")
   @@index([company_id, department_id], map: "nhan_su_dinh_danh_cong_ty_dinh_danh_phong_ban_idx")
+  @@index([company_id, vi_tri_lam_viec_id])
   @@index([company_id, tinh_trang_lam_viec], map: "nhan_su_dinh_danh_cong_ty_tinh_trang_lam_viec_idx")
 }
 
@@ -425,8 +428,9 @@ enum TrangThaiBuocQuyTrinh {
   CANCELLED
 }
 
-// Danh mục không gian vật lý dùng chung; chưa gắn HR/tài sản ở giai đoạn này.
+// Danh mục không gian vật lý dùng chung; nhân sự có một vị trí làm việc chính.
 model vi_tri {
+  danh_sach_nhan_su nhan_su[] @relation("ViTriNhanSu")
   id Int @id @default(autoincrement())
   company_id Int
   cong_ty cong_ty @relation(fields: [company_id], references: [id], onDelete: Restrict)

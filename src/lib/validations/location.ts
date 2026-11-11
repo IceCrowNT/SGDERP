@@ -36,5 +36,16 @@ export const SaveLocationSchema = z
     path: ["version"],
   });
 export const DeleteLocationSchema = z
-  .object({ id: z.number().int().positive(), version: z.string().datetime() })
+  .object({
+    id: z.number().int().positive(),
+    version: z.string().datetime(),
+    assignmentVersion: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  })
   .strict();
+
+export const AssignEmployeeLocationSchema = z.object({
+  employeeId: z.number().int().positive(),
+  locationId: z.number().int().positive().nullable(),
+  version: z.string().datetime(),
+  confirmMove: z.boolean().optional(),
+}).strict();

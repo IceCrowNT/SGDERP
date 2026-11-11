@@ -12,6 +12,9 @@ import { canManageAccounts } from "@/lib/account-access";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getSession, hasPermission } from "@/lib/auth";
+import { locationPath } from "@/lib/location-tree";
+import { assertWorkLocationChange, isAvailableWorkLocation, WorkLocationError } from "@/lib/work-location";
+import { AssignEmployeeLocationSchema } from "@/lib/validations/location";
 import {
   CreateEmployeeSchema,
   UpdateEmployeeSchema,
@@ -25,6 +28,7 @@ export interface GetEmployeesFilter {
   status?: "ALL" | "ACTIVE" | "LEFT" | "UNKNOWN";
 }
 const employeeInclude = {
+  vi_tri_lam_viec: { select: { id: true, ten_vi_tri: true } },
   phong_ban: { select: { id: true, ten_phong_ban: true } },
   _count: { select: { danh_sach_tai_khoan: true } },
   danh_sach_phong_phu_trach: {
@@ -47,8 +51,7 @@ export async function getEmployees(filter?: GetEmployeesFilter) {
     });
     const ids = new Set([filter.departmentId]);
     for (const id of ids)
-      for (const d of departments)
-        if (d.parent_id === id) ids.add(d.id);
+      for (const d of departments) if (d.parent_id === id) ids.add(d.id);
     where.department_id = { in: [...ids] };
   }
   if (filter?.search?.trim()) {
@@ -66,9 +69,18 @@ export async function getEmployees(filter?: GetEmployeesFilter) {
     include: employeeInclude,
     orderBy: { ma_nhan_su: "asc" },
   });
+  const locations = await db.vi_tri.findMany({
+    where: { company_id: session.companyId },
+    select: { id: true, parent_id: true, ten_vi_tri: true },
+  });
   return {
     success: true as const,
-    data,
+    data: data.map((person) => ({
+      ...person,
+      workLocationPath: person.vi_tri_lam_viec_id
+        ? locationPath(person.vi_tri_lam_viec_id, locations)
+        : null,
+    })),
     canManage: hasPermission(session, "HR", "MANAGE"),
   };
 }
@@ -101,9 +113,9 @@ async function saveEmployee(input: unknown, updating: boolean) {
   const id = "id" in v ? (v.id as number) : undefined;
   const addingAccount = Boolean(
     v.createAccount ||
-      v.accountUsername ||
-      v.accountPassword ||
-      v.accountRoleIds?.length,
+    v.accountUsername ||
+    v.accountPassword ||
+    v.accountRoleIds?.length,
   );
   if (addingAccount && !canManageAccounts(session))
     return { success: false, message: "Không có quyền quản lý tài khoản." };
@@ -113,7 +125,7 @@ async function saveEmployee(input: unknown, updating: boolean) {
   const passwordHash = initialPassword
     ? await bcrypt.hash(initialPassword, 10)
     : undefined;
-  let credentials: { username: string; password: string } | undefined;
+  let credentials: { username: string; password: string; } | undefined;
   try {
     await db.$transaction(async (tx) => {
       // Same ordering as department edits; account operations share the advisory lock.
@@ -134,11 +146,44 @@ async function saveEmployee(input: unknown, updating: boolean) {
         throw Error("Phòng ban không hợp lệ.");
       const previous = id
         ? await tx.nhan_su.findFirst({
-            where: { id: id, company_id: session.companyId },
-          })
+          where: { id: id, company_id: session.companyId },
+        })
         : null;
       if (id && !previous) throw Error("Không tìm thấy nhân sự.");
+      const locationChanged =
+        v.workLocationId !== undefined &&
+        v.workLocationId !== (previous?.vi_tri_lam_viec_id ?? null);
+      if (locationChanged && previous)
+        assertWorkLocationChange({
+          currentId: previous.vi_tri_lam_viec_id,
+          targetId: v.workLocationId!,
+          currentVersion: previous.updated_at.toISOString(),
+          expectedVersion: v.locationVersion,
+          status: v.employmentStatus,
+          confirmMove: v.confirmLocationMove,
+        });
+      if (locationChanged && v.workLocationId !== null) {
+        if (v.employmentStatus !== "ACTIVE")
+          throw Error("Chỉ gán vị trí mới cho nhân sự đang làm việc.");
+        const locations = await tx.vi_tri.findMany({
+          where: { company_id: session.companyId },
+          select: {
+            id: true,
+            parent_id: true,
+            ten_vi_tri: true,
+            loai_vi_tri: true,
+            dang_su_dung: true,
+          },
+        });
+        if (!isAvailableWorkLocation(v.workLocationId!, locations))
+          throw Error(
+            "Chọn phòng, khu vực hoặc chỗ ngồi còn sử dụng trong công ty.",
+          );
+      }
       const data = {
+        ...(v.workLocationId !== undefined
+          ? { vi_tri_lam_viec_id: v.workLocationId }
+          : {}),
         ho_ten: v.fullName,
         chuc_vu: v.position || null,
         ghi_chu: v.notes || null,
@@ -152,8 +197,8 @@ async function saveEmployee(input: unknown, updating: boolean) {
       const person = id
         ? await tx.nhan_su.update({ where: { id: id }, data })
         : await tx.nhan_su.create({
-            data: { ...data, company_id: session.companyId },
-          });
+          data: { ...data, company_id: session.companyId },
+        });
       if (addingAccount) {
         if (!roleIds.length)
           roleIds.push(await defaultRole(tx, session.companyId));
@@ -274,6 +319,8 @@ async function saveEmployee(input: unknown, updating: boolean) {
       "/employees",
       "/departments",
       "/office-3d",
+      "/office-3d/hcns",
+      "/locations",
       "/accounts",
       "/",
     ])
@@ -289,6 +336,8 @@ async function saveEmployee(input: unknown, updating: boolean) {
             : "Đã lưu hồ sơ nhân sự.",
     };
   } catch (error) {
+    if (error instanceof WorkLocationError)
+      return { success: false, message: error.message, code: error.code };
     return {
       success: false,
       message:
@@ -307,4 +356,59 @@ export async function createEmployee(input: CreateEmployeeInput) {
 }
 export async function updateEmployee(input: UpdateEmployeeInput) {
   return saveEmployee(input, true);
+}
+
+// Location screen changes only the workplace, never other fields on the HR profile.
+export async function assignEmployeeLocation(input: unknown) {
+  const session = await getSession();
+  if (!session || !hasPermission(session, "HR", "MANAGE"))
+    return { success: false as const, message: "Không có quyền sửa nhân sự." };
+  const parsed = AssignEmployeeLocationSchema.safeParse(input);
+  if (!parsed.success)
+    return { success: false as const, message: "Chọn nhân sự và vị trí hợp lệ.", fieldErrors: parsed.error.flatten().fieldErrors };
+  const v = parsed.data;
+  try {
+    await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
+      await currentActor(tx, session, "HR");
+      const person = await tx.nhan_su.findFirst({
+        where: { id: v.employeeId, company_id: session.companyId },
+        select: { id: true, ho_ten: true, vi_tri_lam_viec_id: true, tinh_trang_lam_viec: true, updated_at: true },
+      });
+      if (!person) throw new WorkLocationError("Không tìm thấy nhân sự.", "INVALID");
+      assertWorkLocationChange({
+        currentId: person.vi_tri_lam_viec_id, targetId: v.locationId,
+        currentVersion: person.updated_at.toISOString(), expectedVersion: v.version,
+        status: person.tinh_trang_lam_viec, confirmMove: v.confirmMove,
+      });
+      if (person.vi_tri_lam_viec_id === v.locationId) return;
+      const locations = await tx.vi_tri.findMany({
+        where: { company_id: session.companyId },
+        select: { id: true, parent_id: true, ten_vi_tri: true, loai_vi_tri: true, dang_su_dung: true },
+      });
+      if (v.locationId !== null && !isAvailableWorkLocation(v.locationId, locations))
+        throw new WorkLocationError("Chọn phòng, khu vực hoặc chỗ ngồi còn sử dụng trong công ty.", "INVALID");
+      const from = person.vi_tri_lam_viec_id === null ? "Chưa xác định vị trí" : locationPath(person.vi_tri_lam_viec_id, locations);
+      const to = v.locationId === null ? "Chưa xác định vị trí" : locationPath(v.locationId, locations);
+      await tx.nhan_su.update({ where: { id: person.id }, data: { vi_tri_lam_viec_id: v.locationId } });
+      await tx.nhat_ky_hoat_dong.create({
+        data: {
+          company_id: session.companyId, account_id: session.userId,
+          ten_dang_nhap: session.username, ho_ten: session.fullName,
+          phan_he: "HR", hanh_dong: "UPDATE", doi_tuong_id: String(person.id), ten_doi_tuong: person.ho_ten,
+          mo_ta: `Đổi vị trí làm việc: ${from} → ${to}.`,
+          du_lieu_cu: { vi_tri_lam_viec_id: person.vi_tri_lam_viec_id, vi_tri: from },
+          du_lieu_moi: { vi_tri_lam_viec_id: v.locationId, vi_tri: to },
+        }
+      });
+    });
+    for (const path of ["/employees", "/locations", "/office-3d", "/office-3d/hcns"])
+      revalidatePath(path);
+    return { success: true as const, message: v.locationId === null ? "Đã bỏ gán vị trí làm việc." : "Đã cập nhật vị trí làm việc." };
+  } catch (error) {
+    if (error instanceof WorkLocationError)
+      return { success: false as const, message: error.message, code: error.code };
+    return { success: false as const, message: "Không thể cập nhật. Hãy tải lại dữ liệu và kiểm tra quyền truy cập." };
+  }
 }

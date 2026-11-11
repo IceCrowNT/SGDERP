@@ -1,4 +1,5 @@
 "use server";
+import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -11,7 +12,7 @@ import {
   DeleteLocationSchema,
 } from "@/lib/validations/location";
 
-class LocationError extends Error {}
+class LocationError extends Error { }
 function failure(error: unknown) {
   return {
     success: false as const,
@@ -19,7 +20,7 @@ function failure(error: unknown) {
       error instanceof LocationError
         ? error.message
         : error instanceof Prisma.PrismaClientKnownRequestError &&
-            error.code === "P2003"
+          error.code === "P2003"
           ? "Vị trí còn dữ liệu liên kết. Hãy chuyển các dữ liệu này trước."
           : "Không thể lưu vị trí. Hãy tải lại trang và kiểm tra quyền truy cập.",
   };
@@ -48,6 +49,18 @@ export async function getLocations() {
   });
   return {
     success: true as const,
+    canManageEmployees: hasPermission(session, "HR", "MANAGE"),
+    employees: hasPermission(session, "HR")
+      ? (await db.nhan_su.findMany({
+        where: { company_id: session.companyId },
+        select: { id: true, ho_ten: true, tinh_trang_lam_viec: true, vi_tri_lam_viec_id: true, updated_at: true, phong_ban: { select: { ten_phong_ban: true } } },
+        orderBy: [{ ho_ten: "asc" }, { id: "asc" }],
+      })).map((person) => ({
+        id: person.id, name: person.ho_ten, status: person.tinh_trang_lam_viec,
+        department: person.phong_ban?.ten_phong_ban ?? null,
+        locationId: person.vi_tri_lam_viec_id, version: person.updated_at.toISOString(),
+      }))
+      : null,
     canManage: hasPermission(session, "LOCATIONS", "MANAGE"),
     rows: rows.map(({ updated_at, ...row }) => ({
       ...row,
@@ -135,9 +148,9 @@ export async function saveLocation(input: unknown) {
       await currentActor(tx, session, "LOCATIONS");
       const before = v.id
         ? await tx.vi_tri.findFirst({
-            where: { id: v.id, company_id: session.companyId },
-            select: selection,
-          })
+          where: { id: v.id, company_id: session.companyId },
+          select: selection,
+        })
         : null;
       if (v.id && !before) throw new LocationError("Vị trí không tồn tại.");
       if (before && before.updated_at.toISOString() !== v.version)
@@ -177,6 +190,19 @@ export async function saveLocation(input: unknown) {
         throw new LocationError(
           "Vị trí còn vị trí con. Hãy chuyển hoặc xóa vị trí con trước khi ngừng sử dụng.",
         );
+      if (
+        before &&
+        (!v.active || !["PHONG", "KHU_VUC", "CHO_NGOI"].includes(v.type)) &&
+        (await tx.nhan_su.count({
+          where: {
+            company_id: session.companyId,
+            vi_tri_lam_viec_id: before.id,
+          },
+        }))
+      )
+        throw new LocationError(
+          "Vị trí còn nhân sự liên kết. Hãy chuyển hoặc gỡ vị trí trong hồ sơ nhân sự trước.",
+        );
       const data = {
         ten_vi_tri: v.name,
         loai_vi_tri: v.type,
@@ -186,14 +212,14 @@ export async function saveLocation(input: unknown) {
       };
       const after = before
         ? await tx.vi_tri.update({
-            where: { id: before.id },
-            data,
-            select: selection,
-          })
+          where: { id: before.id },
+          data,
+          select: selection,
+        })
         : await tx.vi_tri.create({
-            data: { ...data, company_id: session.companyId },
-            select: selection,
-          });
+          data: { ...data, company_id: session.companyId },
+          select: selection,
+        });
       const snapshot = (r: typeof after, path: string) => ({
         ...r,
         duong_dan: path,
@@ -225,10 +251,36 @@ export async function saveLocation(input: unknown) {
       return after.id;
     });
     revalidatePath("/locations");
+    revalidatePath("/office-3d/hcns");
+    revalidatePath("/office-3d");
     return { success: true as const, id, message: "Đã lưu vị trí." };
   } catch (e) {
     return failure(e);
   }
+}
+// Fingerprint prevents a confirmation for one set of people deleting a changed set.
+function assignmentVersion(people: { id: number; updated_at: Date; }[]) {
+  return createHash("sha256").update(JSON.stringify(people.map((p) => [p.id, p.updated_at.toISOString()]).sort((a, b) => Number(a[0]) - Number(b[0])))).digest("hex");
+}
+export async function getLocationDeletionPreview(id: number) {
+  const session = await getSession();
+  if (!session || !hasPermission(session, "LOCATIONS", "MANAGE"))
+    return { success: false as const, message: "Bạn không có quyền quản lý vị trí." };
+  if (!z.number().int().positive().safeParse(id).success)
+    return { success: false as const, message: "Vị trí không hợp lệ." };
+  const location = await db.vi_tri.findFirst({ where: { id, company_id: session.companyId }, select: selection });
+  if (!location) return { success: false as const, message: "Vị trí không tồn tại." };
+  if (await db.vi_tri.count({ where: { parent_id: id, company_id: session.companyId } }))
+    return { success: false as const, message: "Vị trí còn vị trí con. Hãy chuyển hoặc xóa vị trí con trước." };
+  // Do not expose identities/counts to a location manager without HR permissions.
+  const canManageHR = hasPermission(session, "HR", "MANAGE");
+  if (!canManageHR && await db.nhan_su.count({ where: { company_id: session.companyId, vi_tri_lam_viec_id: id } }))
+    return { success: false as const, message: "Cần thêm quyền quản lý nhân sự để xóa vị trí này." };
+  const people = canManageHR ? await db.nhan_su.findMany({
+    where: { company_id: session.companyId, vi_tri_lam_viec_id: id },
+    select: { id: true, ho_ten: true, updated_at: true },
+  }) : [];
+  return { success: true as const, id, name: location.ten_vi_tri, version: location.updated_at.toISOString(), assignmentVersion: assignmentVersion(people), people: people.map((p) => p.ho_ten) };
 }
 export async function deleteLocation(input: unknown) {
   const session = await getSession();
@@ -266,6 +318,38 @@ export async function deleteLocation(input: unknown) {
         throw new LocationError(
           "Vị trí còn vị trí con. Hãy chuyển hoặc xóa vị trí con trước.",
         );
+      const people = await tx.nhan_su.findMany({
+        where: { company_id: session.companyId, vi_tri_lam_viec_id: before.id },
+        select: { id: true, ho_ten: true, updated_at: true },
+      });
+      if (people.length) {
+        if (!hasPermission(session, "HR", "MANAGE"))
+          throw new LocationError("Cần thêm quyền quản lý nhân sự để xóa vị trí này.");
+        await currentActor(tx, session, "HR");
+      }
+      if ((people.length || parsed.data.assignmentVersion) && parsed.data.assignmentVersion !== assignmentVersion(people))
+        throw new LocationError("Danh sách nhân sự đã thay đổi. Xem lại thông tin trước khi xác nhận xóa.");
+      if (people.length) {
+        const locations = await tx.vi_tri.findMany({
+          where: { company_id: session.companyId },
+          select: { id: true, parent_id: true, ten_vi_tri: true },
+        });
+        const oldPath = locationPath(before.id, locations);
+        await tx.nhan_su.updateMany({
+          where: { company_id: session.companyId, vi_tri_lam_viec_id: before.id },
+          data: { vi_tri_lam_viec_id: null },
+        });
+        await tx.nhat_ky_hoat_dong.createMany({
+          data: people.map((person) => ({
+            company_id: session.companyId, account_id: session.userId,
+            ten_dang_nhap: session.username, ho_ten: session.fullName,
+            phan_he: "HR", hanh_dong: "UPDATE", doi_tuong_id: String(person.id), ten_doi_tuong: person.ho_ten,
+            mo_ta: `Đưa về chưa xác định vị trí do xóa ${oldPath}.`,
+            du_lieu_cu: { vi_tri_lam_viec_id: before.id, vi_tri: oldPath },
+            du_lieu_moi: { vi_tri_lam_viec_id: null, vi_tri: "Chưa xác định vị trí" },
+          }))
+        });
+      }
       await tx.vi_tri.delete({ where: { id: before.id } });
       await tx.nhat_ky_hoat_dong.create({
         data: {
@@ -277,7 +361,7 @@ export async function deleteLocation(input: unknown) {
           doi_tuong_id: `vi_tri:${before.id}`,
           ten_doi_tuong: before.ten_vi_tri,
           hanh_dong: "DELETE",
-          mo_ta: `Xóa vị trí trống ${before.ten_vi_tri} (${before.ma_vi_tri})`,
+          mo_ta: `Xóa vị trí ${before.ten_vi_tri} (${before.ma_vi_tri})`,
           du_lieu_cu: {
             ...before,
             updated_at: before.updated_at.toISOString(),
@@ -285,10 +369,10 @@ export async function deleteLocation(input: unknown) {
         },
       });
     });
-    revalidatePath("/locations");
+    for (const path of ["/locations", "/employees", "/office-3d", "/office-3d/hcns"]) revalidatePath(path);
     return {
       success: true as const,
-      message: "Đã xóa vị trí trống; lịch sử được giữ lại.",
+      message: "Đã xóa vị trí; nhân sự liên kết được đưa về chưa xác định vị trí. Lịch sử được giữ lại.",
     };
   } catch (e) {
     return failure(e);

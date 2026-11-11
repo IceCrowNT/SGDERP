@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -56,6 +57,7 @@ import {
   saveLocation,
   deleteLocation,
   getLocationHistory,
+  getLocationDeletionPreview,
 } from "@/actions/location";
 import {
   LOCATION_TYPES,
@@ -68,6 +70,8 @@ import {
   type LocationRow,
 } from "@/lib/location-tree";
 import { cn } from "@/lib/utils";
+import { LocationPeople } from "@/components/locations/LocationPeople";
+import type { LocationEmployee } from "@/lib/work-location";
 const normalize = (s: string) =>
   s
     .normalize("NFD")
@@ -81,7 +85,11 @@ const typeLabel = (type: string) =>
 export function LocationManager({
   rows,
   canManage,
+  employees,
+  canManageEmployees,
 }: {
+  employees: LocationEmployee[] | null;
+  canManageEmployees: boolean;
   rows: LocationRow[];
   canManage: boolean;
 }) {
@@ -95,6 +103,7 @@ export function LocationManager({
     row?: LocationRow;
     parentId: number | null;
   } | null>(null);
+  const [deletion, setDeletion] = useState<Awaited<ReturnType<typeof getLocationDeletionPreview>> | null>(null);
   const [removing, setRemoving] = useState<LocationRow | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -208,12 +217,19 @@ export function LocationManager({
             Tòa nhà, khu vực và chỗ ngồi dùng chung
           </p>
         </div>
-        {canManage && (
-          <Button onClick={() => setEditing({ parentId: null })}>
-            <Plus className="size-4" />
-            Thêm vị trí
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild className="min-h-10">
+            <Link href="/office-3d/hcns">
+              <Building2 className="size-4" />Xem phòng HCNS 3D
+            </Link>
           </Button>
-        )}
+          {canManage && (
+            <Button onClick={() => setEditing({ parentId: null })}>
+              <Plus className="size-4" />
+              Thêm vị trí
+            </Button>
+          )}
+        </div>
       </div>
       <FeatureOverview
         items={[
@@ -378,6 +394,11 @@ export function LocationManager({
                       setSelected(null);
                       setError("");
                       setRemoving(picked);
+                      setDeletion(null);
+                      startTransition(async () => {
+                        try { setDeletion(await getLocationDeletionPreview(picked.id)); }
+                        catch { setDeletion({ success: false, message: "Không thể tải thông tin. Vui lòng thử lại." }); }
+                      });
                     }}
                   >
                     <Trash2 className="size-4" />
@@ -385,6 +406,7 @@ export function LocationManager({
                   </Button>
                 </div>
               )}
+              {employees !== null && <LocationPeople key={picked.id} location={picked} locations={rows} people={employees} canManage={canManageEmployees} />}
               <LocationHistory
                 key={`${picked.id}-${picked.version}`}
                 id={picked.id}
@@ -431,12 +453,18 @@ export function LocationManager({
       >
         <DialogContent className="w-[95vw] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Xóa vị trí trống?</DialogTitle>
+            <DialogTitle>Xóa vị trí?</DialogTitle>
             <DialogDescription>
-              Chỉ xóa “{removing?.ten_vi_tri}” khi không còn vị trí con hoặc dữ
-              liệu liên kết. Nhật ký vẫn được giữ.
+              Xóa “{deletion?.success ? deletion.name : removing?.ten_vi_tri}”. Nhật ký vẫn được giữ.
             </DialogDescription>
           </DialogHeader>
+          {!deletion && <p role="status" className="text-sm text-muted-foreground">Đang kiểm tra dữ liệu liên kết…</p>}
+          {deletion && (deletion.success ? (
+            <div className="space-y-2 text-sm">
+              <p>{deletion.people.length ? `${deletion.people.length} nhân sự sẽ chuyển sang “Chưa xác định vị trí”. Hồ sơ nhân sự vẫn được giữ.` : "Vị trí không có nhân sự liên kết."}</p>
+              {deletion.people.length > 0 && <ul className="max-h-40 list-disc overflow-y-auto pl-5">{deletion.people.map((name, i) => <li key={i}>{name}</li>)}</ul>}
+            </div>
+          ) : <p role="alert" className="text-sm text-destructive">{deletion.message}</p>)}
           {error && (
             <p role="alert" className="text-sm text-destructive">
               {error}
@@ -452,17 +480,20 @@ export function LocationManager({
             </Button>
             <Button
               variant="destructive"
-              disabled={pending}
+              disabled={pending || !deletion?.success}
               onClick={() => {
-                if (!removing) return;
+                if (!removing || !deletion?.success) return;
                 startTransition(async () => {
                   try {
                     const result = await deleteLocation({
                       id: removing.id,
-                      version: removing.version,
+                      version: deletion.version,
+                      assignmentVersion: deletion.assignmentVersion,
                     });
                     if (!result.success) {
                       setError(result.message);
+                      setDeletion(await getLocationDeletionPreview(removing.id));
+                      router.refresh();
                       return;
                     }
                     toast.success(result.message);
@@ -489,7 +520,7 @@ function LocationForm({
   onSaved,
 }: {
   rows: LocationRow[];
-  editing: { row?: LocationRow; parentId: number | null };
+  editing: { row?: LocationRow; parentId: number | null; };
   onSaved: (id: number) => void;
 }) {
   const row = editing.row;
@@ -720,7 +751,7 @@ function LocationForm({
     </Form>
   );
 }
-function LocationHistory({ id }: { id: number }) {
+function LocationHistory({ id }: { id: number; }) {
   const [result, setResult] = useState<Awaited<
     ReturnType<typeof getLocationHistory>
   > | null>(null);
@@ -773,8 +804,8 @@ function LocationHistory({ id }: { id: number }) {
                         >
                           <p className="font-medium">{i ? "Sau" : "Trước"}</p>
                           {data &&
-                          typeof data === "object" &&
-                          !Array.isArray(data) ? (
+                            typeof data === "object" &&
+                            !Array.isArray(data) ? (
                             <p className="break-words">
                               {String(data.ten_vi_tri ?? "")} ·{" "}
                               {typeLabel(String(data.loai_vi_tri ?? ""))} ·{" "}

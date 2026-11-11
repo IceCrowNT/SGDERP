@@ -24,6 +24,17 @@ export const EmployeeFieldsSchema = z
       .min(2, "Họ và tên phải có ít nhất 2 ký tự")
       .max(255, "Họ và tên tối đa 255 ký tự"),
     position: z.string().trim().max(100).optional().nullable(),
+    workLocationId: z
+      .number()
+      .int()
+      .positive("Chọn vị trí hợp lệ")
+      .nullable()
+      .optional(),
+    locationVersion: z
+      .string()
+      .datetime("Hồ sơ đã cũ, hãy tải lại trang")
+      .optional(),
+    confirmLocationMove: z.boolean().optional(),
     departmentId: z
       .number({
         required_error: "Chọn phòng ban",

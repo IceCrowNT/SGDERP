@@ -23,7 +23,7 @@ Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng v�
 
 ## Thiết kế chưa triển khai — 10/11/2026
 
-[Tài sản mức 1](plans/ASSET-MANAGEMENT-CHECKLIST.md) dự kiến thêm `loai_tai_san`, `tai_san` và tham chiếu vị trí. FK `nhan_su.vi_tri_lam_viec_id` triển khai ở bước HR sau đó. Các bảng/cột tài sản và FK nhân sự này chưa có; bảng vị trí dùng chung đã triển khai ở danh mục bên dưới.
+[Tài sản mức 1](plans/ASSET-MANAGEMENT-CHECKLIST.md) dự kiến thêm `loai_tai_san`, `tai_san` và tham chiếu vị trí. FK nullable `nhan_su.vi_tri_lam_viec_id` đã có từ migration `20261110160000_vi_tri_lam_viec_nhan_su`, cùng công ty/Restrict, không unique. Form HR và chi tiết vị trí cùng quản lý một liên kết; 3D HCNS chỉ đọc người ACTIVE theo quyền. Khi xóa vị trí qua ERP, action có đủ quyền/xác nhận tự bỏ gán nhân sự và audit nguyên tử trước khi xóa; FK Restrict vẫn giữ để chặn thao tác SQL làm mất liên kết. Các bảng/cột tài sản vẫn chưa triển khai.
 
 ## Danh mục hiện hành
 
@@ -74,7 +74,7 @@ Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fu
 | `dang_su_dung` | Boolean | Cho phép bố trí mới |
 | `created_at`, `updated_at` | DateTime | Thời gian tạo/cập nhật |
 
-Quan hệ Prisma: `cong_ty`, `vi_tri_cha`, `danh_sach_vi_tri_con` (không phải cột). Ràng buộc và vòng đời tại [plan vị trí](plans/LOCATION-MANAGEMENT-CHECKLIST.md). Migration `20261110100000_vi_tri_khong_gian` thêm bảng và quyền LOCATIONS, không cấp grant hoặc gán chỗ ngồi.
+Quan hệ Prisma: `cong_ty`, `vi_tri_cha`, `danh_sach_vi_tri_con`, `danh_sach_nhan_su` (không phải cột). Ràng buộc và vòng đời tại [plan vị trí](plans/LOCATION-MANAGEMENT-CHECKLIST.md). Migration `20261110100000_vi_tri_khong_gian` thêm bảng và quyền LOCATIONS, không cấp grant hoặc gán chỗ ngồi.
 
 ## `cong_ty` — Công ty
 
@@ -150,6 +150,7 @@ Quan hệ Prisma: `cong_ty`, `vi_tri_cha`, `danh_sach_vi_tri_con` (không phải
 | `ghi_chu_nhan_su_hr` | String | Có thể trống |
 | `company_id` | Int | Không NULL |
 | `department_id` | Int | Có thể trống |
+| `vi_tri_lam_viec_id` | Int | Có thể trống; FK vị trí chính cùng công ty, Restrict |
 | `created_at` | DateTime | Không NULL · Có mặc định |
 | `updated_at` | DateTime | Không NULL |
 
@@ -157,6 +158,7 @@ Quan hệ Prisma: `cong_ty`, `vi_tri_cha`, `danh_sach_vi_tri_con` (không phải
 | --- | --- | --- |
 | `cong_ty` | `cong_ty` | Một bản ghi |
 | `phong_ban` | `phong_ban` | Một bản ghi hoặc trống |
+| `vi_tri_lam_viec` | `vi_tri` | Một vị trí chính hoặc trống |
 | `danh_sach_tai_khoan` | `tai_khoan` | Danh sách |
 | `danh_sach_phong_phu_trach` | `phong_ban` | Các phòng người này phụ trách |
 

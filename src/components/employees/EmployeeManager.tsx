@@ -83,13 +83,13 @@ type Employee = NonNullable<
 >[number];
 type AccountOptions = {
   accountAccess: boolean;
-  roles: Array<{ id: number; ten_vai_tro: string }>;
+  roles: Array<{ id: number; ten_vai_tro: string; }>;
   accounts: Array<{
     id: number;
     employee_id: number | null;
     ten_dang_nhap: string;
     cho_phep_dang_nhap: boolean;
-    danh_sach_vai_tro: Array<{ vai_tro: { ten_vai_tro: string } }>;
+    danh_sach_vai_tro: Array<{ vai_tro: { ten_vai_tro: string; }; }>;
   }>;
 };
 type Department = {
@@ -112,12 +112,14 @@ export function EmployeeManager({
   accounts,
   initialDepartmentId,
   initialSearch = "",
+  workLocations,
 }: {
   initialEmployees: Employee[];
   departments: Department[];
   canManage: boolean;
   initialDepartmentId?: number;
   initialSearch?: string;
+  workLocations: { id: number; label: string; }[];
 } & AccountOptions) {
   const [search, setSearch] = useState(initialSearch);
   const [status, setStatus] = useState("ALL");
@@ -655,6 +657,10 @@ export function EmployeeManager({
                 <dl className="grid gap-4 rounded-xl border p-4 text-sm sm:grid-cols-2">
                   {[
                     ["Phòng ban", selected.phong_ban?.ten_phong_ban],
+                    [
+                      "Vị trí làm việc",
+                      selected.workLocationPath || "Chưa xác định vị trí",
+                    ],
                     ["Điện thoại", selected.so_dien_thoai],
                     ["Email", selected.thu_dien_tu],
                     ["Địa chỉ", selected.dia_chi],
@@ -756,6 +762,7 @@ export function EmployeeManager({
               key={editing?.id ?? "new"}
               employee={editing}
               departments={departments}
+              workLocations={workLocations}
               accountAccess={accountAccess}
               roles={roles}
               accounts={accounts}
@@ -772,7 +779,7 @@ function displayDate(value: Date | null) {
     ? new Date(value).toLocaleDateString("vi-VN", { timeZone: "UTC" })
     : null;
 }
-function EmployeeAvatar({ employee }: { employee: Employee }) {
+function EmployeeAvatar({ employee }: { employee: Employee; }) {
   return (
     <Avatar className="size-11" aria-hidden="true">
       <AvatarImage src={employee.duong_dan_anh_dai_dien ?? undefined} alt="" />
@@ -794,10 +801,12 @@ function EmployeeForm({
   accountAccess,
   roles,
   accounts,
+  workLocations,
 }: {
   employee: Employee | null;
   departments: Department[];
   done: () => void;
+  workLocations: { id: number; label: string; }[];
 } & AccountOptions) {
   const router = useRouter();
   const [credentials, setCredentials] = useState<{
@@ -816,6 +825,10 @@ function EmployeeForm({
       accountRoleIds: [],
       fullName: employee?.ho_ten ?? "",
       position: employee?.chuc_vu ?? "",
+      workLocationId: employee?.vi_tri_lam_viec_id ?? null,
+      locationVersion: employee
+        ? new Date(employee.updated_at).toISOString()
+        : undefined,
       departmentId: employee?.department_id ?? undefined,
       notes: employee?.ghi_chu ?? "",
       phone: employee?.so_dien_thoai ?? "",
@@ -839,6 +852,35 @@ function EmployeeForm({
     { name: "dateOfBirth", label: "Ngày sinh", type: "date" },
     { name: "joinDate", label: "Ngày vào làm", type: "date" },
   ] as const;
+  const [moveValues, setMoveValues] = useState<CreateEmployeeInput | null>(null);
+  function submitValues(values: CreateEmployeeInput) {
+    start(async () => {
+      const r = employee
+        ? await updateEmployee({ ...values, id: employee.id })
+        : await createEmployee(values);
+      if (!r.success) {
+        if ("fieldErrors" in r && r.fieldErrors) {
+          let focusFirst = true;
+          for (const [key, messages] of Object.entries(r.fieldErrors)) {
+            if (key in EmployeeFieldsSchema.shape && messages?.[0]) {
+              form.setError(
+                key as keyof CreateEmployeeInput,
+                { type: "server", message: messages[0] },
+                { shouldFocus: focusFirst },
+              );
+              focusFirst = false;
+            }
+          }
+        }
+        toast.error(r.message);
+        return;
+      }
+      toast.success(r.message);
+      router.refresh();
+      if (r.credentials) setCredentials(r.credentials);
+      else done();
+    });
+  }
   if (credentials)
     return <AccountCredentials credentials={credentials} done={done} />;
   return (
@@ -847,33 +889,11 @@ function EmployeeForm({
         className="space-y-5"
         noValidate
         onSubmit={form.handleSubmit(
-          (values) =>
-            start(async () => {
-              const r = employee
-                ? await updateEmployee({ ...values, id: employee.id })
-                : await createEmployee(values);
-              if (!r.success) {
-                if ("fieldErrors" in r && r.fieldErrors) {
-                  let focusFirst = true;
-                  for (const [key, messages] of Object.entries(r.fieldErrors)) {
-                    if (key in EmployeeFieldsSchema.shape && messages?.[0]) {
-                      form.setError(
-                        key as keyof CreateEmployeeInput,
-                        { type: "server", message: messages[0] },
-                        { shouldFocus: focusFirst },
-                      );
-                      focusFirst = false;
-                    }
-                  }
-                }
-                toast.error(r.message);
-                return;
-              }
-              toast.success(r.message);
-              router.refresh();
-              if (r.credentials) setCredentials(r.credentials);
-              else done();
-            }),
+          (values) => {
+            if (employee?.vi_tri_lam_viec_id && values.workLocationId && values.workLocationId !== employee.vi_tri_lam_viec_id)
+              setMoveValues(values);
+            else submitValues(values);
+          },
           () =>
             toast.error(
               "Vui lòng kiểm tra các trường được đánh dấu trong biểu mẫu.",
@@ -1022,6 +1042,59 @@ function EmployeeForm({
                 )}
               />
             </div>
+            <FormField
+              control={form.control}
+              name="workLocationId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Vị trí làm việc</FormLabel>
+                  <Select
+                    value={field.value ? String(field.value) : "NONE"}
+                    onValueChange={(value) =>
+                      field.onChange(value === "NONE" ? null : Number(value))
+                    }
+                  >
+                    <FormControl>
+                      <SelectTrigger
+                        ref={field.ref}
+                        onBlur={field.onBlur}
+                        className="min-h-10 h-auto w-full text-left whitespace-normal [&_span]:break-words"
+                      >
+                        <SelectValue placeholder="Chưa xác định vị trí" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="NONE">Chưa xác định vị trí</SelectItem>
+                      {employee?.vi_tri_lam_viec_id &&
+                        !workLocations.some(
+                          (row) => row.id === employee.vi_tri_lam_viec_id,
+                        ) && (
+                          <SelectItem
+                            value={String(employee.vi_tri_lam_viec_id)}
+                            disabled
+                          >
+                            {employee.workLocationPath} (không còn khả dụng)
+                          </SelectItem>
+                        )}
+                      {workLocations.map((row) => (
+                        <SelectItem
+                          key={row.id}
+                          value={String(row.id)}
+                          className="whitespace-normal"
+                        >
+                          {row.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Chọn phòng, khu vực hoặc chỗ ngồi. Chọn “Chưa xác định vị trí” để
+                    gỡ liên kết.
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="notes"
@@ -1181,8 +1254,8 @@ function EmployeeForm({
                                           checked
                                             ? [...(field.value ?? []), r.id]
                                             : (field.value ?? []).filter(
-                                                (id) => id !== r.id,
-                                              ),
+                                              (id) => id !== r.id,
+                                            ),
                                         )
                                       }
                                     />
@@ -1206,6 +1279,22 @@ function EmployeeForm({
           {pending ? "Đang lưu…" : "Lưu hồ sơ"}
         </Button>
       </form>
+      <Dialog open={Boolean(moveValues)} onOpenChange={(open) => { if (!open && !pending) setMoveValues(null); }}>
+        <DialogContent className="max-h-[85vh] w-[95vw] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Chuyển vị trí nhân sự?</DialogTitle>
+            <DialogDescription>{employee?.ho_ten} đang có vị trí làm việc. Xác nhận chuyển và lưu hồ sơ.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 rounded-lg bg-muted/40 p-3 text-sm">
+            <p>Từ: {employee?.workLocationPath}</p>
+            <p className="font-medium">Đến: {workLocations.find((row) => row.id === moveValues?.workLocationId)?.label}</p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" disabled={pending} onClick={() => setMoveValues(null)}>Hủy</Button>
+            <Button disabled={pending} onClick={() => { if (moveValues) { submitValues({ ...moveValues, confirmLocationMove: true }); setMoveValues(null); } }}>Chuyển vị trí và lưu</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 }

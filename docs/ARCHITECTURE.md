@@ -1,5 +1,28 @@
 # TÀI LIỆU KIẾN TRÚC TỔNG THỂ & SỔ BỘ THƯ VIỆN
 
+## Tòa nhà 3D cùng phong cách HCNS — 10/11/2026
+
+- `/office-3d` dùng `getOfficeBuilding`, `building-layout.ts`/`building-mapping.ts` và các component trong `src/components/office-3d/building/`. Viewer tải client, Fiber/Drei, camera trực giao, `frameloop="demand"`, DPR tối đa 1,5; bỏ viewer Three.js thủ công và `RoomDetailSheet` ghép người theo phòng ban.
+- `HcnsRoomModel.tsx` dùng chung hình học HCNS cho tòa nhà và trang chi tiết; góc xoay/thu đồng tỷ lệ nằm trong cấu hình hình học. `/office-3d/hcns` quay về tầng 2/phòng HCNS qua query của trang tòa nhà.
+- Ánh xạ riêng `var/office-3d/building.json` (ngoài Git, sao lưu cùng `hcns.json` và DB) nối ID tòa nhà/tầng/phòng đã kiểm chứng. Không tự tạo vị trí hoặc đoán phòng họp từ tên. Khi triển khai trên môi trường khác phải cấp ánh xạ đúng DB; thiếu/sai công ty hiển thị chưa thiết lập.
+- Cả menu/page/action tòa nhà dùng LOCATIONS; HR riêng cho người ACTIVE có FK nằm trong nhánh vị trí đã xác nhận. Không đếm nhân sự công ty như người trong tòa nhà, không truy vấn tài sản. Không đổi schema, migration, dependency, biến môi trường hoặc cấp quyền.
+
+## Liên kết nhân sự và vị trí hai chiều — 10/11/2026
+
+- `/locations` và bảng chi tiết `/office-3d/hcns` dùng chung `LocationPeople.tsx` cho tìm/gán/chuyển/bỏ gán nhân sự. Trang HCNS chỉ nạp lựa chọn nhân sự ACTIVE khi có HR MANAGE, liên kết điểm qua ID đã xác minh; người chỉ xem vẫn nhận danh sách tại điểm. `assignEmployeeLocation` cập nhật duy nhất FK vị trí, dùng cùng kiểm tra chuyển/phiên bản với form HR; mutation vẫn Prisma trực tiếp trong action. Danh sách tối thiểu cần HR VIEW, thay đổi cần HR MANAGE; không thêm schema/dependency.
+- Xóa vị trí xem trước danh sách bị ảnh hưởng, kiểm tra lại phiên bản vị trí và tập người trong khóa công ty/phân quyền; tự đặt FK về null và ghi audit từng người + vị trí trong một transaction. Giữ schema/FK Restrict/trigger, không migration hoặc đổi quyền. Không truy vấn bảng tài sản chưa có.
+- `tsconfig.json` loại các thư mục đầu ra/tạm khỏi kiểm tra TypeScript; bản sao app dùng kiểm thử nằm trong `outputs/`, không bị biên dịch như nguồn ứng dụng. Không thêm thư viện hoặc biến môi trường vận hành.
+
+## Bản thử không gian HCNS — 10/11/2026
+
+- [Plan 3D](plans/OFFICE-3D-CHECKLIST.md): `/office-3d/hcns`, đọc 10 vị trí từ DB qua `src/actions/office-room.ts`; client/viewer tại `src/components/office-3d/hcns/`, hình học và kiểm tra ánh xạ tại `src/lib/office-3d/`.
+- Thêm `@react-three/fiber@9.8.2` và `@react-three/drei@10.7.9`, tương thích React 19 hiện tại; giữ Three.js hiện có. Viewer tải phía client bằng dynamic import, vẽ khi cần; không tải font/texture/model từ CDN. Không thay Next.js hoặc Prisma.
+- Ánh xạ cục bộ `var/office-3d/hcns.json` (ngoài Git) liên kết khóa hình khối với ID vị trí và công ty. Sao lưu/triển khai file cùng DB, không tự tạo lại vị trí khi thiếu file. Chưa cần biến môi trường mới hoặc bảng 3D riêng.
+- Ghi chú nguồn ở DB/backup cục bộ, không tự phân công từ tên viết trên bản phác. Form HR đã có chọn/chuyển/gỡ vị trí chính; bản HCNS đọc người ACTIVE qua FK khi có HR VIEW/MANAGE bên cạnh LOCATIONS. Chưa tạo tài sản; khung tòa nhà đã được thay bằng cùng phong cách và dùng liên kết vị trí như mục đầu tài liệu.
+- Migration `20261110160000_vi_tri_lam_viec_nhan_su` thêm FK nullable cùng công ty/Restrict, kiểm tra loại/trạng thái và bảo vệ vị trí có người tham chiếu. Đã thử backup khôi phục trước khi áp dụng local, giữ 15 bảng cũ, không seed phân công. `src/lib/work-location.ts` kiểm tra danh mục chọn; action HR có version và audit nguyên tử. Không thêm dependency/biến môi trường cho liên kết HR.
+- Cấu hình hướng bàn dùng `facingDegrees` (độ), chuyển sang radian tại viewer; bàn 1 = 180°, bàn 9/10 = 90°. Không dựng ghế theo yêu cầu.
+- Nội thất là geometry dùng lại, không asset tải ngoài. Nhãn chọn là DOM chiếu theo camera, cùng React root với trang. `frameloop="demand"`, giới hạn DPR 1,5, shadow map 1024; kiểm thử/giới hạn đo tại plan 3D.
+
 ## Không gian cá nhân — triển khai 05/11/2026
 
 [Thiết kế tài khoản và không gian cá nhân](THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md) triển khai DEFAULT, tự sinh tên đăng nhập, `/profile`, dashboard theo người đăng nhập và quản lý quyền workflow tập trung tại `/roles`. Tái sử dụng bảng hiện có; dự kiến thêm cờ đổi mật khẩu lần đầu và lưu ảnh ngoài Git. Đã thêm cờ `bat_buoc_doi_mat_khau`, `/profile`, GET `/media/avatar/[file]` (phục vụ ảnh có kiểm tra quyền) và các Server Actions cá nhân. Dependency trực tiếp `sharp@0.35.5` giải mã/chuẩn hóa ảnh sang WebP, bỏ metadata, giới hạn 16 triệu pixel; đầu vào 2 MB, body Server Actions 3 MB. Ảnh lưu tại `var/avatars/` ngoài Git; tùy chọn env `AVATAR_STORAGE_DIR` trỏ tới volume bền vững khi triển khai (không thay `.env` hiện tại). Sao lưu thư mục ảnh cùng DB; không đặt vào `public/`. Session đọc cờ đổi mật khẩu từ DB mỗi request; các chức năng nghiệp vụ bị chặn cho tới khi đổi xong. Đổi mật khẩu thu hồi phiên cũ và cấp lại cookie phiên hiện tại. Các mutation profile/role/account cùng khóa hàng công ty trước advisory phân quyền, thống nhất với HR/workflow. Khóa cấp username toàn hệ thống `(260127, 0)` sau khóa công ty/phân quyền; không cộng quyền giữa các tài khoản. Quyền workflow cấp tại `/roles`; màn hình workflow chỉ đọc quyền, không có action tự cấp hoặc xác nhận kích hoạt. Menu workflow chỉ hiện khi có quyền workflow. Dashboard đếm theo người/quyền và phân trang 10 dòng. Kiểm chứng: 38 E2E + 7 unit, TypeScript/lint và schema diff đạt; build Webpack đạt (còn cảnh báo bảo mật Next.js/middleware có sẵn). DB giữ nguyên 73 người, 61 tài khoản, 19 phòng và toàn bộ grant cũ; chỉ thêm DEFAULT không grant. Theo dõi tại [checklist](plans/PROFILE-DASHBOARD-CHECKLIST.md).
@@ -168,11 +191,11 @@ graph TD
 - `/locations` nằm trong Hệ thống & cấu hình, chỉ hiện theo LOCATIONS VIEW/MANAGE. Thêm bảng `vi_tri`, mã tự cấp bất biến, cây cùng công ty, kiểm tra vòng lặp, trạng thái và audit. Không tự cấp quyền hoặc nhập dữ liệu mẫu.
 - Cấu trúc mới: `src/actions/location.ts`, `src/lib/validations/location.ts`, `src/lib/location-tree.ts`, `src/components/locations/LocationManager.tsx`, `src/app/(dashboard)/locations/`; kiểm thử tại `tests/e2e/locations.spec.ts`.
 - Migration `20261110100000_vi_tri_khong_gian` đã áp dụng sau backup/khôi phục thử DB tạm; Prisma Client đã generate. Không cài/gỡ dependency hoặc đổi biến môi trường. Khởi động lại dev/Studio sau thay schema để nạp Client mới.
-- [Plan vị trí](plans/LOCATION-MANAGEMENT-CHECKLIST.md) sở hữu thiết kế và nghiệm thu; HR/tài sản mới dùng danh mục chọn ở bước tích hợp sau, chưa thay mapping 3D.
+- [Plan vị trí](plans/LOCATION-MANAGEMENT-CHECKLIST.md) sở hữu thiết kế và nghiệm thu; HR đã dùng danh mục chọn tối thiểu; tài sản tích hợp sau. Tòa nhà và HCNS đọc vị trí qua ánh xạ ID riêng theo [plan 3D](plans/OFFICE-3D-CHECKLIST.md); cách ghép phòng ban vào không gian của khung cũ đã gỡ.
 
 ### Tài sản và không gian — thiết kế lưu trữ
 
-Phân hệ tài sản cũ đã gỡ khỏi DB ngày 31/10/2026. [Kế hoạch tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md) cập nhật 10/11 thiết kế mức 1: tài sản sở hữu hai bảng `loai_tai_san`, `tai_san`. [Vị trí & không gian](plans/LOCATION-MANAGEMENT-CHECKLIST.md) là phân hệ dùng chung riêng, sở hữu `vi_tri`, menu `/locations` và quyền LOCATIONS; triển khai trước tài sản. HR dự kiến thêm FK vị trí làm việc chính nullable ở bước sau, rồi mới nối 3D; quyền quản lý tài sản không bao gồm sửa cây vị trí. Dùng lại RBAC và nhật ký hiện có. Vật tư tiêu hao tách làm sau. Phần tài sản và liên kết HR/3D vẫn là thiết kế; nền vị trí đã triển khai theo mục trên. Không đổi dependency/môi trường; 3D nhân sự vẫn hoạt động độc lập.
+Phân hệ tài sản cũ đã gỡ khỏi DB ngày 31/10/2026. [Kế hoạch tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md) cập nhật 10/11 thiết kế mức 1: tài sản sở hữu hai bảng `loai_tai_san`, `tai_san`. [Vị trí & không gian](plans/LOCATION-MANAGEMENT-CHECKLIST.md) là phân hệ dùng chung riêng, sở hữu `vi_tri`, menu `/locations` và quyền LOCATIONS; triển khai trước tài sản. HR đã có FK vị trí làm việc chính nullable; quyền quản lý tài sản không bao gồm sửa cây vị trí. Dùng lại RBAC và nhật ký hiện có. Vật tư tiêu hao tách làm sau. Tài sản vẫn là thiết kế. Bản 3D HCNS đọc vị trí/ghi chú và người ACTIVE đã gán theo quyền HR, chưa có hồ sơ tài sản; 3D nhân sự cũ vẫn hoạt động độc lập.
 
 ### Quy ước tên vật lý PostgreSQL — 22/10/2026
 
@@ -250,8 +273,10 @@ SGDERP/
 | | `lucide-react` | `^1.52.0` | Bộ biểu tượng vector giao diện chuẩn nhất quán. |
 | | `sonner` | `^2.0.8` | Hệ thống Toast thông báo trạng thái thao tác người dùng. |
 | | `clsx`, `tailwind-merge`, `cva` | Latest | Hợp nhất class style an toàn qua hàm helper `cn()`. |
-| **Không Gian Số 3D** | `three` | `^0.182.0` | **Engine WebGL dựng mô hình Tòa nhà & Mặt bằng 3D Digital Twin.** |
-| | `@types/three` | `^0.182.0` | Type definitions đầy đủ cho Three.js. |
+| **Không Gian Số 3D** | `three` | `^0.186.1` | Engine WebGL dựng mô hình tòa nhà và nội thất. |
+| | `@types/three` | `^0.186.0` | Type definitions cho Three.js. |
+| | `@react-three/fiber` | `^9.8.2` | Quản lý scene tòa nhà và HCNS bằng React, tải client và vẽ theo yêu cầu. |
+| | `@react-three/drei` | `^10.7.9` | CameraControls và hình khối bo góc dùng lại. |
 | **Ảnh đại diện** | `sharp` | `^0.35.5` | Kiểm tra, giới hạn kích thước, chuẩn hóa ảnh cá nhân sang WebP trên server. |
 | **Bảo Mật & Xác Thực** | `jose` | `^6.2.12` | Ký & giải mã JWT Session Cookie cho kiến trúc Edge/Serverless. |
 | | `bcryptjs` | `^3.0.3` | Băm mật khẩu tài khoản người dùng với Salt. |

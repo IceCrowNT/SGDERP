@@ -310,7 +310,7 @@ test("last active administrator cannot remove own admin role", async ({
     }),
   ).toBe(1);
 });
-test("HR list and 3D count people, including people with no account", async ({
+test("HR list counts people, including people with no account", async ({
   page,
   context,
 }) => {
@@ -340,9 +340,6 @@ test("HR list and 3D count people, including people with no account", async ({
   await expect(
     page.getByText(new RegExp(`${count} đang làm việc theo hồ sơ`)),
   ).toBeVisible();
-  await page.goto("/office-3d");
-  await expect(page.getByRole("heading", { name: "Bản đồ 3D tòa nhà" })).toBeVisible();
-  await expect(page.getByText(`${count} CBNV`, { exact: true })).toBeVisible();
   expect(
     await p.tai_khoan.count({ where: { employee_id: added.id } }),
   ).toBe(0);

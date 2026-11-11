@@ -315,7 +315,7 @@ test("locations: tree CRUD, move confirmation, history, concurrent guards, permi
   const remove = await removing;
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(await db.vi_tri.findUnique({ where: { id: child.id } })).toBeNull();
-  expect(await replay(page, history, child.id)).toContain("Xóa vị trí trống");
+  expect(await replay(page, history, child.id)).toContain("Xóa vị trí");
   const a = await db.vi_tri.create({
     data: {
       company_id: company,

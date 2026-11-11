@@ -59,7 +59,7 @@ export const menuGroups: MenuGroup[] = [
     items: [
       { label: "Hồ sơ nhân sự", href: "/employees", icon: Users },
       { label: "Cơ cấu phòng ban", href: "/departments", icon: Building2 },
-      { label: "Bản đồ 3D Tòa nhà", href: "/office-3d", icon: Cuboid, badge: "3D" },
+      { label: "Bản đồ 3D Tòa nhà", href: "/office-3d", icon: Cuboid, badge: "3D", requiredModule: "LOCATIONS" },
     ],
   },
   {

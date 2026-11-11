@@ -1,6 +1,6 @@
 # Kế hoạch nhân sự, phòng ban và tài khoản
 
-Cập nhật: **06/11/2026**. Nền chức năng đã triển khai, đang ở mức thử nghiệm. Database local vừa được tạo lại cho demo: **72 nhân sự, 1 tài khoản quản trị, 18 phòng ban**; đây không phải số lượng cố định của hệ thống.
+Cập nhật: **10/11/2026**. Nền chức năng đã triển khai, đang ở mức thử nghiệm. Database local vừa được tạo lại cho demo: **72 nhân sự, 1 tài khoản quản trị, 18 phòng ban**; đây không phải số lượng cố định của hệ thống.
 
 Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 
@@ -14,6 +14,13 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 
 - [x] Phòng ban có số liệu cơ cấu/người phụ trách, giữ cây và sơ đồ hiện có. Giao diện nhân sự tiếp tục được thu gọn theo mục Danh bạ ở trên; không đổi quyền, nguồn hoặc dữ liệu.
 - [x] TypeScript/lint đạt; nhóm nhân sự/tài khoản chạy lại 14/14 E2E đạt sau sửa bảng responsive dùng chung DOM. Kiểm tra Chrome desktop/mobile: nhân sự, phòng ban không tràn ngang; tìm kiếm và cây giữ nguyên hành vi.
+
+## Gán vị trí hai chiều — 10/11/2026
+
+- [x] Tái sử dụng luồng gán vị trí tại bảng chi tiết 3D HCNS, giữ quyền HR riêng và chỉ cập nhật FK. Phạm vi/kiểm chứng tại [plan 3D](OFFICE-3D-CHECKLIST.md).
+- [x] Form HR và chi tiết vị trí dùng cùng FK và quy tắc chuyển; action tại vị trí chỉ cập nhật chỗ làm việc, không ghi đè các trường hồ sơ khác. Người đã gán nơi khác cần xác nhận; version cũ bị từ chối, danh sách tại vị trí được làm mới để chọn lại.
+- [x] Xóa vị trí qua ERP tự bỏ gán nhân sự trong cùng transaction và audit; đủ LOCATIONS MANAGE + HR MANAGE khi có người, không đổi ID hoặc trạng thái người. Quy tắc chi tiết tại [plan vị trí](LOCATION-MANAGEMENT-CHECKLIST.md).
+- [x] 11 E2E liên quan và 8 unit đạt; TypeScript/lint đạt. Kiểm chứng UI desktop/mobile/sáng/tối, quyền, đồng thời và audit rollback trên DB tạm đã dọn; fingerprint 15 bảng vận hành giữ nguyên. Kết quả chi tiết và bằng chứng tại [plan vị trí](LOCATION-MANAGEMENT-CHECKLIST.md).
 
 ## Đã hoàn thành
 
@@ -55,11 +62,16 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 - [ ] Dùng thử quyền với tài khoản thực tế và cấu hình [workflow đã triển khai thử nghiệm](WORKFLOW-CHECKLIST.md).
 - [ ] Chốt ai được xem trường HR nhạy cảm, phạm vi danh bạ và thông tin hiển thị trên 3D.
 - [ ] Khi cần: xuất–nhập Excel theo mã ERP, xem trước chênh lệch; không ghi đè từ nguồn cũ hoặc dùng STT/tên làm khóa.
-- [x] Chốt hướng dùng chung bảng `vi_tri` với tài sản; thiết kế tại [plan vị trí](LOCATION-MANAGEMENT-CHECKLIST.md). Dự kiến thêm `nhan_su.vi_tri_lam_viec_id` nullable để gán vị trí chính, không tạo danh mục vị trí nhân sự riêng.
-- [ ] Sau nền vị trí/tài sản: thêm FK vị trí làm việc cùng công ty, Restrict; form HR chọn danh mục tối thiểu theo HR MANAGE, không cấp quyền sửa cây vị trí. Gán vị trí và audit cùng transaction, khóa theo plan vị trí; bổ sung chặn xóa/ngừng dùng vị trí còn nhân sự ở mọi trạng thái. Kiểm thử cấp/thu hồi quyền, khác công ty và gán đồng thời với ngừng dùng/xóa.
-- [ ] Bước riêng sau đó: lập plan 3D và chuyển sang đọc vị trí đã xác nhận. Hiện 3D vẫn ghép mã phòng trong code; không tự gán vị trí theo chức vụ/phòng công tác.
+- [x] Chốt hướng dùng chung bảng `vi_tri` với tài sản; thiết kế tại [plan vị trí](LOCATION-MANAGEMENT-CHECKLIST.md).
+- [x] Gán/chuyển/gỡ vị trí trong hồ sơ theo HR MANAGE; hiển thị đường dẫn vị trí cho HR VIEW. 3D HCNS đọc người đang làm việc đã được gán, không suy từ ghi chú hoặc phòng ban.
+- [x] 8/8 E2E (3 gán vị trí, 2 danh bạ, 3 HCNS) và 5 unit đạt. Kiểm tra gán/chuyển/gỡ, audit, HR MANAGE không cần LOCATIONS, HR VIEW không sửa, quyền vị trí không lộ người, action khác công ty/version cũ. TypeScript/lint đạt; đã xem ảnh form desktop/mobile và mô hình sáng/tối, không lỗi JS hoặc tràn ngang. Kiểm thử ghi chỉ chạy trên DB khôi phục tạm; `employee-location.spec.ts` tự bỏ qua khi không dùng DB `sdg_hr_location_test_*` có ánh xạ HCNS.
+- [x] Bản đồ tòa nhà đã chuyển sang đọc người ACTIVE theo nhánh vị trí đã xác nhận, cần LOCATIONS + HR; bỏ ghép người theo mã phòng ban. Tòa nhà và HCNS dùng cùng nội thất, kiểm chứng tại [plan 3D](OFFICE-3D-CHECKLIST.md).
 
 ## Thiết kế DB cần giữ
+
+- `nhan_su.vi_tri_lam_viec_id` nullable → `vi_tri(id, company_id)`, Restrict, không unique: mỗi người một vị trí chính, một vị trí có thể nhiều người. Chỉ gán mới người ACTIVE vào PHONG/KHU_VUC/CHO_NGOI với cả nhánh đang dùng; nghỉ việc giữ liên kết nhưng không hiện là người đang ngồi trên 3D. Chuyển phòng ban không tự chuyển vị trí.
+- Gán vị trí khóa công ty, kiểm tra quyền hiện hành và phiên bản hồ sơ khi đổi liên kết, lưu cùng audit HR. Client cũ không gửi trường này thì giữ nguyên liên kết. Ngừng dùng/đổi sang loại không hợp lệ vẫn chặn người tham chiếu. Xóa vị trí có xác nhận sẽ tự gỡ liên kết mọi người (kể cả đã nghỉ), theo plan vị trí; giữ FK Restrict và audit nguyên tử. Nghỉ việc riêng không tự giải phóng chỗ.
+- Migration `20261110160000_vi_tri_lam_viec_nhan_su` đã thử trên DB khôi phục từ backup rồi áp dụng local: fingerprint 15 bảng cũ giữ nguyên (bỏ cột mới khỏi phép so sánh), không seed phân công hoặc thay tài khoản/quyền. Có FK kép và trigger kiểm tra loại/trạng thái/đồng thời; Prisma Client đã generate. Bằng chứng tại `outputs/hr-locations/` ngoài Git.
 
 - `nhan_su` là người thật; `tai_khoan.employee_id` nullable, không unique (0..N tài khoản/người). Không khôi phục các cột `legacy*` đã bỏ hoặc chép hồ sơ người vào tài khoản; `ten_hien_thi` là nhãn tài khoản. Nhật ký hoạt động tham chiếu tài khoản, không dùng số tài khoản làm số nhân sự.
 - Nhân sự gắn phòng bằng `(department_id, company_id)`; tài khoản gắn người bằng `(employee_id, company_id)`. Phòng là nút của cây cùng công ty; chức vụ chỉ là text. `nguoi_phu_trach_id` nullable, FK kép cùng công ty, Restrict, không unique: một người có thể phụ trách nhiều phòng, kể cả phòng khác nơi công tác. Chỉ chọn mới người ACTIVE; nghỉ việc giữ liên kết để bàn giao, không tự chọn người thay.

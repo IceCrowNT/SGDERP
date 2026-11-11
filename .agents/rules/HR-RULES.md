@@ -10,6 +10,13 @@ Nghiệp vụ hiện hành của HR; tiến độ và thiết kế DB tại [Pla
 - Phòng ban cho sửa tên/mã/mô tả/cha; chặn cha khác công ty, chính mình hoặc hậu duệ. Chỉ xóa phòng không còn con/nhân sự ở bất kỳ trạng thái nào. Khóa và audit theo mục DB của plan.
 - Chọn head cùng công ty, chỉ chọn mới người ACTIVE; giữ head cũ không ACTIVE khi sửa trường khác và cảnh báo cần bàn giao. Không tự chọn người thay, không suy từ tên/chức vụ, không đổi vị trí 3D khi đổi cơ cấu.
 
+## Vị trí làm việc
+
+- HR MANAGE chọn/chuyển/gỡ vị trí trong hồ sơ, chi tiết vị trí hoặc bảng chi tiết 3D HCNS; cùng FK, không lưu danh sách độc lập. Chuyển giữa hai vị trí phải xác nhận. HR VIEW xem đường dẫn/danh sách người. Chọn vị trí trong form HR không cần LOCATIONS VIEW và không có quyền sửa cây; truy cập trang Vị trí/3D cần quyền LOCATIONS riêng.
+- Một người có tối đa một vị trí chính; nhiều người được dùng chung một vị trí. Chỉ gán mới người đang làm việc vào phòng/khu vực/chỗ ngồi còn sử dụng cùng công ty, kể cả tổ tiên. Không tự gán theo phòng ban, tên ghi chú hoặc chức vụ.
+- Chưa xác minh thì để trống. Nghỉ việc giữ liên kết để tra cứu; 3D chỉ hiện người ACTIVE. Chuyển người không tự chuyển thiết bị hoặc đổi phòng công tác.
+- Đổi liên kết kiểm tra phiên bản hồ sơ, khóa cùng luồng quản lý vị trí và ghi audit nguyên tử. Ngừng dùng/đổi loại không phù hợp vẫn cần xử lý người liên kết. Xóa vị trí qua ERP tự đưa mọi người liên kết về chưa xác định vị trí trong cùng transaction, sau xem trước và xác nhận theo [rule vị trí](LOCATION-MANAGEMENT-RULES.md); không xóa người hoặc thay trạng thái làm việc.
+
 ## Cấp tài khoản và nghỉ việc
 
 - `createAccount` là tùy chọn, các trường nâng cao là `accountUsername/accountPassword/accountRoleIds`. Không chọn thì chỉ tạo hồ sơ; tạo kèm cần cả HR MANAGE và ACCOUNTS MANAGE. Mặc định và bàn giao tài khoản theo [rule cá nhân](PROFILE-DASHBOARD-RULES.md).

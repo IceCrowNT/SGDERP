@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getEmployees } from "@/actions/employee";
+import { getLocationOptions } from "@/actions/location";
+import { locationPath } from "@/lib/location-tree";
+import { isAvailableWorkLocation } from "@/lib/work-location";
 import { EmployeeManager } from "@/components/employees/EmployeeManager";
 import { AlertCircle } from "lucide-react";
 
@@ -56,6 +59,11 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
   });
 
   const accountAccess = canManageAccounts(session);
+  const locationResult = res.canManage ? await getLocationOptions() : null;
+  const locationRows = locationResult?.success ? locationResult.rows : [];
+  const workLocations = locationRows
+    .filter((row) => isAvailableWorkLocation(row.id, locationRows))
+    .map((row) => ({ id: row.id, label: locationPath(row.id, locationRows) }));
   const roles = accountAccess
     ? await db.vai_tro.findMany({
         where: { company_id: session.companyId },
@@ -105,6 +113,7 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
         })}
         canManage={res.canManage || false}
         accountAccess={accountAccess}
+        workLocations={workLocations}
         roles={roles}
         accounts={accounts}
       />
