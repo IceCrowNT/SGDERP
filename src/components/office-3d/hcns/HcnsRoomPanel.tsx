@@ -3,33 +3,18 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   FileText,
-  Monitor,
-  Laptop,
-  Printer,
-  ScanLine,
-  Router,
   Pencil,
   MapPin,
   Users,
 } from "lucide-react";
 import { getLocations } from "@/actions/location";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { LocationPeople } from "@/components/locations/LocationPeople";
+import { LocationAssets } from "@/components/locations/LocationAssets";
 import type { LocationRow } from "@/lib/location-tree";
 import type { LocationEmployee } from "@/lib/work-location";
-import type { EquipmentKind, HcnsRoomData } from "@/lib/office-3d/hcns-layout";
+import type { HcnsRoomData } from "@/lib/office-3d/hcns-layout";
 import { cn } from "@/lib/utils";
-const equipmentLabels: Record<
-  EquipmentKind,
-  { label: string; icon: typeof Monitor }
-> = {
-  pc: { label: "Máy tính", icon: Monitor },
-  laptop: { label: "Laptop", icon: Laptop },
-  printer: { label: "Máy in", icon: Printer },
-  scanner: { label: "Máy quét", icon: ScanLine },
-  "access-point": { label: "Bộ phát Wi-Fi", icon: Router },
-};
 export function HcnsRoomPanel({
   room,
   selected,
@@ -234,6 +219,11 @@ export function HcnsRoomPanel({
                     </section>
                   )
                 )}
+                {room.canViewAssets && point.locationId !== undefined && (
+                  <LocationAssets key={`assets-${point.key}`} location={{ id: point.locationId,
+                    name: `${room.path} / ${point.name}`, active: point.state === "active" }}
+                    assets={point.assets ?? []} canManage={room.canManageAssets && point.state === "active"} />
+                )}
                 <div className="mb-3 flex items-center gap-2 text-sm font-medium">
                   <FileText className="size-4 text-muted-foreground" />
                   Ghi chú vị trí
@@ -242,28 +232,12 @@ export function HcnsRoomPanel({
                   {point.description ||
                     "Chưa có thông tin người sử dụng hoặc thiết bị trên sơ đồ."}
                 </p>
-                {point.equipment.length > 0 && (
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {point.equipment.map((kind) => {
-                      const info = equipmentLabels[kind];
-                      return (
-                        <Badge
-                          key={kind}
-                          variant="secondary"
-                          className="gap-1.5 py-1.5"
-                        >
-                          <info.icon className="size-3.5" />
-                          {info.label}
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                )}
               </>
             )}
             <p className="mt-6 border-t pt-4 text-xs leading-5 text-muted-foreground">
-              Thiết bị được minh họa theo ghi chú, chưa phải hồ sơ tài sản. Chỗ
-              chưa có ghi chú chưa được xác nhận là chỗ trống.
+              {room.canViewAssets
+                ? "Hình thiết bị đại diện theo loại; danh sách tài sản ghi đầy đủ từng hồ sơ đã gán. Ghi chú cũ chỉ để tham khảo."
+                : "Ghi chú vị trí chỉ để tham khảo; dữ liệu tài sản cần quyền xem tài sản."}
             </p>
             {room.canManage && (
               <Button

@@ -12,7 +12,7 @@ import { CreateDepartmentSchema, type CreateDepartmentInput } from "@/lib/valida
 import { toast } from "sonner";
 import { ChevronRight, ChevronDown, FolderTree, Pencil, Search, Plus, Trash2 } from "lucide-react";
 import { createDepartment, updateDepartment, deleteDepartment } from "@/actions/department";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -278,25 +278,13 @@ export function DepartmentManager({
               )} />
               <FormField control={form.control} name="parentId" render={({ field }) => (
                 <FormItem><FormLabel>Phòng ban cấp trên</FormLabel>
-                  <Select value={field.value ? String(field.value) : "root"} onValueChange={value => field.onChange(value === "root" ? null : Number(value))} disabled={isPending}>
-                    <FormControl><SelectTrigger className="w-full min-w-0"><SelectValue placeholder="Chọn cấp trên" /></SelectTrigger></FormControl>
-                    <SelectContent><SelectItem value="root">Trực thuộc công ty</SelectItem>
-                      {initialDepartments.filter(d => !excludedParents.has(d.id)).map(d => <SelectItem key={d.id} value={String(d.id)}>{parentLabel(d)}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <FormControl><SearchableSelect label="Phòng ban cấp trên" ref={field.ref} onBlur={field.onBlur} value={field.value ? String(field.value) : "root"} onValueChange={value => field.onChange(value === "root" ? null : Number(value))} disabled={isPending} options={[{ value: "root", label: "Trực thuộc công ty" }, ...initialDepartments.filter(d => !excludedParents.has(d.id)).map(d => ({ value: String(d.id), label: parentLabel(d), keywords: d.ma_phong_ban }))]} /></FormControl>
                   <FormDescription>Không chọn cấp trên nếu đây là đơn vị trực thuộc công ty.</FormDescription><FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="headEmployeeId" render={({ field }) => (
                 <FormItem><FormLabel>Người phụ trách phòng ban</FormLabel>
-                  <Select value={field.value ? String(field.value) : "none"} onValueChange={value => field.onChange(value === "none" ? null : Number(value))} disabled={isPending}>
-                    <FormControl><SelectTrigger ref={field.ref} onBlur={field.onBlur} className="w-full min-w-0"><SelectValue placeholder="Chọn người phụ trách" /></SelectTrigger></FormControl>
-                    <SelectContent><SelectItem value="none">Chưa phân công</SelectItem>
-                      {headCandidates.filter(p => p.tinh_trang_lam_viec === "ACTIVE" || p.id === editingDepartment?.nguoi_phu_trach_id).map(p => (
-                        <SelectItem key={p.id} value={String(p.id)}>{p.ho_ten} · {p.ma_nhan_su} · {p.phong_ban?.ten_phong_ban ?? "Chưa có phòng"}{p.tinh_trang_lam_viec !== "ACTIVE" ? " · Cần phân công lại" : ""}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl><SearchableSelect label="Người phụ trách phòng ban" ref={field.ref} onBlur={field.onBlur} value={field.value ? String(field.value) : "none"} onValueChange={value => field.onChange(value === "none" ? null : Number(value))} disabled={isPending} searchPlaceholder="Tìm tên, mã hoặc phòng ban…" options={[{ value: "none", label: "Chưa phân công" }, ...headCandidates.filter(p => p.tinh_trang_lam_viec === "ACTIVE" || p.id === editingDepartment?.nguoi_phu_trach_id).map(p => ({ value: String(p.id), label: p.ho_ten, description: `${p.ma_nhan_su} · ${p.phong_ban?.ten_phong_ban ?? "Chưa có phòng"}${p.tinh_trang_lam_viec !== "ACTIVE" ? " · Cần phân công lại" : ""}` }))]} /></FormControl>
                   <FormDescription>Một người có thể phụ trách nhiều phòng. Quyền sử dụng phần mềm được cấp riêng cho tài khoản.</FormDescription><FormMessage />
                 </FormItem>
               )} />

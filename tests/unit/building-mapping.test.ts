@@ -45,12 +45,12 @@ test("building resolves exact IDs and active descendants, while unmapped geometr
     row(42, 30, "KHU_VUC", { dang_su_dung: false }),
     row(43, 42, "CHO_NGOI"),
   ])!;
-  assert.equal(result.rooms.length, 22);
+  assert.equal(result.rooms.length, BUILDING_ROOMS.length);
   const room = result.rooms.find((r) => r.key === HCNS_BUILDING_KEY)!;
   assert.deepEqual([...room.locationIds].sort(), [30, 40, 41]);
   assert.equal(room.name, "Location 30");
   assert.equal(
-    result.rooms.find((r) => r.key === "t2_chutich")?.row,
+    result.rooms.find((r) => r.key === "plan_t2_trai_sau")?.row,
     undefined,
   );
 });
@@ -132,11 +132,17 @@ test("mapping rejects ambiguous IDs, duplicated geometry and unknown keys", () =
     false,
   );
 });
-test("HCNS uniform rotation fits its footprint without intersecting the adjacent stairwell", () => {
-  const room = BUILDING_ROOMS.find((r) => r.key === HCNS_BUILDING_KEY)!;
-  const stairs = BUILDING_ROOMS.find((r) => r.key === "t2_thang")!;
-  assert.equal(HCNS_PLACEMENT.rotation, Math.PI / 2);
-  assert.ok(14.8 * HCNS_PLACEMENT.scale <= room.width);
-  assert.ok(9.6 * HCNS_PLACEMENT.scale <= room.depth);
-  assert.ok(room.x + room.width / 2 < stairs.x - stairs.width / 2);
+test("confirmed departments retain binding keys at the user-confirmed source rooms", () => {
+  const hcns = BUILDING_ROOMS.find((r) => r.key === HCNS_BUILDING_KEY)!;
+  const business = BUILDING_ROOMS.find((r) => r.key === "t1_kd")!;
+  assert.equal(hcns.sourceKey, "plan_t2_phai_sau");
+  assert.equal(business.sourceKey, "plan_t1_trai_truoc");
+  assert.equal(hcns.floor, 2);
+  assert.equal(business.floor, 1);
+  assert.equal(HCNS_PLACEMENT.rotation, 0);
+  assert.equal(HCNS_PLACEMENT.scale, 1);
+  const reception = BUILDING_ROOMS.find((r) => r.key === "t1_letan")!;
+  assert.equal(reception.placed, false);
+  assert.equal(reception.outline.length, 0);
+  assert.ok(hcns.outline.length > 4, "HCNS must preserve its service-core notch");
 });

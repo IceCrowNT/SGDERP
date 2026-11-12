@@ -11,6 +11,8 @@ datasource db {
 // CORE & TENANT (Công ty thành viên / Chi nhánh trong Tập đoàn)
 // -----------------------------------------------------------------------------
 model cong_ty {
+  danh_sach_loai_tai_san loai_tai_san[]
+  danh_sach_tai_san tai_san[]
   danh_sach_vi_tri vi_tri[]
   danh_sach_mau_quy_trinh     mau_quy_trinh[]
   danh_sach_buoc_mau          buoc_mau_quy_trinh[]
@@ -38,6 +40,7 @@ model cong_ty {
 // ORGANIZATION (Phòng ban / Ban QLDA / Bộ phận trực thuộc)
 // -----------------------------------------------------------------------------
 model phong_ban {
+  danh_sach_tai_san tai_san[]
   danh_sach_ho_so_quy_trinh ho_so_quy_trinh[]
 
   id            Int     @id(map: "Department_pkey") @default(autoincrement())
@@ -82,6 +85,7 @@ model phong_ban {
 // IDENTITY & HR PROFILE (Định danh tài khoản & Hồ sơ nhân sự)
 // -----------------------------------------------------------------------------
 model nhan_su {
+  danh_sach_tai_san tai_san[]
   danh_sach_buoc_chi_dinh     buoc_mau_quy_trinh[]
   danh_sach_ho_so_gui         ho_so_quy_trinh[]
   danh_sach_buoc_duoc_giao    buoc_xu_ly_quy_trinh[]
@@ -430,6 +434,7 @@ enum TrangThaiBuocQuyTrinh {
 
 // Danh mục không gian vật lý dùng chung; nhân sự có một vị trí làm việc chính.
 model vi_tri {
+  danh_sach_tai_san tai_san[]
   danh_sach_nhan_su nhan_su[] @relation("ViTriNhanSu")
   id Int @id @default(autoincrement())
   company_id Int
@@ -448,4 +453,66 @@ model vi_tri {
   @@unique([id, company_id])
   @@unique([company_id, ma_vi_tri])
   @@index([company_id, parent_id])
+}
+
+enum TinhTrangTaiSan {
+  CHUA_XAC_NHAN
+  BINH_THUONG
+  HONG
+  DANG_SUA
+  NGUNG_SU_DUNG
+}
+
+enum HinhThucSuDungTaiSan {
+  CHUA_XAC_DINH
+  CA_NHAN
+  DUNG_CHUNG
+  CHUA_PHAN_BO
+}
+
+model loai_tai_san {
+  id Int @id @default(autoincrement())
+  company_id Int
+  cong_ty cong_ty @relation(fields: [company_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  ma_loai String @db.VarChar(50)
+  ten_loai String @db.VarChar(255)
+  mo_ta String? @db.Text
+  dang_su_dung Boolean @default(true)
+  danh_sach_tai_san tai_san[]
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([id, company_id])
+  @@unique([company_id, ma_loai])
+}
+
+model tai_san {
+  id Int @id @default(autoincrement())
+  company_id Int
+  cong_ty cong_ty @relation(fields: [company_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  ma_tai_san String @default(dbgenerated("tao_ma_tai_san()")) @db.VarChar(50)
+  ten_tai_san String @db.VarChar(255)
+  loai_tai_san_id Int
+  loai_tai_san loai_tai_san @relation(fields: [loai_tai_san_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  phong_quan_ly_id Int?
+  phong_quan_ly phong_ban? @relation(fields: [phong_quan_ly_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  nguoi_su_dung_id Int?
+  nguoi_su_dung nhan_su? @relation(fields: [nguoi_su_dung_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  vi_tri_id Int?
+  vi_tri vi_tri? @relation(fields: [vi_tri_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  tinh_trang TinhTrangTaiSan @default(CHUA_XAC_NHAN)
+  hinh_thuc_su_dung HinhThucSuDungTaiSan @default(CHUA_XAC_DINH)
+  so_serial String? @db.VarChar(255)
+  hang_model String? @db.VarChar(255)
+  ghi_chu String? @db.Text
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([id, company_id])
+  @@unique([company_id, ma_tai_san])
+  @@index([company_id, loai_tai_san_id])
+  @@index([company_id, phong_quan_ly_id])
+  @@index([company_id, nguoi_su_dung_id])
+  @@index([company_id, vi_tri_id])
+  @@index([company_id, tinh_trang])
 }

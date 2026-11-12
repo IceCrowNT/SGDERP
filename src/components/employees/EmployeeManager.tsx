@@ -42,6 +42,7 @@ import {
   EmployeeFieldsSchema,
   type CreateEmployeeInput,
 } from "@/lib/validations/user";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -342,28 +343,7 @@ export function EmployeeManager({
             </Button>
           </div>
           {view === "table" ? (
-            <Select value={departmentId} onValueChange={chooseDepartment}>
-              <SelectTrigger
-                className="h-10 w-full min-w-0 sm:max-w-sm"
-                aria-label="Lọc phòng ban"
-              >
-                <SelectValue>
-                  {department?.name ??
-                    (departmentId === "UNASSIGNED"
-                      ? "Chưa gắn phòng ban"
-                      : "Tất cả phòng ban")}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Tất cả phòng ban</SelectItem>
-                {departments.map((d) => (
-                  <SelectItem key={d.id} value={String(d.id)}>
-                    {d.name}
-                  </SelectItem>
-                ))}
-                <SelectItem value="UNASSIGNED">Chưa gắn phòng ban</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect label="Lọc phòng ban" value={departmentId} onValueChange={chooseDepartment} className="sm:max-w-sm" options={[{ value: "ALL", label: "Tất cả phòng ban" }, ...departments.map(d => ({ value: String(d.id), label: d.name })), { value: "UNASSIGNED", label: "Chưa gắn phòng ban" }]} />
           ) : overview ? (
             <Button
               className="min-h-10"
@@ -967,31 +947,7 @@ function EmployeeForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel required>Phòng ban</FormLabel>
-                    <Select
-                      value={field.value?.toString() ?? ""}
-                      onValueChange={(v) => field.onChange(Number(v))}
-                    >
-                      <FormControl>
-                        <SelectTrigger
-                          ref={field.ref}
-                          onBlur={field.onBlur}
-                          aria-required="true"
-                          className="h-10 w-full"
-                        >
-                          <SelectValue>
-                            {departments.find((d) => d.id === field.value)
-                              ?.name ?? "Chọn phòng ban"}
-                          </SelectValue>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {departments.map((d) => (
-                          <SelectItem key={d.id} value={String(d.id)}>
-                            {d.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl><SearchableSelect label="Phòng ban" ref={field.ref} onBlur={field.onBlur} aria-required="true" value={field.value?.toString() ?? ""} onValueChange={v => field.onChange(Number(v))} placeholder="Chọn phòng ban" options={departments.map(d => ({ value: String(d.id), label: d.name }))} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1048,45 +1004,11 @@ function EmployeeForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Vị trí làm việc</FormLabel>
-                  <Select
-                    value={field.value ? String(field.value) : "NONE"}
-                    onValueChange={(value) =>
-                      field.onChange(value === "NONE" ? null : Number(value))
-                    }
-                  >
-                    <FormControl>
-                      <SelectTrigger
-                        ref={field.ref}
-                        onBlur={field.onBlur}
-                        className="min-h-10 h-auto w-full text-left whitespace-normal [&_span]:break-words"
-                      >
-                        <SelectValue placeholder="Chưa xác định vị trí" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="NONE">Chưa xác định vị trí</SelectItem>
-                      {employee?.vi_tri_lam_viec_id &&
-                        !workLocations.some(
-                          (row) => row.id === employee.vi_tri_lam_viec_id,
-                        ) && (
-                          <SelectItem
-                            value={String(employee.vi_tri_lam_viec_id)}
-                            disabled
-                          >
-                            {employee.workLocationPath} (không còn khả dụng)
-                          </SelectItem>
-                        )}
-                      {workLocations.map((row) => (
-                        <SelectItem
-                          key={row.id}
-                          value={String(row.id)}
-                          className="whitespace-normal"
-                        >
-                          {row.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl><SearchableSelect label="Vị trí làm việc" ref={field.ref} onBlur={field.onBlur} value={field.value ? String(field.value) : "NONE"} onValueChange={v => field.onChange(v === "NONE" ? null : Number(v))} searchPlaceholder="Tìm tên hoặc đường dẫn vị trí…" options={[
+                      { value: "NONE", label: "Chưa xác định vị trí" },
+                      ...(employee?.vi_tri_lam_viec_id && !workLocations.some(row => row.id === employee.vi_tri_lam_viec_id) ? [{ value: String(employee.vi_tri_lam_viec_id), label: employee.workLocationPath ?? "Vị trí hiện tại", description: "Không còn khả dụng", disabled: true }] : []),
+                      ...workLocations.map(row => ({ value: String(row.id), label: row.label })),
+                    ]} /></FormControl>
                   <p className="text-xs text-muted-foreground">
                     Chọn phòng, khu vực hoặc chỗ ngồi. Chọn “Chưa xác định vị trí” để
                     gỡ liên kết.

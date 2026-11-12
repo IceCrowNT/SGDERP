@@ -1,6 +1,12 @@
 "use client";
 import { RoundedBox } from "@react-three/drei";
-import type { EquipmentKind } from "@/lib/office-3d/hcns-layout";
+import { Shape } from "three";
+import {
+  HCNS_ROOM_OUTLINE,
+  HCNS_PARTITION_Z,
+  HCNS_CONNECTING_DOOR,
+  type EquipmentKind,
+} from "@/lib/office-3d/hcns-layout";
 
 // Physical materials are independent of the HTML application theme.
 export const materials = {
@@ -206,192 +212,79 @@ export function Desk({
         size={[width - 0.2, 0.22, 0.04]}
         color={materials.woodEdge}
       />
-      {equipment.includes("pc") && (
-        <>
-          <group
-            position={[equipment.includes("laptop") ? -0.45 : 0, 0.85, -0.12]}
-          >
-            <Monitor />
-          </group>
-          <Block
-            at={[-width / 2 + 0.3, 0.29, 0]}
-            size={[0.22, 0.5, 0.4]}
-            color={materials.device}
-          />
-        </>
-      )}
-      {equipment.includes("laptop") && (
-        <group position={[equipment.includes("pc") ? 0.6 : 0, 0.85, 0.05]}>
-          <Laptop />
+      {equipment.slice(0, 3).map((kind, index, visible) => (
+        <group key={kind}
+          position={[(index - (visible.length - 1) / 2) * width / visible.length, 0.85, -0.05]}
+          scale={Math.min(0.85, width / (visible.length * 1.1), depth / 0.8)}>
+          {kind === "pc" && <Monitor />}
+          {kind === "laptop" && <Laptop />}
+          {kind === "printer" && <Printer />}
+          {kind === "scanner" && <>
+            <Block at={[0, 0.05, 0]} size={[0.5, 0.1, 0.38]} color={materials.paper} />
+            <Block at={[0, 0.11, 0]} size={[0.45, 0.025, 0.32]} color={materials.metal} />
+          </>}
+          {kind === "access-point" && <Cylinder at={[0, 0.04, 0]} radius={0.16} height={0.07} color={materials.paper} />}
+          {kind === "generic" && <Block at={[0, 0.17, 0]} size={[0.4, 0.34, 0.32]} color={materials.device} />}
         </group>
-      )}
-      {equipment.includes("printer") && (
-        <group position={[0, 0.85, 0]}>
-          <Printer />
-        </group>
-      )}
-      {equipment.includes("scanner") && (
-        <>
-          <Block
-            at={[width / 2 - 0.35, 0.9, 0.04]}
-            size={[0.5, 0.1, 0.38]}
-            color={materials.paper}
-          />
-          <Block
-            at={[width / 2 - 0.35, 0.96, 0.04]}
-            size={[0.45, 0.025, 0.32]}
-            color={materials.metal}
-          />
-        </>
-      )}
-      {equipment.includes("access-point") && (
-        <Cylinder
-          at={[-width / 2 + 0.3, 0.9, -0.16]}
-          radius={0.16}
-          height={0.07}
-          color={materials.paper}
-        />
-      )}
+      ))}
+      {equipment.includes("pc") && <Block
+        at={[-width / 2 + 0.3, 0.29, 0]} size={[0.22, 0.5, 0.4]} color={materials.device} />}
+
     </group>
+  );
+}
+
+const roomFloor = new Shape();
+HCNS_ROOM_OUTLINE.forEach(([x, z], index) => {
+  if (index === 0) roomFloor.moveTo(x, -z);
+  else roomFloor.lineTo(x, -z);
+});
+roomFloor.closePath();
+
+type Point = [number, number];
+function WallLine({ from, to }: { from: Point; to: Point }) {
+  const dx = to[0] - from[0];
+  const dz = to[1] - from[1];
+  return (
+    <Block
+      at={[(from[0] + to[0]) / 2, 0.32, (from[1] + to[1]) / 2]}
+      size={[Math.hypot(dx, dz), 0.64, 0.12]}
+      rotation={[0, -Math.atan2(dz, dx), 0]}
+      color={materials.wall}
+    />
   );
 }
 
 export function RoomShell() {
   return (
     <group>
-      <RoundedBox
-        args={[9.6, 0.3, 14.8]}
-        radius={0.1}
-        smoothness={2}
-        position={[0, -0.2, 0]}
-        receiveShadow
-      >
-        <meshStandardMaterial color={materials.slab} roughness={1} />
-      </RoundedBox>
-      <Block
-        at={[0, -0.035, 0]}
-        size={[9.2, 0.08, 14.4]}
-        color={materials.floor}
-        shadow={false}
+      <mesh position={[0, -0.025, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <shapeGeometry args={[roomFloor]} />
+        <meshStandardMaterial color={materials.floor} roughness={1} />
+      </mesh>
+      {HCNS_ROOM_OUTLINE.map((from, index) => {
+        const to = HCNS_ROOM_OUTLINE[(index + 1) % HCNS_ROOM_OUTLINE.length];
+        // The plan's doorway is in the lower-left edge. Keep an open passage,
+        // rather than placing a second wall across it or modelling door hardware.
+        if (index === 5)
+          return (
+            <group key={index}>
+              <WallLine from={from} to={[-5.15, 6.1]} />
+              <WallLine from={[-5.15, 4.65]} to={to} />
+            </group>
+          );
+        return <WallLine key={index} from={from} to={to} />;
+      })}
+      {/* Updated annotated plan: desk 01 outside; left-hand connecting door.
+          The earlier inferred store is not present in this drawing. */}
+      <WallLine
+        from={[-1.03, HCNS_PARTITION_Z]}
+        to={[HCNS_CONNECTING_DOOR.minX, HCNS_PARTITION_Z]}
       />
-      {Array.from({ length: 11 }, (_, i) => (
-        <Block
-          key={`z${i}`}
-          at={[0, 0.009, -6 + i * 1.2]}
-          size={[9.15, 0.006, 0.014]}
-          color={materials.grout}
-          shadow={false}
-        />
-      ))}
-      {Array.from({ length: 7 }, (_, i) => (
-        <Block
-          key={`x${i}`}
-          at={[-3.6 + i * 1.2, 0.009, 0]}
-          size={[0.014, 0.006, 14.35]}
-          color={materials.grout}
-          shadow={false}
-        />
-      ))}
-      <Block
-        at={[0, 1.25, -7.2]}
-        size={[9.4, 2.5, 0.15]}
-        color={materials.wall}
+      <WallLine
+        from={[HCNS_CONNECTING_DOOR.maxX, HCNS_PARTITION_Z]}
+        to={[5.15, HCNS_PARTITION_Z]}
       />
-      <Block
-        at={[-4.6, 0.36, 0]}
-        size={[0.15, 0.72, 14.4]}
-        color={materials.wall}
-      />
-      {/* Right wall with the entrance shown on the supplied sketch. */}
-      <Block
-        at={[4.6, 0.48, -5.9]}
-        size={[0.15, 0.96, 2.6]}
-        color={materials.wall}
-      />
-      <Block
-        at={[4.6, 0.48, 1.85]}
-        size={[0.15, 0.96, 10.7]}
-        color={materials.wall}
-      />
-      <group position={[4.6, 0, -4.6]} rotation={[0, -Math.PI / 2, 0]}>
-        <Door width={1.1} />
-      </group>
-      {/* Partition: confirmed doorway; exact opening position awaits measurement. */}
-      <Block
-        at={[-1.85, 0.38, 0.3]}
-        size={[5.5, 0.76, 0.14]}
-        color={materials.wall}
-      />
-      <Block
-        at={[3.35, 0.38, 0.3]}
-        size={[2.5, 0.76, 0.14]}
-        color={materials.wall}
-      />
-      <group position={[0.9, 0, 0.3]}>
-        <Door width={1.2} />
-      </group>
-      {/* Store occupies the upper-right corner of the partition. */}
-      <Block
-        at={[3.35, 0.75, -2.4]}
-        size={[2.5, 1.5, 0.12]}
-        color={materials.wall}
-      />
-      <Block
-        at={[2.1, 0.75, -2.12]}
-        size={[0.12, 1.5, 0.55]}
-        color={materials.wall}
-      />
-      <Block
-        at={[2.1, 0.75, -0.3]}
-        size={[0.12, 1.5, 1.2]}
-        color={materials.wall}
-      />
-      <group position={[2.1, 0, -1.85]} rotation={[0, -Math.PI / 2, 0]}>
-        <Door width={0.95} />
-      </group>
-      <Block
-        at={[3.35, 0.015, -1.05]}
-        size={[2.35, 0.025, 2.55]}
-        color={materials.grout}
-        shadow={false}
-      />
-      <Block
-        at={[0, 0.08, -7.1]}
-        size={[9.15, 0.16, 0.035]}
-        color={materials.woodEdge}
-        shadow={false}
-      />
-    </group>
-  );
-}
-function Door({ width }: { width: number }) {
-  return (
-    <group>
-      {[0, width].map((x) => (
-        <Block
-          key={x}
-          at={[x, 1.05, 0]}
-          size={[0.075, 2.1, 0.13]}
-          color={materials.woodEdge}
-        />
-      ))}
-      <Block
-        at={[width / 2, 2.1, 0]}
-        size={[width + 0.075, 0.075, 0.13]}
-        color={materials.woodEdge}
-      />
-      <group rotation={[0, -Math.PI / 3, 0]}>
-        <Block
-          at={[width / 2, 1.02, 0]}
-          size={[width - 0.04, 2, 0.045]}
-          color={materials.wood}
-        />
-        <Block
-          at={[width - 0.18, 1, 0.055]}
-          size={[0.1, 0.035, 0.04]}
-          color={materials.metal}
-        />
-      </group>
     </group>
   );
 }

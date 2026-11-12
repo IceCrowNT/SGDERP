@@ -75,6 +75,8 @@ async function main() {
 
   // 3. Tạo Danh mục Quyền cơ bản (Permissions)
   const permissionDefs = [
+    { module: "ASSETS", action: "VIEW", name: "Xem tài sản", scope: "ALL" },
+    { module: "ASSETS", action: "MANAGE", name: "Quản lý tài sản và loại thiết bị", scope: "ALL" },
     { module: "ACCOUNTS", action: "MANAGE", name: "Quản lý tài khoản đăng nhập", scope: "ALL" },
     { module: "LOCATIONS", action: "VIEW", name: "Xem vị trí và không gian", scope: "ALL" },
     { module: "LOCATIONS", action: "MANAGE", name: "Quản lý vị trí và không gian", scope: "ALL" },

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { HCNS_LAYOUT, equipmentFromNote, type RoomPoint } from "./hcns-layout";
+import { HCNS_LAYOUT, type RoomPoint } from "./hcns-layout";
 
 export const RoomMappingSchema = z
   .object({
@@ -68,7 +68,7 @@ export function mappedRoomPoints(
       name: row.ten_vi_tri,
       description: row.mo_ta,
       state: row.dang_su_dung ? "active" : "inactive",
-      equipment: row.dang_su_dung ? equipmentFromNote(row.mo_ta) : [],
+      equipment: [], // Filled from authorized asset records, never from old notes.
     };
   });
 }

@@ -1,6 +1,6 @@
 # QUY TẮC QUẢN LÝ TÀI SẢN
 
-Phạm vi thiết kế hiện hành: **mức 1, quản lý từng thiết bị**. Chưa triển khai schema/UI mới. Tiến độ và thiết kế DB ở [Plan tài sản](../../docs/plans/ASSET-MANAGEMENT-CHECKLIST.md); áp dụng cùng ba rule kỹ thuật chung.
+Phạm vi hiện hành: **mức 1, quản lý từng thiết bị**. Đã có nền DB, quyền, Server Actions và giao diện `/assets` với danh sách, hồ sơ, lựa chọn người/vị trí và lịch sử. Tiến độ và thiết kế DB ở [Plan tài sản](../../docs/plans/ASSET-MANAGEMENT-CHECKLIST.md); áp dụng cùng ba rule kỹ thuật chung.
 
 ## Hồ sơ thiết bị
 
@@ -13,7 +13,7 @@ Phạm vi thiết kế hiện hành: **mức 1, quản lý từng thiết bị**
 
 ## Quyền và lịch sử
 
-- ASSETS MANAGE quản lý thiết bị và loại, chỉ chọn vị trí có sẵn; sửa cây vị trí cần LOCATIONS MANAGE. Quyền dự kiến ASSETS VIEW/MANAGE dùng RBAC hiện có; phải triển khai kiểm tra server cùng catalog và UI. Mọi dữ liệu theo công ty của phiên; trường phòng quản lý không tự tạo phạm vi phòng ban.
+- ASSETS MANAGE quản lý thiết bị và loại, chỉ chọn vị trí có sẵn; sửa cây vị trí cần LOCATIONS MANAGE. ASSETS VIEW/MANAGE dùng RBAC hiện có; server và ma trận `/roles` cùng chính sách. Mọi dữ liệu theo công ty của phiên; trường phòng quản lý không tự tạo phạm vi phòng ban.
 - Người có ASSETS MANAGE được chọn người/phòng qua danh mục tối thiểu theo công ty, không phải được xem toàn bộ thông tin HR. Không tự cấp quyền mới cho vai trò hoặc tài khoản hiện có.
 - Mọi thay đổi và nhật ký trước–sau phải lưu cùng transaction. Dùng lại bảng nhật ký, không dùng helper nuốt lỗi cho lịch sử bắt buộc. Chi tiết đọc đúng nhật ký của thiết bị được phép xem; không mở toàn bộ nhật ký hệ thống.
 - Thiết kế bảng/cột, khóa, phân loại đối tượng audit và xử lý đồng thời được quản lý tại plan, không nhân bản tại đây.
@@ -21,5 +21,5 @@ Phạm vi thiết kế hiện hành: **mức 1, quản lý từng thiết bị**
 ## Giai đoạn sau
 
 - Vật tư tiêu hao dùng nhập–xuất–tồn, tách khỏi hồ sơ thiết bị; không thêm bảng vật tư trong mức 1.
-- QR/mã vạch, import/export, bảo trì, license, scope theo phòng và hiển thị tài sản trên 3D triển khai khi có yêu cầu tiếp theo. Khi tích hợp 3D, ánh xạ từ ID vị trí ổn định; không dùng mesh hoặc tên phòng làm khóa nghiệp vụ.
+- QR/mã vạch, import/export, bảo trì, license, scope theo phòng triển khai khi có yêu cầu tiếp theo. 3D HCNS đã có gán/chuyển/bỏ gán theo [rule 3D](OFFICE-3D-RULES.md), ánh xạ từ ID vị trí ổn định; không dùng mesh hoặc tên phòng làm khóa nghiệp vụ.
 - Không đưa chống thất thoát, khấu hao hoặc kiểm kê khắt khe vào mức 1.

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { notFound } from "next/navigation"
 
 import { FeatureInDevelopment } from "@/components/layout/FeatureInDevelopment"
 
@@ -25,7 +26,7 @@ function resolveFeatureName(slug: string[]) {
     return "Hồ sơ nhân sự chi tiết"
   }
 
-  return "Tính năng này"
+  return undefined
 }
 
 export default async function UnavailableFeaturePage({
@@ -34,6 +35,8 @@ export default async function UnavailableFeaturePage({
   params: Promise<{ slug: string[] }>
 }) {
   const { slug } = await params
+  const featureName = resolveFeatureName(slug)
+  if (!featureName) notFound()
 
-  return <FeatureInDevelopment featureName={resolveFeatureName(slug)} />
+  return <FeatureInDevelopment featureName={featureName} />
 }

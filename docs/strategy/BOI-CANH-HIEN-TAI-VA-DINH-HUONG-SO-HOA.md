@@ -20,8 +20,6 @@
 > **Cập nhật nguồn nhân sự 27/10/2026:** Đã nhập file HR final ngày 26/10/2026: 72 người theo danh sách, giữ 7 hồ sơ chờ xác nhận và 1 đã nghỉ riêng. File HR ưu tiên cho các trường nhân sự có trong file; mapping 1Office và cây 18 đơn vị được giữ. Các số liệu 66/67 trong khảo sát cũ bên dưới là lịch sử, không phải hiện trạng mới. Xem [đối chiếu HR và các điểm cần xác nhận](DOI-CHIEU-NHAN-SU-HR-2026-10-26.md).
 
 
-> **Quyết định 27/10/2026:** Tạm hoãn tích hợp AI và gỡ bản thử nghiệm hồ sơ thanh toán khỏi ứng dụng. Giữ ý tưởng/tài liệu để xem xét sau; không tự khôi phục khi chưa được duyệt. Xem [plan AI](../plans/AI-DOCUMENTS-CHECKLIST.md).
-
 ## Quyết định nhân sự và tài khoản — 26/10/2026
 
 Người phụ trách duyệt quản lý đơn giản: phòng ban → hồ sơ nhân sự → 0 hoặc nhiều tài khoản. Số người tính từ hồ sơ, không từ tài khoản. Tài khoản cá nhân/admin của cùng người dùng chung ID nhân sự, quyền độc lập. Nguồn nhân sự hiện ưu tiên file HR final 72 người theo quyết định 27/10/2026; cây cơ cấu giữ tham chiếu 1Office, ERP quản lý tài khoản và quyền riêng. Không bổ sung hệ quản trị danh tính phức tạp.
@@ -121,8 +119,6 @@ MVP không bao gồm chống mất trộm, điều tra thất thoát, khấu hao
 **Yêu cầu định hướng:** khi có tính năng AI trong ERP, người dùng muốn tự nhập thông tin kết nối hoặc đăng nhập tài khoản được cấp để sử dụng riêng. Mục tiêu là tận dụng tài khoản sẵn có và phân bổ chi phí/hạn mức theo từng phòng, tránh dồn toàn bộ chi phí AI vào một tài khoản hoặc ngân sách ERP chung.
 
 Cần phân biệt người dùng ERP với tài khoản AI: nhiều người trong một phòng có thể sử dụng cùng nguồn tài khoản theo thực tế được cung cấp, nên “dùng riêng” ở đây trước hết là riêng theo phòng; chưa có thông tin mỗi nhân viên sở hữu một thuê bao riêng.
-
-**Lựa chọn cập nhật ngày 23/10/2026:** sử dụng OpenAI API key cấu hình phía server qua `.env.local` hoặc biến môi trường triển khai (`OPENAI_API_KEY`, `OPENAI_MODEL`). Người dùng không nhập key trên tab. Giao diện chỉ hiển thị trạng thái có/thiếu cấu hình; chưa xác thực hoặc gọi AI. Chi phí API tách khỏi thuê bao ChatGPT, thuộc tài khoản API phía server; việc phân nguồn chi phí theo phòng chưa triển khai. Sign in with ChatGPT chỉ còn là hướng nghiên cứu.
 
 Các yêu cầu đề xuất cho tính năng:
 

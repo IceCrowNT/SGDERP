@@ -434,6 +434,7 @@ function RoleForm({
       description: role?.description ?? "",
       workflowActions: role?.workflowActions ?? [],
       permissions: {
+        ASSETS: role?.permissions.ASSETS ?? "NONE",
         LOCATIONS: role?.permissions.LOCATIONS ?? "NONE",
         HR: role?.permissions.HR ?? "NONE",
         ACCOUNTS: role?.permissions.ACCOUNTS === "MANAGE" ? "MANAGE" : "NONE",

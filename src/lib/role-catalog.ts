@@ -3,6 +3,12 @@ import type { PermissionLevel } from "@/lib/auth";
 // Only functions whose server guards are implemented belong in this matrix.
 export const ROLE_MODULES = [
   {
+    code: "ASSETS",
+    label: "Tài sản",
+    description: "Hồ sơ thiết bị, loại tài sản và lịch sử thay đổi",
+    levels: ["NONE", "VIEW", "MANAGE"],
+  },
+  {
     code: "LOCATIONS",
     label: "Vị trí & không gian",
     description: "Danh mục không gian dùng chung, độc lập nhân sự và tài sản",

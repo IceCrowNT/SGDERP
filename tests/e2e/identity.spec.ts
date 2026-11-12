@@ -186,7 +186,7 @@ test("UI creates a profile independently and two accounts without extra people",
       .click();
     await page.getByRole("combobox", { name: "Nhân sự sở hữu" }).click();
     await page
-      .getByRole("option", { name: new RegExp(employee.ma_nhan_su) })
+      .getByRole("option").filter({ hasText: employee.ma_nhan_su })
       .click();
     await page
       .getByLabel("Tên đăng nhập", { exact: true })

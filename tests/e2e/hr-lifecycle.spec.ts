@@ -307,7 +307,7 @@ test("department head can hold several offices without granting account rights; 
   await page
     .getByRole("combobox", { name: "Người phụ trách phòng ban", exact: true })
     .click();
-  await page.getByRole("option", { name: new RegExp(head.ma_nhan_su) }).click();
+  await page.getByRole("option").filter({ hasText: head.ma_nhan_su }).click();
   const sent = page.waitForRequest(action);
   await page
     .getByRole("button", { name: "Lưu phòng ban", exact: true })

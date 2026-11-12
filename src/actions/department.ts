@@ -121,6 +121,8 @@ export async function deleteDepartment(id: number) {
       await tx.$queryRaw`SELECT id FROM phong_ban WHERE id = ${id} AND company_id = ${session.companyId} FOR UPDATE`;
       const department = await tx.phong_ban.findFirst({ where: { id: id, company_id: session.companyId }, include: { _count: { select: { danh_sach_nhan_su: true, phong_ban_con: true } } } });
       if (!department) throw Error("Phòng ban không tồn tại.");
+      if (await tx.tai_san.count({ where: { company_id: session.companyId, phong_quan_ly_id: id } }))
+        throw Error("Phòng ban còn quản lý tài sản. Hãy đổi đơn vị quản lý trong hồ sơ tài sản trước.");
       if (department._count.phong_ban_con || department._count.danh_sach_nhan_su)
         throw Error("Không thể xóa phòng ban đang có đơn vị con hoặc nhân sự. Hãy chuyển các dữ liệu này trước.");
       await tx.phong_ban.delete({ where: { id: id, company_id: session.companyId } });

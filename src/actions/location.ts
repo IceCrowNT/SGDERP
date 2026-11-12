@@ -68,13 +68,14 @@ export async function getLocations() {
     })),
   };
 }
-// Minimal catalog for HR; ASSETS will be added when that feature's guard exists.
+// Choosing a location does not grant access to the full location or HR modules.
 export async function getLocationOptions() {
   const session = await getSession();
   if (
     !session ||
     !(
       hasPermission(session, "HR", "MANAGE") ||
+      hasPermission(session, "ASSETS", "MANAGE") ||
       hasPermission(session, "LOCATIONS")
     )
   )
@@ -210,6 +211,9 @@ export async function saveLocation(input: unknown) {
         mo_ta: v.description || null,
         dang_su_dung: v.active,
       };
+      // Asset references are checked before any state change; no automatic unassignment.
+      if (before && !v.active && await tx.tai_san.count({ where: { company_id: session.companyId, vi_tri_id: before.id } }))
+        throw new LocationError("Vị trí còn tài sản. Hãy chuyển hoặc gỡ vị trí trong hồ sơ tài sản trước.");
       const after = before
         ? await tx.vi_tri.update({
           where: { id: before.id },
@@ -270,6 +274,8 @@ export async function getLocationDeletionPreview(id: number) {
     return { success: false as const, message: "Vị trí không hợp lệ." };
   const location = await db.vi_tri.findFirst({ where: { id, company_id: session.companyId }, select: selection });
   if (!location) return { success: false as const, message: "Vị trí không tồn tại." };
+  if (await db.tai_san.count({ where: { company_id: session.companyId, vi_tri_id: id } }))
+    return { success: false as const, message: "Vị trí còn tài sản. Hãy chuyển hoặc gỡ vị trí trong hồ sơ tài sản trước." };
   if (await db.vi_tri.count({ where: { parent_id: id, company_id: session.companyId } }))
     return { success: false as const, message: "Vị trí còn vị trí con. Hãy chuyển hoặc xóa vị trí con trước." };
   // Do not expose identities/counts to a location manager without HR permissions.
@@ -306,6 +312,8 @@ export async function deleteLocation(input: unknown) {
         select: selection,
       });
       if (!before) throw new LocationError("Vị trí không tồn tại.");
+      if (await tx.tai_san.count({ where: { company_id: session.companyId, vi_tri_id: before.id } }))
+        throw new LocationError("Vị trí còn tài sản. Hãy chuyển hoặc gỡ vị trí trong hồ sơ tài sản trước.");
       if (before.updated_at.toISOString() !== parsed.data.version)
         throw new LocationError(
           "Vị trí đã thay đổi. Tải lại trang trước khi xóa.",

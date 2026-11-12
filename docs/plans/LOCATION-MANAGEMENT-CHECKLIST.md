@@ -1,6 +1,10 @@
 # Kế hoạch vị trí & không gian dùng chung
 
-Cập nhật: **10/11/2026**. **Bản đầu đã triển khai; đã có cây vị trí do người phụ trách nhập và 10 vị trí HCNS theo bản phác.** Rule: [LOCATION-MANAGEMENT-RULES](../../.agents/rules/LOCATION-MANAGEMENT-RULES.md).
+Cập nhật: **12/11/2026**. **Bản đầu đã triển khai; đã có cây vị trí do người phụ trách nhập và 10 vị trí HCNS theo bản phác.** Rule: [LOCATION-MANAGEMENT-RULES](../../.agents/rules/LOCATION-MANAGEMENT-RULES.md).
+
+## Ô chọn có tìm kiếm — 12/11/2026
+
+- [x] Ô chọn vị trí cấp trên: đã chuyển sang tìm/chọn có hỗ trợ không dấu; kiểm thử giao diện và hồi quy đạt. Cách dùng chung và kiểm chứng tại [tổng quan](README.md#ô-chọn-dữ-liệu-có-tìm-kiếm--12112026). Không đổi dữ liệu hoặc quyền.
 
 ## Phạm vi và trách nhiệm
 
@@ -29,7 +33,7 @@ Một bảng mới `vi_tri`; Prisma và PostgreSQL dùng cùng tên. ID tự sin
 - ID/mã không phải số thứ tự hay số lượng. Kiểm thử tích hợp đã cấp rồi dọn bản ghi trên DB local nên sequence có khoảng trống; rollback cũng không trả số đã cấp. Không reset bộ đếm hoặc đánh lại ID của dữ liệu đang dùng. Các lần kiểm thử ghi dữ liệu tiếp theo ưu tiên DB tạm để không tiêu bộ đếm vận hành.
 - Loại vị trí giúp phân loại; bản đầu không ép đủ mọi tầng cấp. Chặn chính mình, hậu duệ, chu trình và khác công ty. Không tự đổi cây khi thay cơ cấu phòng ban.
 - Chỉ chọn vị trí đang sử dụng, với toàn bộ tổ tiên đang sử dụng. Chuyển cha giữ ID của vị trí và các liên kết nhưng đổi đường dẫn của cả nhánh; hiển thị ảnh hưởng và xác nhận trước khi lưu.
-- Xóa từng vị trí không có con: preview tên/danh sách người bị ảnh hưởng và dấu kiểm tra phiên bản danh sách; khi xác nhận, kiểm tra lại trong khóa rồi đặt `nhan_su.vi_tri_lam_viec_id = null`, ghi audit HR từng người và audit xóa vị trí cùng transaction. Gồm người đã nghỉ/chưa xác nhận; giữ ID/hồ sơ/trạng thái. Không đổi FK Restrict hoặc trigger: nếu ghi trực tiếp SQL khi còn người vẫn bị chặn. Ngừng dùng/đổi loại không phù hợp vẫn chặn tham chiếu. Tài sản chưa triển khai, không tự xử lý dữ liệu tài sản.
+- Xóa từng vị trí không có con: preview tên/danh sách người bị ảnh hưởng và dấu kiểm tra phiên bản danh sách; khi xác nhận, kiểm tra lại trong khóa rồi đặt `nhan_su.vi_tri_lam_viec_id = null`, ghi audit HR từng người và audit xóa vị trí cùng transaction. Gồm người đã nghỉ/chưa xác nhận; giữ ID/hồ sơ/trạng thái. Không đổi FK Restrict hoặc trigger: nếu ghi trực tiếp SQL khi còn người vẫn bị chặn. Ngừng dùng/đổi loại không phù hợp vẫn chặn tham chiếu. Vị trí còn tài sản bị chặn xóa/ngừng dùng ở preview/action/DB theo [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md); không tự gỡ thiết bị.
 - Mutation khóa hàng công ty → khóa phân quyền hiện hành → kiểm tra lại quyền, version và cây → ghi dữ liệu/audit trong cùng transaction. Luồng gán vị trí ở HR/tài sản cũng khóa công ty trước kiểm tra trạng thái để không đua với ngừng dùng/xóa vị trí.
 - Nhật ký dùng bảng sẵn có: phân hệ `LOCATIONS`, đối tượng `vi_tri:<id>`. Nhật ký chứa trước/sau và nhãn giải thích; không tạo bảng lịch sử vị trí riêng.
 
@@ -43,7 +47,7 @@ Một bảng mới `vi_tri`; Prisma và PostgreSQL dùng cùng tên. ID tự sin
 | `HR · MANAGE`        | Chọn vị trí làm việc cho nhân sự; không sửa danh mục vị trí                                |
 
 - Hai luồng chọn vị trí của HR/tài sản được truy vấn danh mục tối thiểu (ID, mã, tên, loại, đường dẫn, trạng thái), không bắt cấp LOCATIONS VIEW. Truy vấn vẫn kiểm tra đúng quyền nghiệp vụ và công ty.
-- LOCATIONS VIEW không cấp quyền xem người/tài sản tại vị trí. Danh sách người chỉ trả khi có HR VIEW/MANAGE, gồm tên/phòng/tình trạng/vị trí; không trả liên hệ hoặc hồ sơ đầy đủ. Lịch sử LOCATIONS không chứa tên/số người bị gỡ; thông tin này ghi riêng trong HR. Tài sản chưa tích hợp.
+- LOCATIONS VIEW không cấp quyền xem người/tài sản tại vị trí. Danh sách người chỉ trả khi có HR VIEW/MANAGE, gồm tên/phòng/tình trạng/vị trí; không trả liên hệ hoặc hồ sơ đầy đủ. Lịch sử LOCATIONS không chứa tên/số người bị gỡ; thông tin này ghi riêng trong HR. Chưa hiển thị danh sách thiết bị tại vị trí; đã có bảo vệ tham chiếu tài sản.
 - Trang ưu tiên cây và panel chi tiết; mobile mở chi tiết riêng. Form có dấu `*`, lỗi tại trường, chọn cha bằng đường dẫn; không nhập ID thủ công. Không đưa lịch sử hay metadata kỹ thuật lên màn hình chính.
 - Catalog, migration, seed cài mới, guard menu/page/action và ma trận `/roles` cập nhật cùng lần triển khai quyền. Không tạo role mẫu mới, không tự cấp cho ADMIN/HCNS/role tài sản.
 
@@ -56,7 +60,7 @@ Một bảng mới `vi_tri`; Prisma và PostgreSQL dùng cùng tên. ID tự sin
 | 3. Vị trí nhân sự   | [Plan HR](HR-CHECKLIST.md): đã có FK nullable cùng công ty/Restrict và form gán/chuyển/gỡ vị trí                                                             |
 | 4. Kết nối 3D         | [Plan 3D HCNS](OFFICE-3D-CHECKLIST.md): đã có bản thử đọc 10 vị trí qua ID ổn định; đọc người ACTIVE được gán trong HR; chưa có hồ sơ tài sản |
 
-Nhân sự có một vị trí làm việc chính; một vị trí có thể chứa nhiều người và thiết bị, không unique FK hoặc tự suy sức chứa. Thiết bị giữ vị trí riêng, không tự đi theo người. Bước HR đã bổ sung kiểm tra người tham chiếu ở mọi trạng thái tại action/DB và kiểm thử đồng thời với ngừng dùng. Khi triển khai tài sản phải bổ sung kiểm tra tham chiếu tương ứng; không truy vấn bảng tài sản chưa tồn tại.
+Nhân sự có một vị trí làm việc chính; một vị trí có thể chứa nhiều người và thiết bị, không unique FK hoặc tự suy sức chứa. Thiết bị giữ vị trí riêng, không tự đi theo người. Bước HR đã bổ sung kiểm tra người tham chiếu ở mọi trạng thái tại action/DB và kiểm thử đồng thời với ngừng dùng. Đợt 1 tài sản đã bổ sung kiểm tra tham chiếu tương ứng ở preview/action/DB; chỉ trả thông báo chặn, không lộ tên hoặc số thiết bị cho người thiếu quyền tài sản.
 
 ## Gán nhân sự hai chiều — 10/11/2026
 
@@ -67,9 +71,11 @@ Nhân sự có một vị trí làm việc chính; một vị trí có thể ch�
 
 ## Checklist và nghiệm thu
 
+- [x] Đợt 1 tài sản: chặn xóa/ngừng dùng vị trí còn thiết bị ở preview/action/DB, kể cả thiết bị ngừng dùng; không tự gỡ liên kết. Bộ chọn nhận ASSETS MANAGE, không mở quyền sửa cây. Kiểm thử đồng thời và hồi quy tại [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md).
+
 - [X] Tách thiết kế, quyền và quyền sở hữu bảng vị trí khỏi tài sản; đăng ký rule/router, đồng bộ các plan liên quan. Chỉ thay tài liệu.
 - [X] Migration `20261110100000_vi_tri_khong_gian`: bảng, sequence/mã bất biến, FK cùng công ty, kiểm tra cây/trạng thái và 2 quyền LOCATIONS. Backup PostgreSQL 17 được khôi phục vào DB tạm rồi thử migration; fingerprint của 14 bảng cũ giữ nguyên sau áp dụng (loại quyền mới khỏi phép so sánh catalog). Không thêm vị trí hoặc grant vận hành. Bằng chứng cục bộ tại `outputs/locations/`.
-- [X] `/locations`: cây, tìm không dấu/đường dẫn, lọc trạng thái, thêm/sửa/con, xác nhận chuyển nhánh, ngừng dùng/xóa trống, chi tiết và 50 nhật ký gần nhất. Guard menu/page/action, form RHF/Zod, version và audit cùng transaction. Danh mục tối thiểu hỗ trợ HR MANAGE; ASSETS bổ sung khi phân hệ đó triển khai. Ma trận quyền và seed cài mới có LOCATIONS, không tự cấp role.
+- [X] `/locations`: cây, tìm không dấu/đường dẫn, lọc trạng thái, thêm/sửa/con, xác nhận chuyển nhánh, ngừng dùng/xóa trống, chi tiết và 50 nhật ký gần nhất. Guard menu/page/action, form RHF/Zod, version và audit cùng transaction. Danh mục tối thiểu hỗ trợ HR MANAGE và ASSETS MANAGE; quyền chọn không cấp quyền sửa cây. Ma trận quyền và seed cài mới có LOCATIONS, không tự cấp role.
 - [X] Kiểm thử VIEW/MANAGE/không quyền (kể cả chỉ có HR MANAGE), thu hồi quyền, URL/action trực tiếp, khác công ty, mã đồng thời và audit rollback. Tiêm lỗi audit giới hạn trong công ty kiểm thử: action thất bại giữ nguyên dữ liệu/version.
 - [X] Kiểm thử hai chuyển cha đồng thời không tạo chu trình, xác nhận chuyển nhánh, đường dẫn/tìm không dấu, chặn ngừng dùng/xóa còn vị trí con, không chọn cha đã ngừng dùng, version cũ và lịch sử còn sau xóa. Chrome desktop/mobile/sáng/tối, focus khi đóng chi tiết đạt. Ca liên kết HR đã kiểm tra ở migration `20261110160000_vi_tri_lam_viec_nhan_su`: cùng công ty/loại/trạng thái, giữ liên kết người LEFT, chặn xóa/ngừng dùng và gán đồng thời; chạy trên DB tạm. Tài sản kiểm tra sau khi triển khai.
 - [X] 3 ca `locations.spec.ts` và 9 ca phân quyền hồi quy đạt; TypeScript/lint, Prisma validate và schema diff đạt. Tại thời điểm dọn fixture: fingerprint 14 bảng cũ giữ nguyên, 0 vị trí/0 grant LOCATIONS; số liệu này không phải trạng thái cố định sau khi người dùng nhập dữ liệu. Đã mở Chrome kiểm tra Studio cổng 5555: `All Models` có `vi_tri`, mở được các cột `ma_vi_tri`, `ten_vi_tri`; đúng DB `sdg_erp`, không cần chạy lại migration. Tab cũ cần tải lại danh sách model. Nhật ký/ảnh kiểm thử/backup chỉ ở `outputs/locations/`.

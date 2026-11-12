@@ -322,7 +322,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
                 size="sm"
                 variant="ghost"
                 className="min-h-10"
-                disabled={!room}
+                disabled={!room || !shape?.placed}
                 onClick={() => view("focus")}
               >
                 <Focus className="size-4" />
@@ -398,7 +398,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
                 : "Nhấp đúp HCNS để vào phòng"}{" "}
               · Kéo để xoay · Cuộn/chụm để thu phóng
             </span>
-            <span>Bố cục tham khảo · Kích thước ước lượng</span>
+            <span>Mặt bằng giản lược · Bố trí nội thất tham khảo</span>
           </footer>
         </section>
         <aside
@@ -428,6 +428,11 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
                       ? "Đã ngừng sử dụng"
                       : room.path}
                 </p>
+                {!shape.placed && (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Chưa xác định vị trí trên mặt bằng mới.
+                  </p>
+                )}
               </div>
               {room.key === HCNS_BUILDING_KEY && building.hcns && (
                 <Button

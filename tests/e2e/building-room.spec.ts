@@ -122,7 +122,7 @@ test("explore three floors, enter HCNS, return and use mobile without errors", a
     page
       .getByRole("region", { name: "Danh sách phòng" })
       .getByRole("button", { name: /Xem phòng/ }),
-  ).toHaveCount(4);
+  ).toHaveCount(13);
   await page
     .getByRole("group", { name: "Chọn tầng" })
     .getByRole("button", { name: "Tầng 2", exact: true })
@@ -173,7 +173,7 @@ test("explore three floors, enter HCNS, return and use mobile without errors", a
   await page.evaluate(() => document.documentElement.classList.add("dark"));
   await page
     .getByRole("textbox", { name: "Tìm phòng trong mô hình" })
-    .fill("ke hoach");
+    .fill("phong phat trien du an");
   await expect(
     page
       .getByRole("region", { name: "Danh sách phòng" })
@@ -186,7 +186,7 @@ test("explore three floors, enter HCNS, return and use mobile without errors", a
   await page.keyboard.press("Enter");
   await expect(
     page.getByRole("region", { name: "Thông tin phòng" }),
-  ).toContainText("Kế Hoạch - Đầu Tư");
+  ).toContainText("Phòng Phát triển dự án");
   expect(errors).toEqual([]);
 });
 test("building uses workplace links, reflects DB changes, and drops stale room hierarchy", async ({

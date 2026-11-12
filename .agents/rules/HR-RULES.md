@@ -7,7 +7,7 @@ Nghiệp vụ hiện hành của HR; tiến độ và thiết kế DB tại [Pla
 - Người thật và tài khoản đăng nhập quản lý riêng; số nhân sự không tính theo số tài khoản. Chức vụ là text, không tự xác định head hoặc cấp quyền.
 - HR VIEW chỉ xem; HR MANAGE tạo/sửa hồ sơ và CRUD phòng ban. Dữ liệu hoạt động độc lập tại ERP sau khởi tạo; nguồn HR/1Office chỉ truy nguyên, không khóa trường hoặc bắt đối soát khi sửa.
 - Input hồ sơ strict, không nhận `employeeCode`, `companyId` hoặc metadata nguồn. Mã nhân sự tự cấp và bất biến; phòng bắt buộc thuộc cây cùng công ty. `notes` sửa ghi chú vận hành, không sửa `hrNotes` gốc qua form.
-- Phòng ban cho sửa tên/mã/mô tả/cha; chặn cha khác công ty, chính mình hoặc hậu duệ. Chỉ xóa phòng không còn con/nhân sự ở bất kỳ trạng thái nào. Khóa và audit theo mục DB của plan.
+- Phòng ban cho sửa tên/mã/mô tả/cha; chặn cha khác công ty, chính mình hoặc hậu duệ. Chỉ xóa phòng không còn con/nhân sự ở bất kỳ trạng thái nào và không còn tài sản do phòng quản lý; xử lý liên kết tài sản theo [rule tài sản](ASSET-MANAGEMENT-RULES.md). Khóa và audit theo mục DB của plan.
 - Chọn head cùng công ty, chỉ chọn mới người ACTIVE; giữ head cũ không ACTIVE khi sửa trường khác và cảnh báo cần bàn giao. Không tự chọn người thay, không suy từ tên/chức vụ, không đổi vị trí 3D khi đổi cơ cấu.
 
 ## Vị trí làm việc

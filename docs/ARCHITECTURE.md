@@ -1,7 +1,18 @@
 # TÀI LIỆU KIẾN TRÚC TỔNG THỂ & SỔ BỘ THƯ VIỆN
 
+## Tài sản mức 1 — 12/11/2026
+
+- Panel HCNS dùng `src/components/locations/LocationAssets.tsx`, kiểu dữ liệu/kiểm tra cây tại `src/lib/asset-location.ts`. `getAssetLocationCandidates` tải tối thiểu khi mở picker (20 hồ sơ/trang); `assignAssetLocation` chỉ sửa FK vị trí trong transaction/audit ASSETS. `getHcnsRoom` đọc hồ sơ thật theo quyền riêng; hình đại diện theo loại thay minh họa từ ghi chú. Không thêm schema/dependency/env; các thay đổi từ `/assets` cũng revalidate viewer. Nghiệm thu tại [plan 3D](plans/OFFICE-3D-CHECKLIST.md).
+
+- Đợt giao diện thêm route `/assets`, loading và `src/components/assets/` (danh sách, form, chi tiết/lịch sử), nhãn trạng thái tại `src/lib/asset-labels.ts`. Truy vấn danh sách/phân trang và số đếm cùng bộ lọc trong transaction đọc nhất quán; lựa chọn lọc chỉ trả tên đã gắn thiết bị cho ASSETS VIEW. Menu dùng guard ASSETS; form vẫn gọi Server Actions sẵn có. Không thêm thư viện hoặc schema. Tiến độ tại plan tài sản.
+
+- Đợt 1 thêm hai model `loai_tai_san`, `tai_san`, migration `20261111095809_tai_san_muc_1`, Server Actions `src/actions/asset.ts` và validation `src/lib/validations/asset.ts`. Actions gọi Prisma trực tiếp, cùng khóa công ty/phân quyền với vị trí/HR; audit cùng transaction. Không thêm dependency hoặc biến môi trường.
+- Quyền ASSETS VIEW/MANAGE tích hợp catalog, validation và ma trận `/roles`; seed chỉ thêm catalog cho cài mới, không cấp quyền mặc định. Vị trí/phòng ban bổ sung chặn xóa khi còn tài sản. Đã có route/menu `/assets` và liên kết gán vị trí ở HCNS; tiến độ và kiểm chứng tại [plan tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md).
+- `tests/integration/assets-foundation.test.cjs` kiểm tra DB và Server Actions trên DB khôi phục riêng; chỉ giả lập cookie request/cache của Next, giữ JWT/phiên/quyền và Prisma thật. `tests/e2e/assets.spec.ts` kiểm tra giao diện/quyền và xử lý lỗi trên Chrome với DB riêng. Backup/script/đầu ra nằm ngoài Git trong `outputs/assets-foundation/` và `outputs/assets-ui/`.
+
 ## Viewer 3D thống nhất — 11/11/2026
 
+- `architectural-layout.ts` giữ mặt bằng giản lược của ba PDF trong cấu hình tĩnh; `building-layout.ts` nối vùng đã xác nhận với khóa ánh xạ cũ. Hình đa giác dùng chung cho vùng chọn, nhãn và nền/tường thấp; camera căn theo phạm vi mới. HCNS dùng cùng tỷ lệ/trục với tầng, 10 bàn thuộc cấu hình riêng, không có trình biên tập bố trí hoặc bảng DB mới. Tên phòng chưa xác nhận để trung tính; Lễ tân giữ hồ sơ nhưng chưa đặt hình. Phạm vi/kiểm chứng tại [plan 3D](plans/OFFICE-3D-CHECKLIST.md#khảo-sát-mặt-bằng-kiến-trúc).
 - `OfficePerson.tsx` sở hữu hình người cách điệu dùng chung hình học/vật liệu; dữ liệu từ liên kết HR–vị trí sẵn có. Chọn bàn/người trực tiếp, nhãn tên chiếu từ cùng phép biến đổi với model và tránh chồng nhau; danh sách vị trí làm đường truy cập thay thế. Không thêm bảng hoặc thư viện.
 - CameraControls dùng `impl` của Drei để giới hạn bước thời gian khi vẽ trở lại sau khoảng nghỉ. Nhấp đúp phòng HCNS trong tầng giữ hướng camera và phóng tới nội thất đang nhúng; vật liệu không gian xung quanh mờ dần. Camera trở lại góc tầng đã lưu, hỗ trợ giảm chuyển động; hình người không có vòng hoạt ảnh riêng. Kiểm chứng và giới hạn tại [plan 3D](plans/OFFICE-3D-CHECKLIST.md).
 
@@ -18,7 +29,7 @@
 ## Liên kết nhân sự và vị trí hai chiều — 10/11/2026
 
 - `/locations` và bảng chi tiết HCNS trong `/office-3d` dùng chung `LocationPeople.tsx` cho tìm/gán/chuyển/bỏ gán nhân sự. Trang HCNS chỉ nạp lựa chọn nhân sự ACTIVE khi có HR MANAGE, liên kết điểm qua ID đã xác minh; người chỉ xem vẫn nhận danh sách tại điểm. `assignEmployeeLocation` cập nhật duy nhất FK vị trí, dùng cùng kiểm tra chuyển/phiên bản với form HR; mutation vẫn Prisma trực tiếp trong action. Danh sách tối thiểu cần HR VIEW, thay đổi cần HR MANAGE; không thêm schema/dependency.
-- Xóa vị trí xem trước danh sách bị ảnh hưởng, kiểm tra lại phiên bản vị trí và tập người trong khóa công ty/phân quyền; tự đặt FK về null và ghi audit từng người + vị trí trong một transaction. Giữ schema/FK Restrict/trigger, không migration hoặc đổi quyền. Không truy vấn bảng tài sản chưa có.
+- Xóa vị trí xem trước danh sách bị ảnh hưởng, kiểm tra lại phiên bản vị trí và tập người trong khóa công ty/phân quyền; tự đặt FK về null và ghi audit từng người + vị trí trong một transaction. Giữ schema/FK Restrict/trigger, không migration hoặc đổi quyền. Đợt 1 tài sản bổ sung chặn xóa/ngừng dùng vị trí còn thiết bị; xem mục nền tài sản ở đầu tài liệu.
 - `tsconfig.json` loại các thư mục đầu ra/tạm khỏi kiểm tra TypeScript; bản sao app dùng kiểm thử nằm trong `outputs/`, không bị biên dịch như nguồn ứng dụng. Không thêm thư viện hoặc biến môi trường vận hành.
 
 ## Bản thử không gian HCNS — 10/11/2026
@@ -28,7 +39,7 @@
 - Ánh xạ cục bộ `var/office-3d/hcns.json` (ngoài Git) liên kết khóa hình khối với ID vị trí và công ty. Sao lưu/triển khai file cùng DB, không tự tạo lại vị trí khi thiếu file. Chưa cần biến môi trường mới hoặc bảng 3D riêng.
 - Ghi chú nguồn ở DB/backup cục bộ, không tự phân công từ tên viết trên bản phác. Form HR đã có chọn/chuyển/gỡ vị trí chính; bản HCNS đọc người ACTIVE qua FK khi có HR VIEW/MANAGE bên cạnh LOCATIONS. Chưa tạo tài sản; khung tòa nhà đã được thay bằng cùng phong cách và dùng liên kết vị trí như mục đầu tài liệu.
 - Migration `20261110160000_vi_tri_lam_viec_nhan_su` thêm FK nullable cùng công ty/Restrict, kiểm tra loại/trạng thái và bảo vệ vị trí có người tham chiếu. Đã thử backup khôi phục trước khi áp dụng local, giữ 15 bảng cũ, không seed phân công. `src/lib/work-location.ts` kiểm tra danh mục chọn; action HR có version và audit nguyên tử. Không thêm dependency/biến môi trường cho liên kết HR.
-- Cấu hình hướng bàn dùng `facingDegrees` (độ), chuyển sang radian tại viewer; bàn 1 = 180°, bàn 9/10 = 90°. Không dựng ghế theo yêu cầu.
+- Cấu hình hướng bàn dùng `facingDegrees` (độ), chuyển sang radian tại viewer; hướng/bố trí hiện hành theo [plan 3D](plans/OFFICE-3D-CHECKLIST.md#phong-cách-hình-ảnh). Không dựng ghế theo yêu cầu.
 - Nội thất là geometry dùng lại, không asset tải ngoài. Nhãn chọn là DOM chiếu theo camera, cùng React root với trang. `frameloop="demand"`, giới hạn DPR 1,5, shadow map 1024; kiểm thử/giới hạn đo tại plan 3D.
 
 ## Không gian cá nhân — triển khai 05/11/2026
@@ -190,7 +201,7 @@ graph TD
 ### Các Trục Nghiệp Vụ Trọng Tâm:
 1. **Quản trị Nhân sự & Định danh (Core HR & IAM):** 72 người theo danh sách HR chốt 26/10/2026 (đã làm sạch hồ sơ dư), cây phòng ban 2 cấp gắn ID số nguyên (`Int`), liên kết kế thừa quyền.
 2. **Không gian số 3D Tòa nhà (Digital Twin 3D Office):** Trực quan hóa mặt bằng văn phòng, định vị phòng ban và hiển thị tức thì nhân sự ngồi tại từng phòng bằng WebGL Three.js.
-3. **Tài sản IT — tạm hoãn:** bảng và seed đã gỡ ngày 31/10/2026; chỉ giữ thiết kế tham khảo.
+3. **Tài sản IT — mức 1:** quản lý từng thiết bị tại `/assets`; hai bảng mới dùng chung vị trí, nhân sự, RBAC và audit. Không khôi phục schema/seed cũ đã gỡ ngày 31/10/2026.
 4. **Điều hành Xe Công Vụ (Fleet Management):** Xếp lịch điều xe đưa đón giữa Tập đoàn và KCN Nam Đình Vũ.
 5. **Cầu nối Phê duyệt Dự án (Executive Bridge):** Luân chuyển hồ sơ, biên bản bàn giao đất, nghiệm thu giữa Tập đoàn và Ban QLDA Nam Đình Vũ.
 
@@ -199,11 +210,11 @@ graph TD
 - `/locations` nằm trong Hệ thống & cấu hình, chỉ hiện theo LOCATIONS VIEW/MANAGE. Thêm bảng `vi_tri`, mã tự cấp bất biến, cây cùng công ty, kiểm tra vòng lặp, trạng thái và audit. Không tự cấp quyền hoặc nhập dữ liệu mẫu.
 - Cấu trúc mới: `src/actions/location.ts`, `src/lib/validations/location.ts`, `src/lib/location-tree.ts`, `src/components/locations/LocationManager.tsx`, `src/app/(dashboard)/locations/`; kiểm thử tại `tests/e2e/locations.spec.ts`.
 - Migration `20261110100000_vi_tri_khong_gian` đã áp dụng sau backup/khôi phục thử DB tạm; Prisma Client đã generate. Không cài/gỡ dependency hoặc đổi biến môi trường. Khởi động lại dev/Studio sau thay schema để nạp Client mới.
-- [Plan vị trí](plans/LOCATION-MANAGEMENT-CHECKLIST.md) sở hữu thiết kế và nghiệm thu; HR đã dùng danh mục chọn tối thiểu; tài sản tích hợp sau. Tòa nhà và HCNS đọc vị trí qua ánh xạ ID riêng theo [plan 3D](plans/OFFICE-3D-CHECKLIST.md); cách ghép phòng ban vào không gian của khung cũ đã gỡ.
+- [Plan vị trí](plans/LOCATION-MANAGEMENT-CHECKLIST.md) sở hữu thiết kế và nghiệm thu; HR và tài sản dùng danh mục chọn tối thiểu; tài sản chặn xóa/ngừng dùng vị trí còn tham chiếu. Tòa nhà và HCNS đọc vị trí qua ánh xạ ID riêng theo [plan 3D](plans/OFFICE-3D-CHECKLIST.md); cách ghép phòng ban vào không gian của khung cũ đã gỡ.
 
 ### Tài sản và không gian — thiết kế lưu trữ
 
-Phân hệ tài sản cũ đã gỡ khỏi DB ngày 31/10/2026. [Kế hoạch tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md) cập nhật 10/11 thiết kế mức 1: tài sản sở hữu hai bảng `loai_tai_san`, `tai_san`. [Vị trí & không gian](plans/LOCATION-MANAGEMENT-CHECKLIST.md) là phân hệ dùng chung riêng, sở hữu `vi_tri`, menu `/locations` và quyền LOCATIONS; triển khai trước tài sản. HR đã có FK vị trí làm việc chính nullable; quyền quản lý tài sản không bao gồm sửa cây vị trí. Dùng lại RBAC và nhật ký hiện có. Vật tư tiêu hao tách làm sau. Tài sản vẫn là thiết kế. Bản 3D HCNS đọc vị trí/ghi chú và người ACTIVE đã gán theo quyền HR, chưa có hồ sơ tài sản; khung 3D nhân sự cũ đã được thay bằng viewer tòa nhà dùng vị trí chung.
+Phân hệ tài sản cũ đã gỡ khỏi DB ngày 31/10/2026. [Kế hoạch tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md) đã triển khai mức 1: tài sản sở hữu hai bảng `loai_tai_san`, `tai_san`. [Vị trí & không gian](plans/LOCATION-MANAGEMENT-CHECKLIST.md) là phân hệ dùng chung riêng, sở hữu `vi_tri`, menu `/locations` và quyền LOCATIONS; triển khai trước tài sản. HR đã có FK vị trí làm việc chính nullable; quyền quản lý tài sản không bao gồm sửa cây vị trí. Dùng lại RBAC và nhật ký hiện có. Vật tư tiêu hao tách làm sau. Giao diện `/assets` và Server Actions đã có. Bản 3D HCNS đọc/gán người ACTIVE theo quyền HR, đọc/gán thiết bị theo quyền ASSETS qua FK vị trí riêng; khung 3D nhân sự cũ đã được thay bằng viewer tòa nhà dùng vị trí chung.
 
 ### Quy ước tên vật lý PostgreSQL — 22/10/2026
 
@@ -217,9 +228,11 @@ Từ 03/11/2026, cả hồ sơ nhân sự và cơ cấu phòng ban đều do ERP
 
 ## 2. BẢN ĐỒ CẤU TRÚC THƯ MỤC DỰ ÁN
 
+`src/components/ui/searchable-select.tsx` cung cấp ô chọn danh mục có tìm kiếm, dùng `popover.tsx` bọc Radix đã cài cùng Input/Button hiện có. `src/lib/search-text.ts` chuẩn hóa tiếng Việt chỉ để lọc; biểu mẫu giữ ID và kiểm tra server hiện hành. Dùng cho các danh mục tham chiếu dài tại HR, tài sản, vị trí, tài khoản và workflow; không thêm dependency, biến môi trường hoặc DB. Theo dõi tại [tổng quan plan](plans/README.md#ô-chọn-dữ-liệu-có-tìm-kiếm--12112026).
+
 `src/components/ui/feature-overview.tsx` cung cấp thẻ số liệu, hướng dẫn mở rộng, trạng thái trống và avatar chữ cho các màn hình nghiệp vụ. Component chỉ trình bày dữ liệu đã được phân quyền từ màn hình gọi; không truy vấn DB, không cài thư viện hoặc thêm biến môi trường.
 
-Ba rule kỹ thuật Frontend/Backend/Database giữ chuẩn chung. Rule riêng tại `.agents/rules/`: [HR](../.agents/rules/HR-RULES.md), [phân quyền](../.agents/rules/ROLE-MANAGEMENT-RULES.md), [workflow](../.agents/rules/WORKFLOW-RULES.md), [tài khoản/profile/dashboard](../.agents/rules/PROFILE-DASHBOARD-RULES.md), [tài sản](../.agents/rules/ASSET-MANAGEMENT-RULES.md) mức 1 và [vị trí dùng chung](../.agents/rules/LOCATION-MANAGEMENT-RULES.md). Tài sản ở bước thiết kế; vị trí đã có bản đầu. Nghiệp vụ đọc tại rule riêng; thiết kế DB, trạng thái và kiểm thử theo plan liên kết. Định tuyến do `AGENTS.md` quản lý; không thêm dependency hoặc cấu hình chạy khi sắp xếp tài liệu.
+Ba rule kỹ thuật Frontend/Backend/Database giữ chuẩn chung. Rule riêng tại `.agents/rules/`: [HR](../.agents/rules/HR-RULES.md), [phân quyền](../.agents/rules/ROLE-MANAGEMENT-RULES.md), [workflow](../.agents/rules/WORKFLOW-RULES.md), [tài khoản/profile/dashboard](../.agents/rules/PROFILE-DASHBOARD-RULES.md), [tài sản](../.agents/rules/ASSET-MANAGEMENT-RULES.md) mức 1 và [vị trí dùng chung](../.agents/rules/LOCATION-MANAGEMENT-RULES.md). Tài sản và vị trí đã có bản đầu. Nghiệp vụ đọc tại rule riêng; thiết kế DB, trạng thái và kiểm thử theo plan liên kết. Định tuyến do `AGENTS.md` quản lý; không thêm dependency hoặc cấu hình chạy khi sắp xếp tài liệu.
 
 Tài liệu trong `docs/strategy` dùng tên tiếng Việt không dấu, viết hoa và phân cách bằng dấu gạch ngang. File bối cảnh chính là [BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md](./strategy/BOI-CANH-HIEN-TAI-VA-DINH-HUONG-SO-HOA.md). Khi đổi tên phải cập nhật các liên kết trong router, checklist và tài liệu liên quan.
 
@@ -390,9 +403,6 @@ Khi AI Agent hoặc kỹ sư thêm thư viện mới hoặc thay đổi hạ t�
 
 TypeScript, ESLint, Prisma validate/migrate diff và production build webpack; Playwright Chrome kiểm thử trên tài khoản tạm và dọn sau test. Prettier 3 chạy qua npm exec để định dạng tệp mới, không thêm dependency vào package.json hoặc thay lockfile. Snapshot trước chuyển đổi được lưu ngoài repo; không công khai nội dung mật khẩu băm trong báo cáo.
 
-### Tạm hoãn mô-đun AI — 27/10/2026
+### Route tính năng và trang không tìm thấy — 11/11/2026
 
-- Gỡ nhóm menu AI, thư mục `src/components/ai-documents`, `src/lib/payment-document.ts` và test pilot. `/ai-documents/page.tsx` chỉ hiển thị thông báo tạm hoãn sau đăng nhập; không có form, xử lý ảnh, xuất Word hoặc cấu hình AI.
-- Gỡ `docx` khỏi dependencies/lockfile; không thay phiên bản Next.js hoặc thư viện nghiệp vụ khác. Biến OPENAI_API_KEY/OPENAI_MODEL không còn được mã ứng dụng sử dụng; không yêu cầu cấu hình chúng. Không đọc/in giá trị hay thay secret hiện có.
-- Không thay DB/role/quyền dùng chung; giữ các Word đã xuất và tài liệu nghiệp vụ. Không có API AI hoặc worker nền cần dừng.
-- Điểm lưu mã cục bộ: `archive/ai-documents-20261027` (`168109ff0d995b250001b67f1fcf0cc79bdf3b68`); hướng khôi phục từng tệp trong [plan AI](plans/AI-DOCUMENTS-CHECKLIST.md). Không đóng gói mã archive trong ứng dụng.
+Route thật trong `src/app/(dashboard)` là nguồn xác định chức năng đã có. `[...slug]/page.tsx` chỉ giữ trang chờ cho các đường dẫn đã khai báo (công việc, cài đặt và hồ sơ nhân sự chi tiết); URL ngoài danh sách gọi `notFound()`. Đã gỡ trang tạm hoãn và bộ kiểm thử riêng của công cụ hồ sơ thanh toán AI theo yêu cầu, cùng plan và hướng dẫn khôi phục. Không có bảng hoặc dependency riêng cần gỡ; không đổi DB hay quyền dùng chung. Đối chiếu tính năng–mã nguồn–DB tại [tổng quan plan](plans/README.md#đối-chiếu-plan-với-code-và-db).

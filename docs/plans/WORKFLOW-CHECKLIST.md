@@ -1,8 +1,12 @@
 # Kế hoạch quy trình và duyệt công việc
 
-Cập nhật: **06/11/2026**. **Bản thử nghiệm tuần tự đã triển khai và kiểm thử đạt; chờ cấu hình người dùng thực tế. Đã chốt hướng thiết kế trình tạo quy trình kéo thả, luồng sử dụng mẫu, thông báo và dashboard; chưa triển khai phần mở rộng.** Thiết kế chi tiết tại [Thiết kế quy trình](../THIET-KE-QUY-TRINH.md).
+Cập nhật: **12/11/2026**. **Bản thử nghiệm tuần tự đã triển khai và có kết quả kiểm thử trước đây; chờ cấu hình pilot thực tế. Đã chốt hướng thiết kế trình tạo quy trình kéo thả, luồng sử dụng mẫu, thông báo và dashboard; chưa triển khai phần mở rộng.** Đối chiếu code/DB: 5 bảng hiện có đều rỗng, quyền WORKFLOW đã được gán ở một số role; không dùng kết quả “chưa có grant” của lần kiểm tra cũ làm hiện trạng. Xem [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db) và [Thiết kế quy trình](../THIET-KE-QUY-TRINH.md).
 
 Rule nghiệp vụ: [WORKFLOW-RULES](../../.agents/rules/WORKFLOW-RULES.md).
+
+## Ô chọn có tìm kiếm — 12/11/2026
+
+- [x] Ô chọn mẫu và người xử lý/chuyển giao: đã chuyển sang tìm/chọn có hỗ trợ không dấu; kiểm thử giao diện và hồi quy đạt. Cách dùng chung và kiểm chứng tại [tổng quan](README.md#ô-chọn-dữ-liệu-có-tìm-kiếm--12112026). Không đổi dữ liệu hoặc quyền.
 
 ## Đồng bộ giao diện — 09/11/2026
 
@@ -80,4 +84,4 @@ Chưa gồm tệp đính kèm, biểu mẫu động, duyệt song song, điều 
 2. Tại `/departments`, chọn người phụ trách phòng nếu mẫu dùng cách tìm head. Người gửi/duyệt/thực hiện phải gắn nhân sự đang làm việc.
 3. Tại `/workflows`, tạo mẫu “Hỗ trợ IT”: bước duyệt bởi phụ trách phòng → bước thực hiện bởi nhân sự IT được chọn. Phát hành rồi gửi một hồ sơ thử; người gửi không tự duyệt.
 
-Chưa cấp quyền hoặc tạo mẫu nghiệp vụ cho công ty thật. Người phụ trách chọn đối tượng dùng thử trước khi nghiệm thu; không cần đổi schema để cấu hình luồng trên.
+Quyền được quản lý tại `/roles`; phải kiểm tra grant đang có trước khi cấu hình pilot, không tự cấp lại. DB tại mốc đối chiếu chưa có mẫu/hồ sơ nghiệp vụ. Người phụ trách chọn đối tượng dùng thử trước khi nghiệm thu; không cần đổi schema để cấu hình luồng trên.

@@ -148,6 +148,7 @@ export async function saveRole(input: unknown) {
       const editable = catalog.filter(
         (p) =>
           isEditableGrant(p) &&
+          (p.phan_he !== "ASSETS" || v.permissions.ASSETS !== undefined) &&
           (p.phan_he !== "WORKFLOW" || v.workflowActions !== undefined) &&
           (p.phan_he !== "LOCATIONS" || v.permissions.LOCATIONS !== undefined),
       );

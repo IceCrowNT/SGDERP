@@ -23,6 +23,7 @@ import {
   type WorkflowDraftInput,
   type WorkflowCommandInput,
 } from "@/lib/validations/workflow";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -88,12 +89,14 @@ export function ChoiceField({
   options,
   numeric = false,
   required = true,
+  searchable = false,
 }: {
   name: string;
   label: string;
   options: { value: string; label: string }[];
   numeric?: boolean;
   required?: boolean;
+  searchable?: boolean;
 }) {
   const { control } = useFormContext();
   return (
@@ -103,7 +106,7 @@ export function ChoiceField({
       render={({ field }) => (
         <FormItem>
           <FormLabel required={required}>{label}</FormLabel>
-          <Select
+          {searchable ? <FormControl><SearchableSelect label={label} ref={field.ref} onBlur={field.onBlur} aria-required={required} value={field.value == null ? "" : String(field.value)} onValueChange={v => field.onChange(numeric ? Number(v) : v)} options={options} /></FormControl> : (<Select
             value={field.value == null ? "" : String(field.value)}
             onValueChange={(v) => field.onChange(numeric ? Number(v) : v)}
           >
@@ -124,7 +127,7 @@ export function ChoiceField({
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
+          </Select>)}
           <FormMessage />
         </FormItem>
       )}
@@ -271,6 +274,7 @@ export function TemplateForm({
                   name={`steps.${i}.employeeId`}
                   label={`Người xử lý bước ${i + 1}`}
                   numeric
+                  searchable
                   options={people.map((p) => ({
                     value: String(p.id),
                     label: p.name,
@@ -373,6 +377,7 @@ export function DraftForm({
           name="templateId"
           label="Mẫu quy trình"
           numeric
+          searchable
           options={templates.map((t) => ({
             value: String(t.id),
             label: `${t.name} · v${t.revision}`,
@@ -446,6 +451,7 @@ export function CommandForm({
             name="employeeId"
             label="Người nhận công việc"
             numeric
+            searchable
             options={people.map((p) => ({
               value: String(p.id),
               label: p.name,

@@ -1,7 +1,5 @@
 # Ý tưởng tính năng SDG ERP
 
-> **Quyết định 27/10/2026:** Tạm hoãn tích hợp AI và gỡ bản thử nghiệm hồ sơ thanh toán khỏi ứng dụng. Giữ ý tưởng/tài liệu để xem xét sau; không tự khôi phục khi chưa được duyệt. Xem [plan AI](../plans/AI-DOCUMENTS-CHECKLIST.md).
-
 Tài liệu ghi nhận ý tưởng để xem xét và thử nghiệm. Việc ghi nhận không đồng nghĩa được duyệt triển khai; tiến độ thực hiện theo checklist từng phân hệ. Danh sách sẽ bổ sung dần, không thay thế các tài liệu thiết kế hiện có.
 
 ## Quét mã tài sản bằng camera điện thoại

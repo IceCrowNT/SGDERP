@@ -4,6 +4,8 @@ import path from "node:path";
 import { db } from "@/lib/db";
 import { getSession, hasPermission } from "@/lib/auth";
 import { locationPath } from "@/lib/location-tree";
+import { equipmentForAssets } from "@/lib/office-3d/hcns-layout";
+import type { LocationAsset } from "@/lib/asset-location";
 import {
   RoomMappingSchema,
   mappedRoomPoints,
@@ -77,6 +79,20 @@ export async function getHcnsRoom() {
   }
   const canViewEmployees = hasPermission(session, "HR");
   const points = mappedRoomPoints(mapping, rows);
+  const canViewAssets = hasPermission(session, "ASSETS");
+  const assets = canViewAssets ? await db.tai_san.findMany({
+    where: { company_id: session.companyId,
+      vi_tri_id: { in: points.filter(p => p.state === "active" && p.locationId !== undefined).map(p => p.locationId!) } },
+    select: { id: true, ma_tai_san: true, ten_tai_san: true, tinh_trang: true,
+      vi_tri_id: true, updated_at: true,
+      loai_tai_san: { select: { ma_loai: true, ten_loai: true } } },
+    orderBy: [{ ma_tai_san: "asc" }, { id: "asc" }],
+  }) : [];
+  const pointAssets = (locationId?: number): LocationAsset[] => assets
+    .filter(a => a.vi_tri_id === locationId)
+    .map(a => ({ id: a.id, code: a.ma_tai_san, name: a.ten_tai_san,
+      category: a.loai_tai_san.ten_loai, categoryCode: a.loai_tai_san.ma_loai,
+      condition: a.tinh_trang, locationId: a.vi_tri_id, version: a.updated_at.toISOString() }));
   const people = canViewEmployees
     ? await db.nhan_su.findMany({
         where: {
@@ -103,6 +119,10 @@ export async function getHcnsRoom() {
       path: locationPath(room.id, rows),
       points: points.map((point) => ({
         ...point,
+        ...(canViewAssets ? {
+          assets: pointAssets(point.locationId),
+          equipment: equipmentForAssets(pointAssets(point.locationId)),
+        } : {}),
         ...(canViewEmployees
           ? {
               occupants:
@@ -127,6 +147,8 @@ export async function getHcnsRoom() {
       canManage: hasPermission(session, "LOCATIONS", "MANAGE"),
       canViewEmployees,
       canManageEmployees: hasPermission(session, "HR", "MANAGE"),
+      canViewAssets,
+      canManageAssets: hasPermission(session, "ASSETS", "MANAGE"),
     },
   };
 }

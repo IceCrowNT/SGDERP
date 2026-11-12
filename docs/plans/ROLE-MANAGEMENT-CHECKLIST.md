@@ -1,8 +1,12 @@
 # Kế hoạch vai trò và phân quyền
 
-Cập nhật: **09/11/2026**. Bản đầu `/roles` đã triển khai và kiểm thử đạt. HR/quản trị có phạm vi công ty; workflow có quyền hành động và giới hạn theo hồ sơ.
+Cập nhật: **12/11/2026**. Bản đầu `/roles` đã triển khai và có kết quả kiểm thử trước đây. Đối chiếu code/DB xác nhận bốn bảng RBAC và catalog hiện hành; HR/quản trị có phạm vi công ty, workflow có quyền hành động và giới hạn theo hồ sơ. Số liệu vận hành và giới hạn lần rà soát tại [tổng quan](README.md#đối-chiếu-plan-với-code-và-db).
 
 Rule nghiệp vụ: [ROLE-MANAGEMENT-RULES](../../.agents/rules/ROLE-MANAGEMENT-RULES.md).
+
+## Ô chọn có tìm kiếm — 12/11/2026
+
+- [x] Ô chọn nhân sự sở hữu khi tạo/sửa tài khoản: đã chuyển sang tìm/chọn có hỗ trợ không dấu; kiểm thử giao diện và hồi quy đạt. Cách dùng chung và kiểm chứng tại [tổng quan](README.md#ô-chọn-dữ-liệu-có-tìm-kiếm--12112026). Không đổi dữ liệu hoặc quyền.
 
 ## Đồng bộ giao diện — 09/11/2026
 
@@ -11,7 +15,7 @@ Rule nghiệp vụ: [ROLE-MANAGEMENT-RULES](../../.agents/rules/ROLE-MANAGEMENT-
 
 ## Bộ vai trò tối thiểu
 
-- Giữ `ADMIN` (quản trị), `DEFAULT` (cá nhân) và `HR_MANAGER` với nhãn **Quản lý hành chính nhân sự**. Giữ mã/ID HCNS hiện có; đây là role tùy chỉnh, không phải chức vụ hay người duyệt mặc định.
+- Bộ khởi tạo gồm `ADMIN` (quản trị), `DEFAULT` (cá nhân) và `HR_MANAGER` với nhãn **Quản lý hành chính nhân sự**; vận hành được tạo thêm role tùy chỉnh. Giữ mã/ID HCNS hiện có; đây là role tùy chỉnh, không phải chức vụ hay người duyệt mặc định. Kết quả dọn còn 3 role bên dưới là mốc cũ, không phải số lượng hiện tại.
 - Bỏ role mẫu `IT_ADMIN`, `HR_STAFF`, `DEPT_HEAD`, `ACCOUNTANT`, `STAFF` sau kiểm tra gán/quyền. Tài khoản đã có cả hai role HCNS chỉ cần giữ `HR_MANAGER`, bộ quyền hiệu lực không đổi.
 - Seed mới chỉ tạo ba role trên khi khởi tạo; không phục hồi role nghiệp vụ đã xóa hoặc grant đã thu hồi. DEFAULT không grant; ADMIN chỉ quản trị chức năng hiện có; HCNS chỉ HR MANAGE. Quyền workflow có trong danh mục nhưng không tự cấp.
 - Dữ liệu đang dùng giữ nguyên catalog/grant lịch sử TASK/SYSTEM/APPROVAL ngoài ma trận; không chuyển chúng thành quyền workflow. Chúng không chứng minh tính năng tương ứng đã triển khai.
@@ -35,6 +39,8 @@ Quản trị viên tạo role và chọn **quyền đã triển khai** ngay tạ
 - [x] 9 E2E phân quyền đạt, gồm luồng xem tài khoản đang dùng → gỡ vai trò → xóa thành công, tài khoản vẫn được giữ. TypeScript/lint đạt; Chrome kiểm tra trang thật trên desktop/mobile, DEFAULT chỉ đọc và hướng dẫn xóa HCNS. Không đổi schema, quyền hoặc gán role vận hành trong lần sửa giao diện.
 
 ## Đã triển khai
+
+- [x] Đợt 1 tài sản bổ sung ASSETS VIEW/MANAGE vào catalog, validation, giá trị form và Server Actions. Payload role cũ không có ASSETS giữ grant hiện có; migration/seed chỉ bổ sung catalog, không cấp quyền mặc định. Ngày 12/11 đã cấp ASSETS MANAGE cho admin theo yêu cầu, giữ các quyền khác và ghi audit; đây là cấp quyền vận hành tường minh, không thay chính sách seed. Kiểm chứng và bảo toàn dữ liệu tại [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md).
 
 - [x] Tách nghiệp vụ khỏi rule Frontend/Backend chung sang `ROLE-MANAGEMENT-RULES.md`; đăng ký router, giữ quyết định DB trong plan. Chỉ sắp xếp tài liệu, không thay tính năng.
 
@@ -61,7 +67,8 @@ Bộ 8 role từng được tạo bởi seed demo đã được thay bằng chí
 
 | Quyền | Ý nghĩa |
 | --- | --- |
-| Nhân sự/phòng ban | Không truy cập / Xem / Quản lý; gồm danh bạ và 3D |
+| Nhân sự/phòng ban | Không truy cập / Xem / Quản lý; gồm hồ sơ, cơ cấu và danh bạ. Xem người trên 3D cần HR bên cạnh LOCATIONS |
+| Vị trí/3D | Không truy cập / Xem / Quản lý theo LOCATIONS; không tự cấp quyền xem/sửa dữ liệu nhân sự |
 | Tài khoản | Không truy cập / Quản lý; chỉ sửa/gán quyền nằm trong quyền của người thao tác, trừ người có quyền quản lý phân quyền |
 | Vai trò/phân quyền | Không truy cập / Xem / Quản lý; Quản lý là quyền quản trị nhạy cảm, có thể cấp mọi quyền trong công ty |
 | Nhật ký | Không truy cập / Xem; không cấp quyền sửa/xóa lịch sử |
@@ -79,8 +86,9 @@ Kiểm tra bổ sung 05/11: 38 E2E tích hợp + 7 unit đạt; DEFAULT không c
 
 ## Bước sau
 
+- [ ] Sửa mô tả HR trong `src/lib/role-catalog.ts` còn ghi “bản đồ 3D” để khớp guard LOCATIONS hiện có; chỉ là nhãn giải thích, không thay grant. Phát hiện khi đối chiếu 11/11, chưa sửa mã trong lượt rà soát.
 - [x] LOCATIONS VIEW/MANAGE đã có migration, catalog, ma trận, seed cài mới và guard `/locations`; không cấp grant vận hành. Payload sửa role từ phiên UI cũ không có LOCATIONS giữ nguyên grant này; UI mới gửi mức quyền tường minh. Kiểm thử ma trận mới và 9 ca phân quyền hồi quy đạt. Thiết kế tại [plan vị trí](LOCATION-MANAGEMENT-CHECKLIST.md).
-- [ ] ASSETS triển khai cùng [tài sản](ASSET-MANAGEMENT-CHECKLIST.md), không bao gồm sửa cây vị trí. HR/ASSETS chọn vị trí theo quyền nghiệp vụ, không tự có LOCATIONS MANAGE.
+- [x] ASSETS đã triển khai cùng [tài sản](ASSET-MANAGEMENT-CHECKLIST.md), không bao gồm sửa cây vị trí. HR/ASSETS chọn vị trí theo quyền nghiệp vụ, không tự có LOCATIONS MANAGE.
 
 - [x] Tách ràng buộc DB phân quyền khỏi rule tổng quát; giữ trong mục thiết kế DB của phân hệ, không sửa grant hoặc dữ liệu.
 - [x] Áp dụng [thiết kế DEFAULT và quyền cá nhân](../THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md): nền dashboard/profile cho tài khoản hợp lệ; DEFAULT không cấp HR/workflow, role STAFF mẫu được bỏ theo mục thu gọn ở trên. Giữ grant nghiệp vụ hiện tại; không cấp hàng loạt cho tài khoản cũ.

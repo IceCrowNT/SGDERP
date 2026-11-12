@@ -25,8 +25,9 @@ import {
 import type { BuildingData } from "@/lib/office-3d/building-mapping";
 import { BuildingModel } from "./BuildingModel";
 import { hcnsWorldPoint } from "@/lib/office-3d/building-navigation";
-import { HCNS_LAYOUT, personRoomPosition } from "@/lib/office-3d/hcns-layout";
+import { HCNS_LAYOUT, HCNS_ROOM_BOUNDS, personRoomPosition } from "@/lib/office-3d/hcns-layout";
 import { materials } from "../hcns/RoomFurniture";
+import { ARCHITECTURAL_BOUNDS } from "@/lib/office-3d/architectural-layout";
 
 export type BuildingCamera = {
   view: "overview" | "top" | "focus";
@@ -80,8 +81,8 @@ class DemandCameraControls extends CameraControlsImpl {
 }
 function roomFitZoom(camera: Camera, size: { width: number; height: number }) {
   const inverse = camera.quaternion.clone().invert();
-  const corners = [-4.6, 4.6].flatMap((x) =>
-    [-6.7, 7].flatMap((z) =>
+  const corners = [HCNS_ROOM_BOUNDS.minX, HCNS_ROOM_BOUNDS.maxX].flatMap((x) =>
+    [HCNS_ROOM_BOUNDS.minZ, HCNS_ROOM_BOUNDS.maxZ].flatMap((z) =>
       [0, 2.4].map((y) =>
         new Vector3(...hcnsWorldPoint(x, y, z)).applyQuaternion(inverse),
       ),
@@ -92,6 +93,27 @@ function roomFitZoom(camera: Camera, size: { width: number; height: number }) {
   const height =
     Math.max(...corners.map((v) => v.y)) - Math.min(...corners.map((v) => v.y));
   return Math.min(size.width / (width + 2), size.height / (height + 2));
+}
+function floorFitZoom(
+  camera: Camera, size: { width: number; height: number },
+  position: [number, number, number], target: [number, number, number], all: boolean,
+) {
+  const view = camera.clone();
+  view.position.set(...position);
+  view.lookAt(...target);
+  const inverse = view.quaternion.clone().invert();
+  const { width, depth } = ARCHITECTURAL_BOUNDS;
+  const corners = [-width / 2 - 2, width / 2 + 2].flatMap((x) =>
+    [-depth / 2, depth / 2].flatMap((z) =>
+      [0, all ? floorElevation(3, "all") + 2.4 : 2.4].map((y) =>
+        new Vector3(x, y, z).applyQuaternion(inverse),
+      ),
+    ),
+  );
+  return Math.min(
+    size.width / (Math.max(...corners.map((p) => p.x)) - Math.min(...corners.map((p) => p.x)) + 4),
+    size.height / (Math.max(...corners.map((p) => p.y)) - Math.min(...corners.map((p) => p.y)) + 4),
+  );
 }
 function CameraRig({
   command,
@@ -180,10 +202,10 @@ function CameraRig({
       const slot = HCNS_LAYOUT.find((p) => p.key === command.key);
       let position: [number, number, number] = [15, 18, 20];
       let target: [number, number, number] = [0, 0, 0];
-      let zoom = Math.min(size.width / 18.5, size.height / 17);
+      let zoom = Math.min(size.width / (HCNS_ROOM_BOUNDS.width * 1.4), size.height / (HCNS_ROOM_BOUNDS.depth * 1.2));
       if (command.view === "top") {
         position = [0, 24, 0.01];
-        zoom = Math.min(size.width / 11.5, size.height / 16.5);
+        zoom = Math.min(size.width / (HCNS_ROOM_BOUNDS.width + 2), size.height / (HCNS_ROOM_BOUNDS.depth + 2));
       } else if (command.view === "focus" && slot) {
         position = [slot.x + 8, 12, slot.z + 10];
         target = [slot.x, 0.7, slot.z];
@@ -198,11 +220,8 @@ function CameraRig({
       return;
     }
     const room = BUILDING_ROOMS.find((r) => r.key === command.key);
-    let zoom = Math.min(
-      size.width / 68,
-      size.height / (floor === "all" ? 66 : 49),
-    );
-    if (command.view === "focus" && room && floor !== "all") {
+    let zoom: number;
+    if (command.view === "focus" && room?.placed && floor !== "all") {
       void c.setLookAt(
         room.x + 22,
         25,
@@ -218,10 +237,13 @@ function CameraRig({
       );
     } else if (command.view === "top" && floor !== "all") {
       void c.setLookAt(0, 65, 0.01, 0, 0, 0, animate);
-      zoom = Math.min(size.width / 49, size.height / 38);
+      zoom = floorFitZoom(camera, size, [0, 65, 0.01], [0, 0, 0], false);
     } else {
-      const targetY = floor === "all" ? 10 : 0;
-      void c.setLookAt(60, targetY + 46, 65, 0, targetY, 0, animate);
+      const targetY = floor === "all" ? floorElevation(2, "all") : 0;
+      const position: [number, number, number] = [60, targetY + 46, 65];
+      const target: [number, number, number] = [0, targetY, 0];
+      void c.setLookAt(...position, ...target, animate);
+      zoom = floorFitZoom(camera, size, position, target, floor === "all");
     }
     void c.zoomTo(Math.max(3, zoom * command.zoom), animate);
   }, [scope, command, detail, floor, size, camera]);
@@ -290,7 +312,6 @@ function ProjectedLabels({
       // Name labels are secondary to the actual mesh. Keep them from covering
       // one another; the full list remains available beside the canvas.
       if (
-        anchor.point &&
         boxes.some(
           (b) =>
             Math.abs(b.x - x) < (b.w + w) / 2 + 6 &&
@@ -387,21 +408,18 @@ export default function BuildingCanvas(props: Props) {
     if (props.floor === "all")
       return BUILDING_FLOORS.map((f) => ({
         key: `floor-${f.floor}`,
-        at: [-22, floorElevation(f.floor, props.floor) + 0.6, 17],
+        at: [-ARCHITECTURAL_BOUNDS.width / 2 - 1, floorElevation(f.floor, props.floor) + 0.6, 9],
       }));
     return BUILDING_ROOMS.filter(
       (r) =>
-        r.floor === props.floor &&
+        r.placed && r.floor === props.floor && (r.showLabel || r.key === props.selected) &&
         (props.command.view !== "focus" ||
           !props.selected ||
           r.key === props.selected),
     ).map((r) => ({
       key: r.key,
-      at: [
-        r.x,
-        0.45,
-        r.key === HCNS_BUILDING_KEY ? r.z + r.depth / 2 + 0.6 : r.z,
-      ],
+      at: [r.label[0], 0.7, r.label[1]],
+      priority: r.key === props.selected ? 3 : r.key === HCNS_BUILDING_KEY ? 1 : 0,
     }));
   }, [
     props.detail,
@@ -521,7 +539,7 @@ export default function BuildingCanvas(props: Props) {
                 {f.name}
               </Button>
             ))}
-            {props.building.rooms.map((r) => (
+            {props.building.rooms.filter((r) => BUILDING_ROOMS.find((s) => s.key === r.key)?.placed).map((r) => (
               <Button
                 key={r.key}
                 ref={(el) => register(r.key, el)}

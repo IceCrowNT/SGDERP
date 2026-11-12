@@ -18,6 +18,7 @@ import {
   History,
   Loader2,
 } from "lucide-react";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -642,36 +643,7 @@ function LocationForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Vị trí cấp trên</FormLabel>
-              <Select
-                value={field.value === null ? "root" : String(field.value)}
-                onValueChange={(value) => {
-                  field.onChange(value === "root" ? null : Number(value));
-                  setConfirmedParent(undefined);
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger
-                    ref={field.ref}
-                    onBlur={field.onBlur}
-                    aria-required="false"
-                    className="w-full"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="root">
-                    Vị trí gốc (không có cấp trên)
-                  </SelectItem>
-                  {rows
-                    .filter((r) => r.dang_su_dung && !excluded.has(r.id))
-                    .map((r) => (
-                      <SelectItem key={r.id} value={String(r.id)}>
-                        {locationPath(r.id, rows)}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <FormControl><SearchableSelect label="Vị trí cấp trên" ref={field.ref} onBlur={field.onBlur} value={field.value === null ? "root" : String(field.value)} onValueChange={value => { field.onChange(value === "root" ? null : Number(value)); setConfirmedParent(undefined); }} searchPlaceholder="Tìm tên hoặc đường dẫn vị trí…" options={[{ value: "root", label: "Vị trí gốc (không có cấp trên)" }, ...rows.filter(r => r.dang_su_dung && !excluded.has(r.id)).map(r => ({ value: String(r.id), label: locationPath(r.id, rows), keywords: r.ma_vi_tri }))]} /></FormControl>
               <FormMessage />
             </FormItem>
           )}

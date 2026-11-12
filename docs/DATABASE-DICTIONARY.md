@@ -21,9 +21,9 @@ Giữ nguyên tên bảng/cột Việt và 9 bảng. `vai_tro.ma_vai_tro` là m�
 
 Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng và cột PostgreSQL**. Quy ước tiếng Việt hoàn toàn ở thời điểm đó đã được quy ước lai ngày 06/11/2026 phía trên thay thế; Prisma Studio hiển thị trực tiếp tên hiện hành.
 
-## Thiết kế chưa triển khai — 10/11/2026
+## Tài sản và vị trí — 11/11/2026
 
-[Tài sản mức 1](plans/ASSET-MANAGEMENT-CHECKLIST.md) dự kiến thêm `loai_tai_san`, `tai_san` và tham chiếu vị trí. FK nullable `nhan_su.vi_tri_lam_viec_id` đã có từ migration `20261110160000_vi_tri_lam_viec_nhan_su`, cùng công ty/Restrict, không unique. Form HR và chi tiết vị trí cùng quản lý một liên kết; 3D HCNS chỉ đọc người ACTIVE theo quyền. Khi xóa vị trí qua ERP, action có đủ quyền/xác nhận tự bỏ gán nhân sự và audit nguyên tử trước khi xóa; FK Restrict vẫn giữ để chặn thao tác SQL làm mất liên kết. Các bảng/cột tài sản vẫn chưa triển khai.
+[Tài sản mức 1](plans/ASSET-MANAGEMENT-CHECKLIST.md) đã có `loai_tai_san`, `tai_san` và FK vị trí qua migration `20261111095809_tai_san_muc_1`. FK nullable `nhan_su.vi_tri_lam_viec_id` đã có từ migration `20261110160000_vi_tri_lam_viec_nhan_su`, cùng công ty/Restrict, không unique. Form HR và chi tiết vị trí cùng quản lý một liên kết; 3D HCNS chỉ đọc người ACTIVE theo quyền. Khi xóa vị trí qua ERP, action có đủ quyền/xác nhận tự bỏ gán nhân sự và audit nguyên tử trước khi xóa; FK Restrict vẫn giữ để chặn thao tác SQL làm mất liên kết. Vị trí còn tài sản thì chặn xóa/ngừng dùng; không tự gỡ thiết bị. Giao diện `/assets` đã có; dữ liệu thiết bị vận hành chưa nhập.
 
 ## Danh mục hiện hành
 
@@ -32,6 +32,8 @@ Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng v�
 | Công ty | `cong_ty` | Company |
 | Phòng ban | `phong_ban` | Department |
 | Vị trí & không gian dùng chung | `vi_tri` | — |
+| Loại thiết bị | `loai_tai_san` | — (thiết kế mức 1 mới) |
+| Hồ sơ từng thiết bị | `tai_san` | — (thiết kế mức 1 mới) |
 | Hồ sơ nhân sự | `nhan_su` | Employee |
 | Tài khoản đăng nhập | `tai_khoan` | User |
 | Vai trò | `vai_tro` | Role |
@@ -45,7 +47,7 @@ Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng v�
 | Bước xử lý của từng hồ sơ | `buoc_xu_ly_quy_trinh` | — |
 | Lịch sử xử lý | `lich_su_quy_trinh` | — |
 
-DB có 15 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` đã triển khai; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
+DB có 17 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` đã triển khai; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
 
 Các giá trị enum `ACTIVE / LEFT / UNKNOWN`, mã quyền `HR / VIEW / MANAGE`, constraint/index/sequence lịch sử và JSON nhật ký cũ được giữ nguyên. Đây không phải tên bảng/cột. Relation field của Prisma là liên kết, không tạo cột PostgreSQL; tên liên kết cũng dùng tiếng Việt.
 
@@ -59,6 +61,29 @@ await db.nhan_su.findMany({
 ```
 
 Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fullName/companyId; Server Action chuyển tường minh sang trường DB. Không tạo model hoặc lớp Prisma alias tiếng Anh song song. Nhãn người dùng trên ERP vẫn là tiếng Việt có dấu.
+
+## `loai_tai_san` và `tai_san` — Thiết bị mức 1
+
+Hai bảng có `id`, `company_id`, `created_at`, `updated_at`. Mã unique trong công ty; FK nghiệp vụ kép cùng công ty/Restrict. Enum và ràng buộc vận hành do [plan tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md#thiết-kế-db-cần-giữ) quản lý.
+
+| Bảng | Cột nghiệp vụ | Kiểu / ý nghĩa |
+| --- | --- | --- |
+| `loai_tai_san` | `ma_loai` | String(50), mã loại bất biến |
+| | `ten_loai` | String(255), tên bắt buộc |
+| | `mo_ta` | Text?, mô tả |
+| | `dang_su_dung` | Boolean, cho phép chọn mới |
+| `tai_san` | `ma_tai_san` | String(50), mã TS tự cấp/bất biến |
+| | `ten_tai_san` | String(255), tên bắt buộc |
+| | `loai_tai_san_id` | Int, FK loại bắt buộc |
+| | `phong_quan_ly_id` | Int?, FK phòng quản lý |
+| | `nguoi_su_dung_id` | Int?, FK nhân sự dùng thiết bị |
+| | `vi_tri_id` | Int?, FK vị trí vật lý |
+| | `tinh_trang` | Enum `TinhTrangTaiSan`, mặc định `CHUA_XAC_NHAN` |
+| | `hinh_thuc_su_dung` | Enum `HinhThucSuDungTaiSan`, mặc định `CHUA_XAC_DINH` |
+| | `so_serial`, `hang_model` | String(255)?, serial không unique |
+| | `ghi_chu` | Text?, ghi chú vận hành |
+
+Quan hệ Prisma của thiết bị: `cong_ty`, `loai_tai_san`, `phong_quan_ly`, `nguoi_su_dung`, `vi_tri`; các bảng đích có `danh_sach_tai_san`. Công ty có thêm `danh_sach_loai_tai_san`. Audit tra bằng `company_id`, `ASSETS` và `tai_san:<id>` hoặc `loai_tai_san:<id>`, không tạo bảng lịch sử riêng.
 
 ## `vi_tri` — Vị trí & không gian
 
@@ -280,7 +305,7 @@ Quan hệ Prisma: `cong_ty`, `vi_tri_cha`, `danh_sach_vi_tri_con`, `danh_sach_nh
 - Phòng ban và nhân sự quản lý độc lập trong ERP sau khởi tạo. Metadata nguồn chỉ giữ lịch sử, không khóa sửa/đồng bộ 1Office. `ghi_chu` là ghi chú vận hành; `ghi_chu_nhan_su_hr` là ghi chú nguồn.
 - FK nhân sự–phòng ban và tài khoản–nhân sự dùng cặp định danh + công ty. Mọi truy vấn nghiệp vụ cần giới hạn công ty từ phiên đăng nhập.
 - `tai_khoan_vai_tro` và `vai_tro_quyen` dùng khóa chính kép; mỗi cặp chỉ xuất hiện một lần. `la_vai_tro_chinh` không thay thế phép cộng quyền từ các vai trò.
-- Bảng tài sản đã gỡ ngày 31/10/2026; không tự khôi phục khi seed hoặc migrate.
+- Schema tài sản cũ đã gỡ ngày 31/10/2026; không khôi phục bằng seed. Hai bảng mức 1 mới được triển khai độc lập ngày 11/11/2026 theo plan tài sản.
 
 ## Lịch sử chuyển tên
 

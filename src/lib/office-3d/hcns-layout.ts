@@ -1,99 +1,129 @@
-// Model coordinates are illustrative. facingDegrees uses degrees (0/90/180/270).
+import { ARCHITECTURAL_REGIONS } from "./architectural-layout";
+import type { LocationAsset } from "../asset-location";
+
+// User-confirmed: HCNS occupies the room labelled 95.4 m² on floor 2.
+// Furniture follows the annotated floor-2 sheet; sizes remain schematic.
+const hcnsRegion = ARCHITECTURAL_REGIONS.find(
+  (region) => region.key === "plan_t2_phai_sau",
+)!;
+export const HCNS_ROOM_OUTLINE = hcnsRegion.points.map(
+  ([x, z]): [number, number] => [
+    Number((x - hcnsRegion.bounds.x).toFixed(3)),
+    Number((z - hcnsRegion.bounds.z).toFixed(3)),
+  ],
+);
+export const HCNS_ROOM_BOUNDS = {
+  width: hcnsRegion.bounds.width,
+  depth: hcnsRegion.bounds.depth,
+  minX: -hcnsRegion.bounds.width / 2,
+  maxX: hcnsRegion.bounds.width / 2,
+  minZ: -hcnsRegion.bounds.depth / 2,
+  maxZ: hcnsRegion.bounds.depth / 2,
+};
+
+// Corridor entry is on the lower-left edge of the architectural plan (+Z).
+// Desk 01 is alone in the entry zone. The annotated partition aligns with the
+// lower edge of the stairwell, with a left-hand doorway to desks 02–10.
+export const HCNS_PARTITION_Z = 1.675;
+export const HCNS_CONNECTING_DOOR = { minX: -0.85, maxX: 0.75 };
+
+// Facing uses degrees. A shared model is translated into the building without
+// rotating or squeezing individual desks; stable keys retain location bindings.
 export const HCNS_LAYOUT = [
   {
     key: "hcns-01",
     number: 1,
-    x: -2.1,
-    z: -4.8,
+    x: 0.9,
+    z: 6.5,
     width: 2.5,
     depth: 1.2,
-    facingDegrees: 180,
+    facingDegrees: 0,
   },
   {
     key: "hcns-02",
     number: 2,
-    x: -2.1,
-    z: 1.7,
-    width: 2.5,
+    x: 3.2,
+    z: 0.4,
+    width: 2.3,
     depth: 1.0,
-    facingDegrees: 180,
+    facingDegrees: 0,
   },
   {
     key: "hcns-03",
     number: 3,
-    x: -2.75,
-    z: 3.5,
-    width: 1.8,
-    depth: 1,
-    facingDegrees: 180,
+    x: 4.0,
+    z: -2.3,
+    width: 1.6,
+    depth: 0.8,
+    facingDegrees: 0,
   },
   {
     key: "hcns-04",
     number: 4,
-    x: -0.85,
-    z: 3.5,
-    width: 1.8,
-    depth: 1,
-    facingDegrees: 180,
+    x: 2.3,
+    z: -2.3,
+    width: 1.6,
+    depth: 0.8,
+    facingDegrees: 0,
   },
   {
     key: "hcns-05",
     number: 5,
-    x: -2.75,
-    z: 5.0,
-    width: 1.8,
-    depth: 0.85,
-    facingDegrees: 180,
+    x: 4.0,
+    z: -5.25,
+    width: 1.6,
+    depth: 0.7,
+    facingDegrees: 0,
   },
   {
     key: "hcns-06",
     number: 6,
-    x: -0.85,
-    z: 5.0,
-    width: 1.8,
-    depth: 0.85,
-    facingDegrees: 180,
+    x: 2.3,
+    z: -5.25,
+    width: 1.6,
+    depth: 0.7,
+    facingDegrees: 0,
   },
   {
     key: "hcns-07",
     number: 7,
-    x: -2.75,
-    z: 5.9,
-    width: 1.8,
-    depth: 0.85,
-    facingDegrees: 0,
+    x: 4.0,
+    z: -6.0,
+    width: 1.6,
+    depth: 0.7,
+    facingDegrees: 180,
   },
   {
     key: "hcns-08",
     number: 8,
-    x: -0.85,
-    z: 5.9,
-    width: 1.8,
-    depth: 0.85,
-    facingDegrees: 0,
+    x: 2.3,
+    z: -6.0,
+    width: 1.6,
+    depth: 0.7,
+    facingDegrees: 180,
   },
   {
     key: "hcns-09",
     number: 9,
-    x: 3.05,
-    z: 3.5,
+    x: 0.05,
+    z: -2.3,
     width: 1.45,
     depth: 1,
-    facingDegrees: 90,
+    facingDegrees: 270,
   },
   {
     key: "hcns-10",
     number: 10,
-    x: 3.05,
-    z: 5.8,
-    width: 1.6,
+    x: 0.05,
+    z: -5.65,
+    width: 1.5,
     depth: 1.1,
-    facingDegrees: 90,
+    facingDegrees: 270,
   },
 ] as const;
 
 export type EquipmentKind =
-  "pc" | "laptop" | "printer" | "scanner" | "access-point";
+  "pc" | "laptop" | "printer" | "scanner" | "access-point" | "generic";
 export type RoomPoint = {
   key: string;
   locationId?: number;
@@ -102,6 +132,7 @@ export type RoomPoint = {
   description: string | null;
   state: "active" | "inactive" | "unlinked";
   equipment: EquipmentKind[];
+  assets?: LocationAsset[];
   occupants?: {
     id: number;
     name: string;
@@ -116,6 +147,8 @@ export type HcnsRoomData = {
   canManage: boolean;
   canViewEmployees: boolean;
   canManageEmployees: boolean;
+  canViewAssets: boolean;
+  canManageAssets: boolean;
 };
 
 // A visual offset from the desk, not another HR/location assignment.
@@ -127,7 +160,7 @@ export function personOffset(
   return [
     (index - (Math.min(count, 3) - 1) / 2) * 0.48,
     0,
-    slot.depth / 2 + 0.3,
+    slot.depth / 2 + 0.2,
   ];
 }
 export function personRoomPosition(
@@ -144,17 +177,20 @@ export function personRoomPosition(
   ];
 }
 
-// A temporary illustration from location notes, never an asset inventory/count.
-export function equipmentFromNote(note: string | null): EquipmentKind[] {
-  const text = (note ?? "")
+// One representative per type; the panel lists every actual asset independently.
+export function equipmentForAssets(assets: Pick<LocationAsset, "category" | "categoryCode">[]): EquipmentKind[] {
+  return [...new Set(assets.map((asset): EquipmentKind => {
+    const text = `${asset.categoryCode} ${asset.category}`
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/gi, "d")
+    .replace(/[_-]/g, " ")
     .toLowerCase();
-  const result: EquipmentKind[] = [];
-  if (/\bpc\b|may tinh de ban/.test(text)) result.push("pc");
-  if (/\blaptop\b|\blap\b/.test(text)) result.push("laptop");
-  if (/\bprinter\b|may in/.test(text)) result.push("printer");
-  if (/\bscanner\b|\bscaner\b|may quet/.test(text)) result.push("scanner");
-  if (/\bap\b|access\s*point|bo phat/.test(text)) result.push("access-point");
-  return result;
+    if (/\blaptop\b|may tinh xach tay/.test(text)) return "laptop";
+    if (/\bpc\b|desktop|may tinh/.test(text)) return "pc";
+    if (/\bprinter\b|may in/.test(text)) return "printer";
+    if (/\bscanner\b|\bscaner\b|may quet/.test(text)) return "scanner";
+    if (/\bap\b|access\s*point|bo phat|wifi|wi fi/.test(text)) return "access-point";
+    return "generic";
+  }))];
 }

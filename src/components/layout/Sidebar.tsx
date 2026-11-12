@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Cuboid,
   MapPin,
+  Package,
   type LucideIcon,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -50,6 +51,10 @@ export const mainOverviewItem: SubMenuItem = {
 
 // 2. Các nhóm Sub-menu theo từng Phân hệ nghiệp vụ
 export const menuGroups: MenuGroup[] = [
+  {
+    id: "assets", title: "TÀI SẢN", icon: Package, requiredModule: "ASSETS", defaultOpen: true,
+    items: [{ label: "Quản lý tài sản", href: "/assets", icon: Package }],
+  },
   {
     id: "hr",
     title: "QUẢN TRỊ NHÂN SỰ",

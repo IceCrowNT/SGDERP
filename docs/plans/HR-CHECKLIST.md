@@ -1,8 +1,12 @@
 # Kế hoạch nhân sự, phòng ban và tài khoản
 
-Cập nhật: **10/11/2026**. Nền chức năng đã triển khai, đang ở mức thử nghiệm. Database local vừa được tạo lại cho demo: **72 nhân sự, 1 tài khoản quản trị, 18 phòng ban**; đây không phải số lượng cố định của hệ thống.
+Cập nhật: **12/11/2026**. Nền chức năng đã triển khai, đang ở mức thử nghiệm. Đã đối chiếu `/employees`, `/departments`, actions HR và DB: hồ sơ/cơ cấu, người phụ trách và FK vị trí đều có; số liệu hiện tại tại [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db). Các con số backup/reset trong biên bản bên dưới là lịch sử, không phải trạng thái vận hành cố định.
 
 Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
+
+## Ô chọn có tìm kiếm — 12/11/2026
+
+- [x] Ô chọn phòng ban, người phụ trách và vị trí làm việc: đã chuyển sang tìm/chọn có hỗ trợ không dấu; kiểm thử giao diện và hồi quy đạt. Cách dùng chung và kiểm chứng tại [tổng quan](README.md#ô-chọn-dữ-liệu-có-tìm-kiếm--12112026). Không đổi dữ liệu hoặc quyền.
 
 ## Danh bạ theo phòng ban — 09/11/2026
 
@@ -77,7 +81,7 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 - `ma_nhan_su` bắt buộc, unique trong công ty, cấp bằng `so_thu_tu_ma_nhan_su`/`tao_ma_nhan_su()`, bất biến qua trigger `ma_nhan_su_bat_bien`. Không dùng STT, tên hoặc mã phòng làm định danh; export giữ mã dạng text. Import theo mã phải báo mã lạ/trùng/mâu thuẫn; import không mã cần đối chiếu trước. Định danh nguồn unique theo phạm vi công ty/hệ thống nguồn như schema.
 - Phòng ban có mã unique trong công ty; mutation khóa hàng `cong_ty`, rồi khóa phân quyền `(260126, companyId)` khi cần, kiểm tra cây và ghi audit cùng transaction. Xóa phải khóa phòng và kiểm tra không còn con/nhân sự ở bất kỳ trạng thái nào; không dùng SetNull để đẩy con ra cấp công ty.
 - HR final là nguồn khởi tạo, ERP quản lý độc lập. Các trường `tep_nguon_nhan_su_hr`, `ngay_chot_nhan_su_hr`, `ghi_chu_nhan_su_hr`, `he_thong_nguon`, `dinh_danh_nguon`, `thoi_diem_chup_du_lieu_nguon` chỉ truy nguyên; `ghi_chu` là nội dung vận hành chỉnh được. Không khóa trường theo nguồn, suy danh tính từ mapping chưa xác minh hoặc suy nghỉ việc do thiếu trong export. Ngày Excel đọc theo UTC calendar date.
-- Seed HR chỉ bootstrap khi chưa có hồ sơ và marker; seed cơ cấu chỉ khởi tạo khi chưa có phòng, người hoặc nhật ký DEPARTMENT. Không chạy lại importer cũ, tạo tài khoản hàng loạt hay tái tạo dữ liệu đã dọn. Bảng tài sản cũ đã gỡ; thiết kế mới chưa triển khai theo [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md).
+- Seed HR chỉ bootstrap khi chưa có hồ sơ và marker; seed cơ cấu chỉ khởi tạo khi chưa có phòng, người hoặc nhật ký DEPARTMENT. Không chạy lại importer cũ, tạo tài khoản hàng loạt hay tái tạo dữ liệu đã dọn. Bảng tài sản cũ đã gỡ; nền mức 1 mới đã triển khai theo [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md). Xóa phòng quản lý còn tài sản bị chặn; không đổi người/vị trí thiết bị khi nhân sự thay đổi.
 
 Chi tiết cột ở [Từ điển DB](../DATABASE-DICTIONARY.md); quy chuẩn kỹ thuật ở [Rule DB](../../.agents/rules/DATABASE-RULES.md). Lịch sử làm sạch/chuyển đổi đã hoàn thành không phải hướng dẫn chạy lại.
 

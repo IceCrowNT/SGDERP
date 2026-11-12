@@ -1,6 +1,6 @@
 # Kế hoạch số hóa và báo cáo công việc
 
-Cập nhật: **05/11/2026**. Trọng tâm hiện tại: hoàn thiện nền SDG ERP và phân quyền; tài sản/AI tạm hoãn. Kế hoạch phát triển không đồng nghĩa đã nghiệm thu hoặc thay thế 1Office.
+Cập nhật: **11/11/2026**. Đây là lộ trình số hóa chung, không phải plan của một tính năng hoặc bảng DB riêng. Nền phân quyền đã có; bước tiếp theo là phân công và pilot. Tài sản đang thiết kế mức 1, vị trí/3D đã có bản thử. Kế hoạch phát triển không đồng nghĩa đã nghiệm thu hoặc thay thế 1Office. Đối chiếu code/DB tại [tổng quan](README.md#đối-chiếu-plan-với-code-và-db).
 
 ## Hiện trạng đã nắm
 
@@ -16,10 +16,10 @@ Thông tin cập nhật trong báo cáo: 1Office phục vụ các quy trình c�
 
 | Thứ tự | Công việc | Kết quả cần có |
 | --- | --- | --- |
-| 1 | Hoàn thiện phân quyền ERP | Trang role, quyền thực thi ở server, kiểm thử thu hồi quyền |
+| 1 | Dùng thử nền phân quyền đã triển khai | Xác nhận người dùng, quyền thực tế và nghiệm thu; không coi trang role/server guard là chưa xây |
 | 2 | Xác nhận người phụ trách phòng và đầu mối nghiệp vụ | Phân công thực tế, phạm vi quyền rõ ràng |
 | 3 | Thử một workflow nhỏ | Một luồng chạy được, có lịch sử và người nghiệm thu |
-| 4 | Đánh giá lại nhu cầu tài sản/3D và AI | Chỉ khởi động lại phân hệ được duyệt |
+| 4 | Triển khai tài sản mức 1 và mở rộng 3D khi được yêu cầu | Theo plan riêng; dùng lại nền vị trí đã có, xác nhận dữ liệu và phạm vi trước triển khai |
 | 5 | Mở rộng từng đợt | Có người dùng, dữ liệu, đào tạo và tiêu chí thành công |
 
 ## Việc cần chốt và chuẩn bị

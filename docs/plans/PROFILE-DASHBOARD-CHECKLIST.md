@@ -1,6 +1,6 @@
 # Tài khoản mặc định và không gian cá nhân
 
-Cập nhật **06/11/2026 — bản hiện tại đã triển khai và kiểm thử; đã bổ sung định hướng thông báo và ưu tiên việc đến lượt cho workflow kéo thả, chưa triển khai phần mở rộng**. Chi tiết tại [Thiết kế tài khoản và không gian cá nhân](../THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md).
+Cập nhật **11/11/2026 — bản hiện tại đã triển khai và có kết quả kiểm thử trước đây; thông báo cho workflow kéo thả chưa triển khai**. Đối chiếu code/DB xác nhận profile, dashboard, đổi mật khẩu và avatar dùng các bảng sẵn có; DEFAULT không grant, cờ đổi mật khẩu/trigger đã có. Số tài khoản và grant tại các mốc backup/reset bên dưới là lịch sử; hiện trạng tại [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db). Chi tiết tại [Thiết kế tài khoản và không gian cá nhân](../THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md).
 
 Rule nghiệp vụ: [PROFILE-DASHBOARD-RULES](../../.agents/rules/PROFILE-DASHBOARD-RULES.md).
 
@@ -22,7 +22,7 @@ Rule nghiệp vụ: [PROFILE-DASHBOARD-RULES](../../.agents/rules/PROFILE-DASHBO
 
 - [x] Tách nghiệp vụ khỏi rule Frontend/Backend chung sang `PROFILE-DASHBOARD-RULES.md`; đăng ký router, giữ quyết định DB trong plan. Chỉ sắp xếp tài liệu, không thay tính năng.
 
-- [x] Kiểm tra code và DB: workflow có chức năng nhưng chưa có grant/mẫu vận hành; DEFAULT là nhóm tối thiểu; STAFF mẫu đã được loại theo [plan phân quyền](ROLE-MANAGEMENT-CHECKLIST.md#bộ-vai-trò-tối-thiểu).
+- [x] Đối chiếu code và DB 11/11: workflow có chức năng và đã có grant ở một số role, chưa có mẫu/hồ sơ vận hành; DEFAULT là nhóm tối thiểu; STAFF mẫu đã được loại theo [plan phân quyền](ROLE-MANAGEMENT-CHECKLIST.md#bộ-vai-trò-tối-thiểu).
 - [x] Lưu thiết kế luồng, trường profile, quyền, dashboard và thay đổi DB dự kiến.
 - [x] Workflow: quyền cấp tập trung tại `/roles`, đã bỏ bước tự cấp/xác nhận tại trang quy trình; người đủ quyền thấy giao diện mẫu/hồ sơ và nút tạo mẫu đầu tiên.
 - [x] Tài khoản: nhóm DEFAULT, sinh tên chống trùng đồng thời, mật khẩu tạm và đổi lần đầu; không bắt role ở form cơ bản.
@@ -69,4 +69,4 @@ Kiểm tra sau migration quy ước tên 06/11: 51 E2E + 9 unit đạt trên ti�
 
 Sau khi tạo lại database demo cùng ngày: chỉ giữ tài khoản quản trị do seed tạo; tài khoản/profile demo khác cần tạo lại từ giao diện theo luồng hiện hành.
 
-Bước vận hành còn lại: người quản lý cấp quyền và gán vai trò tại `/roles`, sau đó mở `/workflows`; tạo mẫu nháp và chọn người thử nghiệm thực tế. Chưa cấp quyền hoặc tạo mẫu tự động cho công ty thật.
+Bước vận hành còn lại: người quản lý rà quyền/role đang có tại `/roles`, sau đó mở `/workflows`; tạo mẫu nháp và chọn người thử nghiệm thực tế. Lần đối chiếu 11/11 chỉ đọc, không cấp quyền hoặc tạo mẫu.

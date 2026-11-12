@@ -1,8 +1,7 @@
 "use client";
-import { RoundedBox } from "@react-three/drei";
-import { useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Group, Mesh, type Material } from "three";
+import { Group, Line, Mesh, Path, Shape, type Material } from "three";
 import {
   BUILDING_ROOMS,
   BUILDING_FLOORS,
@@ -16,15 +15,15 @@ import type { BuildingData } from "@/lib/office-3d/building-mapping";
 import { HcnsRoomModel } from "../hcns/HcnsRoomModel";
 import { Block, materials as m } from "../hcns/RoomFurniture";
 
-const palette = {
-  grass: "#a8b4a0",
-  foliage: "#6e8d6b",
-  stem: "#9a8165",
-  selection: "#d68a71",
-  stone: "#e2dbd0",
-  mutedFloor: "#dedbd5",
-  railing: "#a49a8c",
-};
+import {
+  architecturalFloorOutline,
+  ARCHITECTURAL_ATRIUM,
+  type ArchitecturalFloor,
+  type ArchitecturalPoint,
+} from "@/lib/office-3d/architectural-layout";
+
+const palette = { stone: "#e2dbd0", mutedFloor: "#dedbd5" };
+const NO_HOLES: ArchitecturalPoint[][] = [];
 function ContextLayer({
   detail,
   children,
@@ -61,7 +60,7 @@ function ContextLayer({
         );
     group.visible = opacity.current > 0;
     group.traverse((node) => {
-      if (!(node instanceof Mesh)) return;
+      if (!(node instanceof Mesh) && !(node instanceof Line)) return;
       for (const material of Array.isArray(node.material)
         ? node.material
         : [node.material]) {
@@ -91,214 +90,82 @@ function ContextLayer({
     </group>
   );
 }
-function FloorSlab({ atrium }: { atrium: boolean }) {
-  const pieces = atrium
-    ? [
-        { x: 0, z: -11.25, w: 45, d: 11.5 },
-        { x: 0, z: 11.75, w: 45, d: 10.5 },
-        { x: -17, z: 0.5, w: 11, d: 12 },
-        { x: 14, z: 0.5, w: 17, d: 12 },
-      ]
-    : [{ x: 0, z: 0, w: 45, d: 34 }];
+function Surface({
+  outline, holes = NO_HOLES, y, color, invisible = false,
+}: {
+  outline: ArchitecturalPoint[];
+  holes?: ArchitecturalPoint[][];
+  y: number;
+  color: string;
+  invisible?: boolean;
+}) {
+  const shape = useMemo(() => {
+    const result = new Shape();
+    function trace(path: Path, points: ArchitecturalPoint[]) {
+      points.forEach(([x, z], index) => {
+        if (index === 0) path.moveTo(x, -z);
+        else path.lineTo(x, -z);
+      });
+      path.closePath();
+    }
+    trace(result, outline);
+    for (const polygon of holes) {
+      const path = new Path();
+      trace(path, polygon);
+      result.holes.push(path);
+    }
+    return result;
+  }, [outline, holes]);
   return (
-    <group>
-      {pieces.map((s, i) => (
-        <group key={i}>
-          <Block
-            at={[s.x, -0.24, s.z]}
-            size={[s.w, 0.46, s.d]}
-            color={m.slab}
-          />
-          <Block
-            at={[s.x, 0.005, s.z]}
-            size={[s.w, 0.035, s.d]}
-            color={m.floor}
-            shadow={false}
-          />
-        </group>
-      ))}
-    </group>
+    <mesh position={[0, y, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <shapeGeometry args={[shape]} />
+      {invisible ? (
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      ) : (
+        <meshStandardMaterial color={color} roughness={1} />
+      )}
+    </mesh>
   );
 }
-function Plant({
-  x,
-  z,
-  tall = false,
-}: {
-  x: number;
-  z: number;
-  tall?: boolean;
-}) {
+const ATRIUM_HOLE = [ARCHITECTURAL_ATRIUM];
+function FloorSlab({ floor }: { floor: ArchitecturalFloor }) {
   return (
-    <group position={[x, 0, z]}>
-      <mesh position={[0, 0.35, 0]} castShadow>
-        <cylinderGeometry args={[0.55, 0.4, 0.7, 10]} />
-        <meshStandardMaterial color={m.paper} roughness={0.9} />
-      </mesh>
-      <Block
-        at={[0, tall ? 1.3 : 0.8, 0]}
-        size={[0.12, tall ? 2 : 1, 0.12]}
-        color={palette.stem}
-      />
-      <mesh position={[0, tall ? 2.25 : 1.3, 0]} castShadow>
-        <icosahedronGeometry args={[tall ? 1.3 : 0.8, 1]} />
-        <meshStandardMaterial color={palette.foliage} roughness={1} />
-      </mesh>
-    </group>
+    <Surface outline={architecturalFloorOutline(floor)}
+      holes={floor === 2 ? ATRIUM_HOLE : NO_HOLES} y={0} color={m.floor} />
   );
 }
-function RoomEnvelope({
-  room,
-  selected,
-}: {
-  room: BuildingRoom;
-  selected: boolean;
-}) {
-  const { width: w, depth: d, kind } = room;
-  const open = ["lobby", "garden", "stairs", "reception"].includes(kind);
+function RoomEnvelope({ room, selected }: { room: BuildingRoom; selected: boolean }) {
+  const enclosed = room.kind === "room" || room.kind === "utility";
+  const outlined = enclosed || room.kind === "atrium" || selected;
+  const edge = useMemo(() => new Float32Array(
+    room.outline.flatMap(([x, z]) => [x, enclosed ? 0.705 : 0.195, z]),
+  ), [room.outline, enclosed]);
   return (
     <group>
-      {room.key !== "t2_atrium" && (
-        <Block
-          at={[0, 0.07, 0]}
-          size={[w - 0.16, 0.09, d - 0.16]}
-          color={
-            selected
-              ? m.selected
-              : kind === "garden"
-                ? palette.grass
-                : kind === "utility"
-                  ? palette.mutedFloor
-                  : palette.stone
-          }
-          shadow={false}
-        />
+      {room.kind !== "atrium" && (
+        <Surface outline={room.outline} y={0.04}
+          color={selected ? m.selected : room.kind === "utility" ? palette.mutedFloor :
+            room.kind === "room" ? palette.stone : m.floor} />
       )}
-      {!open && (
-        <>
-          <Block
-            at={[0, 1.25, -d / 2 + 0.12]}
-            size={[w, 2.5, 0.24]}
-            color={m.wall}
-          />
-          <Block
-            at={[-w / 2 + 0.12, 0.58, 0]}
-            size={[0.24, 1.16, d]}
-            color={m.wall}
-          />
-          <Block
-            at={[w / 2 - 0.12, 0.58, 0]}
-            size={[0.24, 1.16, d]}
-            color={m.wall}
-          />
-          <Block
-            at={[0, 0.24, d / 2 - 0.12]}
-            size={[w, 0.48, 0.24]}
-            color={m.wall}
-          />
-          <Block
-            at={[0, 2.53, -d / 2 + 0.12]}
-            size={[w + 0.04, 0.08, 0.28]}
-            color={m.woodEdge}
-            shadow={false}
-          />
-          <Block
-            at={[0, 0.22, -d / 2 + 0.28]}
-            size={[w - 0.5, 0.15, 0.045]}
-            color={m.woodEdge}
-            shadow={false}
-          />
-        </>
-      )}
-      {kind === "stairs" &&
-        Array.from({ length: 10 }, (_, i) => (
-          <Block
-            key={i}
-            at={[0, (i + 1) * 0.14, -d / 2 + 0.65 + i * 0.65]}
-            size={[w - 0.8, (i + 1) * 0.28, 0.65]}
-            color={m.wall}
-          />
-        ))}
-      {kind === "reception" && (
-        <>
-          <RoundedBox
-            args={[w - 0.3, 1.2, d - 1]}
-            position={[0, 0.65, 0]}
-            radius={0.15}
-            smoothness={2}
-            castShadow
-          >
-            <meshStandardMaterial color={m.wood} roughness={0.8} />
-          </RoundedBox>
-          <Block
-            at={[0, 1.28, 0]}
-            size={[w - 0.15, 0.12, d - 0.8]}
-            color={m.paper}
-          />
-        </>
-      )}
-      {kind === "garden" && (
-        <>
-          <Block
-            at={[0, 0.13, 0]}
-            size={[2, 0.08, d - 0.4]}
-            color={m.floor}
-            shadow={false}
-          />
-          {[-1, 1].flatMap((x) =>
-            [-1, 1].map((z) => (
-              <Plant key={`${x}-${z}`} x={x * 4.8} z={z * 3.4} tall />
-            )),
-          )}
-        </>
-      )}
-      {room.key === "t2_atrium" && (
-        <>
-          {[-1, 1].map((s) => (
-            <group key={s}>
-              <Block
-                at={[(s * w) / 2, 0.45, 0]}
-                size={[0.12, 0.9, d]}
-                color={m.wall}
-              />
-              <Block
-                at={[(s * w) / 2, 0.93, 0]}
-                size={[0.18, 0.06, d]}
-                color={palette.railing}
-              />
-              <Block
-                at={[0, 0.45, (s * d) / 2]}
-                size={[w, 0.9, 0.12]}
-                color={m.wall}
-              />
-              <Block
-                at={[0, 0.93, (s * d) / 2]}
-                size={[w, 0.06, 0.18]}
-                color={palette.railing}
-              />
-            </group>
-          ))}
-        </>
-      )}
-      {selected && (
-        <group position={[0, 0.13, 0]}>
-          {[-1, 1].map((s) => (
-            <group key={s}>
-              <Block
-                at={[s * (w / 2 - 0.25), 0, 0]}
-                size={[0.13, 0.04, d - 0.5]}
-                color={m.accent}
-                shadow={false}
-              />
-              <Block
-                at={[0, 0, s * (d / 2 - 0.25)]}
-                size={[w - 0.5, 0.04, 0.13]}
-                color={m.accent}
-                shadow={false}
-              />
-            </group>
-          ))}
-        </group>
+      {outlined && room.outline.map(([x, z], index) => {
+        const [nextX, nextZ] = room.outline[(index + 1) % room.outline.length];
+        const length = Math.hypot(nextX - x, nextZ - z);
+        const height = enclosed ? 0.65 : 0.14;
+        return (
+          <group key={index} position={[(x + nextX) / 2, 0, (z + nextZ) / 2]}
+            rotation={[0, -Math.atan2(nextZ - z, nextX - x), 0]}>
+            <Block at={[0, height / 2 + 0.05, 0]} size={[length, height, 0.08]}
+              color={selected ? m.accent : m.wall} shadow={false} />
+          </group>
+        );
+      })}
+      {outlined && (
+        <lineLoop>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" args={[edge, 3]} />
+          </bufferGeometry>
+          <lineBasicMaterial color={selected ? m.accent : m.slab} />
+        </lineLoop>
       )}
     </group>
   );
@@ -339,9 +206,9 @@ export function BuildingModel({
           position={[0, floorElevation(f.floor, floor), 0]}
         >
           <ContextLayer detail={detail}>
-            <FloorSlab atrium={f.floor === 2} />
+            <FloorSlab floor={f.floor} />
           </ContextLayer>
-          {BUILDING_ROOMS.filter((r) => r.floor === f.floor).map((room) => (
+          {BUILDING_ROOMS.filter((r) => r.floor === f.floor && r.placed).map((room) => (
             <group
               key={room.key}
               position={[room.x, 0, room.z]}
@@ -365,14 +232,8 @@ export function BuildingModel({
             >
               {room.key === HCNS_BUILDING_KEY && building.hcns ? (
                 <>
-                  <Block
-                    at={[0, 0.07, 0]}
-                    size={[room.width, 0.08, room.depth]}
-                    color={
-                      !detail && selected === room.key ? m.selected : m.floor
-                    }
-                    shadow={false}
-                  />
+                  <Surface outline={room.outline} y={0.07}
+                    color={!detail && selected === room.key ? m.selected : m.floor} />
                   <group
                     position={[0, 0.28, 0]}
                     rotation={[0, HCNS_PLACEMENT.rotation, 0]}
@@ -396,10 +257,7 @@ export function BuildingModel({
                 </ContextLayer>
               )}
               {/* Invisible pick surface covers open spaces and the atrium without inventing a floor. */}
-              <mesh position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[room.width, room.depth]} />
-                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-              </mesh>
+              <Surface outline={room.outline} y={0.08} color={m.floor} invisible />
             </group>
           ))}
         </group>

@@ -11,6 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { getAccounts, saveAccount } from "@/actions/account";
 import { AccountSchema, type AccountInput } from "@/lib/validations/user";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -29,13 +30,6 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -245,38 +239,12 @@ function AccountForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel required={!account}>Nhân sự sở hữu</FormLabel>
-              <Select
-                value={field.value?.toString() ?? "NONE"}
-                onValueChange={(v) => {
-                  field.onChange(v === "NONE" ? null : Number(v));
-                  const employee = employees.find(
-                    (e) => e.id === Number(v),
-                  );
-                  if (employee) form.setValue("displayName", employee.ho_ten);
-                  if (employee?.tinh_trang_lam_viec === "LEFT")
-                    form.setValue("isActive", false);
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger className="h-10 w-full min-w-0">
-                    <SelectValue>
-                      {employees.find((e) => e.id === field.value)
-                        ?.ho_ten ?? "Chọn nhân sự"}
-                    </SelectValue>
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="NONE">Chọn nhân sự</SelectItem>
-                  {employees.map((e) => (
-                    <SelectItem key={e.id} value={String(e.id)}>
-                      {e.ma_nhan_su} — {e.ho_ten}
-                      {e.tinh_trang_lam_viec === "LEFT"
-                        ? " · Đã nghỉ việc"
-                        : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl><SearchableSelect label="Nhân sự sở hữu" ref={field.ref} onBlur={field.onBlur} aria-required={!account} value={field.value?.toString() ?? "NONE"} onValueChange={v => {
+                field.onChange(v === "NONE" ? null : Number(v));
+                const employee = employees.find(e => e.id === Number(v));
+                if (employee) form.setValue("displayName", employee.ho_ten);
+                if (employee?.tinh_trang_lam_viec === "LEFT") form.setValue("isActive", false);
+              }} placeholder="Chọn nhân sự" options={[{ value: "NONE", label: "Chọn nhân sự" }, ...employees.map(e => ({ value: String(e.id), label: e.ho_ten, description: `${e.ma_nhan_su}${e.tinh_trang_lam_viec === "LEFT" ? " · Đã nghỉ việc" : ""}` }))]} /></FormControl>
               <FormMessage />
             </FormItem>
           )}
