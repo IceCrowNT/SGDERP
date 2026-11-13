@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ASSET_CONDITIONS } from "@/lib/asset-labels";
 import { isAvailableAssetLocation, type AssetLocation, type LocationAsset } from "@/lib/asset-location";
 import { locationPath } from "@/lib/location-tree";
+import { cn } from "@/lib/utils";
 
 type Candidate = LocationAsset & { locationName: string };
 type Destination = { id: number; name: string };
@@ -22,10 +23,11 @@ type Picker = { kind: "asset" }
   | { kind: "confirm"; asset: Candidate; target: Destination | null };
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase();
 
-export function LocationAssets({ location, assets, canManage }: {
+export function LocationAssets({ location, assets, canManage, selectedAssetId }: {
   location: Destination & { active: boolean };
   assets: LocationAsset[];
   canManage: boolean;
+  selectedAssetId?: number | null;
 }) {
   const router = useRouter();
   const [picker, setPicker] = useState<Picker | null>(null);
@@ -40,6 +42,9 @@ export function LocationAssets({ location, assets, canManage }: {
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const kind = picker?.kind;
+  const orderedAssets = selectedAssetId
+    ? [...assets].sort((a, b) => Number(b.id === selectedAssetId) - Number(a.id === selectedAssetId))
+    : assets;
 
   useEffect(() => {
     if (!canManage || (kind !== "asset" && kind !== "location")) return;
@@ -100,8 +105,10 @@ export function LocationAssets({ location, assets, canManage }: {
       </div>
       {!assets.length && <p className="text-sm text-muted-foreground">Chưa có tài sản được gán trực tiếp tại đây.</p>}
       <ul className="max-h-96 space-y-2 overflow-y-auto">
-        {assets.map(asset => (
-          <li key={asset.id} className="space-y-2 rounded-xl border p-3">
+        {orderedAssets.map(asset => (
+          <li key={asset.id}
+            aria-current={asset.id === selectedAssetId ? "true" : undefined}
+            className={cn("space-y-2 rounded-xl border p-3", asset.id === selectedAssetId && "border-primary bg-primary/5")}>
             <p className="break-words font-medium">{asset.name}</p>
             <p className="text-xs text-muted-foreground">{asset.code} · {asset.category}</p>
             <Badge variant="secondary">{ASSET_CONDITIONS[asset.condition]}</Badge>

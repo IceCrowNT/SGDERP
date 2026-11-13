@@ -64,16 +64,32 @@ export type BuildingPerson = {
   position: string | null;
   department: string | null;
   location: string;
+  pointKey: string | null;
+};
+export type BuildingAsset = {
+  id: number;
+  name: string;
+  code: string;
+  category: string;
+  categoryCode: string;
+  condition: import("@/lib/asset-location").LocationAsset["condition"];
+  location: string;
+  pointKey: string | null;
 };
 export type BuildingRoomData = {
+  locationId?: number;
   key: string;
   name: string;
   state: "active" | "inactive" | "unlinked";
   description: string | null;
   path: string | null;
   occupants?: BuildingPerson[];
+  assets?: BuildingAsset[];
 };
 export type BuildingData = {
+  objects?: PlacedObject[];
+  canManageEmployees?: boolean;
+  canManageAssets?: boolean;
   name: string;
   floors: {
     floor: FloorNumber;
@@ -84,7 +100,32 @@ export type BuildingData = {
   hcns: HcnsRoomData | null;
   canManage: boolean;
   canViewEmployees: boolean;
+  canViewAssets: boolean;
 };
+export type PlacedObject = import("./placement").PlacementShape & {
+  id: number;
+  roomKey: string;
+  roomId: number;
+  version: string;
+  locationVersion: string;
+  point: import("./hcns-layout").RoomPoint;
+};
+
+// Show only the path inside the selected room, retaining nested-area context.
+export function relativeRoomLocation(id: number, roomId: number, rows: BuildingLocation[]) {
+  const parts: string[] = [], seen = new Set<number>();
+  const byId = new Map(rows.map(row => [row.id, row]));
+  let current: number | null = id;
+  while (current !== null && !seen.has(current)) {
+    if (current === roomId) return parts.reverse().join(" / ") || "Trong phòng";
+    seen.add(current);
+    const row = byId.get(current);
+    if (!row) break;
+    parts.push(row.ten_vi_tri);
+    current = row.parent_id;
+  }
+  return "Chưa rõ vị trí";
+}
 
 // Only exact IDs and a valid physical hierarchy can attach business data.
 export function resolveBuilding(

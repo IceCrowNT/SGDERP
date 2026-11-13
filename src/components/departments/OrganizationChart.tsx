@@ -101,7 +101,7 @@ export function OrganizationChart({ departments, companyName, search }: {
     <Dialog open={Boolean(selected)} onOpenChange={open => { if (!open) setSelected(null); }}>
       <DialogContent className="max-h-[85vh] w-[95vw] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle>{selected?.ten_phong_ban}</DialogTitle><DialogDescription>{selected?.danh_sach_nhan_su.length ?? 0} hồ sơ trực thuộc; không bao gồm bộ phận con.</DialogDescription></DialogHeader>
-        {selected?.danh_sach_nhan_su.length ? <ul className="space-y-2">{selected.danh_sach_nhan_su.map(person => <li key={person.id} className="rounded-lg border p-3"><p className="font-medium">{person.ho_ten}</p><p className="text-sm text-muted-foreground">{person.ma_nhan_su} · {person.chuc_vu || "Chưa có chức vụ"}</p></li>)}</ul> : <p className="text-sm text-muted-foreground">Chưa có hồ sơ nhân sự trực thuộc.</p>}
+        {selected?.danh_sach_nhan_su.length ? <ul className="space-y-2">{selected.danh_sach_nhan_su.map(person => <li key={person.id} className="rounded-lg border p-3"><p className="font-medium">{person.ho_ten}</p><p className="break-words text-sm text-muted-foreground">Chức vụ: {person.chuc_vu?.trim() || "Chưa có chức vụ"} · {person.ma_nhan_su}</p></li>)}</ul> : <p className="text-sm text-muted-foreground">Chưa có hồ sơ nhân sự trực thuộc.</p>}
       </DialogContent>
     </Dialog>
   </div>;

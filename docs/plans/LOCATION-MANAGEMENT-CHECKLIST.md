@@ -1,6 +1,6 @@
 # Kế hoạch vị trí & không gian dùng chung
 
-Cập nhật: **12/11/2026**. **Bản đầu đã triển khai; đã có cây vị trí do người phụ trách nhập và 10 vị trí HCNS theo bản phác.** Rule: [LOCATION-MANAGEMENT-RULES](../../.agents/rules/LOCATION-MANAGEMENT-RULES.md).
+Cập nhật: **13/11/2026**. **Bản đầu đã triển khai; đã có cây vị trí do người phụ trách nhập và 10 vị trí HCNS theo bản phác.** Rule: [LOCATION-MANAGEMENT-RULES](../../.agents/rules/LOCATION-MANAGEMENT-RULES.md).
 
 ## Ô chọn có tìm kiếm — 12/11/2026
 
@@ -11,7 +11,7 @@ Cập nhật: **12/11/2026**. **Bản đầu đã triển khai; đã có cây v�
 - Tính năng riêng tại **Hệ thống & cấu hình → Vị trí & không gian**, đường dẫn `/locations`.
 - Sở hữu danh mục vật lý `vi_tri`, dùng chung cho nhân sự, tài sản và 3D. Phòng ban là cơ cấu tổ chức, không thay thế vị trí.
 - Bản đầu quản lý cây, tìm kiếm, tạo/sửa, thêm vị trí con và ngừng sử dụng. Xóa vị trí không có con có thể tự gỡ liên kết nhân sự sau xác nhận, với đủ quyền; vẫn giữ audit.
-- Chưa thiết kế mặt bằng, tọa độ 3D, đặt chỗ theo lịch, sức chứa hoặc lịch sử di chuyển chuyên biệt. Không tự tạo chỗ ngồi/người từ cấu hình 3D.
+- Danh mục không sở hữu tọa độ 3D, đặt chỗ theo lịch, sức chứa hoặc lịch sử di chuyển chuyên biệt. Bản thử [thêm vị trí trên 3D](OFFICE-3D-CHECKLIST.md#thử-nghiệm-thêm-vị-trí-trên-mô-hình) tạo `vi_tri` + bố trí riêng + audit trong một transaction, dùng cùng quyền LOCATIONS. Không tự sinh vị trí chỉ bằng mở mô hình. Khi xóa vị trí hợp lệ, hình bổ sung bị xóa theo; các ràng buộc tài sản/HR vẫn giữ.
 
 ## Thiết kế DB cần giữ
 
@@ -70,6 +70,8 @@ Nhân sự có một vị trí làm việc chính; một vị trí có thể ch�
 - [X] 11/11 E2E (5 liên kết hai chiều, 3 HR/3D, 3 vị trí) và 8/8 unit đạt; TypeScript/lint đạt. Kiểm tra hủy/xác nhận chuyển, quyền và khác công ty, phiên bản cũ, danh sách thay đổi trước xóa, người đã nghỉ, rollback khi lỗi audit và gán đồng thời với xóa. Đã xem ảnh Chrome desktop/mobile/sáng/tối: không lỗi JS hoặc tràn ngang. Fixture chạy trên DB khôi phục riêng, đã dọn; fingerprint cả 15 bảng vận hành giữ nguyên. Bằng chứng và backup cục bộ tại `outputs/location-people/`.
 
 ## Checklist và nghiệm thu
+
+- [x] Tạo phòng vật lý **Phòng Kế hoạch Đầu tư** dưới Tầng 2 qua action hiện có và liên kết với mô hình. Không sửa cơ cấu phòng ban hoặc tự gán nhân sự/tài sản; quy trình và kiểm chứng tại [plan 3D](OFFICE-3D-CHECKLIST.md#liên-kết-phòng-mới-để-quản-lý).
 
 - [x] Đợt 1 tài sản: chặn xóa/ngừng dùng vị trí còn thiết bị ở preview/action/DB, kể cả thiết bị ngừng dùng; không tự gỡ liên kết. Bộ chọn nhận ASSETS MANAGE, không mở quyền sửa cây. Kiểm thử đồng thời và hồi quy tại [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md).
 

@@ -14,6 +14,7 @@ export type SearchableOption = {
   description?: string;
   keywords?: string;
   disabled?: boolean;
+  icon?: React.ReactNode;
 };
 type Props = Omit<React.ComponentProps<typeof Button>, "value" | "onChange" | "children"> & {
   label: string;
@@ -69,13 +70,14 @@ export const SearchableSelect = forwardRef<HTMLButtonElement, Props>(function Se
         aria-expanded={open && !disabled}
         aria-controls={open ? listId : undefined}
         disabled={disabled}
-        className={cn("h-auto min-h-10 w-full min-w-0 justify-between gap-2 px-3 py-2 text-left font-normal whitespace-normal", !selected && "text-muted-foreground", className)}
+        className={cn("group/select-trigger h-auto min-h-10 w-full min-w-0 justify-between gap-2 px-3 py-2 text-left font-normal whitespace-normal", !selected && "text-muted-foreground", className)}
         onKeyDown={event => {
           onKeyDown?.(event);
           if (!event.defaultPrevented && ["ArrowDown", "ArrowUp"].includes(event.key)) { event.preventDefault(); changeOpen(true); }
         }}
       >
-        <span className="min-w-0"><span className="block break-words">{selected?.label ?? placeholder}</span>{selected?.description && <span className="mt-0.5 block break-words text-xs text-muted-foreground">{selected.description}</span>}</span>
+        {selected?.icon && <span aria-hidden="true" className="shrink-0">{selected.icon}</span>}
+        <span className="min-w-0 flex-1"><span className="block break-words">{selected?.label ?? placeholder}</span>{selected?.description && <span className="mt-0.5 block break-words whitespace-pre-line text-xs text-muted-foreground group-hover/select-trigger:text-accent-foreground">{selected.description}</span>}</span>
         <ChevronsUpDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
       </Button>
     </PopoverTrigger>
@@ -129,13 +131,14 @@ export const SearchableSelect = forwardRef<HTMLButtonElement, Props>(function Se
           disabled={option.disabled}
           tabIndex={-1}
           variant="ghost"
-          className={cn("h-auto min-h-11 w-full justify-start gap-2 rounded-md px-2 py-2 text-left font-normal whitespace-normal", activeValue === option.value && "bg-accent text-accent-foreground")}
+          className={cn("group/select-option h-auto min-h-11 w-full justify-start gap-2 rounded-md px-2 py-2 text-left font-normal whitespace-normal", activeValue === option.value && "bg-accent text-accent-foreground")}
           onMouseDown={event => event.preventDefault()}
           onMouseMove={() => { if (!option.disabled) setActive(option.value); }}
           onClick={() => choose(option)}
         >
           <Check aria-hidden="true" className={cn("size-4 shrink-0", option.value !== value && "invisible")} />
-          <span className="min-w-0"><span className="block break-words">{option.label}</span>{option.description && <span id={`${listId}-${index}-description`} className="mt-0.5 block break-words text-xs text-muted-foreground">{option.description}</span>}</span>
+          {option.icon && <span aria-hidden="true" className="shrink-0">{option.icon}</span>}
+          <span className="min-w-0"><span className="block break-words">{option.label}</span>{option.description && <span id={`${listId}-${index}-description`} className={cn("mt-0.5 block break-words whitespace-pre-line text-xs group-hover/select-option:text-accent-foreground", activeValue === option.value ? "text-accent-foreground" : "text-muted-foreground")}>{option.description}</span>}</span>
         </Button>)}
         {!filtered.length && <p role="status" className="px-3 py-6 text-center text-sm text-muted-foreground">{emptyMessage}</p>}
       </div>

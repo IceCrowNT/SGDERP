@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   BuildingMappingSchema,
   resolveBuilding,
+  relativeRoomLocation,
   type BuildingLocation,
 } from "../../src/lib/office-3d/building-mapping";
 import {
@@ -38,6 +39,15 @@ const rows = [
   row(30, 20, "PHONG"),
   row(40, 30, "CHO_NGOI"),
 ];
+test("room labels omit shared ancestry but distinguish nested positions and direct room assignments", () => {
+  const nested = [...rows, row(41, 40, "DIEM_DAT")];
+  assert.equal(relativeRoomLocation(30, 30, nested), "Trong phòng");
+  assert.equal(relativeRoomLocation(40, 30, nested), "Location 40");
+  assert.equal(relativeRoomLocation(41, 30, nested), "Location 40 / Location 41");
+  assert.equal(relativeRoomLocation(10, 30, nested), "Chưa rõ vị trí");
+  assert.equal(relativeRoomLocation(999, 30, nested), "Chưa rõ vị trí");
+  assert.equal(relativeRoomLocation(41, 30, [...rows, row(41, 41, "DIEM_DAT")]), "Chưa rõ vị trí");
+});
 test("building resolves exact IDs and active descendants, while unmapped geometry has no business data", () => {
   const result = resolveBuilding(mapping, [
     ...rows,

@@ -13,6 +13,9 @@ Phạm vi hiện hành: **mức 1, quản lý từng thiết bị**. Đã có n�
 
 ## Quyền và lịch sử
 
+- Trang tài sản mặc định hiển thị nhóm theo loại; có thể xem theo người hoặc vị trí và tìm toàn cục. Số lượng nhóm dùng cùng phạm vi công ty/quyền với hồ sơ; không tính từ một trang kết quả. Nhóm chưa xác định không đồng nghĩa dùng chung/chưa phân bổ; không suy gán người/vị trí từ cách nhóm. Bố cục và kiểm chứng ở plan tài sản.
+- Card chỉ dùng cho nhóm loại; các nhóm người/vị trí là danh sách gọn, hồ sơ bên trong là bảng. Sửa trực tiếp một dòng phải Lưu/Hủy rõ ràng, giữ bản nháp khi lỗi và không bỏ qua phiên bản, quyền, validation hay lịch sử của luồng sửa hồ sơ đầy đủ.
+
 - ASSETS MANAGE quản lý thiết bị và loại, chỉ chọn vị trí có sẵn; sửa cây vị trí cần LOCATIONS MANAGE. ASSETS VIEW/MANAGE dùng RBAC hiện có; server và ma trận `/roles` cùng chính sách. Mọi dữ liệu theo công ty của phiên; trường phòng quản lý không tự tạo phạm vi phòng ban.
 - Người có ASSETS MANAGE được chọn người/phòng qua danh mục tối thiểu theo công ty, không phải được xem toàn bộ thông tin HR. Không tự cấp quyền mới cho vai trò hoặc tài khoản hiện có.
 - Mọi thay đổi và nhật ký trước–sau phải lưu cùng transaction. Dùng lại bảng nhật ký, không dùng helper nuốt lỗi cho lịch sử bắt buộc. Chi tiết đọc đúng nhật ký của thiết bị được phép xem; không mở toàn bộ nhật ký hệ thống.

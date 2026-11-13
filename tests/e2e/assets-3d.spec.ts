@@ -57,13 +57,13 @@ test("assign, confirm/cancel transfer, choose equipment point and clear without 
   await confirm.getByRole("button", { name: "Hủy", exact: true }).click(); expect((await asset()).vi_tri_id).toBe(seat1);
   await choose(page); await confirm.getByRole("button", { name: "Xác nhận chuyển tài sản", exact: true }).click();
   await expect(panel(page)).toContainText(name); expect((await asset()).vi_tri_id).toBe(seat2);
-  await panel(page).getByRole("button", { name: "Chuyển tài sản", exact: true }).click();
+  await panel(page).getByRole("listitem").filter({ hasText: name }).getByRole("button", { name: "Chuyển tài sản", exact: true }).click();
   await page.getByRole("textbox", { name: "Tìm vị trí cho tài sản" }).fill("Vị trí 06");
   await page.getByRole("dialog").getByRole("button", { name: /Vị trí 06/ }).click();
   await page.getByRole("button", { name: "Xác nhận chuyển tài sản", exact: true }).click();
   await expect(panel(page)).not.toContainText(name);
   await chooseRoomPoint(page, "Vị trí 06"); await expect(panel(page)).toContainText(name); expect((await asset()).vi_tri_id).toBe(seat6);
-  await panel(page).getByRole("button", { name: "Bỏ gán tài sản", exact: true }).click();
+  await panel(page).getByRole("listitem").filter({ hasText: name }).getByRole("button", { name: "Bỏ gán tài sản", exact: true }).click();
   await page.getByRole("button", { name: "Xác nhận bỏ gán tài sản", exact: true }).click();
   await expect(panel(page)).not.toContainText(name);
   const row = await asset(); expect(row.vi_tri_id).toBeNull(); expect(row.ghi_chu).toBe("Giữ nguyên ghi chú"); expect(row.nguoi_su_dung_id).toBeNull();
@@ -116,6 +116,7 @@ test("mobile picker, retry, cancel and 3D/assets synchronization", async ({ page
   await page.screenshot({ path: "outputs/assets-3d/assigned-mobile.png", fullPage: true });
   await page.goto("/assets");
   await page.getByRole("textbox", { name: /Tìm/ }).first().fill(name);
+  await page.getByRole("textbox", { name: "Tìm tài sản", exact: true }).press("Enter");
   await page.getByRole("button", { name: `Mở tài sản ${name}`, exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Chi tiết tài sản", exact: true })).toContainText("Vị trí 02");
 });

@@ -32,6 +32,7 @@ Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng v�
 | Công ty | `cong_ty` | Company |
 | Phòng ban | `phong_ban` | Department |
 | Vị trí & không gian dùng chung | `vi_tri` | — |
+| Bố trí vật thể bổ sung trên 3D | `vat_the_3d` | — |
 | Loại thiết bị | `loai_tai_san` | — (thiết kế mức 1 mới) |
 | Hồ sơ từng thiết bị | `tai_san` | — (thiết kế mức 1 mới) |
 | Hồ sơ nhân sự | `nhan_su` | Employee |
@@ -47,7 +48,7 @@ Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng v�
 | Bước xử lý của từng hồ sơ | `buoc_xu_ly_quy_trinh` | — |
 | Lịch sử xử lý | `lich_su_quy_trinh` | — |
 
-DB có 17 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` đã triển khai; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
+DB có 18 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` đã triển khai; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
 
 Các giá trị enum `ACTIVE / LEFT / UNKNOWN`, mã quyền `HR / VIEW / MANAGE`, constraint/index/sequence lịch sử và JSON nhật ký cũ được giữ nguyên. Đây không phải tên bảng/cột. Relation field của Prisma là liên kết, không tạo cột PostgreSQL; tên liên kết cũng dùng tiếng Việt.
 
@@ -100,6 +101,22 @@ Quan hệ Prisma của thiết bị: `cong_ty`, `loai_tai_san`, `phong_quan_ly`,
 | `created_at`, `updated_at` | DateTime | Thời gian tạo/cập nhật |
 
 Quan hệ Prisma: `cong_ty`, `vi_tri_cha`, `danh_sach_vi_tri_con`, `danh_sach_nhan_su` (không phải cột). Ràng buộc và vòng đời tại [plan vị trí](plans/LOCATION-MANAGEMENT-CHECKLIST.md). Migration `20261110100000_vi_tri_khong_gian` thêm bảng và quyền LOCATIONS, không cấp grant hoặc gán chỗ ngồi.
+
+## `vat_the_3d` — Bố trí vị trí bổ sung trên mô hình
+
+Migration `20261112160000_vi_tri_bo_sung_3d` bổ sung một bảng, giữ 17 bảng cũ. Thiết kế/ràng buộc nghiệp vụ do [plan 3D](plans/OFFICE-3D-CHECKLIST.md#thử-nghiệm-thêm-vị-trí-trên-mô-hình) quản lý.
+
+| Cột | Kiểu | Ý nghĩa |
+| --- | --- | --- |
+| `id`, `company_id` | Int | Khóa kỹ thuật, công ty |
+| `vi_tri_id` | Int | FK kép cùng công ty, unique `(vi_tri_id, company_id)`; mỗi vị trí tối đa một hình bổ sung |
+| `phong_id` | Int | FK kép tới phòng gốc của hình |
+| `loai_vat_the` | String | `BAN` hoặc `DIEM` |
+| `toa_do_x`, `toa_do_z` | Float | Tọa độ tương đối trong phòng, giới hạn hữu hạn |
+| `goc_xoay` | Int | Góc 0/90/180/270 độ |
+| `created_at`, `updated_at` | DateTime | Thời điểm và phiên bản bố trí |
+
+Quan hệ Prisma: `cong_ty`, `vi_tri`, `phong`. Xóa vị trí hợp lệ cascade hình phụ thuộc; FK phòng Restrict. Không đổi liên kết tài sản/nhân sự khi chỉnh bố trí. `vi_tri` có quan hệ `vat_the_3d` và `danh_sach_vat_the_3d`; không thêm cột tọa độ vào danh mục vị trí.
 
 ## `cong_ty` — Công ty
 

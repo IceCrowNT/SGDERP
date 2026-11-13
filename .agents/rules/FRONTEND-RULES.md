@@ -56,3 +56,25 @@ Chuẩn kỹ thuật và trình bày dùng chung cho toàn dự án. Không lưu
 - [Phân quyền](ROLE-MANAGEMENT-RULES.md): ma trận quyền, gán role và phạm vi quản trị.
 - [Tài khoản/Profile/Dashboard](PROFILE-DASHBOARD-RULES.md): mặc định cấp tài khoản, bàn giao, profile và bàn làm việc cá nhân.
 - [Workflow](WORKFLOW-RULES.md): mẫu quy trình, người được giao và quyền duyệt/thực hiện.
+
+## 8. Nguyên tắc UX ưu tiên
+
+1. **Thiết kế từ công việc của người dùng.** Mỗi màn hình phải giúp người dùng nhận biết đang làm việc gì, với đối tượng nào và bước tiếp theo là gì. Ưu tiên khả năng hoàn thành công việc hơn trang trí hoặc thuận tiện triển khai; giữ đúng nghiệp vụ, dữ liệu và quyền.
+
+2. **Thao tác đúng ngữ cảnh.** Điều khiển của một bảng, mô hình hoặc đối tượng đặt trong hoặc sát vùng đó. Phân biệt rõ thao tác toàn trang và thao tác cục bộ; không buộc người dùng tìm nút ở nơi không liên quan.
+
+3. **Giảm thao tác và nhập liệu lặp.** Tận dụng dữ liệu đã có, tìm/chọn và giá trị mặc định có căn cứ. Ưu tiên xử lý tại chỗ khi tác vụ đơn giản; tác vụ dài có không gian riêng. Không tự suy quyết định nghiệp vụ chỉ để giảm số lần bấm.
+
+4. **Bảo toàn ngữ cảnh làm việc.** Sau xem chi tiết, chỉnh sửa, làm mới hoặc thay kích thước vùng xem, giữ lựa chọn, bộ lọc, trang, vị trí cuộn và góc nhìn còn phù hợp. Lỗi lưu phải giữ nội dung đã nhập; không âm thầm bỏ thay đổi chưa lưu.
+
+5. **Hiển thị theo mức độ cần thiết.** Làm rõ hành động chính, giữ thao tác thường dùng dễ tiếp cận; thông tin phụ và thiết lập nâng cao mở khi cần. Không giấu chức năng thiết yếu trong nhiều tầng menu hoặc đưa mọi lựa chọn lên cùng lúc.
+
+6. **Nhất quán và dễ khám phá.** Cùng hành động dùng cùng tên, biểu tượng và cách phản hồi giữa các tính năng. Thao tác thiết yếu phải dùng được bằng chuột, chạm và bàn phím; không chỉ dựa vào hover, nhấp đúp hoặc kéo thả.
+
+7. **Phản hồi nhanh và trung thực.** Phản hồi ngay khi nhận thao tác; chỉ khóa phần đang xử lý khi có thể. Phân biệt đang lưu, đã lưu và lưu lỗi. Hiệu ứng không được cản thao tác hoặc làm nặng thiết bị; không báo thành công trước khi được xác nhận.
+
+8. **Dễ sửa sai.** Lỗi phải chỉ rõ vấn đề và cách xử lý. Xác nhận khi hành động khó đảo ngược hoặc có ảnh hưởng đáng kể; tránh hỏi lại thao tác thông thường. Khi hỗ trợ hoàn tác, phải khôi phục đúng dữ liệu và lịch sử, không chỉ đổi hình hiển thị.
+
+9. **Kiểm chứng bằng tác vụ thực tế.** Đánh giá luồng hoàn thành công việc, không chỉ ảnh giao diện. Khi tối ưu, ghi nhận bước dư thừa, thời gian chờ, điểm gây nhầm và khả năng phục hồi lỗi trước–sau; kết hợp kiểm thử kỹ thuật với phản hồi dùng thử. Tiêu chí cụ thể nằm trong plan tính năng.
+
+10. **Kiểm soát mật độ thông tin và tránh lặp.** Mỗi vùng hiển thị phải phục vụ một nhu cầu nhận biết hoặc thao tác cụ thể. Không lặp cùng thông tin trong một hàng, thẻ hoặc màn hình nếu không giúp phân biệt đối tượng hay ra quyết định. Nội dung dài và lịch sử trình bày tóm tắt, mở rộng khi cần; cảnh báo ảnh hưởng đến thao tác vẫn phải dễ thấy. Không giảm cỡ chữ hoặc thay toàn bộ nhãn bằng biểu tượng chỉ để nhét thêm nội dung.

@@ -7,6 +7,11 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 ## Ô chọn có tìm kiếm — 12/11/2026
 
 - [x] Ô chọn phòng ban, người phụ trách và vị trí làm việc: đã chuyển sang tìm/chọn có hỗ trợ không dấu; kiểm thử giao diện và hồi quy đạt. Cách dùng chung và kiểm chứng tại [tổng quan](README.md#ô-chọn-dữ-liệu-có-tìm-kiếm--12112026). Không đổi dữ liệu hoặc quyền.
+- [x] Đối chiếu phản ánh về Phạm Thị Kim Loan (SDG-016): nguyên nhân là cây hiển thị mã + chức vụ, ô chọn hiển thị mã + phòng công tác và truy vấn ứng viên thiếu `chuc_vu`; hai dòng phụ khác nghĩa nhưng thiếu nhãn. Người dùng đã duyệt triển khai phương án thống nhất hiển thị.
+- [x] Bổ sung chức vụ vào dữ liệu ứng viên và nhãn “Chức vụ” ở cây/sơ đồ/ô chọn; ô chọn tách dòng “Phòng công tác” + mã, giữ thông tin sau chọn và tìm thêm theo chức vụ. Thiếu chức vụ hiển thị “Chưa có chức vụ”. `SearchableSelect` giữ xuống dòng trong mô tả; không đổi hợp đồng lựa chọn, schema, mutation hoặc quyền. Đã ghi nghiệp vụ vào [rule HR](../../.agents/rules/HR-RULES.md#hồ-sơ-và-cơ-cấu).
+- [x] Kiểm chứng cuối: TypeScript/lint bốn file ứng dụng, 5 E2E liên quan (CRUD phòng ban, phụ trách kiêm nhiệm/giới hạn công ty/người nghỉ việc và 3 ca ô chọn chung) đạt trên DB riêng; 3 ca ô chọn chạy lại đạt sau chỉnh độ tương phản. Lần đầu máy chủ thử nghiệm dừng ở nhắc cập nhật Next.js nên chưa truy cập được; đã khởi động lại, xác nhận sẵn sàng và chạy lại đạt, không đổi dependency.
+- [x] Chrome desktop/mobile/sáng/tối: chức vụ chị Loan khớp cây/sơ đồ/ô chọn và sau chọn; tìm chức vụ không dấu đúng; người trùng tên phân biệt bằng mã, trường trống hiện “Chưa có chức vụ”. Chữ phụ dùng màu phù hợp khi hover/điều hướng trên nền xanh. Lượt xem không gửi form, không lỗi JavaScript hoặc tràn ngang ở mobile 390px; đã xem lại ảnh sau chỉnh màu.
+- [x] Đã dừng app riêng và dọn DB thử; mã/ảnh/log tại `outputs/department-head-labels/` ngoài Git. Đối chiếu 17 bảng vận hành: 14 giữ nguyên, 3 bảng tài sản/audit thay đổi đồng thời ngoài luồng kiểm tra được giữ nguyên, không ghi đè. 68 liên kết/anchor tài liệu và `git diff --check` đạt; đã cập nhật nghiệp vụ HR, đề xuất chuẩn Frontend dùng chung tại [tổng quan](README.md#ô-chọn-dữ-liệu-có-tìm-kiếm--12112026), chưa sửa ba rule kỹ thuật chung.
 
 ## Danh bạ theo phòng ban — 09/11/2026
 

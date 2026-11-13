@@ -11,6 +11,7 @@ datasource db {
 // CORE & TENANT (Công ty thành viên / Chi nhánh trong Tập đoàn)
 // -----------------------------------------------------------------------------
 model cong_ty {
+  danh_sach_vat_the_3d vat_the_3d[]
   danh_sach_loai_tai_san loai_tai_san[]
   danh_sach_tai_san tai_san[]
   danh_sach_vi_tri vi_tri[]
@@ -434,6 +435,8 @@ enum TrangThaiBuocQuyTrinh {
 
 // Danh mục không gian vật lý dùng chung; nhân sự có một vị trí làm việc chính.
 model vi_tri {
+  vat_the_3d vat_the_3d? @relation("ViTriVatThe3D")
+  danh_sach_vat_the_3d vat_the_3d[] @relation("PhongVatThe3D")
   danh_sach_tai_san tai_san[]
   danh_sach_nhan_su nhan_su[] @relation("ViTriNhanSu")
   id Int @id @default(autoincrement())
@@ -453,6 +456,26 @@ model vi_tri {
   @@unique([id, company_id])
   @@unique([company_id, ma_vi_tri])
   @@index([company_id, parent_id])
+}
+
+// Bố trí bổ sung qua UI; vị trí nghiệp vụ vẫn thuộc vi_tri.
+model vat_the_3d {
+  id Int @id @default(autoincrement())
+  company_id Int
+  cong_ty cong_ty @relation(fields: [company_id], references: [id], onDelete: Restrict)
+  vi_tri_id Int
+  vi_tri vi_tri @relation("ViTriVatThe3D", fields: [vi_tri_id, company_id], references: [id, company_id], onDelete: Cascade, onUpdate: Restrict)
+  phong_id Int
+  phong vi_tri @relation("PhongVatThe3D", fields: [phong_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  loai_vat_the String @db.VarChar(10)
+  toa_do_x Float
+  toa_do_z Float
+  goc_xoay Int @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([company_id, phong_id])
+  @@unique([vi_tri_id, company_id])
 }
 
 enum TinhTrangTaiSan {

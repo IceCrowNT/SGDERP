@@ -66,6 +66,7 @@ test("search accepts accents and reordered words; Enter selects, Escape keeps fo
 
 test("asset picker preserves disabled categories, disambiguates people by code and saves IDs on mobile in light/dark", async ({ page, context }) => {
   await signAccount(context, manager); await page.goto("/assets");
+  await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
   await page.getByRole("button", { name: "Mở tài sản Thiết bị liên kết cũ", exact: true }).click();
   await page.getByRole("button", { name: "Sửa tài sản", exact: true }).click();
   await picker(page, "Loại tài sản").click();

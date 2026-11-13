@@ -52,7 +52,7 @@ interface DepartmentManagerProps {
   companyName: string;
   initialDepartments: DepartmentItem[];
   canManage: boolean;
-  headCandidates: Array<{ id: number; ho_ten: string; ma_nhan_su: string; tinh_trang_lam_viec: string; phong_ban: { ten_phong_ban: string } | null }>;
+  headCandidates: Array<{ id: number; ho_ten: string; ma_nhan_su: string; chuc_vu: string | null; tinh_trang_lam_viec: string; phong_ban: { ten_phong_ban: string } | null }>;
 }
 
 export function DepartmentManager({
@@ -209,7 +209,7 @@ export function DepartmentManager({
               <li key={employee.id} className="rounded-lg bg-muted/30 px-3 py-2 text-sm">
                 <p className="break-words font-medium">{employee.ho_ten}</p>
                 <p className="break-words text-xs text-muted-foreground">
-                  {employee.ma_nhan_su} · {employee.chuc_vu || "Chưa có chức vụ"}
+                  Chức vụ: {employee.chuc_vu?.trim() || "Chưa có chức vụ"} · {employee.ma_nhan_su}
                 </p>
               </li>
             ))}
@@ -284,7 +284,31 @@ export function DepartmentManager({
               )} />
               <FormField control={form.control} name="headEmployeeId" render={({ field }) => (
                 <FormItem><FormLabel>Người phụ trách phòng ban</FormLabel>
-                  <FormControl><SearchableSelect label="Người phụ trách phòng ban" ref={field.ref} onBlur={field.onBlur} value={field.value ? String(field.value) : "none"} onValueChange={value => field.onChange(value === "none" ? null : Number(value))} disabled={isPending} searchPlaceholder="Tìm tên, mã hoặc phòng ban…" options={[{ value: "none", label: "Chưa phân công" }, ...headCandidates.filter(p => p.tinh_trang_lam_viec === "ACTIVE" || p.id === editingDepartment?.nguoi_phu_trach_id).map(p => ({ value: String(p.id), label: p.ho_ten, description: `${p.ma_nhan_su} · ${p.phong_ban?.ten_phong_ban ?? "Chưa có phòng"}${p.tinh_trang_lam_viec !== "ACTIVE" ? " · Cần phân công lại" : ""}` }))]} /></FormControl>
+                  <FormControl>
+                    <SearchableSelect
+                      label="Người phụ trách phòng ban"
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      value={field.value ? String(field.value) : "none"}
+                      onValueChange={value => field.onChange(value === "none" ? null : Number(value))}
+                      disabled={isPending}
+                      searchPlaceholder="Tìm tên, mã, chức vụ hoặc phòng ban…"
+                      options={[
+                        { value: "none", label: "Chưa phân công" },
+                        ...headCandidates
+                          .filter(person => person.tinh_trang_lam_viec === "ACTIVE" || person.id === editingDepartment?.nguoi_phu_trach_id)
+                          .map(person => ({
+                            value: String(person.id),
+                            label: person.ho_ten,
+                            description: [
+                              `Chức vụ: ${person.chuc_vu?.trim() || "Chưa có chức vụ"}`,
+                              `Phòng công tác: ${person.phong_ban?.ten_phong_ban ?? "Chưa có phòng"} · ${person.ma_nhan_su}`,
+                              ...(person.tinh_trang_lam_viec !== "ACTIVE" ? ["Cần phân công lại"] : []),
+                            ].join("\n"),
+                          })),
+                      ]}
+                    />
+                  </FormControl>
                   <FormDescription>Một người có thể phụ trách nhiều phòng. Quyền sử dụng phần mềm được cấp riêng cho tài khoản.</FormDescription><FormMessage />
                 </FormItem>
               )} />

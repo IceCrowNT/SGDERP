@@ -5,6 +5,7 @@ import {
   type FloorSelection,
 } from "./building-layout";
 import { HCNS_LAYOUT } from "./hcns-layout";
+import { isObjectKey } from "./placement";
 
 export type BuildingNavigation = {
   floor: FloorSelection;
@@ -25,7 +26,7 @@ export function readBuildingNavigation(
       (floor === "1" ? 1 : floor === "2" ? 2 : floor === "3" ? 3 : "all"),
     room: room?.key ?? null,
     detail,
-    point: detail
+    point: room && isObjectKey(query.get("point")) ? query.get("point") : detail
       ? (HCNS_LAYOUT.find((p) => p.key === query.get("point"))?.key ??
         "hcns-01")
       : null,
@@ -35,6 +36,7 @@ export function buildingUrl(view: BuildingNavigation) {
   const query = new URLSearchParams();
   if (view.floor !== "all") query.set("floor", String(view.floor));
   if (view.room) query.set("room", view.room);
+  if (view.room && isObjectKey(view.point)) query.set("point", view.point);
   if (view.detail) {
     query.set("mode", "room");
     if (view.point) query.set("point", view.point);

@@ -42,7 +42,7 @@ export const AssetQuerySchema = z.object({
   usage: z.enum(["CHUA_XAC_DINH", "CA_NHAN", "DUNG_CHUNG", "CHUA_PHAN_BO"]).optional(),
   departmentId: id.optional(),
   employeeId: id.optional(),
-  locationId: id.optional(),
+  locationId: id.nullable().optional(),
   page: z.number().int().min(1).max(1000000).default(1),
 }).strict();
 export type AssetQuery = z.input<typeof AssetQuerySchema>;

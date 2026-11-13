@@ -28,6 +28,8 @@ import { hcnsWorldPoint } from "@/lib/office-3d/building-navigation";
 import { HCNS_LAYOUT, HCNS_ROOM_BOUNDS, personRoomPosition } from "@/lib/office-3d/hcns-layout";
 import { materials } from "../hcns/RoomFurniture";
 import { ARCHITECTURAL_BOUNDS } from "@/lib/office-3d/architectural-layout";
+import { PlacedObjects } from "./PlacedObjects";
+import type { PlacementDraft } from "@/lib/office-3d/placement";
 
 export type BuildingCamera = {
   view: "overview" | "top" | "focus";
@@ -48,20 +50,25 @@ type Props = {
   onEnter: (key: string) => void;
   person: number | null;
   onPerson: (key: string, id: number) => void;
+  onUnavailable: () => void;
+  onRetry: () => void;
+  draft?: PlacementDraft | null;
+  onPlace?: (x:number,z:number)=>void;
 };
-function Fallback() {
+function Fallback({ onUnavailable, onRetry }: { onUnavailable?: () => void; onRetry?: () => void }) {
+  useEffect(() => { onUnavailable?.(); }, [onUnavailable]);
   return (
     <div
       role="status"
-      className="flex h-full min-h-64 items-center justify-center p-8 text-center text-sm text-muted-foreground"
+      className="flex h-full min-h-64 flex-col items-center justify-center gap-4 p-8 text-center text-sm text-muted-foreground"
     >
-      Không thể hiển thị 3D trên trình duyệt này. Bạn vẫn có thể chọn tầng,
-      phòng và đọc thông tin trong danh sách.
+      <p>Không thể hiển thị 3D trên trình duyệt này lúc này. Bạn có thể thử tải lại mô hình hoặc tiếp tục xem thông tin trong danh sách.</p>
+      {onRetry && <Button variant="outline" onClick={onRetry}>Tải lại mô hình</Button>}
     </div>
   );
 }
 class SceneBoundary extends Component<
-  { children: ReactNode },
+  { children: ReactNode; onUnavailable: () => void; onRetry: () => void },
   { failed: boolean }
 > {
   state = { failed: false };
@@ -69,7 +76,7 @@ class SceneBoundary extends Component<
     return { failed: true };
   }
   render() {
-    return this.state.failed ? <Fallback /> : this.props.children;
+    return this.state.failed ? <Fallback onUnavailable={this.props.onUnavailable} onRetry={this.props.onRetry} /> : this.props.children;
   }
 }
 // Demand rendering can wake after minutes of idle time. Never integrate that
@@ -119,9 +126,12 @@ function CameraRig({
   command,
   floor,
   detail,
-}: Pick<Props, "command" | "floor" | "detail">) {
+  building,
+  placing,
+}: Pick<Props, "command" | "floor" | "detail" | "building"> & {placing:boolean}) {
   const ref = useRef<CameraControls>(null);
   const { size, gl, camera } = useThree();
+  const resizeZoom = useRef<{ requested: number; applied: number } | null>(null);
   const scope = detail ? "room:hcns" : `floor:${floor}`;
   const previous = useRef<{
     scope: string;
@@ -137,12 +147,13 @@ function CameraRig({
   );
   useEffect(() => {
     const c = ref.current;
-    if (!c) return;
+    if (!c || size.width <= 0 || size.height <= 0) return;
     const old = previous.current;
     const animate =
       Boolean(old) &&
       !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (old && old.scope !== scope) {
+      resizeZoom.current = null;
       // Snapshot the actual view, including a mouse orbit still decelerating.
       c.stop();
       saved.current.set(old.scope, {
@@ -161,23 +172,30 @@ function CameraRig({
     const cached = saved.current.get(scope);
     if (!detail && old && old.scope !== scope && cached?.command === command) {
       const state = JSON.parse(cached.json);
-      state.zoom *= Math.min(
-        size.width / cached.width,
-        size.height / cached.height,
-      );
+      state.zoom *= floorFitZoom(camera, size, state.position, state.target, floor === "all") /
+        floorFitZoom(camera, cached, state.position, state.target, floor === "all");
       c.fromJSON(JSON.stringify(state), animate);
       return;
     }
     if (old?.scope === scope && old.command === command) {
-      void c.zoomTo(
-        camera.zoom *
+      // Use the pending destination as well as the actual orientation. Repeated
+      // aspect-ratio changes must be reversible, including during zoom damping.
+      const state = JSON.parse(c.toJSON());
+      // Breakpoint changes can briefly leave a 20px viewport beside the old
+      // sidebar. Keep the requested scale across min/max zoom clamping so that
+      // this intermediate layout does not permanently magnify the next view.
+      const sourceZoom = resizeZoom.current && Math.abs(resizeZoom.current.applied - state.zoom) < 1e-8
+        ? resizeZoom.current.requested : state.zoom;
+      const nextZoom = sourceZoom *
           (detail
             ? roomFitZoom(camera, size) / roomFitZoom(camera, old)
-            : Math.min(size.width / old.width, size.height / old.height)),
-        false,
-      );
+            : floorFitZoom(camera, size, state.position, state.target, floor === "all") /
+              floorFitZoom(camera, old, state.position, state.target, floor === "all"));
+      resizeZoom.current = { requested: nextZoom, applied: Math.max(c.minZoom, Math.min(c.maxZoom, nextZoom)) };
+      void c.zoomTo(nextZoom, false);
       return;
     }
+    resizeZoom.current = null;
     if (
       old?.scope === scope &&
       old.command.sequence === command.sequence &&
@@ -186,16 +204,26 @@ function CameraRig({
       void c.zoomTo((camera.zoom * command.zoom) / old.command.zoom, animate);
       return;
     }
+    const placed = building.objects?.find(o => o.point.key === command.key);
+    const placementRoom = BUILDING_ROOMS.find(r => r.key === (placed?.roomKey ?? command.key));
+    if (placementRoom && ((placing && command.view === "top") || (placed && command.view === "focus"))) {
+      const x = placementRoom.x + (placing ? 0 : placed?.x ?? 0);
+      const z = placementRoom.z + (placing ? 0 : placed?.z ?? 0);
+      void c.setLookAt(x + (placing ? 0 : 8), 24, z + (placing ? .01 : 10), x, .3, z, animate);
+      void c.zoomTo(placing ? Math.min(size.width/(placementRoom.width+2),size.height/(placementRoom.depth+2)) : Math.min(size.width/6,size.height/7),animate);
+      return;
+    }
     if (detail && old && old.scope !== scope) {
       // Translate and zoom from the current pose. Do not rotate to a second
       // prebuilt room camera when entering the same embedded geometry.
-      const target = new Vector3(...hcnsWorldPoint(0, 0.8, 0.3));
+      const slot = command.view === "focus" ? HCNS_LAYOUT.find(p => p.key === command.key) : undefined;
+      const target = new Vector3(...(slot ? hcnsWorldPoint(slot.x, 0.7, slot.z) : hcnsWorldPoint(0, 0.8, 0.3)));
       const offset = c
         .getPosition(new Vector3(), false)
         .sub(c.getTarget(new Vector3(), false));
       const position = target.clone().add(offset);
       void c.setLookAt(...position.toArray(), ...target.toArray(), animate);
-      void c.zoomTo(roomFitZoom(camera, size), animate);
+      void c.zoomTo(slot ? Math.min(size.width / 5, size.height / 6) / HCNS_PLACEMENT.scale : roomFitZoom(camera, size), animate);
       return;
     }
     if (detail) {
@@ -246,7 +274,7 @@ function CameraRig({
       zoom = floorFitZoom(camera, size, position, target, floor === "all");
     }
     void c.zoomTo(Math.max(3, zoom * command.zoom), animate);
-  }, [scope, command, detail, floor, size, camera]);
+  }, [scope, command, detail, floor, size, camera, building.objects, placing]);
   useEffect(() => {
     gl.domElement.setAttribute("aria-label", "Mô hình 3D tòa nhà Sao Đỏ");
     gl.domElement.setAttribute("data-building-ready", "true");
@@ -257,6 +285,7 @@ function CameraRig({
   return (
     <CameraControls
       ref={ref}
+      enabled={!placing}
       makeDefault
       impl={DemandCameraControls}
       smoothTime={0.36}
@@ -340,6 +369,7 @@ export default function BuildingCanvas(props: Props) {
     [],
   );
   function pickRoom(key: string) {
+    if (props.draft) return;
     if (pickTimer.current) clearTimeout(pickTimer.current);
     // A first click must not move the all-floor target before the second click.
     if (props.floor === "all")
@@ -347,6 +377,7 @@ export default function BuildingCanvas(props: Props) {
     else props.onSelect(key);
   }
   function enterRoom(key: string) {
+    if (props.draft) return;
     if (pickTimer.current) clearTimeout(pickTimer.current);
     if (props.floor === "all") props.onSelect(key);
     else if (key === HCNS_BUILDING_KEY && props.building.hcns)
@@ -393,6 +424,12 @@ export default function BuildingCanvas(props: Props) {
     [props.building.hcns],
   );
   const anchors = useMemo<LabelAnchor[]>(() => {
+    if (props.draft) return [];
+    const placed = props.building.objects?.find(o=>o.point.key===props.point);
+    if (placed) {
+      const r=BUILDING_ROOMS.find(r=>r.key===placed.roomKey)!;
+      return [{key:placed.point.key,at:[r.x+placed.x,1.3,r.z+placed.z],priority:4}];
+    }
     if (props.detail)
       return people.map((p) => ({
         ...p,
@@ -428,6 +465,8 @@ export default function BuildingCanvas(props: Props) {
     props.selected,
     props.point,
     props.person,
+    props.draft,
+    props.building.objects,
     people,
     hovered,
   ]);
@@ -435,9 +474,9 @@ export default function BuildingCanvas(props: Props) {
     if (element) elements.current.set(key, element);
     else elements.current.delete(key);
   };
-  if (lost) return <Fallback />;
+  if (lost) return <Fallback onUnavailable={props.onUnavailable} onRetry={props.onRetry} />;
   return (
-    <SceneBoundary>
+    <SceneBoundary onUnavailable={props.onUnavailable} onRetry={props.onRetry}>
       <div
         className={cn(
           "relative h-full w-full",
@@ -451,7 +490,7 @@ export default function BuildingCanvas(props: Props) {
           dpr={[1, 1.5]}
           shadows
           gl={{ antialias: true, alpha: true, powerPreference: "default" }}
-          fallback={<Fallback />}
+          fallback={<Fallback onRetry={props.onRetry} />}
           onCreated={({ gl }) => {
             canvas.current = gl.domElement;
             gl.domElement.addEventListener(
@@ -484,10 +523,14 @@ export default function BuildingCanvas(props: Props) {
             hovered={hovered}
             onHover={setHovered}
           />
+          <PlacedObjects objects={props.building.objects ?? []} floor={props.floor} detail={props.detail}
+            selected={props.point} onSelect={props.onPoint} draft={props.draft ?? null} onPlace={props.onPlace ?? (()=>{})}/>
           <CameraRig
             floor={props.floor}
             command={props.command}
             detail={props.detail}
+            building={props.building}
+            placing={Boolean(props.draft)}
           />
           <ProjectedLabels
             elements={elements}
@@ -497,6 +540,9 @@ export default function BuildingCanvas(props: Props) {
         </Canvas>
         {ready && (
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            {props.building.objects?.map(o=><Button key={o.id} ref={el=>register(o.point.key,el)} variant="outline"
+              aria-label={`Xem vị trí ${o.point.name}`} onClick={()=>props.onPoint(o.point.key)}
+              className="pointer-events-auto invisible absolute h-auto min-h-10 max-w-44 -translate-x-1/2 -translate-y-1/2 whitespace-normal rounded-xl bg-card/95 text-xs shadow-sm">{o.point.name}</Button>)}
             {props.detail &&
               people.map((p) => (
                 <Button

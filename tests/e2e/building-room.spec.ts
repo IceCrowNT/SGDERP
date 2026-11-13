@@ -1,3 +1,4 @@
+import { refreshOfficeData } from "../helpers/office-3d";
 import { chooseRoomPoint } from "../helpers/office-3d";
 import { test, expect, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
@@ -6,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { signAccount } from "../helpers/account-fixture";
 const db = new PrismaClient();
 test.skip(
-  !process.env.DATABASE_URL?.includes("/sdg_hr_location_test_"),
+  !/\/(?:sdg_hr_location_test|sdg_assets_test)_\d+(\?|$)/.test(process.env.DATABASE_URL ?? ""),
   "Isolated database required; no operating data fixtures.",
 );
 test.describe.configure({ mode: "serial" });
@@ -131,8 +132,8 @@ test("explore three floors, enter HCNS, return and use mobile without errors", a
     .getByRole("button", { name: `Trên mô hình: ${roomName}`, exact: true })
     .click();
   await expect(
-    page.getByRole("region", { name: "Thông tin phòng" }),
-  ).toContainText(roomName);
+    page.locator("#building-information").getByRole("heading", { name: roomName, exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Mặt bằng", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Mặt bằng", exact: true }),
@@ -144,7 +145,7 @@ test("explore three floors, enter HCNS, return and use mobile without errors", a
   await page
     .getByRole("button", { name: "Đặt lại góc nhìn", exact: true })
     .click();
-  await page.getByRole("button", { name: /Vào phòng HCNS/ }).click();
+  await page.getByRole("button", { name: "Vào phòng", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Không gian HCNS", exact: true }),
   ).toBeVisible({ timeout: 90000 });
@@ -159,11 +160,11 @@ test("explore three floors, enter HCNS, return and use mobile without errors", a
     .getByRole("button", { name: "Trở lại tầng 2", exact: true })
     .click();
   await expect(
-    page.getByRole("region", { name: "Thông tin phòng" }),
-  ).toContainText(roomName);
+    page.locator("#building-information").getByRole("heading", { name: roomName, exact: true }),
+  ).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
-    page.getByRole("button", { name: /Vào phòng HCNS/ }),
+    page.getByRole("button", { name: "Vào phòng", exact: true }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -171,6 +172,7 @@ test("explore three floors, enter HCNS, return and use mobile without errors", a
     ),
   ).toBe(false);
   await page.evaluate(() => document.documentElement.classList.add("dark"));
+  await page.locator("summary", { hasText: "Đổi phòng" }).click();
   await page
     .getByRole("textbox", { name: "Tìm phòng trong mô hình" })
     .fill("phong phat trien du an");
@@ -185,8 +187,8 @@ test("explore three floors, enter HCNS, return and use mobile without errors", a
     .focus();
   await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("region", { name: "Thông tin phòng" }),
-  ).toContainText("Phòng Phát triển dự án");
+    page.locator("#building-information").getByRole("heading", { name: "Phòng Phát triển dự án", exact: true }),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });
 test("building uses workplace links, reflects DB changes, and drops stale room hierarchy", async ({
@@ -201,7 +203,7 @@ test("building uses workplace links, reflects DB changes, and drops stale room h
     where: { id: personId },
     data: { tinh_trang_lam_viec: "LEFT" },
   });
-  await page.getByRole("button", { name: "Cập nhật", exact: true }).click();
+  await refreshOfficeData(page);
   await expect(panel).not.toContainText(name);
   await db.nhan_su.update({
     where: { id: personId },
@@ -211,8 +213,8 @@ test("building uses workplace links, reflects DB changes, and drops stale room h
     where: { id: roomId },
     data: { ten_vi_tri: `HCNS đổi tên ${run}` },
   });
-  await page.getByRole("button", { name: "Cập nhật", exact: true }).click();
-  await expect(panel).toContainText(`HCNS đổi tên ${run}`);
+  await refreshOfficeData(page);
+  await expect(page.locator("#building-information").getByRole("heading", { name: `HCNS đổi tên ${run}`, exact: true })).toBeVisible();
   const building = JSON.parse(
     await readFile("var/office-3d/building.json", "utf8"),
   );
@@ -239,7 +241,7 @@ test("building uses workplace links, reflects DB changes, and drops stale room h
     await expect(panel).toContainText("Chưa có dữ liệu vị trí");
     await expect(panel).not.toContainText(name);
     await expect(
-      page.getByRole("button", { name: /Vào phòng HCNS/ }),
+      page.getByRole("button", { name: "Vào phòng", exact: true }),
     ).toHaveCount(0);
   } finally {
     await db.vi_tri.update({
@@ -258,7 +260,7 @@ test("location access does not disclose HR; no access and other company cannot l
   await signAccount(context, locationsOnly);
   await openHcns(page);
   await expect(
-    page.getByRole("region", { name: "Nhân sự trong không gian" }),
+    page.getByRole("tab", { name: /^Nhân sự/ }),
   ).toHaveCount(0);
   expect(await page.content()).not.toContain(name);
   await expect(
@@ -318,6 +320,6 @@ test("WebGL failure keeps floor selection and accessible room information", asyn
     page.getByRole("region", { name: "Thông tin phòng" }),
   ).toContainText(name);
   await expect(
-    page.getByRole("button", { name: /Vào phòng HCNS/ }),
+    page.getByRole("button", { name: "Vào phòng", exact: true }),
   ).toBeVisible();
 });

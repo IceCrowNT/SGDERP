@@ -21,6 +21,7 @@ async function replay(page: Page, request: Request, payload: unknown) {
   return (await page.request.post("/assets", { headers: { "Next-Action": request.headers()["next-action"], "Content-Type": request.headers()["content-type"] }, data: JSON.stringify([payload]) })).text();
 }
 async function open(page: Page) {
+  if (await page.getByRole("button", { name: "Xem tất cả", exact: true }).isVisible()) await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
   await page.getByRole("button", { name: `Mở tài sản ${name}`, exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Chi tiết tài sản", exact: true }).getByRole("heading", { name, exact: true })).toBeVisible();
 }
@@ -68,6 +69,7 @@ test("empty state, required fields, category creation and personal assignment wo
   await select(page, "Người sử dụng", new RegExp(person.ho_ten));
   await select(page, "Phòng quản lý", "Phòng IT thử");
   await select(page, "Vị trí", "Bàn thử A");
+  await dialog(page).locator("summary").filter({ hasText: "Thông tin bổ sung" }).click();
   await page.getByLabel("Serial / Service tag", { exact: true }).fill("SERIAL-TEST");
   const request = page.waitForRequest(r => action(r) && (r.postData() ?? "").includes('"categoryId"'));
   await dialog(page).getByRole("button", { name: "Lưu tài sản", exact: true }).click(); saveRequest = await request;
@@ -76,6 +78,7 @@ test("empty state, required fields, category creation and personal assignment wo
   asset = (await db.tai_san.findFirstOrThrow({ where: { company_id: company, ten_tai_san: name } })).id;
   const row = await db.tai_san.findUniqueOrThrow({ where: { id: asset } });
   expect(row.nguoi_su_dung_id).toBe(person.id); expect(row.vi_tri_id).toBe(one); expect(row.phong_quan_ly_id).toBe(department);
+  await page.getByRole("tab", { name: "Lịch sử", exact: true }).click();
   await expect(page.getByRole("region", { name: "Lịch sử tài sản" })).toContainText("Tạo hồ sơ");
   expect(await page.content()).not.toContain("PRIVATE_HR_DATA");
   await page.screenshot({ path: "outputs/assets-ui/detail-desktop.png" });
@@ -87,12 +90,15 @@ test("edit clears a personal assignment, changes location/status and preserves r
   await select(page, "Hình thức sử dụng", "Dùng chung");
   await expect(dialog(page).getByRole("combobox", { name: "Người sử dụng", exact: true })).toHaveCount(0);
   await select(page, "Tình trạng", "Hỏng"); await select(page, "Vị trí", "Bàn thử B");
+  await dialog(page).locator("summary").filter({ hasText: "Thông tin bổ sung" }).click();
   await page.getByLabel("Ghi chú", { exact: true }).fill("Kiểm tra bộ nguồn");
   await page.getByRole("button", { name: "Lưu tài sản", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Chi tiết tài sản", exact: true })).toBeVisible();
   const row = await db.tai_san.findUniqueOrThrow({ where: { id: asset } });
   expect(row.nguoi_su_dung_id).toBeNull(); expect(row.vi_tri_id).toBe(two); expect(row.tinh_trang).toBe("HONG");
+  await page.getByRole("tab", { name: "Lịch sử", exact: true }).click();
   const history = page.getByRole("region", { name: "Lịch sử tài sản" });
+  await history.locator("summary").filter({ hasText: "Cập nhật hồ sơ" }).first().click();
   await expect(history).toContainText("Cập nhật hồ sơ"); await expect(history).toContainText(person.ho_ten);
   await expect(history).not.toContainText("nguoi_su_dung_id");
   await page.getByRole("button", { name: "Close", exact: true }).click();
@@ -125,6 +131,7 @@ test("VIEW/none, direct action payloads, tenant bounds and revocation are enforc
 test("stale edits keep input and do not overwrite; inactive links remain editable", async ({ page, context }) => {
   await signAccount(context, manager); await page.goto("/assets"); await open(page);
   await page.getByRole("button", { name: "Sửa tài sản", exact: true }).click();
+  await dialog(page).locator("summary").filter({ hasText: "Thông tin bổ sung" }).click();
   await page.getByLabel("Ghi chú", { exact: true }).fill("Nội dung chưa lưu");
   await db.tai_san.update({ where: { id: asset }, data: { ghi_chu: "Người khác đã cập nhật" } });
   await page.getByRole("button", { name: "Lưu tài sản", exact: true }).click();
@@ -138,6 +145,7 @@ test("stale edits keep input and do not overwrite; inactive links remain editabl
   await page.reload(); await open(page);
   await expect(page.getByText(/Cần kiểm tra và xử lý bàn giao thiết bị/)).toBeVisible();
   await page.getByRole("button", { name: "Sửa tài sản", exact: true }).click();
+  await dialog(page).locator("summary").filter({ hasText: "Thông tin bổ sung" }).click();
   await page.getByLabel("Ghi chú", { exact: true }).fill("Chờ bàn giao");
   await page.getByRole("button", { name: "Lưu tài sản", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Chi tiết tài sản", exact: true })).toBeVisible();
@@ -152,12 +160,12 @@ test("search pagination and mobile light/dark layouts are usable", async ({ page
   await page.getByRole("textbox", { name: "Tìm tài sản", exact: true }).fill(`Thiết bị phân trang ${run}`);
   await page.getByRole("button", { name: "Tìm kiếm tài sản", exact: true }).click();
   await expect(page.getByText("23 hồ sơ · Trang 1/2", { exact: true })).toBeVisible();
-  await expect(page.getByRole("list", { name: "Danh sách tài sản", exact: true }).getByRole("listitem")).toHaveCount(20);
+  await expect(page.getByRole("table", { name: "Danh sách tài sản", exact: true }).locator("tbody tr")).toHaveCount(20);
   await page.getByRole("button", { name: "Trang sau", exact: true }).click();
-  await expect(page.getByRole("list", { name: "Danh sách tài sản", exact: true }).getByRole("listitem")).toHaveCount(3);
+  await expect(page.getByRole("table", { name: "Danh sách tài sản", exact: true }).locator("tbody tr")).toHaveCount(3);
   await page.getByRole("button", { name: "Xóa bộ lọc", exact: true }).click();
   await expect(page.getByText("24 hồ sơ · Trang 1/2", { exact: true })).toBeVisible();
-  await expect(page.getByRole("list", { name: "Danh sách tài sản", exact: true }).getByRole("listitem")).toHaveCount(20);
+  await expect(page.getByRole("table", { name: "Danh sách tài sản", exact: true }).locator("tbody tr")).toHaveCount(20);
   await page.screenshot({ path: "outputs/assets-ui/list-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "outputs/assets-ui/list-mobile.png" });
@@ -194,5 +202,5 @@ test("network failures show retry actions and keep entered form values", async (
   await expect(page.getByRole("alert").filter({ hasText: "Không tải được danh sách" })).toBeVisible();
   await page.unroute("**/assets", block);
   await page.getByRole("button", { name: "Tải lại danh sách", exact: true }).click();
-  await expect(page.getByRole("list", { name: "Danh sách tài sản", exact: true }).getByRole("listitem")).toHaveCount(20);
+  await expect(page.getByRole("table", { name: "Danh sách tài sản", exact: true }).locator("tbody tr")).toHaveCount(20);
 });

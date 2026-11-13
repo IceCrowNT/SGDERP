@@ -33,7 +33,7 @@ export default async function DepartmentsPage() {
 
   const headCandidates = res.canManage ? await db.nhan_su.findMany({
     where: { company_id: session.companyId },
-    select: { id: true, ho_ten: true, ma_nhan_su: true, tinh_trang_lam_viec: true, phong_ban: { select: { ten_phong_ban: true } } },
+    select: { id: true, ho_ten: true, ma_nhan_su: true, chuc_vu: true, tinh_trang_lam_viec: true, phong_ban: { select: { ten_phong_ban: true } } },
     orderBy: { ho_ten: "asc" },
   }) : [];
   return (

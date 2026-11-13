@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   FileText,
   Pencil,
   MapPin,
   Users,
+  Package,
 } from "lucide-react";
 import { getLocations } from "@/actions/location";
 import { Button } from "@/components/ui/button";
@@ -20,11 +21,13 @@ export function HcnsRoomPanel({
   selected,
   onSelect,
   personId,
+  assetId,
 }: {
   room: HcnsRoomData;
   selected: string | null;
   onSelect: (key: string) => void;
   personId?: number | null;
+  assetId?: number | null;
 }) {
   const [assignmentData, setAssignmentData] = useState<{
     locations: LocationRow[];
@@ -71,6 +74,16 @@ export function HcnsRoomPanel({
   const person = room.canViewEmployees
     ? point?.occupants?.find((p) => p.id === personId)
     : undefined;
+  const asset = room.canViewAssets ? point?.assets?.find(a => a.id === assetId) : undefined;
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (person?.id || asset?.id) headingRef.current?.focus({ preventScroll: true });
+  }, [person?.id, asset?.id]);
+  const assetsPanel = room.canViewAssets && point?.locationId !== undefined ? <LocationAssets
+    key={`assets-${point.key}`} location={{ id: point.locationId,
+      name: `${room.path} / ${point.name}`, active: point.state === "active" }}
+    assets={point.assets ?? []} selectedAssetId={asset?.id}
+    canManage={room.canManageAssets && point.state === "active"} /> : null;
   return (
     <div className="space-y-4" aria-label="Thông tin vị trí trong phòng">
       {room.canManageEmployees && !assignmentData && (
@@ -130,18 +143,18 @@ export function HcnsRoomPanel({
           <>
             <div className="mb-5 flex items-center gap-3">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg font-semibold text-primary">
-                {person ? (
+                {asset ? <Package className="size-5" /> : person ? (
                   <Users className="size-5" />
                 ) : (
                   <MapPin className="size-5" />
                 )}
               </div>
               <div className="min-w-0">
-                <h2 className="break-words text-lg font-semibold">
-                  {person?.name ?? point.name}
+                <h2 ref={headingRef} tabIndex={-1} className="break-words text-lg font-semibold outline-none">
+                  {asset?.name ?? person?.name ?? point.name}
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  {person
+                  {asset ? point.name : person
                     ? [person.position, person.department]
                         .filter(Boolean)
                         .join(" · ")
@@ -149,11 +162,11 @@ export function HcnsRoomPanel({
                       ? "Đã ngừng sử dụng"
                       : point.state === "unlinked"
                         ? "Chưa liên kết vị trí"
-                        : "Trong phòng HCNS"}
+                        : room.name}
                 </p>
               </div>
             </div>
-            {person && (
+            {(person || asset) && (
               <Button
                 variant="ghost"
                 className="mb-3 min-h-10"
@@ -170,7 +183,8 @@ export function HcnsRoomPanel({
               </p>
             ) : (
               <>
-                {room.canManageEmployees &&
+                {asset && assetsPanel}
+                {!asset && (room.canManageEmployees &&
                 assignmentData &&
                 assignmentLocation ? (
                   <div className="mb-5">
@@ -218,12 +232,8 @@ export function HcnsRoomPanel({
                       )}
                     </section>
                   )
-                )}
-                {room.canViewAssets && point.locationId !== undefined && (
-                  <LocationAssets key={`assets-${point.key}`} location={{ id: point.locationId,
-                    name: `${room.path} / ${point.name}`, active: point.state === "active" }}
-                    assets={point.assets ?? []} canManage={room.canManageAssets && point.state === "active"} />
-                )}
+                ))}
+                {!asset && assetsPanel}
                 <div className="mb-3 flex items-center gap-2 text-sm font-medium">
                   <FileText className="size-4 text-muted-foreground" />
                   Ghi chú vị trí

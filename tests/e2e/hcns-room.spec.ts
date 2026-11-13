@@ -1,4 +1,4 @@
-import { chooseRoomPoint, openRoomLocations } from "../helpers/office-3d";
+import { chooseRoomPoint, openRoomLocations, refreshOfficeData } from "../helpers/office-3d";
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { readFile } from "node:fs/promises";
@@ -103,12 +103,7 @@ test("HCNS shows ten DB locations, notes, camera controls and responsive layouts
       includeHidden: true,
     }),
   ).toHaveAttribute("aria-pressed", "true");
-  await page
-    .getByRole("button", { name: "Cập nhật dữ liệu", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Cập nhật dữ liệu", exact: true }),
-  ).toBeEnabled();
+  await refreshOfficeData(page);
   for (const width of [1440, 768, 390]) {
     await page.setViewportSize({ width, height: 900 });
     expect(

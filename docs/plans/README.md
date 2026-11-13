@@ -14,8 +14,8 @@ Giao diện nhân sự, tài khoản, phòng ban, profile, workflow, nhật ký 
 | [Workflow](WORKFLOW-CHECKLIST.md) | Đã có `/workflows`, 5 bảng, mẫu có phiên bản và xử lý tuần tự; đã thiết kế kéo thả, biểu mẫu, giao việc và thông báo | Cấu hình pilot thực tế; sau đó làm bản mẫu kỹ thuật vùng kéo thả và migration an toàn |
 | [Tài khoản mặc định/Profile/Dashboard](PROFILE-DASHBOARD-CHECKLIST.md) | Đã có DEFAULT/tên tự sinh, profile và dashboard cá nhân; đã thiết kế ưu tiên việc đến lượt | Dùng thử thực tế; bổ sung thông báo trong ứng dụng cùng workflow mở rộng |
 | [Vị trí & không gian](LOCATION-MANAGEMENT-CHECKLIST.md) | Đã có cây `vi_tri`, quyền LOCATIONS, gán/chuyển/bỏ gán người hai chiều và xóa có xác nhận tự bỏ gán | Dùng thử nghiệp vụ; đã bổ sung chặn xóa/ngừng dùng vị trí còn tài sản |
-| [Tài sản](ASSET-MANAGEMENT-CHECKLIST.md) | Đã có `/assets`: loại, tìm/lọc, hồ sơ, chọn người/vị trí, lịch sử; admin có ASSETS MANAGE, người dùng đã tạo PC01. Gán/chuyển/bỏ gán từ 3D HCNS đã kiểm chứng | Chọn người phụ trách và tiếp tục bổ sung thiết bị đã xác minh để dùng thử |
-| [3D tòa nhà & HCNS](OFFICE-3D-CHECKLIST.md) | Mặt bằng 3 tầng theo PDF, tên 6 phòng tầng 2 và nội thất HCNS theo ảnh hiện trạng; cùng Canvas/10 vị trí. Gán người theo HR, gán tài sản thật theo ASSETS; 7 tích hợp/4 E2E và 20 unit đạt cho đợt tài sản | Xác nhận phòng còn lại ở tầng 1/3 và chỗ đặt Lễ tân; nhận bản phác dựng nội thất cố định từng phòng. Không làm kéo thả/thêm bàn |
+| [Tài sản](ASSET-MANAGEMENT-CHECKLIST.md) | Đã có `/assets`: card loại, danh sách nhóm người/vị trí, bảng thiết bị sửa trực tiếp và hồ sơ; tìm toàn cục, thêm/đổi theo ngữ cảnh. Đã nhập 89 hồ sơ, tổng 91; admin có ASSETS MANAGE, tích hợp 3D HCNS đã kiểm chứng | Đối chiếu 3 dòng nguồn còn giữ lại, xác minh hồ sơ và chọn người phụ trách để dùng thử |
+| [3D tòa nhà & HCNS](OFFICE-3D-CHECKLIST.md) | Mặt bằng 3 tầng, nội thất HCNS/10 vị trí và khung điều khiển mở rộng dùng cùng Canvas. Gán người theo HR, tài sản theo ASSETS. Bảng phòng rút gọn thành hai tab. Bản thử thêm/chỉnh bàn hoặc điểm thiết bị trong phòng đã liên kết; lưu riêng bố trí, gán tài sản ngay tại điểm mới | Xác nhận phòng còn lại ở tầng 1/3 và chỗ đặt Lễ tân; nhận bản phác dựng nội thất cố định và dùng thử bổ sung vị trí trên mô hình |
 | [Số hóa/báo cáo](DIGITAL-TRANSFORMATION-CHECKLIST.md) | Đã khảo sát và chuẩn bị báo cáo | Chốt KPI, đầu mối, lịch và tiêu chí nghiệm thu |
 
 ## Đối chiếu plan với code và DB
@@ -34,7 +34,7 @@ Giao diện nhân sự, tài khoản, phòng ban, profile, workflow, nhật ký 
 | [Báo cáo tuần](WEEKLY-REPORT-CHECKLIST.md) | Chưa có route/action/component báo cáo tuần | Không có `bao_cao_tuan` hoặc quyền WEEKLY_REPORT | Khớp trạng thái chưa triển khai; JSONB/snapshot/xuất file mới là thiết kế. Không đồng nhất với menu `/tasks` |
 | [Chuyển đổi số](DIGITAL-TRANSFORMATION-CHECKLIST.md) | Không có route/action tương ứng riêng | Không sở hữu bảng | Là lộ trình chung nhiều phân hệ, không tương ứng một tính năng phần mềm |
 
-**Sau mốc đọc:** nền tài sản đã triển khai theo [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md); DB hiện có 17 bảng và thêm 2 quyền ASSETS. Ngày 12/11 đã hoàn thành giao diện `/assets`, cấp ASSETS MANAGE cho admin theo yêu cầu; người dùng đã tạo PC01, gán tài sản từ 3D HCNS đã kiểm chứng. Bảng đối chiếu và số liệu dưới đây giữ nguyên ý nghĩa tại mốc đọc trước triển khai.
+**Sau mốc đọc:** nền tài sản đã triển khai theo [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md); Nền tài sản thêm 2 quyền ASSETS; bản thử bố trí 3D ngày 13/11 bổ sung `vat_the_3d`, DB hiện có 18 bảng. Ngày 12/11 đã hoàn thành giao diện `/assets`, cấp ASSETS MANAGE cho admin theo yêu cầu; người dùng đã tạo PC01, gán tài sản từ 3D HCNS đã kiểm chứng. Bảng đối chiếu và số liệu dưới đây giữ nguyên ý nghĩa tại mốc đọc trước triển khai.
 
 Số liệu tại mốc đọc: 72 nhân sự, 18 phòng ban, 3 tài khoản, 4 role (`ADMIN`, `DEFAULT`, `HR_MANAGER`, `ASSETS`), 20 quyền và 17 vị trí; 3 người đã gán vị trí, 2 phòng đã có head. Role mang mã `ASSETS` là dữ liệu vai trò tùy chỉnh, **không chứng minh đã có quyền hoặc tính năng tài sản**; không sửa/xóa role này. Những số liệu khác trong các biên bản cũ chỉ là kết quả tại thời điểm đó. Bằng chứng tổng hợp không chứa hồ sơ người/credential lưu cục bộ tại `outputs/plan-code-db-review/`.
 
@@ -84,6 +84,7 @@ Phần A hướng tới đọc trong 3–5 phút, không chép lại bảng cộ
 - `[x]` chỉ đánh dấu công việc có bằng chứng đã hoàn thành; `[ ]` là còn lại. Hoàn thành thiết kế hoặc kiểm thử kỹ thuật không đồng nghĩa được duyệt triển khai hoặc nghiệm thu vận hành.
 - A tóm tắt các mốc, B sở hữu checklist thực hiện chi tiết; liên kết giữa hai phần, không sao chép từng checkbox ở cả hai.
 - Tiêu chí hoàn thành phải kiểm tra được, bao gồm hành vi chính và tình huống lỗi/quyền/đồng thời phù hợp tính năng. Ghi kết quả thực tế và giới hạn kiểm chứng; không ghi đạt khi chưa chạy.
+- Với tính năng có giao diện, phần A nêu tác vụ chính và điểm vướng của người dùng; phần B ghi luồng thao tác, tiêu chí và kết quả kiểm chứng UX theo mục [Nguyên tắc UX ưu tiên](../../.agents/rules/FRONTEND-RULES.md#8-nguyên-tắc-ux-ưu-tiên) của rule Frontend.
 
 ### 4. Một nơi quản lý và cập nhật hiện trạng
 
@@ -98,6 +99,8 @@ Phần A hướng tới đọc trong 3–5 phút, không chép lại bảng cộ
 
 Theo yêu cầu cải thiện các danh mục dài: ô chọn trong form mở bảng tìm kiếm gọn, gõ có/không dấu, xem tên và ngữ cảnh sẵn có, chọn bằng chuột hoặc bàn phím. Nội dung gõ chỉ để lọc; lưu ID của lựa chọn hợp lệ, không tự tạo bản ghi mới. Các enum ngắn giữ select; hộp tìm/gán người tại vị trí/3D đã có tìm kiếm được giữ.
 
+- [ ] Đề xuất bổ sung chuẩn ô chọn cho tính năng mới tại mục 6 của [rule Frontend](../../.agents/rules/FRONTEND-RULES.md): dùng ô tìm/chọn chung cho danh mục dài, thống nhất nhãn theo nguồn dữ liệu và làm rõ thông tin phụ. Chưa sửa rule chung; chờ duyệt nội dung theo [quy trình trong AGENTS.md](../../AGENTS.md#quy-trình-duyệt-ba-rule-kỹ-thuật-chung). Sửa hiển thị người phụ trách đã được duyệt riêng, theo [plan HR](HR-CHECKLIST.md#ô-chọn-có-tìm-kiếm--12112026).
+
 - [x] Rà soát danh mục tham chiếu tại tài sản, nhân sự/phòng ban, tài khoản, vị trí và workflow; không cần đổi backend, quyền, DB hoặc ba rule kỹ thuật chung.
 - [x] Xây `SearchableSelect` dùng Radix/UI hiện có, tích hợp form và bộ lọc danh mục; giữ giá trị đang chọn, trường tùy chọn và lựa chọn ngừng dùng theo nghiệp vụ.
 - [x] 3 E2E mới đạt trên DB khôi phục riêng: tìm không dấu/nhiều từ, Enter/Esc và focus, không có kết quả, không tự gửi form hoặc lưu chữ nhập tự do, giá trị null/disabled, người trùng tên, lưu đúng ID và mobile/sáng/tối. Ảnh đã kiểm tra tại `outputs/searchable-select/`.
@@ -106,6 +109,7 @@ Theo yêu cầu cải thiện các danh mục dài: ô chọn trong form mở b�
 
 ## Rà soát tài liệu
 
+- [x] Bổ sung 9 [nguyên tắc UX ưu tiên](../../.agents/rules/FRONTEND-RULES.md#8-nguyên-tắc-ux-ưu-tiên) vào rule Frontend theo đề xuất đã duyệt; quy chuẩn lập plan yêu cầu nêu tác vụ, điểm vướng và kiểm chứng UX tại A/B. Giữ nguyên các chuẩn kỹ thuật hiện có; cập nhật tài liệu chưa đồng nghĩa toàn bộ giao diện đã đáp ứng. Đã kiểm tra 52 liên kết/anchor và `git diff --check`; rule Frontend có 9.079 ký tự, dưới giới hạn 12.000. Không đổi mã nguồn/DB, không chạy lại kiểm thử ứng dụng cho thay đổi tài liệu này.
 - [x] Đối chiếu toàn bộ plan với code và DB local ngày 11/11: ghi phạm vi sở hữu, phần chưa triển khai và các chỗ chưa tương ứng một tính năng tại bảng trên; sửa những mô tả hiện trạng lỗi thời đã xác minh. Không chạy lại bộ E2E toàn hệ thống hoặc thay DB/quyền trong lần đọc.
 - [x] Gỡ công cụ hồ sơ thanh toán AI theo yêu cầu: xóa trang tạm hoãn, test và plan riêng; bỏ định tuyến tài liệu, tham chiếu và hướng khôi phục. Route dự phòng chỉ giữ các trang chờ đã khai báo, URL không biết hiển thị không tìm thấy. Không có bảng/dependency riêng cần xóa; giữ nguồn nghiệp vụ và lịch sử Git.
 - [x] Kiểm chứng phần gỡ tính năng: `next typegen`, TypeScript và lint route sửa đạt; đã dọn đúng file kiểu tự sinh còn trỏ tới trang bị xóa. Chrome đạt 8 kiểm tra: 3 URL không tồn tại, 4 trang chờ vẫn hoạt động và dashboard không có liên kết AI. Trang không tìm thấy được render; response dev streaming vẫn 200, không ghi nhận HTTP 404. 183 liên kết/anchor trong 12 file Markdown thay đổi hợp lệ; `git diff --check` đạt. Bằng chứng ở `outputs/plan-code-db-review/`; kiểm tra trình duyệt chỉ đọc, không tạo fixture hoặc sửa DB.

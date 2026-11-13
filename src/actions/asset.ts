@@ -92,6 +92,31 @@ export async function getAssets(input: unknown = {}) {
   } catch { return { success: false as const, message: "Không tải được danh sách tài sản. Vui lòng thử lại." }; }
 }
 
+/** Group summaries only; device dossiers are loaded when a group/search is opened. */
+export async function getAssetOverview() {
+  const session = await getSession();
+  if (!session || !hasPermission(session, "ASSETS")) return denied();
+  try {
+    const summary = await db.$transaction(async tx => {
+      const where = { company_id: session.companyId };
+      const [categories, people, locations, categoryCounts, peopleCounts, locationCounts] = await Promise.all([
+        tx.loai_tai_san.findMany({ where, select: { id: true, ma_loai: true, ten_loai: true, dang_su_dung: true }, orderBy: { ten_loai: "asc" } }),
+        tx.nhan_su.findMany({ where: { ...where, danh_sach_tai_san: { some: where } }, select: { id: true, ho_ten: true, ma_nhan_su: true }, orderBy: { ho_ten: "asc" } }),
+        tx.vi_tri.findMany({ where, select: { id: true, parent_id: true, ten_vi_tri: true } }),
+        tx.tai_san.groupBy({ by: ["loai_tai_san_id"], where, _count: { _all: true } }),
+        tx.tai_san.groupBy({ by: ["nguoi_su_dung_id", "hinh_thuc_su_dung"], where, _count: { _all: true } }),
+        tx.tai_san.groupBy({ by: ["vi_tri_id"], where, _count: { _all: true } }),
+      ]);
+      const byCategory = categories.map(c => ({ id: `category:${c.id}`, label: c.ten_loai, description: c.dang_su_dung ? "" : "Ngừng dùng", icon: c.ma_loai, count: categoryCounts.find(r => r.loai_tai_san_id === c.id)?._count._all ?? 0, query: { categoryId: c.id } }));
+      const byEmployee = people.map(p => ({ id: `employee:${p.id}`, label: p.ho_ten, description: p.ma_nhan_su, icon: "", count: peopleCounts.filter(r => r.nguoi_su_dung_id === p.id).reduce((sum, r) => sum + r._count._all, 0), query: { employeeId: p.id } }));
+      const unassigned = peopleCounts.filter(r => r.nguoi_su_dung_id === null).map(r => ({ id: `usage:${r.hinh_thuc_su_dung}`, label: r.hinh_thuc_su_dung === "DUNG_CHUNG" ? "Dùng chung" : r.hinh_thuc_su_dung === "CHUA_PHAN_BO" ? "Chưa phân bổ" : "Chưa rõ người sử dụng", description: "", icon: "", count: r._count._all, query: { usage: r.hinh_thuc_su_dung } }));
+      const byLocation = locationCounts.map(r => ({ id: `location:${r.vi_tri_id ?? "none"}`, label: r.vi_tri_id ? locations.find(l => l.id === r.vi_tri_id)?.ten_vi_tri ?? "Vị trí" : "Chưa rõ vị trí", description: r.vi_tri_id ? locationPath(r.vi_tri_id, locations) : "", icon: "", count: r._count._all, query: { locationId: r.vi_tri_id } })).sort((a, b) => a.label.localeCompare(b.label, "vi"));
+      return { total: categoryCounts.reduce((sum, r) => sum + r._count._all, 0), byCategory, byEmployee: [...byEmployee, ...unassigned], byLocation };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+    return { success: true as const, ...summary, canManage: hasPermission(session, "ASSETS", "MANAGE") };
+  } catch { return { success: false as const, message: "Không tải được nhóm tài sản. Hãy thử lại." }; }
+}
+
 // VIEW filters expose only names attached to assets in this company, not full HR catalogs.
 export async function getAssetFilterOptions() {
   const session = await getSession();

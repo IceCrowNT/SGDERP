@@ -2,9 +2,12 @@
 
 ## Tài sản mức 1 — 12/11/2026
 
+- `AssetGroups.tsx` trình bày card loại và danh sách nhóm người/vị trí; `getAssetOverview` dùng Prisma groupBy trong transaction đọc nhất quán và quyền ASSETS. Trang `/assets` tải thống kê trước, tải bảng hồ sơ phân trang khi chọn nhóm/tìm kiếm. `AssetInlineEditor.tsx` sửa các ô vận hành trên một dòng qua RHF/Zod và `saveAsset` hiện có; khóa điều hướng danh sách đến khi Lưu/Hủy, lỗi giữ bản nháp. Query vị trí chấp nhận null; không đổi schema/dependency/env. Trạng thái nhóm, bộ lọc và cuộn được giữ trong `AssetManager`; form đầy đủ nhận loại mặc định và trường cần focus theo ngữ cảnh.
+
 - Panel HCNS dùng `src/components/locations/LocationAssets.tsx`, kiểu dữ liệu/kiểm tra cây tại `src/lib/asset-location.ts`. `getAssetLocationCandidates` tải tối thiểu khi mở picker (20 hồ sơ/trang); `assignAssetLocation` chỉ sửa FK vị trí trong transaction/audit ASSETS. `getHcnsRoom` đọc hồ sơ thật theo quyền riêng; hình đại diện theo loại thay minh họa từ ghi chú. Không thêm schema/dependency/env; các thay đổi từ `/assets` cũng revalidate viewer. Nghiệm thu tại [plan 3D](plans/OFFICE-3D-CHECKLIST.md).
 
 - Đợt giao diện thêm route `/assets`, loading và `src/components/assets/` (danh sách, form, chi tiết/lịch sử), nhãn trạng thái tại `src/lib/asset-labels.ts`. Truy vấn danh sách/phân trang và số đếm cùng bộ lọc trong transaction đọc nhất quán; lựa chọn lọc chỉ trả tên đã gắn thiết bị cho ASSETS VIEW. Menu dùng guard ASSETS; form vẫn gọi Server Actions sẵn có. Không thêm thư viện hoặc schema. Tiến độ tại plan tài sản.
+- Bố cục tài sản gọn dùng Table/Tabs hiện có; `AssetCategoryIcon.tsx` ánh xạ mã loại sang icon Lucide, loại chưa biết dùng hình hộp. `SearchableSelect` nhận icon tùy chọn để dùng cùng biểu tượng trong form/bộ lọc; giá trị lựa chọn vẫn là ID. Không thêm dependency/schema/env; phạm vi và nghiệm thu tại [plan tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md).
 
 - Đợt 1 thêm hai model `loai_tai_san`, `tai_san`, migration `20261111095809_tai_san_muc_1`, Server Actions `src/actions/asset.ts` và validation `src/lib/validations/asset.ts`. Actions gọi Prisma trực tiếp, cùng khóa công ty/phân quyền với vị trí/HR; audit cùng transaction. Không thêm dependency hoặc biến môi trường.
 - Quyền ASSETS VIEW/MANAGE tích hợp catalog, validation và ma trận `/roles`; seed chỉ thêm catalog cho cài mới, không cấp quyền mặc định. Vị trí/phòng ban bổ sung chặn xóa khi còn tài sản. Đã có route/menu `/assets` và liên kết gán vị trí ở HCNS; tiến độ và kiểm chứng tại [plan tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md).
@@ -12,7 +15,8 @@
 
 ## Viewer 3D thống nhất — 11/11/2026
 
-- `architectural-layout.ts` giữ mặt bằng giản lược của ba PDF trong cấu hình tĩnh; `building-layout.ts` nối vùng đã xác nhận với khóa ánh xạ cũ. Hình đa giác dùng chung cho vùng chọn, nhãn và nền/tường thấp; camera căn theo phạm vi mới. HCNS dùng cùng tỷ lệ/trục với tầng, 10 bàn thuộc cấu hình riêng, không có trình biên tập bố trí hoặc bảng DB mới. Tên phòng chưa xác nhận để trung tính; Lễ tân giữ hồ sơ nhưng chưa đặt hình. Phạm vi/kiểm chứng tại [plan 3D](plans/OFFICE-3D-CHECKLIST.md#khảo-sát-mặt-bằng-kiến-trúc).
+- `BuildingExplorer` chứa điều khiển và panel trong một vùng làm việc; hook `useExpandedWorkspace.ts` quản lý chế độ mở rộng bằng CSS trên cùng cây DOM, cô lập nền/focus/cuộn và nhường ưu tiên cho portal của hộp thoại/menu. `BuildingCanvas` giữ renderer, căn tỷ lệ camera theo kích thước vùng nhìn để resize đảo ngược được. Không thêm dependency, schema hoặc cấu hình môi trường; phạm vi và nghiệm thu ở [plan 3D](plans/OFFICE-3D-CHECKLIST.md#đề-xuất-khung-điều-khiển-và-mở-rộng).
+- `architectural-layout.ts` giữ mặt bằng giản lược của ba PDF trong cấu hình tĩnh; `building-layout.ts` nối vùng đã xác nhận với khóa ánh xạ cũ. Hình đa giác dùng chung cho vùng chọn, nhãn và nền/tường thấp; camera căn theo phạm vi mới. HCNS dùng cùng tỷ lệ/trục với tầng, 10 bàn gốc thuộc cấu hình riêng. Bản thử thêm bàn/điểm thiết bị dùng `vat_the_3d`, không thay tọa độ của danh mục `vi_tri`. Tên phòng chưa xác nhận để trung tính; Lễ tân giữ hồ sơ nhưng chưa đặt hình. Phạm vi/kiểm chứng tại [plan 3D](plans/OFFICE-3D-CHECKLIST.md#khảo-sát-mặt-bằng-kiến-trúc).
 - `OfficePerson.tsx` sở hữu hình người cách điệu dùng chung hình học/vật liệu; dữ liệu từ liên kết HR–vị trí sẵn có. Chọn bàn/người trực tiếp, nhãn tên chiếu từ cùng phép biến đổi với model và tránh chồng nhau; danh sách vị trí làm đường truy cập thay thế. Không thêm bảng hoặc thư viện.
 - CameraControls dùng `impl` của Drei để giới hạn bước thời gian khi vẽ trở lại sau khoảng nghỉ. Nhấp đúp phòng HCNS trong tầng giữ hướng camera và phóng tới nội thất đang nhúng; vật liệu không gian xung quanh mờ dần. Camera trở lại góc tầng đã lưu, hỗ trợ giảm chuyển động; hình người không có vòng hoạt ảnh riêng. Kiểm chứng và giới hạn tại [plan 3D](plans/OFFICE-3D-CHECKLIST.md).
 
@@ -36,11 +40,14 @@
 
 - [Plan 3D](plans/OFFICE-3D-CHECKLIST.md): `/office-3d/hcns`, đọc 10 vị trí từ DB qua `src/actions/office-room.ts`; client/viewer tại `src/components/office-3d/hcns/`, hình học và kiểm tra ánh xạ tại `src/lib/office-3d/`.
 - Thêm `@react-three/fiber@9.8.2` và `@react-three/drei@10.7.9`, tương thích React 19 hiện tại; giữ Three.js hiện có. Viewer tải phía client bằng dynamic import, vẽ khi cần; không tải font/texture/model từ CDN. Không thay Next.js hoặc Prisma.
-- Ánh xạ cục bộ `var/office-3d/hcns.json` (ngoài Git) liên kết khóa hình khối với ID vị trí và công ty. Sao lưu/triển khai file cùng DB, không tự tạo lại vị trí khi thiếu file. Chưa cần biến môi trường mới hoặc bảng 3D riêng.
+- Ánh xạ cục bộ `var/office-3d/hcns.json` (ngoài Git) liên kết khóa hình khối với ID vị trí và công ty. Sao lưu/triển khai file cùng DB, không tự tạo lại vị trí khi thiếu file. Ánh xạ này giữ cho 10 vị trí gốc; vật thể bổ sung qua UI lưu trong `vat_the_3d`, không ghi lại JSON. Không thêm biến môi trường.
 - Ghi chú nguồn ở DB/backup cục bộ, không tự phân công từ tên viết trên bản phác. Form HR đã có chọn/chuyển/gỡ vị trí chính; bản HCNS đọc người ACTIVE qua FK khi có HR VIEW/MANAGE bên cạnh LOCATIONS. Chưa tạo tài sản; khung tòa nhà đã được thay bằng cùng phong cách và dùng liên kết vị trí như mục đầu tài liệu.
 - Migration `20261110160000_vi_tri_lam_viec_nhan_su` thêm FK nullable cùng công ty/Restrict, kiểm tra loại/trạng thái và bảo vệ vị trí có người tham chiếu. Đã thử backup khôi phục trước khi áp dụng local, giữ 15 bảng cũ, không seed phân công. `src/lib/work-location.ts` kiểm tra danh mục chọn; action HR có version và audit nguyên tử. Không thêm dependency/biến môi trường cho liên kết HR.
 - Cấu hình hướng bàn dùng `facingDegrees` (độ), chuyển sang radian tại viewer; hướng/bố trí hiện hành theo [plan 3D](plans/OFFICE-3D-CHECKLIST.md#phong-cách-hình-ảnh). Không dựng ghế theo yêu cầu.
+- Bố trí bổ sung: `office-placement.ts` là Server Action trực tiếp Prisma, cùng khóa công ty/quyền LOCATIONS và audit với danh mục; `placement.ts` kiểm tra footprint/va chạm. `PlacementEditor` và `PlacedObjects` đặt/xoay/dịch hình trong cùng Canvas, dùng bảng `vat_the_3d`. Sao lưu DB cùng ánh xạ gốc. Migration bổ sung `20261112160000_vi_tri_bo_sung_3d`; không thêm thư viện.
 - Nội thất là geometry dùng lại, không asset tải ngoài. Nhãn chọn là DOM chiếu theo camera, cùng React root với trang. `frameloop="demand"`, giới hạn DPR 1,5, shadow map 1024; kiểm thử/giới hạn đo tại plan 3D.
+
+Thành phần tổng quan phòng 3D `RoomOverviewPanel` nhận người/tài sản đã được `office-building.ts` lọc quyền và cây vị trí hợp lệ; dùng hai tab và điều hướng tới điểm HCNS trong cùng Canvas. Không thêm thư viện, schema hoặc route; thiết kế và kiểm chứng tại [plan 3D](plans/OFFICE-3D-CHECKLIST.md).
 
 ## Không gian cá nhân — triển khai 05/11/2026
 

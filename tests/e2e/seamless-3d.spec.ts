@@ -1,4 +1,4 @@
-import { chooseRoomPoint, openRoomLocations } from "../helpers/office-3d";
+import { chooseRoomPoint, openRoomLocations, refreshOfficeData } from "../helpers/office-3d";
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { readFile, writeFile } from "node:fs/promises";
@@ -33,6 +33,23 @@ async function viewer() {
     },
   });
 }
+
+test("lost WebGL can retry the scene without reloading the page or losing room selection", async ({ page, context }) => {
+  await signAccount(context, await viewer());
+  await page.goto("/office-3d?floor=2&room=t2_hcns_pc");
+  const canvas = page.locator("canvas[data-building-ready=true]");
+  await expect(canvas).toBeVisible({ timeout: 90000 });
+  const originalDocument = await page.locator("html").elementHandle();
+  const url = page.url();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await canvas.evaluate(el => el.dispatchEvent(new Event("webglcontextlost", { cancelable: true })));
+    await page.getByRole("button", { name: "Tải lại mô hình", exact: true }).click();
+    await expect(canvas).toBeVisible({ timeout: 30000 });
+    expect(page.url()).toBe(url);
+    expect(await originalDocument!.evaluate(el => el === document.documentElement)).toBe(true);
+    await expect(page.getByRole("region", { name: "Thông tin phòng" })).toBeVisible();
+  }
+});
 
 test("one canvas survives room entry, camera return and data refresh without navigation reloads", async ({
   page,
@@ -69,7 +86,7 @@ test("one canvas survives room entry, camera return and data refresh without nav
   const times: number[] = [];
   for (let i = 0; i < 3; i++) {
     const begin = Date.now();
-    await page.getByRole("button", { name: /Vào phòng HCNS/ }).click();
+    await page.getByRole("button", { name: "Vào phòng", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "Không gian HCNS", exact: true }),
     ).toBeVisible();
@@ -85,12 +102,7 @@ test("one canvas survives room entry, camera return and data refresh without nav
         includeHidden: true,
       }),
     ).toHaveAttribute("aria-pressed", "true");
-    await page
-      .getByRole("button", { name: "Cập nhật dữ liệu", exact: true })
-      .click();
-    await expect(
-      page.getByRole("button", { name: "Cập nhật dữ liệu", exact: true }),
-    ).toBeEnabled();
+    await refreshOfficeData(page);
     expect(
       await original!.evaluate(
         (el) => el.isConnected && el === document.querySelector("canvas"),
@@ -243,7 +255,7 @@ test("selecting a desk stays responsive while assignment choices are still loadi
     await route.continue();
   });
   try {
-    await page.getByRole("button", { name: /Vào phòng HCNS/ }).click();
+    await page.getByRole("button", { name: "Vào phòng", exact: true }).click();
     await expect.poll(() => started).toBe(true);
     await chooseRoomPoint(page, "Vị trí 02");
     await expect(
