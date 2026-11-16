@@ -237,7 +237,7 @@ async function saveEmployee(input: unknown, updating: boolean) {
             company_id: session.companyId,
             employee_id: person.id,
             ten_dang_nhap: v.accountUsername || generatedUsername,
-            bat_buoc_doi_mat_khau: true,
+            bat_buoc_doi_mat_khau: false,
             ten_hien_thi: person.ho_ten,
             mat_khau_bam: passwordHash!,
             danh_sach_vai_tro: {

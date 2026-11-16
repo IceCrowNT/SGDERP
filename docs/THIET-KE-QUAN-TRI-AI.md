@@ -1,14 +1,14 @@
 # Thiết kế quản trị AI: kết nối, hạn mức và mức sử dụng
 
-Cập nhật **16/11/2026**. **Đã triển khai kết nối pilot tại dashboard; quản trị hạn mức/thống kê đầy đủ còn kế hoạch**; tài liệu chi tiết được quản lý bởi [Plan trợ lý AI](plans/AI-ASSISTANT-CHECKLIST.md). Người phụ trách yêu cầu lưu hạn mức bằng một cột trên tài khoản, bỏ bảng hạn mức riêng. Plan sở hữu phạm vi, tiến độ và nghiệm thu; tài liệu này sở hữu cột hạn mức, bảng kết nối và phần quản trị. Không tự thay đổi tài khoản, hạn mức hoặc API key trên OpenAI.
+Cập nhật **16/11/2026**. **Đã triển khai quản lý kết nối tại Cài đặt chung → Quản trị AI; quản trị hạn mức/thống kê đầy đủ còn kế hoạch**; tài liệu chi tiết được quản lý bởi [Plan trợ lý AI](plans/AI-ASSISTANT-CHECKLIST.md). Người phụ trách yêu cầu lưu hạn mức bằng một cột trên tài khoản, bỏ bảng hạn mức riêng. Plan sở hữu phạm vi, tiến độ và nghiệm thu; tài liệu này sở hữu cột hạn mức, bảng kết nối và phần quản trị. Không tự thay đổi tài khoản, hạn mức hoặc API key trên OpenAI.
 
 ## 1. Mục tiêu và màn hình
 
 ### Đề xuất đưa AI vào khu cài đặt hệ thống — 16/11/2026
 
-Người phụ trách đang xem xét đặt quản trị AI trong Cài đặt chung, cùng các cấu hình hệ thống và có phân quyền. Đây là **đề xuất tổ chức màn hình, chưa được yêu cầu triển khai**; hiện trạng pilot tại dashboard giữ nguyên.
+Người phụ trách đã yêu cầu triển khai phương án này. **Đã có `/settings` và `/settings/ai`, chuyển form key/model khỏi dashboard và thêm quyền `AI MANAGE_CONNECTIONS` tại `/roles`**. Phạm vi/kiểm chứng do [plan cài đặt hệ thống](plans/SYSTEM-SETTINGS-CHECKLIST.md) quản lý; chat pilot giữ ở dashboard.
 
-Đề xuất `/settings` là trang đầu của khu cài đặt dưới **Hệ thống & cấu hình**; có điều hướng nội bộ tới **Thông tin chung**, **Quản trị AI**, **API & tích hợp**, **Thông báo**, **Đăng nhập & bảo mật**, **Dữ liệu & lưu trữ**. `/settings/ai` thay đường dẫn `/ai-management` dự kiến khi phương án được chọn. Từng mục có URL riêng để tải lại/liên kết trực tiếp; mobile dùng bộ chọn mục. Chỉ hiện mục đã triển khai và được cấp quyền, không dựng hàng loạt màn hình trống.
+`/settings` là trang đầu của khu cài đặt dưới **Hệ thống & cấu hình**; hiện có **Quản trị AI**. **Thông tin chung**, **API & tích hợp**, **Thông báo**, **Đăng nhập & bảo mật**, **Dữ liệu & lưu trữ** là các nhóm mở rộng theo nhu cầu. `/settings/ai` thay đường dẫn `/ai-management` từng dự kiến. Từng mục có URL riêng để tải lại/liên kết trực tiếp; mobile dùng bộ chọn mục. Chỉ hiện mục đã triển khai và được cấp quyền, không dựng hàng loạt màn hình trống.
 
 | Nhóm dự kiến | Phạm vi |
 | --- | --- |
@@ -19,15 +19,15 @@ Người phụ trách đang xem xét đặt quản trị AI trong Cài đặt ch
 | Đăng nhập & bảo mật | Chính sách phiên/mật khẩu và phương thức đăng nhập khi được triển khai; cấp/gỡ quyền vẫn tại ma trận hiện có |
 | Dữ liệu & lưu trữ | Chính sách giữ lịch sử/tệp, tình trạng dung lượng và sao lưu; thao tác khôi phục/xóa cần thiết kế vận hành riêng |
 
-Quản trị AI có các vùng **Kết nối & model**, **Hạn mức tài khoản**, **Mức sử dụng**; đợt chuyển trang trước mắt chỉ dùng chức năng key/model đã có. Chat ở dashboard; cá nhân hóa và lịch sử riêng giữ theo plan hiện hành. Tái sử dụng `ket_noi_ai` và kho khóa, không tạo một bản cấu hình AI thứ hai trong bảng cài đặt tổng quát.
+Quản trị AI hiện có **Kết nối & model**; **Hạn mức tài khoản** và **Mức sử dụng** chưa triển khai. Chat ở dashboard; cá nhân hóa và lịch sử riêng giữ theo plan hiện hành. Tái sử dụng `ket_noi_ai` và kho khóa, không tạo một bản cấu hình AI thứ hai trong bảng cài đặt tổng quát.
 
 Phân quyền theo từng nhóm và hành động, không dùng một quyền vào `/settings` để mở tất cả cấu hình. Trang đầu/menu hiện theo hợp các mục được phép; trang con, truy vấn và action kiểm tra quyền tương ứng, cùng công ty. `AI USE`, `AI MANAGE_CONNECTIONS`, `AI MANAGE_LIMITS`, `AI VIEW_USAGE` tiếp tục theo [ma trận quyền AI](#6-quyền-và-audit). Người quản lý kết nối không cần mặc nhiên có quyền quản lý tài sản/vị trí hoặc đọc chat của người khác. Quyền cài đặt chung không tự bao gồm quyền sửa ma trận vai trò.
 
-Cấp quyền vẫn qua `/roles`; có thể đặt liên kết từ khu cài đặt đến đó, không tạo ma trận thứ hai. Khi triển khai cần mở rộng catalog/validation/guard/menu và migration quyền; xác định rõ tài khoản/role được cấp theo [plan phân quyền](plans/ROLE-MANAGEMENT-CHECKLIST.md#khi-thêm-tính-năng-hoặc-quyền-mới). Không suy đặc quyền từ tên ADMIN hoặc tự cấp quyền mới trong lượt đề xuất này.
+Cấp quyền vẫn qua `/roles`; có thể đặt liên kết từ khu cài đặt đến đó, không tạo ma trận thứ hai. Đã mở rộng catalog/validation/guard/menu và migration cho quyền kết nối; quyền hạn mức/usage triển khai khi có chức năng tương ứng theo [plan phân quyền](plans/ROLE-MANAGEMENT-CHECKLIST.md#khi-thêm-tính-năng-hoặc-quyền-mới). Không suy đặc quyền từ tên ADMIN. Migration/seed không cấp grant; thao tác chuyển tiếp riêng có audit giữ quyền quản trị kết nối cho đúng tài khoản pilot hiện tại, theo plan cài đặt.
 
 ### Các vùng quản trị AI theo thiết kế đầy đủ
 
-Người phụ trách đề xuất quản lý hạn mức từng user, API key, quota/token đã dùng và phần còn lại. Đường dẫn dự kiến `/ai-management`, nhãn **Quản trị AI**, có quyền riêng và bốn vùng:
+Người phụ trách đề xuất quản lý hạn mức từng user, API key, quota/token đã dùng và phần còn lại. Khu `/settings/ai`, nhãn **Quản trị AI**, sẽ mở rộng các vùng sau theo quyền riêng; hiện mới có kết nối/key/model:
 
 | Vùng | Nội dung / thao tác |
 | --- | --- |
@@ -58,7 +58,7 @@ User thường xem hạn mức và mức sử dụng của chính tài khoản t
 
 ### Kết nối pilot — 16/11/2026
 
-Đã triển khai theo yêu cầu quản lý API key và model; phần thiết kế đầy đủ phía sau vẫn là lộ trình. Pilot có **một kết nối OpenAI mỗi công ty**, chỉ tài khoản đã được bind và đủ quyền hiện hành được quản lý. Nút Cài đặt AI nằm ngay ở dashboard; chưa có màn hình quản trị usage/quota hoặc cấp grant mới.
+Đã triển khai theo yêu cầu quản lý API key và model; phần thiết kế đầy đủ phía sau vẫn là lộ trình. Pilot có **một kết nối OpenAI mỗi công ty**, quản lý qua `/settings/ai` bằng `AI MANAGE_CONNECTIONS`, độc lập quyền chat. Chưa có màn hình usage/quota; quyền kết nối đã có tại `/roles`.
 
 | Trường trong `ket_noi_ai` | Quy tắc hiện hành |
 | --- | --- |
@@ -86,8 +86,8 @@ erDiagram
 
 - Khóa nhập là dữ liệu chỉ ghi; tải lại form luôn để trống, để trống khi lưu giữ key cũ. Key mới mã hóa AES-256-GCM với nonce ngẫu nhiên và ràng buộc công ty/tham chiếu; file và khóa mã hóa ngoài `public`/Git, quyền thư mục 0700/file 0600. Kho cục bộ cho môi trường hiện tại; đường dẫn và sao lưu tại Kiến trúc. Khóa mã hóa mất/hỏng thì chặn giải mã, không tự thay khóa làm mất khả năng đọc kho cũ.
 - Chuẩn bị file mới trước transaction, khóa công ty/phân quyền, đọc lại quyền và phiên bản, cập nhật metadata cùng audit trong transaction. Không xóa phiên bản khóa cũ đang có thể được request dùng; file chưa gắn do lỗi giữ để dọn khi đã đối chiếu, không xóa khi chưa rõ transaction đã commit.
-- Khi chưa có bản ghi, hỗ trợ cấu hình môi trường cũ; sau khi có bản ghi thì dùng bản ghi đó. Tạm dừng hoặc kho bị lỗi phải chặn chat, không quay về key môi trường. Mỗi lượt chat giữ một phiên bản kết nối; cài đặt đổi giữa lượt thì dừng trước lần gọi API kế tiếp.
-- Kiểm tra khóa dùng `GET /v1/models`, chỉ trả tên model hợp lệ, không gọi model trả phí hoặc nhận URL nhà cung cấp tùy ý. Có giới hạn lượt kiểm tra; lỗi không ghi đè cấu hình hoạt động. Có thể nhập model thủ công khi key không được phép đọc danh sách. [Models API](https://developers.openai.com/api/reference/typescript/resources/models/methods/list).
+- Khi chưa có bản ghi, hỗ trợ cấu hình môi trường cũ chỉ trong công ty của tài khoản pilot được bind; sau khi có bản ghi thì dùng bản ghi đó. Tạm dừng hoặc kho bị lỗi phải chặn chat, không quay về key môi trường. Mỗi lượt chat giữ một phiên bản kết nối; cài đặt đổi giữa lượt thì dừng trước lần gọi API kế tiếp.
+- Kiểm tra khóa dùng `GET /v1/models`, chỉ trả tên model hợp lệ, không gọi model trả phí hoặc nhận URL nhà cung cấp tùy ý. Có giới hạn lượt kiểm tra; lỗi không ghi đè cấu hình hoạt động. Form mặc định dùng danh sách tìm/chọn, tự tải khi mở bằng khóa đã cấu hình; giữ lựa chọn cũ kể cả không có trong danh sách mới. Khóa nhập mới dùng nút kiểm tra/tải; có thể nhập model thủ công khi key không được phép đọc danh sách. [Models API](https://developers.openai.com/api/reference/typescript/resources/models/methods/list).
 - Không tự nhập khóa, chọn model, bật kết nối hay seed dữ liệu thật; bảng mới khởi đầu rỗng. Kiểm thử với khóa/API mô phỏng trên DB và kho file riêng.
 
 ### Thiết kế đầy đủ còn kế hoạch

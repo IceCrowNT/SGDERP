@@ -1,10 +1,14 @@
 # TÀI LIỆU KIẾN TRÚC TỔNG THỂ & SỔ BỘ THƯ VIỆN
 
+## Cài đặt hệ thống — 16/11/2026
+
+Đã có routes `/settings`, `/settings/ai`, UI tại `src/components/settings/` và quyền `AI MANAGE_CONNECTIONS` trong RBAC hiện có; chuyển form key/model khỏi chat. Không thêm dependency hoặc biến môi trường. Thiết kế/nghiệm thu tại [plan cài đặt](plans/SYSTEM-SETTINGS-CHECKLIST.md).
+
 ## Bản thử AI quản trị — 16/11/2026
 
 Đã có quản lý key/model tại `src/actions/ai-settings.ts`, `src/components/ai/AiSettings.tsx`, `src/lib/ai-connection.ts` và `src/lib/ai-secret-store.ts`. Một bảng `ket_noi_ai` giữ metadata; secret mã hóa bằng Node crypto, không thêm thư viện. Kho file mặc định `var/ai-secrets/` ngoài Git/public; `master.key` và ciphertext quyền 0600, thư mục 0700; có thể cấu hình `AI_SECRET_STORAGE_DIR` tới volume bền vững. Cần backup DB và kho ciphertext, giữ bản sao `master.key` được bảo vệ riêng; mất master key không thể giải mã khóa cũ. Nhiều instance phải dùng chung DB và volume/kho bí mật phù hợp; không đặt kho trong filesystem tạm của serverless. Không cần sửa `.env.local` để nhập API key/model qua giao diện.
 
-Đã có bản thử theo [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#bản-thử-cho-tài-khoản-quản-trị--16112026): chat dashboard ở `src/components/ai/`, Server Action tại `src/actions/ai.ts`, hợp đồng/công cụ và cấu hình tại `src/lib/ai-pilot*.ts`. Dùng fetch tới Responses API, Zod và form tài sản/vị trí hiện có; không thêm dependency. `AI_PILOT_ACCOUNT_ID` trong môi trường server chỉ định tài khoản duy nhất được mở pilot, vẫn kiểm tra quyền DB. `OPENAI_API_KEY`/`OPENAI_MODEL` chỉ dự phòng khi chưa lưu kết nối trong DB; đã có bản ghi thì trạng thái tạm dừng/lỗi kho khóa chặn gọi, không tự quay về env. Không trả khóa đã lưu về client/Git. Chat pilot giữ trong bộ nhớ giao diện; metadata usage/giới hạn dùng nhật ký hiện có. Ba bảng chat/usage và hai cột tài khoản của thiết kế đầy đủ chưa triển khai.
+Đã có bản thử theo [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#bản-thử-cho-tài-khoản-quản-trị--16112026): chat dashboard ở `src/components/ai/`, Server Action tại `src/actions/ai.ts`, hợp đồng/công cụ và cấu hình tại `src/lib/ai-pilot*.ts`. Dùng fetch tới Responses API, Zod và form tài sản/vị trí hiện có; không thêm dependency. `AI_PILOT_ACCOUNT_ID` trong môi trường server chỉ định tài khoản duy nhất được mở pilot, vẫn kiểm tra quyền DB. `OPENAI_API_KEY`/`OPENAI_MODEL` chỉ dự phòng khi chưa lưu kết nối trong DB và đúng công ty của tài khoản pilot được bind; đã có bản ghi thì trạng thái tạm dừng/lỗi kho khóa chặn gọi, không tự quay về env. Không trả khóa đã lưu về client/Git. Chat pilot giữ trong bộ nhớ giao diện; metadata usage/giới hạn dùng nhật ký hiện có. Ba bảng chat/usage và hai cột tài khoản của thiết kế đầy đủ chưa triển khai.
 
 ## Tài sản mức 1 — 12/11/2026
 
@@ -257,6 +261,8 @@ Từ 03/11/2026, cả hồ sơ nhân sự và cơ cấu phòng ban đều do ERP
 `src/components/ui/searchable-select.tsx` cung cấp ô chọn danh mục có tìm kiếm, dùng `popover.tsx` bọc Radix đã cài cùng Input/Button hiện có. `src/lib/search-text.ts` chuẩn hóa tiếng Việt chỉ để lọc; biểu mẫu giữ ID và kiểm tra server hiện hành. Dùng cho các danh mục tham chiếu dài tại HR, tài sản, vị trí, tài khoản và workflow; không thêm dependency, biến môi trường hoặc DB. Theo dõi tại [tổng quan plan](plans/README.md#ô-chọn-dữ-liệu-có-tìm-kiếm--12112026).
 
 `src/components/ui/feature-overview.tsx` cung cấp thẻ số liệu, hướng dẫn mở rộng, trạng thái trống và avatar chữ cho các màn hình nghiệp vụ. Component chỉ trình bày dữ liệu đã được phân quyền từ màn hình gọi; không truy vấn DB, không cài thư viện hoặc thêm biến môi trường.
+
+`src/components/ui/password-input.tsx` dùng Input/Button và icon Lucide hiện có để hiện/ẩn mật khẩu trong form cấp tài khoản tại Nhân sự và Tài khoản. Giữ ref và thuộc tính truy cập của React Hook Form; không lưu mật khẩu ra ngoài state của form. Chính sách cấp mới/reset và kiểm chứng tại [plan cá nhân](plans/PROFILE-DASHBOARD-CHECKLIST.md#cấp-tài-khoản-và-xem-mật-khẩu--16112026); không thêm dependency, biến môi trường hoặc schema.
 
 Ba rule kỹ thuật Frontend/Backend/Database giữ chuẩn chung. Rule riêng tại `.agents/rules/`: [HR](../.agents/rules/HR-RULES.md), [phân quyền](../.agents/rules/ROLE-MANAGEMENT-RULES.md), [workflow](../.agents/rules/WORKFLOW-RULES.md), [tài khoản/profile/dashboard](../.agents/rules/PROFILE-DASHBOARD-RULES.md), [tài sản](../.agents/rules/ASSET-MANAGEMENT-RULES.md) mức 1 và [vị trí dùng chung](../.agents/rules/LOCATION-MANAGEMENT-RULES.md). Tài sản và vị trí đã có bản đầu. Nghiệp vụ đọc tại rule riêng; thiết kế DB, trạng thái và kiểm thử theo plan liên kết. Định tuyến do `AGENTS.md` quản lý; không thêm dependency hoặc cấu hình chạy khi sắp xếp tài liệu.
 

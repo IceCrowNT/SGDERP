@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { permissionLevels, workflowActions } from "@/lib/role-catalog";
+import { permissionLevels, workflowActions, aiActions } from "@/lib/role-catalog";
 import type { SessionUser } from "@/lib/auth";
 
 // Identity and permissions come from the selected account, never from sibling accounts.
@@ -43,6 +43,11 @@ export async function readAccountSession(
     departmentName: user.nhan_su?.phong_ban?.ten_phong_ban,
     roleCodes,
     permissions,
+    aiActions: aiActions(
+      user.danh_sach_vai_tro
+        .filter(r => r.vai_tro.company_id === user.company_id)
+        .flatMap(r => r.vai_tro.danh_sach_quyen.map(p => p.quyen)),
+    ),
     workflowActions: workflowActions(
       user.danh_sach_vai_tro
         .filter((r) => r.vai_tro.company_id === user.company_id)

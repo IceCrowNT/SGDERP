@@ -6,8 +6,8 @@ Nghiệp vụ hiện hành; tiến độ và thiết kế DB tại [Plan cá nh�
 
 - Dashboard/profile là khả năng nền của mọi tài khoản hợp lệ, không cần HR hoặc tên role đặc biệt. DEFAULT không có grant nghiệp vụ, không cho sửa/xóa hoặc cấp grant vào nhóm; muốn thêm quyền phải dùng role khác.
 - Tạo tài khoản không chọn role dùng DEFAULT. Username/mật khẩu có thể tự sinh, không bắt nhập ở form cơ bản; mục nâng cao tùy chọn. Tên theo tên cuối + chữ đầu họ/đệm, bỏ dấu/viết thường, trùng thêm số; chi tiết và ví dụ tại thiết kế. Không tự tạo hàng loạt hoặc đổi tài khoản hiện có.
-- Cấp kèm hồ sơ theo quyền ở [rule HR](HR-RULES.md); lưu người/tài khoản/role/audit nguyên tử. Sau lưu giữ màn hình bàn giao mật khẩu tạm một lần tới khi người cấp đóng, không lưu credential vào localStorage/log/audit.
-- Tài khoản mới/reset mật khẩu phải đổi mật khẩu tạm. `getSession()` mặc định chặn nghiệp vụ khi cờ còn bật; chỉ profile/đổi mật khẩu/logout và layout dùng `allowPasswordChange`. Actor trong transaction cũng kiểm tra, không chỉ dựa vào JWT/middleware. Đổi xong mới vào dashboard.
+- Cấp kèm hồ sơ theo quyền ở [rule HR](HR-RULES.md); lưu người/tài khoản/role/audit nguyên tử. Sau lưu giữ màn hình bàn giao mật khẩu một lần tới khi người cấp đóng, không lưu credential vào localStorage/log/audit. Ô mật khẩu cấp tài khoản tại Nhân sự và Tài khoản có nút con mắt hiện/ẩn; mặc định ẩn, không đổi giá trị hoặc gửi form khi bấm.
+- Tài khoản mới tại cả Nhân sự và Tài khoản không bắt đổi mật khẩu lần đầu, áp dụng cho mật khẩu tự nhập hoặc tự sinh. Người dùng tự đổi tại Hồ sơ của tôi khi cần. Quản trị viên reset mật khẩu tài khoản đã có vẫn bật cờ bắt buộc; không tự xóa cờ của tài khoản cũ. `getSession()` mặc định chặn nghiệp vụ khi cờ còn bật; chỉ profile/đổi mật khẩu/logout và layout dùng `allowPasswordChange`. Actor trong transaction cũng kiểm tra, không chỉ dựa vào JWT/middleware. Đổi xong mới vào dashboard.
 - Đổi mật khẩu phải xác minh mật khẩu hiện tại, tăng phiên bản phiên, tắt cờ bắt buộc và cấp cookie mới cho phiên hiện tại. Phiên cũ hết hiệu lực; mật khẩu và phiên của tài khoản khác cùng người giữ nguyên.
 
 ## Profile và ảnh đại diện

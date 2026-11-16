@@ -127,7 +127,7 @@ erDiagram
 | Cá nhân hóa | Ô text tùy chọn, tối đa 2.000 ký tự | Đề xuất |
 | Kết nối và chi phí | Quản trị kết nối/project, hạn mức theo user và kết nối; có thể khởi đầu bằng một nguồn chi | Cần chốt nguồn thanh toán, kho bí mật, model, mức cấp và người quản trị; không tự triển khai kết nối theo phòng |
 | Cấu hình dùng chung | Các tài khoản dùng kết nối mặc định của công ty, model/tốc độ theo kết nối; riêng tài khoản có một mức ngân sách | Phương án tinh gọn cho bản đầu; chưa gán kết nối/model/giới hạn kỹ thuật riêng từng user |
-| Vị trí quản trị cấu hình | Đề xuất khu Cài đặt chung `/settings`, có mục Quản trị AI `/settings/ai`, phân quyền từng nhóm; cấp quyền tập trung tại `/roles` | Đang xem xét theo yêu cầu 16/11; [phương án chi tiết](../THIET-KE-QUAN-TRI-AI.md#đề-xuất-đưa-ai-vào-khu-cài-đặt-hệ-thống--16112026), chưa chuyển UI/quyền |
+| Vị trí quản trị cấu hình | Khu Cài đặt chung `/settings`, mục Quản trị AI `/settings/ai`, quyền quản trị kết nối riêng; cấp tại `/roles` | Đã triển khai theo yêu cầu 16/11; [phương án chi tiết](../THIET-KE-QUAN-TRI-AI.md#đề-xuất-đưa-ai-vào-khu-cài-đặt-hệ-thống--16112026); kiểm chứng tại [plan cài đặt](SYSTEM-SETTINGS-CHECKLIST.md) |
 | Đối soát OpenAI | Usage/Costs cần credential quản trị phù hợp; số dư prepaid chưa xác minh endpoint | Chỉ đọc khi được cấp phạm vi; không hứa có số dư/quota thời gian thực |
 | Nhóm dùng thử | Một nhóm IT/HCNS được cấp quyền rõ | Chưa có danh sách tài khoản/người nghiệm thu |
 | Dữ liệu gửi ra ngoài | Chỉ dữ liệu đã được phép và ẩn danh theo quy định nội bộ | Cần chốt trường dữ liệu, cách ẩn danh và mẫu thử |
@@ -152,12 +152,12 @@ Các lựa chọn còn mở được giải quyết trong bước thiết kế/p
 
 ### Bản thử cho tài khoản quản trị — 16/11/2026
 
-Người phụ trách đã yêu cầu triển khai quản lý API key kèm model ngay trong phần mềm. Đã bổ sung nút **Cài đặt AI** trên dashboard: thêm/thay khóa, nhập/chọn model từ danh sách nhà cung cấp, kiểm tra khóa và bật/tạm dừng. Thiết kế DB/kho bí mật hiện hành tại [kết nối pilot](../THIET-KE-QUAN-TRI-AI.md#kết-nối-pilot--16112026); đợt này thêm một bảng kết nối, chưa triển khai ba bảng chat/usage hoặc hai cột tài khoản của bản đầy đủ.
+Người phụ trách đã yêu cầu triển khai quản lý API key kèm model ngay trong phần mềm. Đã có **Cài đặt chung → Quản trị AI**: thêm/thay khóa, danh sách model có tìm kiếm và tự tải từ nhà cung cấp, kiểm tra khóa và bật/tạm dừng. Hành vi tải/chọn được kiểm chứng tại [plan cài đặt](SYSTEM-SETTINGS-CHECKLIST.md#danh-sách-model-tự-động--16112026). Thiết kế DB/kho bí mật hiện hành tại [kết nối pilot](../THIET-KE-QUAN-TRI-AI.md#kết-nối-pilot--16112026); đợt này thêm một bảng kết nối, chưa triển khai ba bảng chat/usage hoặc hai cột tài khoản của bản đầy đủ.
 
 | Nội dung | Phạm vi đợt này |
 | --- | --- |
 | Tài khoản | Bind bằng `AI_PILOT_ACCOUNT_ID`; kiểm tra phiên và ACCOUNTS/ROLES MANAGE cùng ASSETS/LOCATIONS MANAGE tại server; không suy quyền từ tên role hoặc mở cho mọi admin |
-| Kết nối | Cài đặt AI trên dashboard: lưu/thay khóa, chọn/nhập model, kiểm tra danh sách model và tạm dừng. Khóa lưu mã hóa phía server; chỉ trả hậu tố. Responses API/function calling đọc cấu hình mỗi lượt; thay đổi có hiệu lực không cần khởi động lại. Env chỉ là dự phòng khi chưa có bản ghi kết nối |
+| Kết nối | Trang `/settings/ai`, quyền `AI MANAGE_CONNECTIONS`: lưu/thay khóa, chọn/nhập model, kiểm tra danh sách model và tạm dừng. Khóa lưu mã hóa phía server; chỉ trả hậu tố. Responses API/function calling đọc cấu hình mỗi lượt; thay đổi có hiệu lực không cần khởi động lại. Env chỉ dự phòng khi chưa có bản ghi và đúng công ty pilot |
 | Thêm/sửa | Công cụ AI chỉ tra cứu hoặc chuẩn bị bản nháp; form dùng lại `saveAsset`/`saveLocation`, phiên bản gốc, quyền và audit hiện có. Người dùng xem/sửa rồi bấm Lưu; chưa có công cụ xóa, sửa tài khoản/quyền hoặc SQL tự do |
 | Ngữ cảnh | Nội dung cuộc chat đang mở nằm trong bộ nhớ giao diện, không localStorage; giới hạn lịch sử gửi và đọc lại hồ sơ khi chuẩn bị sửa. Reload mất cuộc trao đổi; không coi đây là lịch sử DB của bản đầy đủ |
 | Dữ liệu DB | Một bảng `ket_noi_ai` giữ metadata, một kết nối/công ty. Dùng nhật ký hoạt động cho thay đổi cấu hình, kiểm tra khóa, metadata yêu cầu và usage từng lần API; không lưu prompt/nội dung hồ sơ/key trong log AI. Nhật ký nghiệp vụ do action phân hệ ghi |
@@ -175,7 +175,7 @@ Người phụ trách đã yêu cầu triển khai quản lý API key kèm model
 - [x] Đã khởi động lại dev để nạp Prisma Client; mở Cài đặt AI bằng tài khoản admin tại local đạt, không lỗi JavaScript, ô khóa để trống. Môi trường hiện có key/model và được giữ nguyên; chưa lưu kết nối vào DB hoặc gọi nhà cung cấp thật. Đã dừng app thử và dọn đúng DB tạm; backup/log/ảnh giữ cục bộ.
 - [ ] Người phụ trách kiểm tra/chọn model và lưu qua Cài đặt AI; kiểm chứng kết nối thật với cấu hình được chọn. Không đánh dấu tích hợp thật thành công khi chỉ có kiểm thử mô phỏng.
 - [x] Đối chiếu `/settings` hiện là trang chờ, menu dùng SYSTEM nhưng catalog ma trận chưa có nhóm này; cấu hình AI còn dùng guard pilot. Ghi [đề xuất khu cài đặt hệ thống](../THIET-KE-QUAN-TRI-AI.md#đề-xuất-đưa-ai-vào-khu-cài-đặt-hệ-thống--16112026): mục AI riêng, các nhóm cấu hình và quyền theo chức năng. 186 liên kết/anchor và `git diff --check` đạt. Lượt phân tích này chỉ cập nhật tài liệu; chưa đổi mã, DB hoặc grant, không chạy lại kiểm thử ứng dụng.
-- [ ] Khi có yêu cầu triển khai: thiết kế plan/rule cài đặt chung, chuyển key/model sang mục AI, tích hợp quyền quản trị riêng vào `/roles`, giữ cấu hình/khóa và chat hiện có; kiểm tra URL/action trực tiếp, cấp/thu hồi quyền, phạm vi công ty và mobile.
+- [x] Theo yêu cầu triển khai tiếp theo, đã chuyển key/model sang `/settings/ai`, tích hợp quyền quản trị kết nối độc lập tại `/roles`, giữ chat và cấu hình/khóa. Thiết kế/nghiệm thu/chuyển quyền pilot tại [plan cài đặt](SYSTEM-SETTINGS-CHECKLIST.md); hạn mức/usage còn kế hoạch.
 
 ### Căn cứ và ranh giới sở hữu
 
@@ -293,13 +293,13 @@ Unique `(id, company_id)`; index `(company_id, account_id, updated_at, id)` ph�
 
 ### Quản trị AI và hạn mức
 
-Màn hình đề xuất `/ai-management`: tổng quan mức dùng, hạn mức tài khoản, kết nối/API key và đối soát OpenAI. **Ngân sách ERP còn khả dụng, số liệu chi phí nhà cung cấp, rate limit và số dư prepaid là các chỉ số khác nhau.** Người quản lý quota/khóa không mặc nhiên được xem nội dung chat của user.
+Khu quản trị `/settings/ai` đã có kết nối/API key/model; tổng quan mức dùng, hạn mức tài khoản và đối soát OpenAI còn kế hoạch. **Ngân sách ERP còn khả dụng, số liệu chi phí nhà cung cấp, rate limit và số dư prepaid là các chỉ số khác nhau.** Người quản lý quota/khóa không mặc nhiên được xem nội dung chat của user.
 
 Thiết kế chi tiết về bảng/cột, công thức mức còn lại, khóa/chính sách đồng thời, vòng đời secret, quyền và nguồn OpenAI nằm tại [Thiết kế quản trị AI](../THIET-KE-QUAN-TRI-AI.md). Đề xuất triển khai quản trị nội bộ cùng pilot chat; đồng bộ Usage/Costs làm sau khi có credential/phạm vi phù hợp. Không tự nạp tiền, tạo/revoke key hoặc sửa spend limit phía OpenAI trong bản đầu.
 
 ### Quyền và bảo vệ lịch sử
 
-Phương án bản đầu: quyền `AI USE` cùng các quyền quản trị độc lập trong catalog/validation/ma trận hiện có; không tạo hệ RBAC riêng. [Ma trận quản trị](../THIET-KE-QUAN-TRI-AI.md#6-quyền-và-audit) quản lý `AI VIEW_USAGE`, `AI MANAGE_LIMITS`, `AI MANAGE_CONNECTIONS`. Chưa cấp quyền cho bất kỳ role/tài khoản nào trong lượt lập plan.
+Phương án bản đầu: quyền `AI USE` cùng các quyền quản trị độc lập trong catalog/validation/ma trận hiện có; không tạo hệ RBAC riêng. [Ma trận quản trị](../THIET-KE-QUAN-TRI-AI.md#6-quyền-và-audit) quản lý `AI VIEW_USAGE`, `AI MANAGE_LIMITS`, `AI MANAGE_CONNECTIONS`. Đợt chuyển trang cài đặt đã cấp riêng `AI MANAGE_CONNECTIONS` để giữ quyền cho tài khoản pilot, có audit; các quyền AI khác chưa triển khai/cấp.
 
 | Tác vụ | Kiểm tra dự kiến |
 | --- | --- |

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AI_ACTIONS } from "@/lib/role-catalog";
 const level = z.enum(["NONE", "VIEW", "MANAGE"], {
   required_error: "Chọn mức quyền",
   invalid_type_error: "Mức quyền không hợp lệ",
@@ -26,6 +27,7 @@ export const RoleSchema = z
       .array(z.enum(["VIEW", "CREATE", "APPROVE", "EXECUTE", "MANAGE"]))
       .max(5)
       .optional(),
+    aiActions: z.array(z.enum(AI_ACTIONS)).max(AI_ACTIONS.length).optional(),
     permissions: z
       .object({
         ASSETS: level.optional(),

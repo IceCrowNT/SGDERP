@@ -4,7 +4,7 @@ const {test,before,after}=require('node:test');
 const {AsyncLocalStorage}=require('node:async_hooks');
 const {randomUUID}=require('node:crypto');
 const fs=require('node:fs/promises'),path=require('node:path'),Module=require('node:module');
-assert.match(new URL(process.env.DATABASE_URL).pathname,/^\/sdg_ai_keys_test_\d+$/);
+assert.match(new URL(process.env.DATABASE_URL).pathname,/^\/sdg_(?:ai_keys|system_settings)_test_\d+$/);
 const request=new AsyncLocalStorage(),load=Module._load;
 Module._load=function(name,...args){
  if(name==='next/headers')return {cookies:async()=>({get:()=>request.getStore()?{value:request.getStore()}:undefined})};
@@ -22,20 +22,25 @@ const as=async(account,fn)=>request.run(account?await createSessionToken({userId
 const current=()=>db.ket_noi_ai.findUniqueOrThrow({where:{company_id:manager.company_id}});
 const save=(values)=>as(manager,()=>saveAiSettings(values));
 const json=data=>new Response(JSON.stringify(data),{status:200});
-let manager,other,foreignCompany,role,grant,vault,originalFetch,calls=0,transport;
+let manager,other,foreignCompany,role,grant,vault,originalFetch,calls=0,transport,operator,operatorRole,foreignOperator;
 before(async()=>{
  const run=randomUUID().slice(0,8),company=await db.cong_ty.create({data:{ten_cong_ty:`AI keys ${run}`}});
- const permissions=await db.quyen.findMany({where:{phan_he:{in:['ROLES','ACCOUNTS','ASSETS','LOCATIONS']},hanh_dong:'MANAGE',pham_vi:'ALL'}});assert.equal(permissions.length,4);grant=permissions.find(p=>p.phan_he==='ROLES');
+ const permissions=await db.quyen.findMany({where:{OR:[{phan_he:{in:['ROLES','ACCOUNTS','ASSETS','LOCATIONS']},hanh_dong:'MANAGE',pham_vi:'ALL'},{phan_he:'AI',hanh_dong:'MANAGE_CONNECTIONS',pham_vi:'ALL'}]}});assert.equal(permissions.length,5);grant=permissions.find(p=>p.phan_he==='AI');
  role=await db.vai_tro.create({data:{company_id:company.id,ma_vai_tro:'AI_KEYS',ten_vai_tro:'Keys',danh_sach_quyen:{create:permissions.map(p=>({permission_id:p.id}))}}});
- for(const name of ['manager','other']){const a=await db.tai_khoan.create({data:{company_id:company.id,ten_dang_nhap:`ai-key-${name}-${run}`,ten_hien_thi:name,mat_khau_bam:'disabled',danh_sach_vai_tro:{create:{role_id:role.id}}}});if(name==='manager')manager=a;else other=a;}
+ const oldAdminRole=await db.vai_tro.create({data:{company_id:company.id,ma_vai_tro:'ADMIN',ten_vai_tro:'Admin without AI',danh_sach_quyen:{create:permissions.filter(p=>p.id!==grant.id).map(p=>({permission_id:p.id}))}}});
+ for(const name of ['manager','other']){const a=await db.tai_khoan.create({data:{company_id:company.id,ten_dang_nhap:`ai-key-${name}-${run}`,ten_hien_thi:name,mat_khau_bam:'disabled',danh_sach_vai_tro:{create:{role_id:name==='manager'?role.id:oldAdminRole.id}}}});if(name==='manager')manager=a;else other=a;}
  foreignCompany=await db.cong_ty.create({data:{ten_cong_ty:`Other keys ${run}`}});
+ operatorRole=await db.vai_tro.create({data:{company_id:company.id,ma_vai_tro:'AI_OPERATOR',ten_vai_tro:'AI only',danh_sach_quyen:{create:{permission_id:grant.id}}}});
+ operator=await db.tai_khoan.create({data:{company_id:company.id,ten_dang_nhap:`ai-operator-${run}`,ten_hien_thi:'AI operator',mat_khau_bam:'disabled',danh_sach_vai_tro:{create:{role_id:operatorRole.id}}}});
+ const foreignRole=await db.vai_tro.create({data:{company_id:foreignCompany.id,ma_vai_tro:'AI_OPERATOR',ten_vai_tro:'Foreign AI',danh_sach_quyen:{create:{permission_id:grant.id}}}});
+ foreignOperator=await db.tai_khoan.create({data:{company_id:foreignCompany.id,ten_dang_nhap:`ai-foreign-${run}`,ten_hien_thi:'Foreign AI',mat_khau_bam:'disabled',danh_sach_vai_tro:{create:{role_id:foreignRole.id}}}});
  process.env.AI_PILOT_ACCOUNT_ID=String(manager.id);process.env.OPENAI_API_KEY='';process.env.OPENAI_MODEL='';
  const base=path.resolve('outputs/ai-settings');await fs.mkdir(base,{recursive:true});vault=await fs.mkdtemp(path.join(base,'vault-'));process.env.AI_SECRET_STORAGE_DIR=vault;
  originalFetch=global.fetch;global.fetch=async(url,options)=>{calls++;assert(['https://api.openai.com/v1/models','https://api.openai.com/v1/responses'].includes(url));assert.equal(options.redirect,'error');assert(transport,'Unexpected network request');return transport(url,options);};
 });
 after(async()=>{global.fetch=originalFetch;await db.$disconnect();});
 
-test('only bound account with current grants can read or change settings; validation does not save',async()=>{
+test('only current AI grants allow settings; pilot/admin/asset privileges do not substitute for them',async()=>{
  for(const a of [null,other]){assert.equal((await as(a,getAiSettings)).success,false);assert.equal((await as(a,()=>saveAiSettings({version:null,apiKey:key1,model:'test-model',enabled:true}))).success,false);}
  assert.equal((await save({version:null,apiKey:'',model:'test-model',enabled:true})).success,false);
  assert.equal((await save({version:null,apiKey:key1,model:'bad\nmodel',enabled:true})).success,false);
@@ -111,4 +116,29 @@ test('permission loss during key test does not return models; test rate limit de
  await db.nhat_ky_hoat_dong.createMany({data:Array.from({length:10},()=>({company_id:manager.company_id,account_id:manager.id,ten_dang_nhap:manager.ten_dang_nhap,ho_ten:'Test',phan_he:'AI',hanh_dong:'AI_KEY_TEST',mo_ta:'Rate fixture'}))});
  row=await current();const before=calls;assert.equal((await as(manager,()=>testAiKey({version:row.updated_at.toISOString(),apiKey:''}))).success,false);assert.equal(calls,before);
  const logs=await db.nhat_ky_hoat_dong.findMany({where:{company_id:manager.company_id,phan_he:'AI'}});for(const key of [key1,key2,process.env.OPENAI_API_KEY])assert(!JSON.stringify(logs).includes(key));
+});
+
+
+test('AI-only manager is independent of chat and RBAC; company cannot adopt another company environment key',async()=>{
+ const previousCalls=calls;
+ assert((await as(operator,getAiSettings)).success);
+ assert.equal((await as(operator,()=>askAi({requestId:randomUUID(),message:'test'}))).success,false);
+ const {getRoles}=require('../../src/actions/role.ts');assert.equal((await as(operator,getRoles)).success,false);
+ const foreign=await as(foreignOperator,getAiSettings);assert(foreign.success);assert.equal(foreign.settings.hasKey,false);assert.equal(foreign.settings.model,'');assert.equal(foreign.settings.maskedKey,null);
+ assert.equal((await as(foreignOperator,()=>saveAiSettings({version:null,apiKey:'',model:'foreign-model',enabled:true}))).success,false);
+ assert.equal((await as(foreignOperator,()=>testAiKey({version:null,apiKey:''}))).success,false);
+ assert.equal(calls,previousCalls);
+ const before=await current();assert((await as(foreignOperator,()=>saveAiSettings({version:null,apiKey:key1,model:'foreign-model',enabled:true}))).success);
+ assert.deepEqual(await current(),before);assert.equal((await readAiConnection(foreignCompany.id)).model,'foreign-model');
+});
+
+test('role matrix grants/revokes AI immediately and old payload preserves the action',async()=>{
+ const {saveRole,getRoles,assignAccountRoles}=require('../../src/actions/role.ts');
+ const payload=async(ai)=>{const row=await db.vai_tro.findUniqueOrThrow({where:{id:operatorRole.id}});return {id:row.id,version:row.updated_at.toISOString(),code:row.ma_vai_tro,name:row.ten_vai_tro,description:'',permissions:{HR:'NONE',ACCOUNTS:'NONE',ROLES:'NONE',AUDIT:'NONE'},...(ai===undefined?{}:{aiActions:ai})};};
+ assert((await as(manager,async()=>saveRole(await payload(undefined)))).success);
+ assert((await as(operator,getAiSettings)).success);
+ let list=await as(manager,getRoles);assert(list.success);assert.deepEqual(list.roles.find(r=>r.id===operatorRole.id).aiActions,['MANAGE_CONNECTIONS']);
+ assert((await as(manager,async()=>saveRole(await payload([])))).success);assert.equal((await as(operator,getAiSettings)).success,false);
+ assert((await as(manager,async()=>saveRole(await payload(['MANAGE_CONNECTIONS'])))).success);assert((await as(operator,getAiSettings)).success);
+ const row=await db.tai_khoan.findUniqueOrThrow({where:{id:operator.id}});assert((await as(manager,()=>assignAccountRoles({accountId:operator.id,roleIds:[],version:row.updated_at.toISOString()}))).success);assert.equal((await as(operator,getAiSettings)).success,false);
 });

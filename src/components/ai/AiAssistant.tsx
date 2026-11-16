@@ -17,13 +17,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { AiSettings } from "@/components/ai/AiSettings";
 import type { AiSettingsView } from "@/lib/validations/ai-settings";
 
 const schema = z.object({ message: z.string().trim().min(1, "Nhập yêu cầu của bạn.").max(2000, "Tối đa 2.000 ký tự.") });
 type Message = AiMessage & { href?: string };
 
-export function AiAssistant({ settings }: { settings: AiSettingsView }) {
+export function AiAssistant({ settings }: { settings: Pick<AiSettingsView, "hasKey" | "model" | "enabled"> }) {
   const configured = settings.hasKey && Boolean(settings.model) && settings.enabled;
   const router = useRouter();
   const form = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema), defaultValues: { message: "" } });
@@ -65,9 +64,9 @@ export function AiAssistant({ settings }: { settings: AiSettingsView }) {
   return <section className="min-w-0 rounded-2xl border bg-card" aria-label="Trợ lý AI">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4 sm:p-5">
       <div className="flex items-center gap-3"><span className="rounded-xl bg-primary/10 p-2 text-primary"><Bot className="size-5" /></span><div><h2 className="font-semibold">Trợ lý AI</h2><p className="text-xs text-muted-foreground">Tra cứu và soạn hồ sơ tài sản, vị trí</p></div></div>
-      <div className="flex flex-wrap gap-2"><AiSettings disabled={pending || saving} /><Button variant="ghost" className="min-h-10" disabled={pending || Boolean(draft)} onClick={() => { setMessages([]); setError(""); setFailed(null); form.reset(); }}><MessageSquarePlus className="size-4" />Chat mới</Button></div>
+      <div className="flex flex-wrap gap-2"><Button variant="ghost" className="min-h-10" disabled={pending || Boolean(draft)} onClick={() => { setMessages([]); setError(""); setFailed(null); form.reset(); }}><MessageSquarePlus className="size-4" />Chat mới</Button></div>
     </div>
-    {!configured ? <div className="space-y-3 p-5"><p className="font-medium">{settings.enabled ? "Chưa kết nối AI" : "Kết nối AI đang tạm dừng"}</p><p className="text-sm text-muted-foreground">{settings.enabled ? "Mở Cài đặt AI để nhập API key và chọn model. Sau khi lưu, bạn có thể bắt đầu trao đổi tại đây." : "Mở Cài đặt AI và bật Cho phép sử dụng kết nối để tiếp tục."}</p><Button variant="outline" onClick={() => router.refresh()}>Kiểm tra lại</Button></div> : <>
+    {!configured ? <div className="space-y-3 p-5"><p className="font-medium">{settings.enabled ? "Chưa kết nối AI" : "Kết nối AI đang tạm dừng"}</p><p className="text-sm text-muted-foreground">Liên hệ người quản trị để thiết lập hoặc bật kết nối tại Cài đặt chung → Quản trị AI.</p><Button variant="outline" onClick={() => router.refresh()}>Kiểm tra lại</Button></div> : <>
       <div role="log" aria-label="Nội dung trao đổi với AI" aria-live="polite" className="max-h-[28rem] min-h-40 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-5">
         {!messages.length && <div className="space-y-4 py-3"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Sparkles className="size-4" /><span>Bạn muốn tra cứu hoặc cập nhật hồ sơ nào?</span></div><div className="flex flex-wrap gap-2">{["Tìm máy in ở phòng HCNS", "Tôi muốn thêm một thiết bị", "Tôi muốn sửa thông tin vị trí"].map(text => <Button key={text} variant="outline" className="h-auto min-h-10 whitespace-normal text-left" onClick={() => { form.setValue("message", text); form.setFocus("message"); }}>{text}</Button>)}</div></div>}
         {messages.map((m, i) => <div key={i} className={cn("max-w-full rounded-xl p-3 text-sm", m.role === "user" ? "ml-4 bg-primary/10 sm:ml-12" : "mr-4 bg-muted/60 sm:mr-12")}><p className="mb-1 text-xs font-medium text-muted-foreground">{m.role === "user" ? "Bạn" : "Trợ lý"}</p><p className="whitespace-pre-wrap break-words">{m.content}</p>{m.href && <Link className="mt-2 inline-flex min-h-10 items-center font-medium text-primary underline underline-offset-4" href={m.href}>Mở hồ sơ</Link>}</div>)}

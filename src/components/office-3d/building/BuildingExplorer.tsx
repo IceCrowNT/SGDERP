@@ -114,6 +114,33 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
   const showPanel = panelOpen ?? desktop;
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [toolbarHeight, setToolbarHeight] = useState(144);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [availableHeight, setAvailableHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const measure = () => {
+      // Use the page position, not the current scroll position: scrolling must
+      // not keep growing the viewer. Browser chrome/zoom are reflected in CSS px.
+      const top = frame.getBoundingClientRect().top + window.scrollY
+        + (frame.closest("main")?.scrollTop ?? 0);
+      setAvailableHeight(Math.floor((window.visualViewport?.height ?? window.innerHeight) - top - 16));
+    };
+    const observer = new ResizeObserver(measure);
+    if (frame.parentElement) observer.observe(frame.parentElement);
+    const header = document.querySelector("header");
+    if (header) observer.observe(header);
+    window.addEventListener("resize", measure);
+    window.visualViewport?.addEventListener("resize", measure);
+    measure();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("resize", measure);
+    };
+  }, []);
+  // On very short screens retain a usable canvas and allow normal page scroll.
+  const minimumHeight = Math.ceil((toolbarHeight + 24 + 128 + 180) / (showPanel && !desktop ? .65 : 1));
   useEffect(() => {
     const toolbar = toolbarRef.current;
     if (!toolbar) return;
@@ -451,7 +478,10 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
 
         </div>
       </header>
-      <div className="h-[760px] min-w-0 sm:h-[720px]">
+      <div ref={frameRef} className="min-w-0" style={{
+        height: availableHeight === null ? "calc(100dvh - 10rem)" : Math.max(minimumHeight, availableHeight),
+        minHeight: minimumHeight,
+      }}>
         <div
           ref={workspaceRef}
           role={expanded ? "dialog" : "region"}

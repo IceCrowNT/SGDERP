@@ -12,7 +12,6 @@ const featureNames: Record<string, string> = {
   tasks: "Quản lý công việc",
   "tasks/department": "Công việc phòng ban và dự án",
   roles: "Phân quyền vai trò",
-  settings: "Cài đặt chung",
 }
 
 function resolveFeatureName(slug: string[]) {

@@ -1,6 +1,6 @@
 # Tài khoản mặc định, hồ sơ cá nhân và dashboard
 
-Cập nhật **06/11/2026 — đã triển khai bản thử nghiệm, kiểm thử hồi quy đạt; bổ sung định hướng dashboard cho mẫu quy trình kéo thả và thông báo trong ứng dụng, chưa triển khai phần mở rộng**. Tài khoản cơ bản dùng được dashboard và tự sửa thông tin cá nhân; quyền nghiệp vụ cấp riêng. Migration cộng thêm cờ đổi mật khẩu và DEFAULT; giữ tài khoản/quyền nghiệp vụ hiện có.
+Cập nhật **16/11/2026 — đã kiểm chứng bỏ bắt buộc đổi mật khẩu cho tài khoản cấp mới và nút hiện/ẩn mật khẩu; bổ sung định hướng dashboard cho mẫu quy trình kéo thả và thông báo trong ứng dụng, chưa triển khai phần mở rộng**. Tài khoản cơ bản dùng được dashboard và tự sửa thông tin cá nhân; quyền nghiệp vụ cấp riêng. Migration cộng thêm cờ đổi mật khẩu và DEFAULT; giữ tài khoản/quyền nghiệp vụ hiện có.
 
 ## 1. Hiện trạng trước triển khai (mốc kiểm tra 05/11)
 
@@ -21,9 +21,9 @@ Giữ **một nhân sự có 0..N tài khoản**. Không tự tạo tài khoản
 2. Có lựa chọn **Tạo tài khoản đăng nhập**. Chọn sẵn khi tạo người đang làm việc và người thao tác có cả HR MANAGE + ACCOUNTS MANAGE; có thể bỏ chọn. Người chỉ có HR MANAGE vẫn tạo được hồ sơ riêng.
 3. Khi chọn: xem trước tên đăng nhập tự sinh, hiển thị **Quyền cơ bản (DEFAULT)**, không bắt chọn role. Quyền bổ sung để trong mục mở rộng hoặc cấp sau tại `/accounts`/`/roles` theo quyền người thao tác.
 4. Lưu nhân sự, tài khoản, liên kết role và audit trong một transaction. Nếu cấp tài khoản thất bại, không để lại hồ sơ dở dang; báo lỗi cụ thể và cho phép bỏ lựa chọn tạo tài khoản.
-5. Mật khẩu tạm ngẫu nhiên riêng cho từng tài khoản, chỉ hiển thị một lần sau tạo thành công để bàn giao. Không dùng chung mật khẩu mặc định; lần đăng nhập đầu yêu cầu đổi mật khẩu.
+5. Mật khẩu khởi tạo tự sinh ngẫu nhiên riêng hoặc nhập trong tùy chọn nâng cao, chỉ hiển thị một lần sau tạo thành công để bàn giao. Không dùng chung mật khẩu mặc định. Theo cập nhật 16/11/2026, tài khoản mới sử dụng ngay, không bắt đổi mật khẩu lần đầu; có thể tự đổi trong Hồ sơ của tôi. Ô nhập mật khẩu tại Nhân sự và Tài khoản có con mắt hiện/ẩn, mặc định ẩn.
 
-Trang `/accounts` áp dụng cùng mặc định khi tạo thêm tài khoản cho người đã có. Người đã nghỉ không được cấp tài khoản mở. Tài khoản hiện có giữ nguyên tên, mật khẩu và quyền.
+Trang `/accounts` áp dụng cùng mặc định khi tạo thêm tài khoản cho người đã có. Người đã nghỉ không được cấp tài khoản mở. Tài khoản hiện có giữ nguyên tên, mật khẩu, cờ bắt buộc đổi và quyền. Khi quản trị viên chủ động reset mật khẩu của tài khoản đã có, vẫn bắt người dùng đổi ở lần đăng nhập tiếp theo và hiển thị đúng lời nhắc bàn giao.
 
 ### Quy tắc tên đăng nhập
 
@@ -110,7 +110,7 @@ Việc cấp quyền chỉ diễn ra khi người quản trị lưu phân quyề
 ## 7. Phạm vi DB và thứ tự thực hiện
 
 - Tái sử dụng 14 bảng hiện có; không thêm bảng profile/dashboard, không gộp nhân sự với tài khoản.
-- Dữ liệu mới: role DEFAULT cho từng công ty. Đã thêm `tai_khoan.bat_buoc_doi_mat_khau Boolean @default(false)`; tạo tài khoản với mật khẩu tạm đặt `true`, tài khoản cũ giữ `false`.
+- Dữ liệu mới: role DEFAULT cho từng công ty. Đã thêm `tai_khoan.bat_buoc_doi_mat_khau Boolean @default(false)`; từ 16/11 tạo tài khoản đặt `false`, reset mật khẩu tài khoản đã có đặt `true`. Không đổi schema hoặc cập nhật hàng loạt tài khoản cũ.
 - Cơ chế DEFAULT được khóa trong quản lý role và bảo đảm khi khởi tạo công ty/cấp tài khoản; không chạy lại seed để ghi đè quyền hiện có.
 - Cấu hình nơi lưu ảnh bền vững trên server và sao lưu cùng DB; ảnh, file tạm không đưa lên Git. Mặc định `var/avatars/`, có thể đặt `AVATAR_STORAGE_DIR` đến volume bền vững; dùng sharp chuẩn hóa ảnh, xem kiến trúc.
 

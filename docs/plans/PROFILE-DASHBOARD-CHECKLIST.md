@@ -1,6 +1,6 @@
 # Tài khoản mặc định và không gian cá nhân
 
-Cập nhật **11/11/2026 — bản hiện tại đã triển khai và có kết quả kiểm thử trước đây; thông báo cho workflow kéo thả chưa triển khai**. Đối chiếu code/DB xác nhận profile, dashboard, đổi mật khẩu và avatar dùng các bảng sẵn có; DEFAULT không grant, cờ đổi mật khẩu/trigger đã có. Số tài khoản và grant tại các mốc backup/reset bên dưới là lịch sử; hiện trạng tại [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db). Chi tiết tại [Thiết kế tài khoản và không gian cá nhân](../THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md).
+Cập nhật **16/11/2026 — đã kiểm chứng chính sách cấp mới và ô mật khẩu; thông báo cho workflow kéo thả chưa triển khai**. Đối chiếu code/DB xác nhận profile, dashboard, đổi mật khẩu và avatar dùng các bảng sẵn có; DEFAULT không grant, cờ đổi mật khẩu/trigger đã có. Số tài khoản và grant tại các mốc backup/reset bên dưới là lịch sử; hiện trạng tại [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db). Chi tiết tại [Thiết kế tài khoản và không gian cá nhân](../THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md).
 
 Rule nghiệp vụ: [PROFILE-DASHBOARD-RULES](../../.agents/rules/PROFILE-DASHBOARD-RULES.md).
 
@@ -22,6 +22,24 @@ Mở rộng đề xuất ngày 13/11/2026: chat trên dashboard và cá nhân h�
 
 Đã sao lưu nhất quán DB cục bộ trước thay đổi: 73 nhân sự, 61 tài khoản; giữ dữ liệu người dùng vừa bổ sung. Migration `20261105120000_khong_gian_ca_nhan` đã thử toàn chuỗi trên DB tạm và áp dụng local; thêm cờ đổi mật khẩu/DEFAULT, không đổi tài khoản cũ. Đối chiếu sau kiểm thử: toàn bộ bản ghi cũ và grant cũ không đổi; dữ liệu kiểm thử đã dọn.
 
+## Cấp tài khoản và xem mật khẩu — 16/11/2026
+
+### A. Phạm vi đã duyệt
+
+Nhân sự được cấp tài khoản mới đăng nhập và sử dụng ngay, không phải qua bước đổi mật khẩu đầu tiên. Áp dụng cả tạo kèm hồ sơ và tạo tại `/accounts`, với mật khẩu nhập tay hoặc tự sinh. Nút con mắt giúp kiểm tra mật khẩu đã nhập ở cả hai form; mặc định ẩn, dùng được bằng bàn phím và trên điện thoại.
+
+Giữ luồng tự đổi mật khẩu trong profile và bắt buộc đổi sau khi quản trị viên reset tài khoản đã có. Không cập nhật hàng loạt cờ/mật khẩu/quyền của tài khoản cũ; không cần migration hoặc thay ba rule kỹ thuật chung.
+
+### B. Triển khai và kiểm chứng
+
+- [x] Tạo mới đặt cờ bắt buộc đổi mật khẩu `false` ở cả hai action; sửa tài khoản có nhập mật khẩu vẫn đặt `true`.
+- [x] Dùng chung `PasswordInput`: mặc định che mật khẩu, nút hiện/ẩn có tên truy cập và vùng bấm 40px; giữ ref/label/lỗi của form, không submit khi bấm.
+- [x] Màn hình bàn giao phân biệt tài khoản mới với reset; đồng bộ rule và thiết kế cá nhân.
+- [x] 6/6 E2E Chrome đạt trên DB riêng: đăng nhập ngay bằng mật khẩu tự sinh/nhập tay ở cả hai luồng; reset vẫn chuyển đến profile, tự đổi mật khẩu vẫn thu hồi phiên cũ và giữ tài khoản khác của cùng người. Hồi quy quyền DEFAULT/HR-only, profile/avatar, workflow và dashboard đạt.
+- [x] Nút con mắt giữ nguyên giá trị, không gửi form, hỗ trợ chuột/Enter/Space và mặc định ẩn khi mở lại. Mobile 390px không tràn ngang; đã xem ảnh form với mật khẩu được che tại `outputs/account-onboarding/account-password-mobile.png`.
+- [x] TypeScript, lint các file thay đổi và `git diff --check` đạt.
+- [x] Đã dừng app cổng 4137 và xóa DB thử sau khi kiểm chứng; không cập nhật dữ liệu vận hành. Backup/script/ảnh nằm trong `outputs/account-onboarding/` ngoài Git. Lần đầu app thử dừng ở thông báo bảo mật Next.js hiện có; khởi động lại để kiểm tra, chưa nâng dependency. Payload kiểm thử HR-only đã bỏ mật khẩu khi chọn chỉ tạo hồ sơ để giữ đúng hợp đồng server.
+
 ## Thực hiện theo thứ tự
 
 - [x] Tách nghiệp vụ khỏi rule Frontend/Backend chung sang `PROFILE-DASHBOARD-RULES.md`; đăng ký router, giữ quyết định DB trong plan. Chỉ sắp xếp tài liệu, không thay tính năng.
@@ -29,7 +47,7 @@ Mở rộng đề xuất ngày 13/11/2026: chat trên dashboard và cá nhân h�
 - [x] Đối chiếu code và DB 11/11: workflow có chức năng và đã có grant ở một số role, chưa có mẫu/hồ sơ vận hành; DEFAULT là nhóm tối thiểu; STAFF mẫu đã được loại theo [plan phân quyền](ROLE-MANAGEMENT-CHECKLIST.md#bộ-vai-trò-tối-thiểu).
 - [x] Lưu thiết kế luồng, trường profile, quyền, dashboard và thay đổi DB dự kiến.
 - [x] Workflow: quyền cấp tập trung tại `/roles`, đã bỏ bước tự cấp/xác nhận tại trang quy trình; người đủ quyền thấy giao diện mẫu/hồ sơ và nút tạo mẫu đầu tiên.
-- [x] Tài khoản: nhóm DEFAULT, sinh tên chống trùng đồng thời, mật khẩu tạm và đổi lần đầu; không bắt role ở form cơ bản.
+- [x] Tài khoản: nhóm DEFAULT, sinh tên chống trùng đồng thời, mật khẩu cấp một lần; không bắt role ở form cơ bản. Chính sách đăng nhập đầu theo mục cập nhật 16/11 ở trên.
 - [x] Profile: liên hệ, ảnh, đổi mật khẩu; API/action chỉ dùng danh tính trong phiên.
 - [x] Dashboard: bỏ khối không phục vụ cá nhân, thêm việc chờ duyệt/thực hiện và hồ sơ theo quyền thực tế.
 - [x] Trực quan hóa dashboard (09/11): thẻ số liệu có biểu tượng, danh sách dạng bảng trên desktop/thẻ trên mobile, nhãn trạng thái, biểu đồ thanh yêu cầu cá nhân bấm lọc được, lối tắt dạng ô và minh họa trạng thái trống. Dùng dữ liệu/phạm vi quyền hiện có, không thêm dependency hoặc đổi DB.
@@ -38,7 +56,7 @@ Mở rộng đề xuất ngày 13/11/2026: chat trên dashboard và cá nhân h�
 
 ## Thiết kế DB cần giữ
 
-- `tai_khoan.bat_buoc_doi_mat_khau` Boolean default false; tài khoản mới/reset mật khẩu đặt true. Migration `20261105120000_khong_gian_ca_nhan` không đổi mật khẩu, phiên hoặc grant của tài khoản cũ.
+- `tai_khoan.bat_buoc_doi_mat_khau` Boolean default false; tài khoản mới đặt false, reset mật khẩu tài khoản đã có đặt true. Không đổi cờ của tài khoản cũ hàng loạt. Migration `20261105120000_khong_gian_ca_nhan` không đổi mật khẩu, phiên hoặc grant của tài khoản cũ; cập nhật chính sách 16/11 chỉ đổi action, không cần migration.
 - DEFAULT không có grant nghiệp vụ; trigger `chan_cap_quyen_default` chặn INSERT/UPDATE grant vào nhóm này, action chặn sửa/xóa role. Quyền bổ sung cấp qua role khác; không tự gán DEFAULT hoặc quyền mới hàng loạt cho tài khoản cũ.
 - `ten_dang_nhap` unique toàn hệ thống. Cấp tên trong transaction theo thứ tự: hàng công ty → advisory phân quyền `(260126, companyId)` → advisory cấp tên toàn hệ thống `(260127, 0)`. Unique là ràng buộc cuối; không thay ID hoặc mã nhân sự để xử lý trùng tên.
 - Profile dùng trường liên hệ/ảnh/địa chỉ sẵn có của `nhan_su`; dashboard đọc dữ liệu được phép xem, không tạo bảng profile/dashboard hoặc bản sao hồ sơ người. Quan hệ người–tài khoản và nghỉ việc theo [plan HR](HR-CHECKLIST.md#thiết-kế-db-cần-giữ).

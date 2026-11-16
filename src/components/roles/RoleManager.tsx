@@ -19,6 +19,9 @@ import {
   WORKFLOW_ACTIONS,
   WORKFLOW_LABELS,
   type WorkflowAction,
+  AI_ACTIONS,
+  AI_LABELS,
+  type AiAction,
 } from "@/lib/role-catalog";
 import type { PermissionLevel } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -69,12 +72,15 @@ function effective(roles: Role[], ids: number[]) {
 function PermissionSummary({
   levels,
   actions = [],
+  ai = [],
 }: {
   actions?: WorkflowAction[];
+  ai?: AiAction[];
   levels: Record<string, PermissionLevel>;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
+      {ai.map(a => <Badge key={a} variant="secondary">{AI_LABELS[a]}</Badge>)}
       {actions.map((a) => (
         <Badge key={a} variant="secondary">
           Quy trình: {WORKFLOW_LABELS[a]}
@@ -87,7 +93,7 @@ function PermissionSummary({
           </Badge>
         ) : null,
       )}
-      {!actions.length &&
+      {!actions.length && !ai.length &&
         !ROLE_MODULES.some(
           (m) => levels[m.code] && levels[m.code] !== "NONE",
         ) && (
@@ -203,7 +209,7 @@ export function RoleManager({ data }: { data: Data }) {
                   <Users className="size-4" aria-hidden="true" />
                   {role.accountCount} tài khoản
                 </div>
-                <PermissionSummary levels={role.permissions} actions={role.workflowActions} />
+                <PermissionSummary levels={role.permissions} actions={role.workflowActions} ai={role.aiActions} />
                 {role.description && (
                   <details className="mt-3 text-sm text-muted-foreground">
                     <summary className="cursor-pointer focus-visible:outline-ring">Mô tả vai trò</summary>
@@ -275,6 +281,7 @@ export function RoleManager({ data }: { data: Data }) {
                 </p>
                 <PermissionSummary
                   levels={effective(data.roles, a.roleIds)}
+                  ai={[...new Set(data.roles.filter(r => a.roleIds.includes(r.id)).flatMap(r => r.aiActions))]}
                   actions={[
                     ...new Set(
                       data.roles
@@ -433,6 +440,7 @@ function RoleForm({
       name: role?.name ?? "",
       description: role?.description ?? "",
       workflowActions: role?.workflowActions ?? [],
+      aiActions: role?.aiActions ?? [],
       permissions: {
         ASSETS: role?.permissions.ASSETS ?? "NONE",
         LOCATIONS: role?.permissions.LOCATIONS ?? "NONE",
@@ -594,6 +602,18 @@ function RoleForm({
             </FormItem>
           )}
         />
+        <FormField control={form.control} name="aiActions" render={({ field }) => (
+          <FormItem className="rounded-lg border p-4">
+            <p className="font-semibold">Cài đặt AI</p>
+            {AI_ACTIONS.map(action => <label key={action} className="flex min-h-10 items-center gap-3 text-sm">
+              <Checkbox disabled={!canManage || pending} checked={field.value?.includes(action) ?? false}
+                onCheckedChange={checked => field.onChange(checked ? [...(field.value ?? []), action] : field.value?.filter(a => a !== action))} />
+              {AI_LABELS[action]}
+            </label>)}
+            <p className="text-xs text-muted-foreground">Quản lý API key và model trong Cài đặt chung. Quyền sử dụng trợ lý được quản lý riêng.</p>
+            <FormMessage />
+          </FormItem>
+        )} />
         {Boolean(role?.retainedPermissions.length) && (
           <details className="text-sm text-muted-foreground">
             <summary className="cursor-pointer">
@@ -680,6 +700,7 @@ function AssignmentForm({
       <h3 className="font-semibold text-sm">Quyền hiệu lực sau khi lưu</h3>
       <PermissionSummary
         levels={effective(roles, ids)}
+        ai={[...new Set(roles.filter(r => ids.includes(r.id)).flatMap(r => r.aiActions))]}
         actions={[
           ...new Set(
             roles

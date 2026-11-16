@@ -14,6 +14,7 @@ import { AccountSchema, type AccountInput } from "@/lib/validations/user";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -196,7 +197,7 @@ function AccountForm({
     employees.find((e) => e.id === employeeId)?.tinh_trang_lam_viec ===
     "LEFT";
   if (credentials)
-    return <AccountCredentials credentials={credentials} done={done} />;
+    return <AccountCredentials credentials={credentials} requirePasswordChange={Boolean(account)} done={done} />;
   return (
     <Form {...form}>
       <form
@@ -264,12 +265,16 @@ function AccountForm({
               <FormItem>
                 <FormLabel required={name === "displayName"}>{label}</FormLabel>
                 <FormControl>
-                  <Input
-                    {...field}
-                    readOnly={name === "username" && Boolean(account)}
-                    type={name === "password" ? "password" : "text"}
-                    autoComplete={name === "password" ? "new-password" : "off"}
-                  />
+                  {name === "password" ? (
+                    <PasswordInput {...field} autoComplete="new-password" disabled={pending} />
+                  ) : (
+                    <Input
+                      {...field}
+                      readOnly={name === "username" && Boolean(account)}
+                      type="text"
+                      autoComplete="off"
+                    />
+                  )}
                 </FormControl>
                 <FormMessage />
               </FormItem>

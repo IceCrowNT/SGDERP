@@ -49,6 +49,18 @@ export type PermissionGrant = {
   hanh_dong: string;
   pham_vi: string;
 };
+// Only implemented AI actions belong in the editable catalog.
+export const AI_ACTIONS = ["MANAGE_CONNECTIONS"] as const;
+export type AiAction = (typeof AI_ACTIONS)[number];
+export const AI_LABELS: Record<AiAction, string> = {
+  MANAGE_CONNECTIONS: "Quản lý kết nối & model AI",
+};
+export function aiActions(grants: PermissionGrant[]): AiAction[] {
+  return AI_ACTIONS.filter(action => grants.some(p => p.phan_he === "AI" && p.hanh_dong === action && p.pham_vi === "ALL"));
+}
+export function canManageAiConnections(session: { aiActions?: AiAction[]; mustChangePassword?: boolean } | null | undefined) {
+  return Boolean(session && !session.mustChangePassword && session.aiActions?.includes("MANAGE_CONNECTIONS"));
+}
 export function permissionLevels(grants: PermissionGrant[]) {
   const result: Record<string, PermissionLevel> = {};
   for (const p of grants) {
@@ -94,7 +106,8 @@ export function canWorkflow(
 export function isEditableGrant(p: PermissionGrant) {
   return (
     p.pham_vi === "ALL" &&
-    ((p.phan_he === "WORKFLOW" &&
+    ((p.phan_he === "AI" && AI_ACTIONS.includes(p.hanh_dong as AiAction)) ||
+      (p.phan_he === "WORKFLOW" &&
       WORKFLOW_ACTIONS.includes(p.hanh_dong as WorkflowAction)) ||
       ROLE_MODULES.some(
         (m) =>

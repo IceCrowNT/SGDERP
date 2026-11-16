@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { canManageAccounts } from "@/lib/account-access"
 import { SessionUser } from "@/lib/auth"
+import { canManageAiConnections } from "@/lib/role-catalog"
 import {
   LayoutDashboard,
   Users,
@@ -92,7 +93,7 @@ export const menuGroups: MenuGroup[] = [
       { label: "Phân quyền vai trò", href: "/roles", icon: ShieldCheck, requiredModule: "ROLES" },
       { label: "Vị trí & không gian", href: "/locations", icon: MapPin, requiredModule: "LOCATIONS" },
       { label: "Nhật ký hoạt động", href: "/audit-logs", icon: History, requiredModule: "AUDIT" },
-      { label: "Cài đặt chung", href: "/settings", icon: Settings, requiredModule: "SYSTEM", badge: "Sắp có" },
+      { label: "Cài đặt chung", href: "/settings", icon: Settings },
     ],
   },
 ]
@@ -137,6 +138,7 @@ export function NavigationLinks({ session, onNavigate }: NavigationLinksProps) {
   const visibleGroups = menuGroups.map(group => ({ ...group, items: group.items.filter(item => {
     if (session?.mustChangePassword) return false;
     if (item.href === "/accounts") return canManageAccounts(session);
+    if (item.href === "/settings") return canManageAiConnections(session);
     const moduleCode = item.requiredModule ?? group.requiredModule;
     return !moduleCode || ["VIEW", "MANAGE"].includes(session?.permissions[moduleCode] ?? "");
   }) })).filter(group => group.items.length > 0);

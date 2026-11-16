@@ -40,6 +40,8 @@ Quản trị viên tạo role và chọn **quyền đã triển khai** ngay tạ
 
 ## Đã triển khai
 
+- [x] Quyền `AI MANAGE_CONNECTIONS` tích hợp session/catalog/validation/ma trận và guard cài đặt. Migration/seed chỉ thêm catalog; thao tác riêng giữ quyền cho tài khoản pilot qua role chỉ gán tài khoản đó, có audit. Payload role cũ giữ grant AI, mảng rỗng thu hồi; kiểm chứng/hồi quy tại [plan cài đặt](SYSTEM-SETTINGS-CHECKLIST.md).
+
 - [x] Đợt 1 tài sản bổ sung ASSETS VIEW/MANAGE vào catalog, validation, giá trị form và Server Actions. Payload role cũ không có ASSETS giữ grant hiện có; migration/seed chỉ bổ sung catalog, không cấp quyền mặc định. Ngày 12/11 đã cấp ASSETS MANAGE cho admin theo yêu cầu, giữ các quyền khác và ghi audit; đây là cấp quyền vận hành tường minh, không thay chính sách seed. Kiểm chứng và bảo toàn dữ liệu tại [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md).
 
 - [x] Tách nghiệp vụ khỏi rule Frontend/Backend chung sang `ROLE-MANAGEMENT-RULES.md`; đăng ký router, giữ quyết định DB trong plan. Chỉ sắp xếp tài liệu, không thay tính năng.

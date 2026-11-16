@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 export type PermissionLevel = "NONE" | "VIEW" | "MANAGE";
 
 export interface SessionUser {
+  aiActions?: import("@/lib/role-catalog").AiAction[];
   workflowActions?: import("@/lib/role-catalog").WorkflowAction[];
   mustChangePassword?: boolean;
   userId: number;

@@ -202,7 +202,7 @@ export default async function Dashboard({
       )}
       <div className="grid items-start gap-6 xl:grid-cols-3">
         <div className="min-w-0 space-y-6 xl:col-span-2">
-        {aiSettings && <AiAssistant settings={aiSettings} />}
+        {aiSettings && <AiAssistant settings={{ hasKey: aiSettings.hasKey, model: aiSettings.model, enabled: aiSettings.enabled }} />}
         <section className="min-w-0 overflow-hidden rounded-2xl border bg-card">
           {selected ? (
             <>

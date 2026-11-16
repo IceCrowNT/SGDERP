@@ -45,6 +45,7 @@ import {
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -1113,7 +1114,7 @@ export function EmployeeForm({
                       </p>
                       <p className="text-sm">
                         Quyền cơ bản: <strong>DEFAULT</strong> · Dashboard, hồ
-                        sơ cá nhân và đổi mật khẩu. Mật khẩu tạm được cấp sau
+                        sơ cá nhân và đổi mật khẩu. Mật khẩu được cấp sau
                         khi lưu.
                       </p>
                       <details>
@@ -1142,14 +1143,24 @@ export function EmployeeForm({
                               <FormItem>
                                 <FormLabel>{f.label}</FormLabel>
                                 <FormControl>
-                                  <Input
-                                    {...field}
-                                    value={field.value ?? ""}
-                                    type={f.type}
-                                    autoComplete="off"
-                                    placeholder="Để trống để tự cấp"
-                                    disabled={pending}
-                                  />
+                                  {f.type === "password" ? (
+                                    <PasswordInput
+                                      {...field}
+                                      value={field.value ?? ""}
+                                      autoComplete="new-password"
+                                      placeholder="Để trống để tự cấp"
+                                      disabled={pending}
+                                    />
+                                  ) : (
+                                    <Input
+                                      {...field}
+                                      value={field.value ?? ""}
+                                      type={f.type}
+                                      autoComplete="off"
+                                      placeholder="Để trống để tự cấp"
+                                      disabled={pending}
+                                    />
+                                  )}
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>

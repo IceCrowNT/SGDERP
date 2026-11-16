@@ -43,7 +43,7 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 - [x] Thêm/sửa hồ sơ, tìm kiếm, lọc trạng thái/phòng; các trường bắt buộc có dấu `*` và báo lỗi. Liên hệ/ngày/ghi chú bổ sung sau.
 - [x] CRUD phòng ban, cây cha–con, sơ đồ từ trên xuống, mở nhánh xem nhân sự; chặn vòng lặp và xóa phòng còn người/đơn vị con.
 - [x] Chọn người phụ trách từng phòng; một người có thể phụ trách nhiều phòng. Hiển thị các phòng phụ trách trong danh sách nhân sự.
-- [x] Tạo hồ sơ kèm tài khoản tùy chọn trong một lần lưu cho người đủ quyền; `/accounts` quản lý tài khoản và gán vai trò hiện có.
+- [x] Tạo hồ sơ kèm tài khoản tùy chọn trong một lần lưu cho người đủ quyền; `/accounts` quản lý tài khoản và gán vai trò hiện có. Ngày 16/11 bỏ bắt buộc đổi mật khẩu cho tài khoản cấp mới và thêm con mắt ở ô mật khẩu; chính sách, tiến độ kiểm chứng tại [plan cá nhân](PROFILE-DASHBOARD-CHECKLIST.md#cấp-tài-khoản-và-xem-mật-khẩu--16112026).
 - [x] Lưu nghỉ việc tự khóa các tài khoản liên kết đang mở và thu hồi phiên. Làm việc trở lại không tự mở tài khoản; bảo vệ quản trị cuối cùng.
 - [x] Kiểm tra quyền tại giao diện/server, cùng công ty và ghi nhật ký; sửa hồ sơ không tự cấp thêm quyền.
 - [x] Chuẩn hóa khóa DB sang `id`, `company_id`, `department_id`, `employee_id`, `parent_id`; dữ liệu 73 người/61 tài khoản/19 phòng ban giữ nguyên sau migration 06/11.
@@ -55,7 +55,7 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 | Nguồn dữ liệu | File HR final là nguồn khởi tạo; chỉnh sửa hiện hành tại ERP. Metadata 1Office/HR chỉ để truy nguyên |
 | Chức vụ / phụ trách / quyền | Ba khái niệm riêng; không suy quyền hoặc trưởng phòng từ text chức vụ |
 | Tạo người | Nhập họ tên, chọn phòng, tình trạng mặc định Đang làm việc; mã tự cấp, công ty lấy từ phiên |
-| Cấp tài khoản | Tùy chọn tạo kèm tài khoản, chọn sẵn khi thêm người và đủ quyền; tự sinh tên/mật khẩu tạm, không chọn role thì dùng DEFAULT. Có thể chỉ tạo hồ sơ hoặc chọn nâng cao |
+| Cấp tài khoản | Tùy chọn tạo kèm tài khoản, chọn sẵn khi thêm người và đủ quyền; tự sinh tên/mật khẩu khởi tạo, không chọn role thì dùng DEFAULT. Có thể chỉ tạo hồ sơ hoặc chọn nâng cao; chính sách mật khẩu theo [plan cá nhân](PROFILE-DASHBOARD-CHECKLIST.md#thiết-kế-db-cần-giữ) |
 | Người được thao tác | HR MANAGE sửa hồ sơ/cơ cấu và ghi nhận nghỉ việc; ACCOUNTS MANAGE cấp/mở tài khoản và gán role trong quyền được phép; ROLES MANAGE quản trị ma trận và cấp mọi quyền |
 | Người phụ trách nghỉ việc | Giữ liên kết, cảnh báo cần phân công lại; không tự chọn người thay |
 | Sửa dữ liệu trực tiếp | Studio/SQL không chạy quy trình khóa/audit của action; phiên vẫn chặn người LEFT. Vận hành qua giao diện ERP |

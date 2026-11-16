@@ -14,6 +14,8 @@ Nghiệp vụ hiện hành; thiết kế DB, phạm vi còn kế hoạch và k�
 
 ## Vai trò mẫu và mở rộng quyền
 
+- `AI MANAGE_CONNECTIONS` quản lý kết nối/model tại `/settings/ai`, độc lập quyền chat và tài sản/vị trí. Ma trận chỉ có hành động AI đã triển khai; payload cũ thiếu `aiActions` giữ grant, mảng rỗng thu hồi. Điều hướng theo [rule cài đặt](SYSTEM-SETTINGS-RULES.md).
+
 - Chỉ khởi tạo ADMIN, DEFAULT và một role HCNS (`HR_MANAGER`, nhãn Quản lý hành chính nhân sự). HCNS là role tùy chỉnh; ADMIN/DEFAULT là role hệ thống. Không sinh sẵn role theo mọi chức danh/phòng ban hoặc tái tạo role nghiệp vụ đã bị xóa.
 - Quản trị viên tùy chỉnh role bằng quyền đã có tại `/roles`. Quyền cho tính năng mới phải có kiểm tra server/phạm vi, catalog, validation và migration tương ứng trước khi đưa vào ma trận; quy trình mở rộng tại plan. Không tự gán quyền mới cho các role đang dùng.
 

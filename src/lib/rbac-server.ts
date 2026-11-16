@@ -7,6 +7,7 @@ export async function currentActor(
   tx: Prisma.TransactionClient,
   session: SessionUser,
   module: string,
+  action = "MANAGE",
 ) {
   const account = await tx.tai_khoan.findFirst({
     where: { id: session.userId, company_id: session.companyId },
@@ -31,7 +32,7 @@ export async function currentActor(
     account.bat_buoc_doi_mat_khau ||
     account.nhan_su?.tinh_trang_lam_viec === "LEFT" ||
     account.phien_ban_dang_nhap !== session.sessionVersion ||
-    permissions[module] !== "MANAGE"
+    !grants.some(p => p.phan_he === module && p.hanh_dong === action && p.pham_vi === "ALL")
   )
     throw Error("Quyền truy cập đã thay đổi. Vui lòng tải lại trang.");
   return { permissions, grants };

@@ -8,7 +8,7 @@ Prisma và PostgreSQL dùng cùng tên. Khóa chính là `id`; khóa ngoại ph�
 
 ## Tài khoản cá nhân — 05/11/2026
 
-Migration `20261105120000_khong_gian_ca_nhan` thêm `tai_khoan.bat_buoc_doi_mat_khau Boolean @default(false)`; mật khẩu tạm mới/reset đặt true, tài khoản cũ giữ false. Thêm role DEFAULT cho từng công ty, không gán hàng loạt cho tài khoản cũ; trigger chặn cấp quyền nghiệp vụ vào DEFAULT. Profile tái sử dụng ảnh/liên hệ/địa chỉ trong `nhan_su`. Vẫn **14 bảng**, không tạo bảng profile/dashboard. Tên đăng nhập unique toàn hệ thống; khóa cấp tên không đổi ID hoặc mã nhân sự. Chi tiết tại [thiết kế](THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md).
+Migration `20261105120000_khong_gian_ca_nhan` thêm `tai_khoan.bat_buoc_doi_mat_khau Boolean @default(false)`; chính sách cấp mới/reset hiện hành xem [plan cá nhân](plans/PROFILE-DASHBOARD-CHECKLIST.md#thiết-kế-db-cần-giữ). Thêm role DEFAULT cho từng công ty, không gán hàng loạt cho tài khoản cũ; trigger chặn cấp quyền nghiệp vụ vào DEFAULT. Profile tái sử dụng ảnh/liên hệ/địa chỉ trong `nhan_su`. Vẫn **14 bảng**, không tạo bảng profile/dashboard. Tên đăng nhập unique toàn hệ thống; khóa cấp tên không đổi ID hoặc mã nhân sự. Chi tiết tại [thiết kế](THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md).
 
 ## Workflow — 05/11/2026
 
@@ -26,6 +26,8 @@ Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng v�
 [Tài sản mức 1](plans/ASSET-MANAGEMENT-CHECKLIST.md) đã có `loai_tai_san`, `tai_san` và FK vị trí qua migration `20261111095809_tai_san_muc_1`. FK nullable `nhan_su.vi_tri_lam_viec_id` đã có từ migration `20261110160000_vi_tri_lam_viec_nhan_su`, cùng công ty/Restrict, không unique. Form HR và chi tiết vị trí cùng quản lý một liên kết; 3D HCNS chỉ đọc người ACTIVE theo quyền. Khi xóa vị trí qua ERP, action có đủ quyền/xác nhận tự bỏ gán nhân sự và audit nguyên tử trước khi xóa; FK Restrict vẫn giữ để chặn thao tác SQL làm mất liên kết. Vị trí còn tài sản thì chặn xóa/ngừng dùng; không tự gỡ thiết bị. Giao diện `/assets` đã có; dữ liệu thiết bị vận hành chưa nhập.
 
 ## Kết nối AI — 16/11/2026
+
+Catalog có `AI / MANAGE_CONNECTIONS / ALL` qua migration `20261116150000_quyen_quan_tri_ai`, dùng RBAC hiện có; không thêm bảng/cột. Cấp/thu hồi tại `/roles`, quản lý kết nối tại `/settings/ai`; [plan cài đặt](plans/SYSTEM-SETTINGS-CHECKLIST.md) sở hữu đợt chuyển trang/quyền.
 
 Migration `20261116110000_ket_noi_ai` thêm một bảng metadata `ket_noi_ai`: `id`, `company_id` unique/FK công ty, `model_mac_dinh`, `tham_chieu_bi_mat`, `hau_to_khoa`, `phien_ban_khoa`, `dang_su_dung`, `created_at`, `updated_at`. Khóa thật mã hóa tại kho file server, không lưu plaintext hoặc ciphertext trong DB. Kiểu/ràng buộc và vòng đời tại [thiết kế kết nối pilot](THIET-KE-QUAN-TRI-AI.md#kết-nối-pilot--16112026). Chưa thêm cột cá nhân hóa/hạn mức hoặc bảng chat/usage.
 
@@ -224,7 +226,7 @@ Quan hệ Prisma: `cong_ty`, `vi_tri`, `phong`. Xóa vị trí hợp lệ cascad
 | `ten_hien_thi` | String | Không NULL |
 | `cho_phep_dang_nhap` | Boolean | Không NULL · Có mặc định |
 | `phien_ban_dang_nhap` | Int | Không NULL · Có mặc định |
-| `bat_buoc_doi_mat_khau` | Boolean | Mặc định false; true với mật khẩu tạm mới/reset, chặn nghiệp vụ tới khi đổi mật khẩu |
+| `bat_buoc_doi_mat_khau` | Boolean | Mặc định false; khi true, chặn nghiệp vụ tới khi đổi mật khẩu. Điều kiện bật cờ theo [plan cá nhân](plans/PROFILE-DASHBOARD-CHECKLIST.md#thiết-kế-db-cần-giữ) |
 | `company_id` | Int | Không NULL |
 | `employee_id` | Int | Có thể trống |
 | `created_at` | DateTime | Không NULL · Có mặc định |

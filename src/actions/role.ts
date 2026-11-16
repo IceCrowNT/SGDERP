@@ -7,6 +7,7 @@ import {
   isEditableGrant,
   permissionLevels,
   workflowActions,
+  aiActions,
 } from "@/lib/role-catalog";
 import { currentActor, ensureAdministrator } from "@/lib/rbac-server";
 import {
@@ -55,6 +56,7 @@ export async function getRoles() {
       accountCount: r._count.danh_sach_tai_khoan,
       permissions: permissionLevels(r.danh_sach_quyen.map((p) => p.quyen)),
       workflowActions: workflowActions(r.danh_sach_quyen.map((p) => p.quyen)),
+      aiActions: aiActions(r.danh_sach_quyen.map((p) => p.quyen)),
       retainedPermissions: r.danh_sach_quyen
         .filter((p) => !isEditableGrant(p.quyen))
         .map(
@@ -150,6 +152,7 @@ export async function saveRole(input: unknown) {
           isEditableGrant(p) &&
           (p.phan_he !== "ASSETS" || v.permissions.ASSETS !== undefined) &&
           (p.phan_he !== "WORKFLOW" || v.workflowActions !== undefined) &&
+          (p.phan_he !== "AI" || v.aiActions !== undefined) &&
           (p.phan_he !== "LOCATIONS" || v.permissions.LOCATIONS !== undefined),
       );
       const selected = Object.entries(v.permissions)
@@ -167,6 +170,11 @@ export async function saveRole(input: unknown) {
           (p) => p.phan_he === "WORKFLOW" && p.hanh_dong === action,
         );
         if (!p) throw Error("Danh mục quyền quy trình chưa sẵn sàng.");
+        selected.push(p.id);
+      }
+      for (const action of new Set(v.aiActions ?? [])) {
+        const p = editable.find(p => p.phan_he === "AI" && p.hanh_dong === action);
+        if (!p) throw Error("Danh mục quyền AI chưa sẵn sàng.");
         selected.push(p.id);
       }
       const role = before
@@ -215,6 +223,7 @@ export async function saveRole(input: unknown) {
           name: v.name,
           description: v.description,
           permissions: v.permissions,
+          aiActions: v.aiActions ?? aiActions(before?.danh_sach_quyen.map(p => p.quyen) ?? []),
           workflowActions:
             v.workflowActions ??
             workflowActions(before?.danh_sach_quyen.map((p) => p.quyen) ?? []),

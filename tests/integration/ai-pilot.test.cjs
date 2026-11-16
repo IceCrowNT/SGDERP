@@ -4,7 +4,7 @@ const { test, before, after } = require('node:test');
 const { AsyncLocalStorage } = require('node:async_hooks');
 const { randomUUID } = require('node:crypto');
 const Module = require('node:module');
-assert.match(new URL(process.env.DATABASE_URL).pathname, /^\/sdg_ai(?:_keys)?_test_\d+$/);
+assert.match(new URL(process.env.DATABASE_URL).pathname, /^\/sdg_(?:ai(?:_keys)?|system_settings)_test_\d+$/);
 const request = new AsyncLocalStorage(), load = Module._load;
 Module._load = function(name, ...args) {
   if (name === 'next/headers') return { cookies: async () => ({ get: () => request.getStore() ? { value: request.getStore() } : undefined }) };

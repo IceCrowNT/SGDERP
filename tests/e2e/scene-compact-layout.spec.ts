@@ -88,3 +88,42 @@ test("asset search opens contextual details; WebGL failure opens the alternate d
   await page.getByRole('button',{name:'Hướng dẫn thao tác 3D',exact:true}).click();
   await expect(page.getByText('Mặt bằng giản lược · Nội thất theo khảo sát, kích thước ước lượng.',{exact:true})).toBeVisible();
 });
+
+test("viewer fits the remaining viewport on laptops and phones, retaining controls when resized",async({page,context})=>{
+  await signAccount(context,await account());
+  await page.setViewportSize({width:1440,height:760});
+  await page.goto('/office-3d');
+  const canvas=page.locator('canvas[data-building-ready=true]');
+  await expect(canvas).toBeVisible({timeout:90000});
+  const original=await canvas.elementHandle();
+  const workspace=page.getByTestId('building-workspace');
+  for(const [width,height] of [[1440,760],[1280,650],[1669,825],[1920,1080],[390,844],[320,844]]) {
+    await page.setViewportSize({width,height});
+    await page.evaluate(()=>window.scrollTo(0,0));
+    await expect.poll(async()=>{
+      const box=(await workspace.boundingBox())!;
+      return box.y+box.height<=height-8;
+    }).toBe(true);
+    for(const name of ['Phối cảnh','Mặt bằng','Phóng to mô hình','Đặt lại góc nhìn']) {
+      const box=(await page.getByRole('button',{name,exact:true}).boundingBox())!;
+      expect(box.y+box.height).toBeLessThanOrEqual(height-8);
+      expect(box.height).toBeGreaterThanOrEqual(40);
+    }
+    expect((await canvas.boundingBox())!.height).toBeGreaterThanOrEqual(180);
+    if(width===1440) await page.screenshot({path:'outputs/compact-3d/laptop-viewport.png'});
+  }
+  // Very short landscape windows keep a usable model and allow page scrolling.
+  await page.setViewportSize({width:844,height:390});
+  await expect.poll(async()=>(await canvas.boundingBox())!.height).toBeGreaterThanOrEqual(180);
+  const reset=page.getByRole('button',{name:'Đặt lại góc nhìn',exact:true});
+  await reset.scrollIntoViewIfNeeded();
+  const before=(await workspace.boundingBox())!.height;
+  await page.waitForTimeout(250);
+  expect((await workspace.boundingBox())!.height).toBeCloseTo(before,0);
+  await reset.click();
+  await page.getByRole('button',{name:'Mở rộng không gian 3D',exact:true}).click();
+  await expect(workspace).toHaveAttribute('data-expanded','true');
+  await page.keyboard.press('Escape');
+  await expect(workspace).toHaveAttribute('data-expanded','false');
+  expect(await original!.evaluate(el=>el===document.querySelector('canvas'))).toBe(true);
+});
