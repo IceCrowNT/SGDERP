@@ -23,11 +23,13 @@ type Picker = { kind: "asset" }
   | { kind: "confirm"; asset: Candidate; target: Destination | null };
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase();
 
-export function LocationAssets({ location, assets, canManage, selectedAssetId }: {
+export function LocationAssets({ location, assets, canManage, selectedAssetId, allowAssign = true, showHeading = true }: {
   location: Destination & { active: boolean };
   assets: LocationAsset[];
   canManage: boolean;
   selectedAssetId?: number | null;
+  allowAssign?: boolean;
+  showHeading?: boolean;
 }) {
   const router = useRouter();
   const [picker, setPicker] = useState<Picker | null>(null);
@@ -100,8 +102,8 @@ export function LocationAssets({ location, assets, canManage, selectedAssetId }:
   return (
     <section aria-label="Tài sản tại vị trí" className="mb-5 space-y-3 border-t pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 font-semibold"><Package className="size-4" />Tài sản tại vị trí <Badge variant="secondary">{assets.length}</Badge></h3>
-        {canManage && location.active && <Button variant="outline" className="min-h-10" disabled={pending} onClick={() => open({ kind: "asset" })}><Plus className="size-4" />Gán tài sản</Button>}
+        {showHeading && <h3 className="flex items-center gap-2 font-semibold"><Package className="size-4" />Tài sản tại vị trí <Badge variant="secondary">{assets.length}</Badge></h3>}
+        {canManage && allowAssign && location.active && <Button variant="outline" className="min-h-10" disabled={pending} onClick={() => open({ kind: "asset" })}><Plus className="size-4" />Gán tài sản</Button>}
       </div>
       {!assets.length && <p className="text-sm text-muted-foreground">Chưa có tài sản được gán trực tiếp tại đây.</p>}
       <ul className="max-h-96 space-y-2 overflow-y-auto">

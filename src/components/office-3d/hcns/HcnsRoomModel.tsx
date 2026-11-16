@@ -3,6 +3,7 @@ import {
   HCNS_LAYOUT,
   personOffset,
   type RoomPoint,
+  type EquipmentKind,
 } from "@/lib/office-3d/hcns-layout";
 import { Desk, RoomShell, materials } from "./RoomFurniture";
 import { OfficePerson } from "./OfficePerson";
@@ -12,6 +13,9 @@ export function HcnsRoomModel({
   points,
   selected = null,
   onSelect,
+  onFocusPoint,
+  onEquipment,
+  activeEquipment,
   hovered,
   onHover,
   person,
@@ -21,6 +25,9 @@ export function HcnsRoomModel({
   points: RoomPoint[];
   selected?: string | null;
   onSelect?: (key: string) => void;
+  onFocusPoint?: (key: string) => void;
+  onEquipment?: (key: string, kind: EquipmentKind, focus: boolean) => void;
+  activeEquipment?: EquipmentKind;
   hovered?: string | null;
   onHover?: (key: string | null) => void;
   person?: number | null;
@@ -37,7 +44,7 @@ export function HcnsRoomModel({
         const highlighted = chosen || hovered === slot.key;
         const people =
           canViewEmployees && point.state === "active"
-            ? (point.occupants ?? [])
+            ? (point.occupants ?? []).slice().sort((a, b) => Number(b.id === person) - Number(a.id === person))
             : [];
         return (
           <group
@@ -53,9 +60,10 @@ export function HcnsRoomModel({
                 : undefined
             }
             onPointerOut={onSelect ? () => onHover?.(null) : undefined}
+            onDoubleClick={onFocusPoint ? event => {event.stopPropagation(); if(event.button === 0 && event.delta < 5) onFocusPoint(slot.key);} : undefined}
             onClick={(event) => {
               if (onSelect) event.stopPropagation();
-              if (onSelect && event.delta < 5) onSelect(slot.key);
+              if (onSelect && event.button === 0 && event.delta < 5) onSelect(slot.key);
             }}
           >
             <group rotation={[0, (slot.facingDegrees * Math.PI) / 180, 0]}>
@@ -64,6 +72,8 @@ export function HcnsRoomModel({
                 depth={slot.depth}
                 equipment={point.equipment}
                 selected={highlighted}
+                activeEquipment={chosen ? activeEquipment : undefined}
+                onEquipment={onEquipment ? (kind,focus) => onEquipment(slot.key,kind,focus) : undefined}
               />
               {people.slice(0, 3).map((p, index) => (
                 <group
@@ -74,7 +84,7 @@ export function HcnsRoomModel({
                     onPerson
                       ? (event) => {
                           event.stopPropagation();
-                          if (event.delta < 5) onPerson(slot.key, p.id);
+                          if (event.button === 0 && event.delta < 5) onPerson(slot.key, p.id);
                         }
                       : undefined
                   }

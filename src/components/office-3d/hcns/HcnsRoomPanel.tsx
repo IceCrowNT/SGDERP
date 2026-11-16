@@ -2,8 +2,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  FileText,
-  Pencil,
   MapPin,
   Users,
   Package,
@@ -12,9 +10,10 @@ import { getLocations } from "@/actions/location";
 import { Button } from "@/components/ui/button";
 import { LocationPeople } from "@/components/locations/LocationPeople";
 import { LocationAssets } from "@/components/locations/LocationAssets";
+import { LocationEditDialog } from "@/components/locations/LocationEditDialog";
 import type { LocationRow } from "@/lib/location-tree";
 import type { LocationEmployee } from "@/lib/work-location";
-import type { HcnsRoomData } from "@/lib/office-3d/hcns-layout";
+import { assetsForEquipment, type EquipmentKind, type HcnsRoomData } from "@/lib/office-3d/hcns-layout";
 import { cn } from "@/lib/utils";
 export function HcnsRoomPanel({
   room,
@@ -22,12 +21,16 @@ export function HcnsRoomPanel({
   onSelect,
   personId,
   assetId,
+  equipmentKind,
+  onAsset,
 }: {
   room: HcnsRoomData;
   selected: string | null;
   onSelect: (key: string) => void;
   personId?: number | null;
   assetId?: number | null;
+  equipmentKind?: EquipmentKind;
+  onAsset?: (id:number)=>void;
 }) {
   const [assignmentData, setAssignmentData] = useState<{
     locations: LocationRow[];
@@ -75,6 +78,8 @@ export function HcnsRoomPanel({
     ? point?.occupants?.find((p) => p.id === personId)
     : undefined;
   const asset = room.canViewAssets ? point?.assets?.find(a => a.id === assetId) : undefined;
+  const groupAssets = room.canViewAssets && equipmentKind && !asset ? assetsForEquipment(point?.assets ?? [],equipmentKind) : [];
+  const assetContext = Boolean(assetId || equipmentKind);
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (person?.id || asset?.id) headingRef.current?.focus({ preventScroll: true });
@@ -82,7 +87,7 @@ export function HcnsRoomPanel({
   const assetsPanel = room.canViewAssets && point?.locationId !== undefined ? <LocationAssets
     key={`assets-${point.key}`} location={{ id: point.locationId,
       name: `${room.path} / ${point.name}`, active: point.state === "active" }}
-    assets={point.assets ?? []} selectedAssetId={asset?.id}
+    assets={asset ? [asset] : point.assets ?? []} selectedAssetId={asset?.id} allowAssign={!assetContext} showHeading={!assetContext}
     canManage={room.canManageAssets && point.state === "active"} /> : null;
   return (
     <div className="space-y-4" aria-label="Thông tin vị trí trong phòng">
@@ -100,40 +105,6 @@ export function HcnsRoomPanel({
           )}
         </div>
       )}
-      <details className="rounded-2xl border bg-card p-4">
-        <summary className="cursor-pointer text-sm font-medium">
-          Danh sách vị trí · {room.points.length}
-        </summary>
-        <div
-          className="mt-3 max-h-72 space-y-1 overflow-y-auto"
-          aria-label="Chọn vị trí"
-        >
-          {room.points.map((p) => (
-            <Button
-              key={p.key}
-              variant={selected === p.key ? "secondary" : "ghost"}
-              className={cn(
-                "h-auto min-h-11 w-full justify-start whitespace-normal text-left",
-                p.state !== "active" && "border border-dashed",
-              )}
-              aria-label={`Chọn ${p.name}`}
-              aria-pressed={selected === p.key}
-              onClick={() => onSelect(p.key)}
-            >
-              <MapPin className="size-4 shrink-0" />
-              <span>
-                <span className="block">{p.name}</span>
-                {room.canViewEmployees && p.occupants?.length ? (
-                  <span className="block text-xs font-normal text-muted-foreground">
-                    {p.occupants.map((person) => person.name).join(", ")}
-                  </span>
-                ) : null}
-              </span>
-            </Button>
-          ))}
-        </div>
-      </details>
-
       <section
         aria-label="Chi tiết vị trí"
         aria-live="polite"
@@ -151,7 +122,7 @@ export function HcnsRoomPanel({
               </div>
               <div className="min-w-0">
                 <h2 ref={headingRef} tabIndex={-1} className="break-words text-lg font-semibold outline-none">
-                  {asset?.name ?? person?.name ?? point.name}
+                  {asset?.name ?? (assetContext ? "Chọn tài sản" : person?.name ?? point.name)}
                 </h2>
                 <p className="text-xs text-muted-foreground">
                   {asset ? point.name : person
@@ -166,7 +137,10 @@ export function HcnsRoomPanel({
                 </p>
               </div>
             </div>
-            {(person || asset) && (
+            {!assetContext && room.canManage && point.locationId !== undefined && point.state !== "unlinked" && (
+              <div className="mb-4"><LocationEditDialog key={point.locationId} locationId={point.locationId} /></div>
+            )}
+            {(person || assetContext) && (
               <Button
                 variant="ghost"
                 className="mb-3 min-h-10"
@@ -183,8 +157,17 @@ export function HcnsRoomPanel({
               </p>
             ) : (
               <>
-                {asset && assetsPanel}
-                {!asset && (room.canManageEmployees &&
+                {asset && <>
+                  {assetsPanel}
+                  <Button asChild variant="outline" className="min-h-10"><Link href={`/assets?asset=${asset.id}`}>Mở hồ sơ tài sản</Link></Button>
+                </>}
+                {assetContext && !asset && <section aria-label="Chọn tài sản tại hình đại diện" className="space-y-2">
+                  <p className="text-sm text-muted-foreground">{groupAssets.length ? "Hình này đại diện cho các tài sản sau tại vị trí này:" : "Tài sản không còn tại vị trí này hoặc bạn không có quyền xem."}</p>
+                  {groupAssets.map(a=><Button key={a.id} variant="outline" className="h-auto min-h-10 w-full justify-start whitespace-normal text-left" onClick={()=>onAsset?.(a.id)}>
+                    <span>{a.name}<span className="block text-xs text-muted-foreground">{a.code} · {a.category}</span></span>
+                  </Button>)}
+                </section>}
+                {!assetContext && (room.canManageEmployees &&
                 assignmentData &&
                 assignmentLocation ? (
                   <div className="mb-5">
@@ -233,33 +216,16 @@ export function HcnsRoomPanel({
                     </section>
                   )
                 ))}
-                {!asset && assetsPanel}
-                <div className="mb-3 flex items-center gap-2 text-sm font-medium">
-                  <FileText className="size-4 text-muted-foreground" />
-                  Ghi chú vị trí
-                </div>
-                <p className="whitespace-pre-line break-words text-sm leading-7">
-                  {point.description ||
-                    "Chưa có thông tin người sử dụng hoặc thiết bị trên sơ đồ."}
-                </p>
+                {!assetContext && assetsPanel}
+                <details className="mt-4 border-t pt-3">
+                  <summary className="min-h-10 cursor-pointer text-sm font-medium">
+                    Ghi chú vị trí
+                  </summary>
+                  <p className="whitespace-pre-line break-words text-sm leading-7">
+                    {point.description || "Chưa có ghi chú."}
+                  </p>
+                </details>
               </>
-            )}
-            <p className="mt-6 border-t pt-4 text-xs leading-5 text-muted-foreground">
-              {room.canViewAssets
-                ? "Hình thiết bị đại diện theo loại; danh sách tài sản ghi đầy đủ từng hồ sơ đã gán. Ghi chú cũ chỉ để tham khảo."
-                : "Ghi chú vị trí chỉ để tham khảo; dữ liệu tài sản cần quyền xem tài sản."}
-            </p>
-            {room.canManage && (
-              <Button
-                variant="outline"
-                asChild
-                className="mt-4 min-h-10 w-full"
-              >
-                <Link href="/locations">
-                  <Pencil className="size-4" />
-                  Sửa trong danh mục vị trí
-                </Link>
-              </Button>
             )}
           </>
         ) : (
@@ -272,6 +238,49 @@ export function HcnsRoomPanel({
           </div>
         )}
       </section>
+      <RoomPointList room={room} selected={selected} onSelect={onSelect} />
     </div>
+  );
+}
+
+export function RoomPointList({ room, selected, onSelect }: {
+  room: HcnsRoomData;
+  selected: string | null;
+  onSelect: (key: string) => void;
+}) {
+  return (
+      <details className="rounded-2xl border bg-card p-4">
+        <summary className="cursor-pointer text-sm font-medium">
+          Danh sách vị trí · {room.points.length}
+        </summary>
+        <div
+          className="mt-3 max-h-72 space-y-1 overflow-y-auto"
+          aria-label="Chọn vị trí"
+        >
+          {room.points.map((p) => (
+            <Button
+              key={p.key}
+              variant={selected === p.key ? "secondary" : "ghost"}
+              className={cn(
+                "h-auto min-h-11 w-full justify-start whitespace-normal text-left",
+                p.state !== "active" && "border border-dashed",
+              )}
+              aria-label={`Chọn ${p.name}`}
+              aria-pressed={selected === p.key}
+              onClick={() => onSelect(p.key)}
+            >
+              <MapPin className="size-4 shrink-0" />
+              <span>
+                <span className="block">{p.name}</span>
+                {room.canViewEmployees && p.occupants?.length ? (
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    {p.occupants.map((person) => person.name).join(", ")}
+                  </span>
+                ) : null}
+              </span>
+            </Button>
+          ))}
+        </div>
+      </details>
   );
 }

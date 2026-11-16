@@ -11,6 +11,7 @@ datasource db {
 // CORE & TENANT (Công ty thành viên / Chi nhánh trong Tập đoàn)
 // -----------------------------------------------------------------------------
 model cong_ty {
+  danh_sach_ket_noi_ai ket_noi_ai[]
   danh_sach_vat_the_3d vat_the_3d[]
   danh_sach_loai_tai_san loai_tai_san[]
   danh_sach_tai_san tai_san[]
@@ -35,6 +36,22 @@ model cong_ty {
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// AI (Kết nối OpenAI dùng cho bản thử quản trị)
+// -----------------------------------------------------------------------------
+model ket_noi_ai {
+  id                Int      @id @default(autoincrement())
+  company_id        Int      @unique
+  cong_ty           cong_ty  @relation(fields: [company_id], references: [id], onDelete: Restrict)
+  model_mac_dinh    String   @db.VarChar(200)
+  tham_chieu_bi_mat String   @db.VarChar(36)
+  hau_to_khoa      String   @db.VarChar(4)
+  phien_ban_khoa   Int      @default(1)
+  dang_su_dung     Boolean  @default(true)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
 }
 
 // -----------------------------------------------------------------------------
@@ -501,6 +518,7 @@ model loai_tai_san {
   ten_loai String @db.VarChar(255)
   mo_ta String? @db.Text
   dang_su_dung Boolean @default(true)
+  khau_hao_mac_dinh_thang Int?
   danh_sach_tai_san tai_san[]
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -528,6 +546,10 @@ model tai_san {
   so_serial String? @db.VarChar(255)
   hang_model String? @db.VarChar(255)
   ghi_chu String? @db.Text
+  ngay_mua DateTime? @db.Date
+  gia_mua Decimal? @db.Decimal(18, 0)
+  thoi_gian_khau_hao_thang Int?
+  han_bao_hanh DateTime? @db.Date
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 

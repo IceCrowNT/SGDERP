@@ -1,6 +1,6 @@
 # Mô hình không gian 3D — tòa nhà và phòng HCNS
 
-Cập nhật: **13/11/2026**. Đã triển khai và kiểm chứng mặt bằng ba tầng theo PDF, chuyển cảnh HCNS, gán người/tài sản, khung điều khiển mở rộng, bảng phòng rút gọn và thêm vị trí trực tiếp trên mô hình; vẫn là bản thử nghiệm. Rule: [OFFICE-3D-RULES](../../.agents/rules/OFFICE-3D-RULES.md).
+Cập nhật: **16/11/2026**. Đã triển khai và kiểm chứng mặt bằng ba tầng theo PDF, chuyển cảnh HCNS, gán người/tài sản, khung điều khiển mở rộng, bảng phòng rút gọn và thêm/sửa thông tin vị trí trực tiếp trên mô hình; vẫn là bản thử nghiệm. Rule: [OFFICE-3D-RULES](../../.agents/rules/OFFICE-3D-RULES.md).
 
 ## A. Tổng quan
 
@@ -17,16 +17,22 @@ flowchart LR
 | Người dùng thao tác | Hành vi hiện tại |
 | --- | --- |
 | Nhấp đúp HCNS khi đang xem tầng | Phóng gần từ hướng đang nhìn, không tải lại trang/Canvas; không gian xung quanh mờ dần |
-| Chọn bàn | Làm nổi vùng làm việc, xem vị trí và gán/chuyển/bỏ gán theo quyền; không phủ nút số lên hình |
+| Vào HCNS / bấm tên HCNS / bấm vùng trống | Vào phòng không tự chọn bàn; tên HCNS và nhấp trái nền/sàn bỏ chọn điểm, trở về camera và bảng tổng quan phòng |
+| Chọn bàn / nhấp đúp | Nhấp đơn xem vị trí; nhấp đúp phóng sát khu vực, giữ hướng nhìn và cùng Canvas |
+| Chọn hình thiết bị | Xem đúng hồ sơ tài sản; nếu nhiều hồ sơ chung hình thì chọn trong danh sách. Nhấp đúp phóng gần thiết bị |
+| Chuột phải đối tượng / menu … | Sửa hồ sơ đúng đối tượng theo quyền riêng: vị trí, tài sản hoặc nhân sự; mở tại chỗ, giữ Canvas/góc nhìn. Hình nhiều tài sản cho chọn hồ sơ |
+| Sửa thông tin vị trí | Từ bảng điểm/phòng đã liên kết, sửa tên và mô tả ngay trên 3D theo quyền quản lý vị trí; lưu giữ góc nhìn và lựa chọn |
+| Tìm đối tượng / nút lớp | Chỉ gợi ý sau khi gõ; chọn để đến vị trí. Bật/tắt Nhân sự/Tài sản và lọc loại nằm ở cụm nút riêng |
 | Chọn hình người hoặc tên | Xem người đã gán tại vị trí; nhiều người có danh sách đầy đủ |
 | Gán tài sản tại bàn | Chọn thiết bị đã tạo; chuyển từ nơi khác có xác nhận, hỗ trợ bỏ gán. Quyền ASSETS riêng với HR |
-| Quay ra hoặc nhấn Esc | Trở lại góc tầng trước đó; không dùng Esc điều hướng khi đang mở form/hộp thoại |
+| Quay ra hoặc nhấn Esc | Đóng menu/hộp thoại trước; tài sản → vị trí → phòng → tầng → toàn nhà, giữ góc nhìn trước. Chỉ thu gọn khung mở rộng khi đã ở toàn nhà; không bỏ bản nháp |
+| Chuột phải / nút … | Cùng bộ thao tác theo đối tượng và quyền: xem, tập trung, tổng quan, thêm/chỉnh bố trí; không thao tác xóa nhanh |
 | Dùng điện thoại/bàn phím hoặc thiếu WebGL | Giữ nút vào/quay lại và danh sách vị trí mở rộng |
 | Mở rộng/thu gọn vùng 3D | Nút góc trên phải; giữ góc nhìn, tầng/phòng, vị trí và cùng Canvas |
-| Xem/ẩn thông tin | Cột bên cạnh trên desktop, bảng phía dưới trên điện thoại; màn hình ngang thấp dùng cột để tránh che mô hình |
+| Xem/ẩn thông tin | Bảng bên phải mặc định mở trên desktop; chọn phòng/hồ sơ mở thông tin theo ngữ cảnh. Cột bên cạnh trên desktop, bảng phía dưới trên điện thoại; màn hình ngang thấp dùng cột để tránh che mô hình |
 | Chọn Nhân sự/Tài sản trong bảng phòng | Xem số lượng và vị trí ngắn gọn; chọn hồ sơ có hình để tập trung đúng điểm và xem chi tiết, giữ cùng Canvas |
 
-Mô hình người biểu thị phân công chỗ làm việc, không phải chấm công/hiện diện. Dùng dữ liệu và quyền HR–vị trí hiện có; bảng bố trí bổ sung được mô tả bên dưới. Không thêm dependency hoặc thay ba rule chung. Phòng khác HCNS chưa có nội thất xác nhận. Tìm kiếm đưa camera tới người và kéo thả người chưa thuộc phạm vi này.
+Mô hình người biểu thị phân công chỗ làm việc, không phải chấm công/hiện diện. Dùng dữ liệu và quyền HR–vị trí hiện có; bảng bố trí bổ sung được mô tả bên dưới. Không thêm dependency hoặc thay ba rule chung. Phòng khác HCNS chưa có nội thất xác nhận. Tìm kiếm đưa camera tới người đã được bổ sung theo mục bên dưới; kéo thả người chưa thuộc phạm vi này.
 
 **Mặt bằng hiện hành:** ba PDF tầng 1–3 làm nền tỷ lệ; bản tầng 2 được người phụ trách điền thêm đã xác nhận tên 6 phòng và điều chỉnh nội thất HCNS. Kinh doanh ở ô 97 m² tầng 1. Giữ 10 vị trí HCNS và dữ liệu đang gán; Lễ tân tra cứu được nhưng chưa đặt lên mặt bằng vì thiếu xác nhận. 10 bàn HCNS giữ cấu hình gốc, có thể thêm bàn/điểm thiết bị qua bản thử bên dưới; tài sản thật gán qua panel theo quyền ASSETS. Chi tiết và kiểm chứng ở mục [Khảo sát mặt bằng kiến trúc](#khảo-sát-mặt-bằng-kiến-trúc).
 
@@ -35,6 +41,108 @@ Mô hình người biểu thị phân công chỗ làm việc, không phải ch�
 **Giao diện 12/11 — đã triển khai và kiểm chứng:** điều khiển nằm trong vùng mô hình, có Mở rộng/Thu gọn và bảng thông tin đóng/mở. Các thao tác cục bộ không cần tìm ngoài khung; xem [thiết kế và nghiệm thu bên dưới](#đề-xuất-khung-điều-khiển-và-mở-rộng).
 
 ## B. Chi tiết triển khai
+
+### Sửa hồ sơ từ menu đối tượng — 16/11/2026
+
+**Đã triển khai và kiểm chứng:** chuột phải chọn đúng đối tượng rồi mở sửa tại chỗ; menu … dùng cùng lệnh cho bàn phím/chạm. Bàn/phòng sửa tên/mô tả vị trí (LOCATIONS MANAGE); hình người sửa hồ sơ nhân sự (HR MANAGE); hình thiết bị sửa hồ sơ tài sản (ASSETS MANAGE). Nhãn menu lấy tên đối tượng. Hình đại diện nhiều thiết bị phải chọn hồ sơ, không tự lấy bản ghi đầu tiên; nền không hiện lệnh sửa đối tượng.
+
+Tái sử dụng form/action hiện có; hồ sơ chi tiết chỉ tải khi mở, kiểm tra công ty/quyền tại server. Không thay DB hoặc cấp quyền. Giữ Canvas/camera/URL khi mở và lưu, làm mới tên/liên kết trên mô hình; form lỗi giữ bản nháp, đóng ngoài không làm mất nội dung. Mã tự cấp không sửa. Tài sản dùng lại panel sửa từng mục, nhân sự dùng form HR với xác nhận chuyển vị trí và xử lý nghỉ việc hiện có; không mở luồng tài khoản trong 3D.
+
+- [x] Hoàn thiện xác định đích, nhãn và lệnh sửa theo quyền, chọn hồ sơ khi hình đại diện nhiều tài sản.
+- [x] Tái sử dụng phần sửa vị trí/tài sản/nhân sự tại chỗ và bảo vệ bản nháp; tải động editor, không nạp chi tiết hồ sơ khi chỉ xem mô hình.
+- [x] 4 E2E mới đạt: nhấp phải mesh thiết bị và bàn, nhãn nhân sự; đúng menu/hồ sơ, sửa/lưu và audit, tên trên mô hình cập nhật, Canvas/URL/ma trận camera không đổi khi lưu tài sản. Hình nhiều thiết bị phải chọn đúng bản ghi. HR lỗi mạng giữ bản nháp, Escape không bỏ form, dùng Lưu/Hủy; quyền độc lập, HR VIEW và ID khác công ty bị từ chối tại action đọc mới. Menu … hoạt động ở mobile/tối, không tràn ngang.
+- [x] 21 E2E hồi quy liên quan đạt ở các lượt kiểm tra: 3 sửa vị trí, 3 HR độc lập, 7 khung làm việc và 8 điều hướng/menu 3D. Chuẩn hóa tên vị trí chỉ trong DB thử cho fixture cũ; sửa điểm bấm kiểm thử bàn sang phần trống thay vì đè hình thiết bị, cập nhật ngưỡng vùng Canvas ngang theo thanh tìm kiếm/lớp hiện có. Fixture mới dùng chỗ ngồi hợp lệ khi gán nhân sự, không dùng điểm thiết bị. TypeScript, lint, build production Webpack, 109 liên kết/anchor và `git diff --check` đạt.
+- [x] Chrome trên cổng 4000: mở menu nhân sự, nhập thử/Escape/Hủy, không gửi lưu, tên DB giữ nguyên và không lỗi JavaScript; đã xem ảnh desktop và mobile tối. Không migration/cấp quyền hoặc ghi dữ liệu vận hành. Lượt đối chiếu đầu thấy tài sản/audit thay đổi đồng thời ngoài luồng thử và được giữ nguyên; hai lượt sau 18/18 bảng vận hành không đổi. Đã dọn server/DB thử, giữ app cổng 4000. Bằng chứng, snapshot và log tại `outputs/3d-object-edit/`.
+
+### Chọn thiết bị, phóng gần và lùi cấp
+
+- [x] Dùng chung cho bàn HCNS và vật thể thêm qua `vat_the_3d`: nhấp đơn thiết bị chọn hồ sơ, nhấp đúp bàn/điểm phóng gần vị trí; nhấp đúp thiết bị phóng gần hình đại diện. Giữ hướng camera và tôn trọng giảm chuyển động; không đổi cấp khi chỉ cuộn zoom.
+- [x] Hình đại diện ánh xạ tới hồ sơ ASSETS tại đúng điểm sau bộ lọc. Một hồ sơ mở trực tiếp; nhiều hồ sơ cùng loại mở danh sách để chọn, không đoán bản ghi. Panel chỉ hiển thị tài sản đang chọn, tên vị trí, tình trạng và thao tác theo quyền; có link mở hồ sơ đầy đủ. Gán mới ở cấp vị trí, chuyển/bỏ gán dùng lại action hiện có.
+- [x] Lựa chọn tài sản/loại hình theo URL; lưu camera từng cấp trong viewer để Esc/Back phục hồi. Esc: tài sản hoặc nhóm hình → vị trí → phòng → tầng → toàn nhà; khung mở rộng giữ nguyên đến toàn nhà rồi Esc mới thu gọn. Menu/form/bản nháp được ưu tiên; tên HCNS/nền phòng vẫn về tổng quan phòng.
+- **DB/quyền:** không thêm bảng/cột, không ghi dữ liệu khi chọn/zoom. Dùng dữ liệu đã lọc theo quyền ASSETS/HR/LOCATIONS; ID trong URL không cấp quyền hoặc tự truy vấn hồ sơ ngoài phạm vi. Thiết kế DB hiện hành giữ nguyên ở mục bên dưới.
+- [x] 18 unit đạt: URL/lùi cấp, loại tài sản, nhóm nhiều hồ sơ và bộ lọc. 3 E2E mới chỉ đọc đạt: nhấp thật mesh bàn/PC, đúng hồ sơ, zoom và phục hồi camera theo từng cấp, khung mở rộng/menu/Esc, bàn thêm tại KHĐT và cùng Canvas.
+- [x] 14 E2E hồi quy chỉ đọc đạt: 6 tìm kiếm/lớp/mobile và 8 chuyển phòng/camera/menu/WebGL. Tổng 17 ca gồm 3 ca mới; TypeScript, lint và diff check đạt. Các test điều hướng đọc tên vị trí hiện tại từ DB, không phụ thuộc tên “Vị trí 07” cũ. Đã xem ảnh PC được chọn; ảnh/log tại `outputs/equipment-models/`. Nhóm nhiều hồ sơ cùng hình đã kiểm tra bằng unit; chưa dựng fixture UI trùng loại. Không chạy lại nhóm E2E có ghi DB trong lượt này.
+- **Giới hạn:** vẫn tối đa 3 hình đại diện loại tại điểm; hồ sơ thứ tư trở đi truy cập qua bảng hoặc lọc loại. Chưa mở rộng thành trình kéo thả tài sản hay nội thất chi tiết của mọi phòng.
+
+### Hình đại diện các loại tài sản hiện có
+
+- [x] Đối chiếu 11 loại trong DB: giữ PC, laptop, máy in, AP; sửa nhận diện `SCN`/“Máy Scan” và dựng máy quét có nắp mở/kính/tờ giấy. Thêm điện thoại bàn, tổng đài, máy chủ, UPS, cân bằng tải và switch. Hình cách điệu để nhận biết loại, không mô phỏng đúng hãng/model.
+- [x] `EquipmentModel`/`EquipmentDisplay` trong `RoomFurniture` dùng chung cho bàn HCNS, bàn thêm và điểm đặt thiết bị; điểm thiết bị không còn luôn dùng khối hộp. Mã loại đã biết ưu tiên, tên Việt/Anh dự phòng, loại lạ giữ hình chung. Tối đa 3 hình đại diện loại tại một điểm; hồ sơ/số lượng vẫn theo DB và quyền/lọc hiện có.
+- **DB/tài nguyên:** không thay schema, bản ghi, gán vị trí hoặc quyền; không thêm thư viện, texture hay file model. Chỉ dựng mesh cho loại đang hiển thị; mã thư viện nằm trong bundle viewer, loại không dùng không tạo mesh/GPU resource. Giữ sàn/tường/bàn khi tắt lớp tài sản.
+- [x] 10 unit đạt (nhận diện đủ 11 loại, SCN/Máy Scan/tên tùy chỉnh, fallback, lọc và quyền); 7 E2E chỉ đọc đạt (6 tìm kiếm/lớp/mobile và 1 chọn điểm thiết bị HCNS). TypeScript/lint/diff check đạt. Đã xem gallery Chrome gồm 11 loại + fallback trên cả bàn/điểm thiết bị, không lỗi JS; kiểm tra trực tiếp máy scan tại HCNS qua bộ lọc, không ghi DB. Ảnh/script tạm tại `outputs/equipment-models/`, ngoài Git.
+- Giới hạn hiện hành: vị trí 02 HCNS có 4 loại, SCN xếp sau 3 hình đầu theo thứ tự hồ sơ nên cần lọc Máy Scan để xem riêng. Không đổi giới hạn 3 hình hoặc tự sửa thứ tự/gán tài sản trong đợt bổ sung thư viện này.
+
+### Sửa thông tin vị trí ngay trên 3D
+
+- Phạm vi đã yêu cầu: nút **Sửa thông tin vị trí** tại chi tiết điểm dựng sẵn/điểm thêm mới và tổng quan phòng có liên kết. Cho sửa tên và mô tả/hướng dẫn tìm; giữ loại, cha, trạng thái và hình học. Thay cấu trúc/ngừng sử dụng vẫn qua danh mục vị trí.
+- [x] Dùng `LocationEditDialog` và `LocationForm` dùng chung với `/locations`; mở mới tải một bản ghi qua `getLocationForEdit`, chỉ LOCATIONS MANAGE, đúng công ty, không tải danh sách HR. Lưu qua `saveLocation` hiện có: validation, version, transaction/audit và revalidation; không thêm schema/API hoặc tự đổi liên kết.
+- [x] Lưu thành công đóng hộp thoại và làm mới dữ liệu trên cùng Canvas, giữ URL/điểm/góc nhìn. Lỗi giữ form và thông báo; đang lưu chặn đóng/gửi lặp. Bỏ liên kết buộc sang `/locations` để sửa ghi chú ở panel điểm.
+- [x] 6 E2E Chrome đạt: 3 ca sửa tại 3D và 3 ca hồi quy `/locations`. Bao gồm lưu/hủy/validation, phiên bản cũ giữ bản nháp, chặn thiếu quyền/khác công ty tại server, điểm gốc/điểm thêm/phòng, giữ URL/Canvas/camera, mở rộng và mobile. TypeScript, lint và diff check đạt; đã xem ảnh desktop mở rộng/mobile. Kiểm thử ghi trên DB sao chép riêng, đã dọn; đối chiếu cả 18 bảng vận hành không đổi. Bằng chứng và backup tại `outputs/location-inline/`, ngoài Git.
+
+### Lỗi chọn điểm thiết bị HCNS — đã sửa và kiểm chứng
+
+- [x] Kiểm tra đọc DB và Chrome ngày 16/11/2026: “Máy hủy giấy” và “Tủ đồ” đều có vị trí đang sử dụng và bản ghi bố trí hợp lệ. Mở trực tiếp điểm chọn hiển thị chi tiết cả hai; bấm vật thể Máy hủy giấy trong góc mặt bằng lại về tổng quan, trong khi Tủ đồ chọn được.
+- [x] Truy vết raycast: đường viền `LineLoop` thuộc nhóm phòng/tầng đã ẩn vẫn nằm trước điểm Máy hủy giấy trong kết quả bắt chuột; sự kiện tới handler nền của `BuildingModel`, gọi tổng quan và chặn điểm phía sau. Thử loại các giao điểm có tổ tiên `visible=false` trong phiên trình duyệt kiểm tra giúp chọn đúng Máy hủy giấy. Không sửa mã ứng dụng, DB hoặc liên kết vị trí. Bằng chứng/script tạm tại `outputs/hcns-inspect/`.
+- [x] Bộ sự kiện chung của Canvas loại giao điểm có vật thể hoặc tổ tiên `visible=false` trước khi phát sự kiện; chuột phải dùng cùng điều kiện. Đường viền trang trí `LineLoop` không tham gia raycast. Giữ vùng chọn phòng trong suốt có chủ đích, xử lý nền và cùng Canvas; không đổi DB, liên kết, bố trí hoặc quyền.
+- [x] 8 ca Chrome đạt (1 ca mới + 7 hồi quy): chuột trái/phải trên Máy hủy giấy/Tủ đồ ở mặt bằng và phối cảnh, bấm nền về tổng quan, chuyển tầng/phòng, chọn bàn dựng sẵn, KHĐT, Back/Forward, mobile, giữ Canvas và phục hồi WebGL. Ca mới chỉ đọc DB, đối chiếu hai bản ghi bố trí/vị trí trước–sau không đổi. TypeScript, lint và `git diff --check` đạt. Đã xem ảnh `outputs/hcns-inspect/fixed-1-top.png` và `fixed-1-perspective.png`; đồng bộ rule phân hệ, không sửa ba rule kỹ thuật chung.
+
+### Tìm kiếm và lọc đối tượng trong khung 3D
+
+**Đã chỉnh UX theo phản hồi 13/11:** ô tìm kiếm chỉ tìm đối tượng, không liệt kê danh bạ khi chưa nhập và không chứa lệnh bật/tắt. Sàn, tường, bàn luôn là bối cảnh. Tái sử dụng luồng camera/điều hướng đã kiểm chứng.
+
+| Thao tác | Hành vi đã thống nhất |
+| --- | --- |
+| Tìm kiếm | Input trực tiếp; chỉ gợi ý khi có chữ, tối đa 6 kết quả. Tìm tên không dấu, phân biệt bằng phòng/vị trí hoặc mã thiết bị. Không di chuyển camera khi mới gõ |
+| Chọn người/tài sản | Đến điểm đã liên kết trên cùng Canvas. Thiếu điểm thì tới phòng hoặc thông báo. Tự bật lớp của đối tượng vừa chọn; giữ trạng thái lớp còn lại |
+| Nút biểu tượng Nhân sự / Tài sản | Bật/tắt độc lập, không làm đổi góc nhìn hoặc lựa chọn; có tên truy cập, chú thích và trạng thái hiển thị. Không mở bảng kết quả khi chỉ bật/tắt |
+| Nút lọc loại tài sản | Chọn loại trong menu riêng cạnh nút lớp; chỉ lọc tài sản, không tự ẩn nhân sự. Danh sách kết quả theo phạm vi phòng/tầng/toàn nhà. Chọn Tất cả loại để bỏ lọc. Nếu đang chọn điểm, giữ bảng chi tiết điểm; tổng quan mới hiển thị danh sách kết quả |
+| Esc / Tab / bấm ngoài | Đóng gợi ý trước; không đổi tầng/phòng. Bàn phím mũi tên/Enter chọn kết quả; xóa chữ đóng danh sách |
+
+**DB cần giữ:** không thêm bảng/cột/query. Dùng danh bạ tìm kiếm tối thiểu người ACTIVE cùng công ty theo HR VIEW và hồ sơ tài sản đã có trong dữ liệu tòa nhà theo ASSETS VIEW. Tìm tài sản chỉ bao phủ các phòng đã liên kết; không tạo hồ sơ/điểm giả. FK và ánh xạ hiện có là nguồn định vị. Bật/tắt chỉ thay lớp hình/nhãn, bảng hồ sơ vẫn là dữ liệu nghiệp vụ; lọc loại có danh sách/số đếm riêng. Trạng thái lớp/bộ lọc lưu trong phiên trang, không lưu DB.
+
+- [x] Tách tìm kiếm gợi ý và nút lớp; giữ cơ chế zoom, quyền, điểm chọn và dữ liệu camera hiện có. Tái sử dụng Input/Button/DropdownMenu và lệnh điều hướng; không sửa Select dùng ở form. Đã bổ sung nguyên tắc ưu tiên kế thừa thao tác quen thuộc vào rule 3D, không thay ba rule kỹ thuật chung.
+- [x] 4 E2E tìm kiếm/lớp + 7 E2E hồi quy đạt: rỗng/giới hạn 6 gợi ý, phím/chuột/mobile, nút lớp độc lập, giữ điểm chọn/Canvas, lọc loại theo phòng/tầng và tìm tới đối tượng đang ẩn. 18 unit đạt, gồm dữ liệu/ánh xạ, điều hướng, lớp và gợi ý. TypeScript/lint/diff check đạt; đã xem ảnh desktop/mobile, sáng/tối, context-only trong `outputs/scene-search/` ngoài Git.
+- E2E chỉ đọc tài khoản/dữ liệu hiện có, không gửi mutation vào DB vận hành. Unit kiểm tra không trả gợi ý/đích khi thiếu quyền; chưa chạy mới ma trận tài khoản thiếu quyền trên DB riêng.
+
+### Rút gọn bảng tổng quan và thanh công cụ
+
+**Phạm vi đã duyệt:** giảm thông tin lặp, dành diện tích cho mô hình và gom điều khiển theo chiều rộng thực tế; giữ hình học, dữ liệu và lệnh camera hiện hành.
+
+| Vùng | Quyết định |
+| --- | --- |
+| Tổng quan tòa nhà | Chỉ giữ tiêu đề trang, bỏ phụ đề tên tòa nhà/số tầng và đường dẫn lặp. Bảng bên phải mặc định mở trên desktop, kể cả khi quay về tổng quan bằng nút tầng/Esc; có thể chủ động đóng/mở. Mobile giữ bảng dưới mở khi chọn; WebGL lỗi mở danh sách thay thế |
+| Danh sách không gian | Dùng tên không gian nhất quán, số lượng theo danh sách đã lọc; không số thứ tự nội bộ. Bỏ khu phụ trợ chưa liên kết DB như WC, cầu thang, thông tầng, hành lang/mái; giữ phòng làm việc, Lễ tân và mọi vị trí đã liên kết. Hình học trên mô hình giữ nguyên. Tìm trong phạm vi đang xem sẽ mở các nhóm có kết quả. Khi chọn phòng, danh sách đổi không gian vẫn thu gọn; mất WebGL có danh sách thay thế |
+| Thanh công cụ | Chọn tầng, tìm đối tượng, nút lớp và thao tác chung cùng hàng khi vùng mô hình đủ rộng (56rem); khung hẹp xuống hàng có chủ đích, giữ vùng bấm ≥40px. Chiều cao toolbar được đo bằng ResizeObserver để chừa đúng khoảng cho Canvas, không giữ khoảng trống cố định |
+| Bảng thông tin | Bỏ câu hướng dẫn thường trực và mục Về mô hình này; phần trợ giúp/giới hạn mô hình nằm ở nút ?. Giữ cây tra cứu, tab Nhân sự/Tài sản, trạng thái dữ liệu thiếu và hành động cần thiết |
+| Tìm kiếm đối tượng | Chọn kết quả xong làm trống ô nhập; chuyển tầng/phòng/điểm hoặc Back/Forward bỏ từ khóa cũ. Bật/tắt lớp, đổi góc nhìn, mở rộng và làm mới dữ liệu không tự xóa nội dung đang nhập |
+
+**DB:** dùng dữ liệu hiện có, không đổi bảng, bản ghi, ánh xạ hoặc quyền; chỉ thay trình bày và trạng thái UI.
+
+- [x] Áp dụng rule Frontend hiện hành về mật độ thông tin: bỏ phụ đề/giới thiệu lặp, panel tổng quan mở mặc định trên desktop, gom toolbar theo chiều rộng khung và dành lại diện tích Canvas. Không sửa ba rule chung.
+- [x] Điều chỉnh mặc định mở panel và lược khu phụ trợ tham khảo: 3 E2E đạt (bố cục desktop/mobile, đóng/mở/chọn phòng, tìm kiếm/danh sách nhóm, WebGL fallback); TypeScript/lint/diff check đạt. Đã xem ảnh desktop: danh sách còn 6/6/4 không gian theo tầng ở dữ liệu kiểm tra. Không đổi dữ liệu hoặc hình học.
+- [x] Kiểm tra desktop 1600/1280 và mobile 390/320: toolbar cùng hàng khi đủ chỗ, không che Canvas/tràn ngang, nút ≥40px; khung rất hẹp giữ ô tìm rộng rồi xuống hàng nút lớp. Đã xem ảnh tổng quan, bảng phòng và mobile sáng/tối tại `outputs/compact-3d/` và `outputs/scene-search/`.
+- [x] 19 ca E2E chỉ đọc đạt: 2 bố cục mới, 6 tìm kiếm, 8 chuyển cảnh và 3 chọn/zoom/Esc; kiểm tra mở panel theo lựa chọn, danh sách thay thế WebGL, giữ cùng Canvas và phục hồi camera. Lượt đầu đạt 18/19; ca bấm PC dùng tọa độ cũ khi bàn đã thêm máy in, đã sửa kiểm thử theo thứ tự/độ co của thiết bị thực tế và chạy lại đạt. TypeScript, lint các file liên quan và diff check đạt. Không ghi dữ liệu vận hành; các luồng lưu/xóa không thuộc lượt kiểm thử này.
+
+- [x] `SpaceDirectory` nhóm theo tầng, thu gọn ở toàn nhà, mở khi lọc/tầng đang xem/WebGL fallback; dùng tên không gian và trạng thái tham khảo/chưa xác định theo dữ liệu. Bỏ khối giới thiệu, CTA riêng HCNS và số thứ tự. Toolbar viền/bóng nhẹ, vùng bấm ≥40px; chọn tầng nền nhạt. Ô tìm reset riêng khi đổi đích/chọn kết quả, giữ Canvas và trạng thái lớp.
+- [x] 13 E2E chỉ đọc đạt (`scene-search` + `seamless-3d`): nhóm/tìm/chọn không gian bằng phím, dữ liệu rỗng, tìm đối tượng → tổng quan, Back/Forward không phục hồi từ khóa cũ, giữ từ khóa khi bật/tắt lớp/mở rộng, cùng Canvas và camera quay lại, mobile 390/320, WebGL fallback. Đã xem ảnh tổng quan mới, kết quả tìm không gian và mobile sáng/tối tại `outputs/scene-search/`; TypeScript/lint/diff check đạt. Không ghi DB vận hành; các ca có fixture ở `building-room`/`room-overview` chỉ cập nhật selector, chưa chạy lại trên DB riêng trong đợt này.
+
+### Quy ước tương tác và bố trí thông tin dùng chung
+
+- [x] Kế thừa mô hình thao tác quen thuộc của viewer: chọn để xem, nhấp đúp HCNS để vào, bấm nền/tên phòng để bỏ chọn và xem tổng quan. Chuột trái kéo xoay, chuột giữa kéo dịch chuyển, cuộn thu phóng; chuột phải dành cho menu đối tượng. Cảm ứng giữ thao tác một/hai ngón của CameraControls; mọi lệnh phụ có trong nút … để dùng bằng chạm/bàn phím.
+- [x] `BuildingExplorer.spaceActions()` là bộ lệnh chung cho menu chuột phải và menu …; dùng lại hàm điều hướng/camera/editor. Nhấp phải bàn/phòng/người xác định đối tượng trước khi mở menu; nhấp phải nền giữ lựa chọn cho tới khi chọn lệnh. Chỉnh bố trí chỉ có với vật thể bổ sung và LOCATIONS MANAGE; không cho sửa 10 bàn cấu hình bằng editor mới. Bản nháp khóa chuyển đối tượng/menu; không thêm thao tác ghi DB hoặc xóa bỏ qua xác nhận hiện có.
+- [x] Esc xử lý lớp mở trên cùng rồi lùi tài sản → vị trí → phòng → tầng → toàn nhà; khung mở rộng chỉ thu gọn khi đã ở toàn nhà. Không điều hướng khi đang nhập form, có hộp thoại/menu hoặc bản nháp. Chọn/căn camera/đóng menu giữ cùng Canvas; URL vẫn lưu cấp/điểm chọn.
+- [x] Bảng bên phải theo ngữ cảnh: phòng dùng tổng quan người/tài sản; điểm dùng chi tiết và hành động gán hiện có. Có nút Tổng quan phòng ngay trên chi tiết. Danh sách đổi vị trí đặt dưới hồ sơ; ghi chú thu gọn, bỏ đoạn giải thích kỹ thuật lặp trên từng vị trí. Nhãn vật thể bổ sung chỉ tồn tại khi đang chọn, gỡ khỏi DOM khi về tổng quan để không lưu nhãn cũ. Không hiển thị thêm ID hoặc số liệu suy đoán.
+- [x] 7 E2E `seamless-3d` và 5 unit điều hướng đạt: menu trên mesh bàn thật, cùng lệnh với nút …, chuột/phím/mobile, Esc theo cấp, giữ Canvas, Back/Forward và khôi phục WebGL. KHĐT dùng menu chung, mở/hủy chỉnh bố trí và giữ bản nháp khi bấm nền/chuột phải/Esc; đối chiếu bản ghi thử đọc không đổi. Đã xem ảnh desktop/mobile/KHĐT; TypeScript, lint và diff check đạt. Không gửi mutation vào DB vận hành; ảnh tại `outputs/seamless-3d/` ngoài Git. Các bài thử gán dữ liệu/khung mở rộng trên DB riêng đã cập nhật chọn điểm rõ ràng và thứ tự Esc; chưa chạy lại nhóm có ghi DB trong đợt thay đổi giao diện này.
+
+Không thêm thư viện, schema hoặc quyền; wrapper ContextMenu dùng Radix đã cài. Bộ thao tác áp dụng cho phòng/vật thể hiện có, kể cả KHĐT; chế độ chuyển cảnh vào nội thất chi tiết vẫn riêng HCNS. Không dựng trình biên tập 3D mới và không thay ba rule kỹ thuật chung.
+
+### Tổng quan phòng và bỏ chọn vị trí
+
+- [x] HCNS trên thanh điều hướng là nút; vào phòng mặc định `point=null`. Link ghi rõ điểm vẫn mở điểm đó, link cũ `/office-3d/hcns` mở tổng quan. Back/Forward giữ đúng trạng thái tổng quan/chi tiết.
+- [x] Dùng lại `RoomOverviewPanel` để xem tổng người/tài sản và ghi chú phòng theo quyền; dùng chung `RoomPointList` cho danh sách 10 điểm gốc cùng các vị trí bổ sung. Chọn điểm mới mở `HcnsRoomPanel`, tải lựa chọn gán người khi cần.
+- [x] Nút HCNS hoặc nhấp trái nền/sàn ngoài bàn/người/thiết bị bỏ chọn và căn camera toàn phòng qua cơ chế hiện có. Giữ cùng Canvas, không đổi tầng hoặc tải lại trang. Kéo xoay/nhấp phải/nút điều khiển không bỏ chọn; đang thêm/chỉnh bố trí thì giữ bản nháp.
+- [x] 5 E2E `seamless-3d` và 5 unit điều hướng đạt; gồm tổng quan mặc định, nút HCNS bằng bàn phím, bấm nền bỏ chọn, không bỏ chọn khi kéo/nhấp phải/đổi góc nhìn, giữ bản nháp, cùng Canvas, Back/Forward, mobile và khôi phục WebGL. TypeScript/lint/diff check đạt; đã xem ảnh desktop/mobile. Ca cũ dùng tên vị trí 10 được sửa để đọc tên hiện hành theo ID ánh xạ. Không ghi dữ liệu vận hành; ảnh tại `outputs/seamless-3d/` ngoài Git.
+- Không đổi schema, dữ liệu, quyền hoặc dependency. Menu chuột phải đã được bổ sung trong mục Quy ước tương tác phía trên; không tổng quát hóa toàn bộ chế độ chi tiết sang KHĐT.
 
 ### Khôi phục khi không hiển thị mô hình
 
@@ -93,7 +201,7 @@ Phản hồi: khi chọn HCNS từ tầng, tên phòng/tầng/đường dẫn l�
 | Tóm tắt | Số người đã gán và số hồ sơ tài sản gộp vào nhãn hai tab, không thêm dãy thống kê lặp. Đếm trong phòng, gồm liên kết trực tiếp và các vị trí con hợp lệ. Số vị trí là thông tin phụ, không đồng nghĩa số chỗ ngồi/sức chứa. |
 | Nhân sự / Tài sản | Hai tab có số lượng từ DB, nhớ tab khi quay từ chi tiết về phòng. Người: tên + tên vị trí tương đối trong phòng; chức vụ/phòng ban mở khi cần. Tài sản: tên + vị trí + tình trạng cần chú ý; trên 12 hồ sơ và nhiều loại thì nhóm theo loại. Mã chỉ hiện trên dòng tổng quan để phân biệt thiết bị trùng tên. |
 | Tương tác | Với HCNS đã có hình học, chọn dòng đưa tới đúng bàn/điểm và chi tiết trong cùng Canvas; không mặc định chuyển sang trang nhân sự. Đưa focus bàn phím đến tiêu đề hồ sơ; tài sản đang chọn được làm nổi và đặt đầu danh sách tại điểm đó. Đối tượng chưa gắn hình mở chi tiết ngay trên dòng, không tự đặt vị trí 3D. |
-| Thông tin phụ | Danh sách phòng chuyển vào mục Đổi phòng thu gọn khi đã chọn một phòng; giữ truy cập bàn phím và tự mở danh sách thay thế khi WebGL lỗi. Ghi chú/hướng dẫn mở khi cần, cảnh báo ngừng dùng/mất liên kết vẫn hiển thị. |
+| Thông tin phụ | Danh sách không gian theo tầng chuyển vào mục Đổi không gian thu gọn khi đã chọn một phòng; giữ truy cập bàn phím và tự mở danh sách thay thế khi WebGL lỗi. Ghi chú/hướng dẫn mở khi cần, cảnh báo ngừng dùng/mất liên kết vẫn hiển thị. |
 
 Chỉ tổng hợp dữ liệu được phép xem, không dùng số mesh hoặc ghi chú tham khảo để đếm tài sản. Không suy hiện diện, tỷ lệ lấp đầy hoặc chỗ trống từ số người và số vị trí; dữ liệu chưa gán chưa chứng minh không có người/thiết bị thực tế. Thiếu quyền không hiển thị thành số 0. Dùng các FK hiện có; bổ sung truy vấn đọc tối thiểu theo công ty/quyền và vị trí hợp lệ. Không đổi schema, quyền, hình học hoặc bộ chọn vị trí tài sản.
 
@@ -110,7 +218,7 @@ Chỉ tổng hợp dữ liệu được phép xem, không dùng số mesh hoặc
 | Vị trí | Điều khiển |
 | --- | --- |
 | Góc trên trái | Chọn toàn nhà/tầng; trong HCNS hiện tên phòng và nút quay về tầng, tránh lặp đường dẫn với nhiều hàng điều hướng |
-| Góc trên phải | Mở/đóng thông tin, Mở rộng/Thu gọn, menu phụ chứa Cập nhật dữ liệu và Quản lý vị trí theo quyền |
+| Góc trên phải | Mở/đóng thông tin, Mở rộng/Thu gọn; menu … dùng chung bộ lệnh theo đối tượng với chuột phải, gồm Cập nhật dữ liệu và Quản lý vị trí theo quyền |
 | Góc dưới trái | Phối cảnh/Mặt bằng, nhãn ngắn; hướng dẫn thao tác chuyển vào nút trợ giúp |
 | Góc dưới phải | Thu/phóng mô hình, đặt lại góc nhìn; Tập trung xuất hiện khi có đối tượng phù hợp được chọn |
 
@@ -118,7 +226,7 @@ Chỉ tổng hợp dữ liệu được phép xem, không dùng số mesh hoặc
 - Mở rộng dùng chính vùng làm việc 3D phủ vùng nội dung trình duyệt, tạm che menu/header ERP; thanh địa chỉ trình duyệt vẫn còn. Nút `+`/`−` vẫn điều chỉnh camera, khác với thay kích thước vùng làm việc. Bản đầu không cần thêm chế độ toàn màn hình trình duyệt riêng.
 - Giữ cùng cây component/Canvas khi mở rộng và thu gọn: bảo toàn tầng/phòng/điểm, hướng xoay, tâm nhìn và tỷ lệ gần tương đối khi resize. Không tải lại trang, tạo renderer thứ hai hoặc tự đổi tầng. Khôi phục vị trí cuộn trang/focus khi thu gọn.
 - Bảng nhân sự/tài sản thuộc cùng vùng làm việc; desktop có cột chi tiết thu gọn, mobile dùng bảng trượt từ dưới. Chọn bàn/người mở thông tin tương ứng; vẫn gán/chuyển/bỏ gán trong chế độ mở rộng theo quyền hiện hành.
-- Escape xử lý lớp trên cùng: hộp thoại trước, sau đó thu gọn vùng mở rộng; chỉ khi ở chế độ thường và không có hộp thoại/form mới áp dụng quay từ phòng về tầng. Bảo đảm hộp thoại gán nhân sự/tài sản hiển thị phía trên vùng mở rộng, focus/Tab và cuộn không lọt xuống trang nền.
+- Escape xử lý menu/hộp thoại trước, sau đó lùi từng cấp lựa chọn theo bảng A, giữ khung mở rộng đến tổng quan toàn nhà. Bảo đảm hộp thoại gán nhân sự/tài sản hiển thị phía trên vùng mở rộng, focus/Tab và cuộn không lọt xuống trang nền.
 - Mobile giữ cụm chọn tầng gọn và các nút tối thiểu 40×40px, có tên truy cập; thao tác thiết yếu không phụ thuộc hover. Giảm hoạt ảnh khi người dùng chọn giảm chuyển động; giữ danh sách thay thế khi WebGL lỗi.
 - Chỉ thay bố cục/trạng thái giao diện và xử lý resize/điều hướng liên quan tại `BuildingExplorer`, `BuildingCanvas`, panel. Không cần schema, quyền mới hoặc thư viện; trạng thái mở rộng không lưu DB. Chuẩn này thuộc plan/rule 3D, không cần sửa ba rule kỹ thuật chung.
 
@@ -195,7 +303,7 @@ Hướng đọc: phía mặt tiền ở dưới bản vẽ. Ảnh điền tay tr
 | Bàn và vị trí | Agent dựng bàn/vùng làm việc một lần theo bản phác và liên kết vị trí; người dùng không cần thao tác dựng hình. Khi thay đổi bố trí thực tế, cập nhật cấu hình riêng phòng đó |
 | Nhân sự và tài sản | Hình người theo HR; hình thiết bị theo tài sản đã gán và quyền ASSETS. Không dựng thiết bị từ ghi chú cũ |
 
-Giữ viewer và liên kết `vi_tri` hiện có; bố cục gốc không cần bảng DB riêng; vật thể bổ sung dùng bảng bố trí tại mục bản thử. Không tự tạo lại danh mục, thêm tọa độ nghiệp vụ hoặc thư viện dựng hình. Bỏ khỏi đợt này các đề xuất trình bố trí tổng quát, thư viện đồ trang trí, lưu phiên bản thiết kế và chức năng tìm kiếm mới. Cột đơn giản không nhất thiết gây chậm đáng kể; lý do bỏ là không phục vụ thao tác quản lý, gây nhiễu và tăng công duy trì. Không cam kết mức tăng tốc khi chưa đo.
+Giữ viewer và liên kết `vi_tri` hiện có; bố cục gốc không cần bảng DB riêng; vật thể bổ sung dùng bảng bố trí tại mục bản thử. Không tự tạo lại danh mục, thêm tọa độ nghiệp vụ hoặc thư viện dựng hình. Bỏ khỏi đợt này các đề xuất trình bố trí tổng quát, thư viện đồ trang trí, lưu phiên bản thiết kế. Tìm kiếm mới đã được duyệt riêng tại mục Tìm kiếm và lọc đối tượng. Cột đơn giản không nhất thiết gây chậm đáng kể; lý do bỏ là không phục vụ thao tác quản lý, gây nhiễu và tăng công duy trì. Không cam kết mức tăng tốc khi chưa đo.
 
 ### Bố cục cố định, dữ liệu vận hành cập nhật
 
@@ -266,7 +374,7 @@ Mô hình và bảng chi tiết dùng dữ liệu hiện có; không tự tạo 
 - [x] Bộ chạy thử ban đầu lỗi cấu hình DB tạm do file kết quả camera trùng tên metadata; đã tách file, khôi phục metadata từ bản DB chưa có mutation và chạy lại đạt. Không coi các ca lỗi/bỏ qua ban đầu là kiểm chứng thành công.
 - [x] DB/server thử đã dọn; đối chiếu fingerprint **15 bảng vận hành không đổi**. Backup, ảnh, chuỗi khung hình và kết quả ở `outputs/direct-3d/` (ngoài Git); giữ app cổng 4000 hoạt động. Không sửa schema, dependency, môi trường hoặc ba rule kỹ thuật chung.
 
-Không cần bảng nhân vật, tọa độ trong DB hoặc thư viện mới cho thiết kế này. Tái sử dụng liên kết HR → vị trí; điểm đặt hình người thuộc cấu hình hình học. Tìm kiếm đưa camera đến người/phòng và kéo thả nhân sự vẫn là đề xuất riêng, chưa chốt phạm vi triển khai.
+Không cần bảng nhân vật, tọa độ trong DB hoặc thư viện mới cho thiết kế này. Tái sử dụng liên kết HR → vị trí; điểm đặt hình người thuộc cấu hình hình học. Tìm kiếm đưa camera đến người/phòng đã triển khai theo mục Tìm kiếm và lọc đối tượng; kéo thả nhân sự chưa thuộc phạm vi.
 
 ## Thay khung tòa nhà — đã triển khai
 

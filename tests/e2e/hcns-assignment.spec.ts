@@ -125,6 +125,7 @@ test("assign, confirm transfer and clear directly in 3D; refresh keeps selection
     timeout: 90000,
   });
   await page.getByRole("button", { name: "Mặt bằng", exact: true }).click();
+  await chooseRoomPoint(page, "Vị trí 01");
   const sent = page.waitForRequest(
     (r) =>
       Boolean(r.headers()["next-action"]) &&

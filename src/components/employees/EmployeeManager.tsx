@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -774,7 +774,7 @@ function EmployeeAvatar({ employee }: { employee: Employee; }) {
     </Avatar>
   );
 }
-function EmployeeForm({
+export function EmployeeForm({
   employee,
   departments,
   done,
@@ -782,11 +782,13 @@ function EmployeeForm({
   roles,
   accounts,
   workLocations,
+  onEditingChange,
 }: {
   employee: Employee | null;
   departments: Department[];
   done: () => void;
   workLocations: { id: number; label: string; }[];
+  onEditingChange?: (editing: boolean) => void;
 } & AccountOptions) {
   const router = useRouter();
   const [credentials, setCredentials] = useState<{
@@ -823,6 +825,7 @@ function EmployeeForm({
     name: ["createAccount", "fullName", "employmentStatus"],
   });
   const leaving = employmentStatus === "LEFT";
+  useEffect(() => { onEditingChange?.(true); }, [onEditingChange]);
   const linkedAccounts = accounts.filter((a) => a.employee_id === employee?.id);
   const fields = [
     { name: "fullName", label: "Họ và tên" },
@@ -835,6 +838,7 @@ function EmployeeForm({
   const [moveValues, setMoveValues] = useState<CreateEmployeeInput | null>(null);
   function submitValues(values: CreateEmployeeInput) {
     start(async () => {
+      try {
       const r = employee
         ? await updateEmployee({ ...values, id: employee.id })
         : await createEmployee(values);
@@ -859,6 +863,7 @@ function EmployeeForm({
       router.refresh();
       if (r.credentials) setCredentials(r.credentials);
       else done();
+      } catch { toast.error("Không kết nối được máy chủ. Nội dung đang sửa vẫn được giữ."); }
     });
   }
   if (credentials)
@@ -1197,6 +1202,7 @@ function EmployeeForm({
             </div>
           )}
         </div>
+        {onEditingChange && <Button type="button" variant="outline" disabled={pending} onClick={done} className="mr-2 min-h-10">Hủy</Button>}
         <Button type="submit" disabled={pending || !form.formState.isReady}>
           {pending ? "Đang lưu…" : "Lưu hồ sơ"}
         </Button>

@@ -38,7 +38,7 @@ test("deep links round trip the room and selected point; room determines its flo
   assert.equal(
     readBuildingNavigation(new URL(HCNS_URL, "http://localhost").searchParams)
       .point,
-    "hcns-01",
+    null,
   );
 });
 test("unknown rooms, invalid points and unsupported detail modes cannot create phantom selections", () => {
@@ -56,7 +56,7 @@ test("unknown rooms, invalid points and unsupported detail modes cannot create p
     readBuildingNavigation(
       new URLSearchParams("room=t2_hcns_pc&mode=room&point=missing"),
     ).point,
-    "hcns-01",
+    null,
   );
 });
 test("all transformed desk anchors stay inside HCNS and preserve relative distances", () => {
@@ -128,4 +128,28 @@ test("corridor entrance zone contains only desk 01; all other desks are beyond t
       && desk.z - halfZ < HCNS_PARTITION_Z + 0.6;
     assert.equal(blocksDoorApproach, false, `${desk.key} blocks the connecting door`);
   }
+});
+
+test("asset links require a valid point and round trip without inventing selections", () => {
+  const view = readBuildingNavigation(new URLSearchParams("room=t2_hcns_pc&mode=room&point=hcns-07&asset=18&equipment=pc"));
+  assert.equal(view.asset, 18);
+  assert.equal(view.equipment, "pc");
+  assert.deepEqual(readBuildingNavigation(new URL(buildingUrl(view), "http://localhost").searchParams), view);
+  for (const suffix of ["asset=-1", "asset=1.5", "asset=no", "equipment=unknown"])
+    assert.deepEqual(readBuildingNavigation(new URLSearchParams(`room=t2_hcns_pc&mode=room&point=hcns-07&${suffix}`)),
+      {floor:2,room:HCNS_BUILDING_KEY,detail:true,point:"hcns-07"});
+  assert.equal(readBuildingNavigation(new URLSearchParams("room=t2_hcns_pc&mode=room&asset=18&equipment=pc")).asset, undefined);
+});
+
+test("back follows asset → point → room → floor → building without duplicate room levels", async () => {
+  const {parentBuildingNavigation: back, selectionCameraKey: key} = await import("../../src/lib/office-3d/building-navigation");
+  const asset = {floor:2 as const,room:HCNS_BUILDING_KEY,detail:true,point:"hcns-07",asset:18,equipment:"pc" as const};
+  const point = back(asset), room = back(point), floor = back(room), building = back(floor);
+  assert.deepEqual(point, {floor:2,room:HCNS_BUILDING_KEY,detail:true,point:"hcns-07"});
+  assert.deepEqual(room, {...point,point:null});
+  assert.deepEqual(floor, {floor:2,room:null,detail:false,point:null});
+  assert.deepEqual(building, {floor:"all",room:null,detail:false,point:null});
+  assert.deepEqual(back(building),building);
+  assert.equal(new Set([asset,point,room,floor,building].map(key)).size,5);
+  assert.deepEqual(back({...asset,asset:undefined}),point);
 });

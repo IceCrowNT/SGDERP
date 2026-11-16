@@ -70,7 +70,7 @@ test("compact tabs count real room records; person and asset links focus the rig
   await expect(panel(page).getByRole("tab", { name: `Tài sản · ${expectedAssets}`, exact: true })).toBeVisible();
   await expect(page.locator("#building-information").getByRole("heading", { name: roomName, exact: true })).toHaveCount(1);
   await expect(panel(page).getByText("Chức vụ chỉ mở chi tiết", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Danh sách phòng", exact: true })).toBeHidden();
+  await expect(page.getByRole("region", { name: "Danh sách không gian", exact: true })).toBeHidden();
   await expect(panel(page).locator('a[href^="/employees"]')).toHaveCount(0);
   await page.screenshot({ path: "outputs/room-panel/overview-people.png", fullPage: true });
   await panel(page).getByRole("button", { name: `Xem vị trí của ${personName}`, exact: true }).click();
@@ -96,8 +96,9 @@ test("compact tabs count real room records; person and asset links focus the rig
   await page.getByRole("button", { name: "Trở lại tầng 2", exact: true }).click();
   await expect(panel(page).getByRole("tab", { name: /^Tài sản/ })).toHaveAttribute("data-state", "active");
   await panel(page).getByRole("button", { name: "Vào phòng", exact: true }).click();
-  await expect(page).toHaveURL(/point=hcns-01/);
-  await expect(page.getByRole("region", { name: "Chi tiết vị trí", exact: true }).getByRole("heading", { name: "Vị trí 01", exact: true })).toBeVisible();
+  expect(new URL(page.url()).searchParams.get("point")).toBeNull();
+  await expect(panel(page)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Chi tiết vị trí", exact: true })).toHaveCount(0);
   await page.screenshot({ path: "outputs/room-panel/normal-entry-after-focus.png", fullPage: true });
   expect(await original!.evaluate(el => el === document.querySelector("canvas") && el.isConnected)).toBe(true);
   expect(documents).toBe(1); expect(errors).toEqual([]);
@@ -136,17 +137,17 @@ test("mobile dark mode, unmapped records and keyboard room switching remain usab
   await page.waitForTimeout(400);
   await page.screenshot({ path: "outputs/room-panel/mobile-dark.png", fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
-  const chooser = page.locator("summary", { hasText: "Đổi phòng" });
+  const chooser = page.locator("summary", { hasText: "Đổi không gian" });
   await chooser.focus(); await page.keyboard.press("Enter");
-  await expect(page.getByRole("region", { name: "Danh sách phòng", exact: true })).toBeVisible();
-  const destination = page.getByRole("button", { name: /Xem phòng Phòng Kế toán/ });
+  await expect(page.getByRole("region", { name: "Danh sách không gian", exact: true })).toBeVisible();
+  const destination = page.getByRole("button", { name: /Xem không gian Phòng Kế toán/ });
   await destination.click(); await expect(page.locator("#building-information").getByRole("heading", { name: "Phòng Kế toán", exact: true })).toBeVisible();
 });
 test("WebGL loss opens room navigation and retains counts and records", async ({ page, context }) => {
   await open(page, context);
   await page.locator("canvas").evaluate(el => el.dispatchEvent(new Event("webglcontextlost", { cancelable: true })));
   await expect(page.getByText(/Không thể hiển thị 3D/)).toBeVisible();
-  await expect(page.getByRole("region", { name: "Danh sách phòng", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Danh sách không gian", exact: true })).toBeVisible();
   await expect(panel(page).getByRole("tab", { name: `Tài sản · ${expectedAssets}`, exact: true })).toBeVisible();
   await panel(page).getByRole("tab", { name: /^Tài sản/ }).click();
   await expect(panel(page).getByText(directName, { exact: true })).toBeVisible();

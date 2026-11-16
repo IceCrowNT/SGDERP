@@ -96,6 +96,31 @@ export async function getEmployeeById(id: number) {
     ? { success: true as const, data }
     : { success: false as const, message: "Không tìm thấy nhân sự." };
 }
+// Load one dossier and only the catalogs needed by the shared HR editor.
+export async function getEmployeeForEdit(id: number) {
+  const session = await getSession();
+  if (!session || !hasPermission(session, "HR", "MANAGE") || !Number.isSafeInteger(id) || id <= 0)
+    return { success: false as const, message: "Không có quyền sửa nhân sự." };
+  const employee = await db.nhan_su.findFirst({ where: { id, company_id: session.companyId }, include: employeeInclude });
+  if (!employee) return { success: false as const, message: "Không tìm thấy nhân sự." };
+  const [departments, locations] = await Promise.all([
+    db.phong_ban.findMany({ where: { company_id: session.companyId }, select: { id: true, ten_phong_ban: true, parent_id: true }, orderBy: { ten_phong_ban: "asc" } }),
+    db.vi_tri.findMany({ where: { company_id: session.companyId }, select: { id: true, parent_id: true, ten_vi_tri: true, loai_vi_tri: true, dang_su_dung: true } }),
+  ]);
+  return { success: true as const,
+    employee: { ...employee, workLocationPath: employee.vi_tri_lam_viec_id ? locationPath(employee.vi_tri_lam_viec_id, locations) : null },
+    departments: departments.map(d => {
+      const names = [d.ten_phong_ban], seen = new Set([d.id]);
+      let parent = d.parent_id;
+      while (parent && !seen.has(parent)) {
+        seen.add(parent); const row = departments.find(p => p.id === parent); if (!row) break;
+        names.unshift(row.ten_phong_ban); parent = row.parent_id;
+      }
+      return { id: d.id, name: names.join(" → "), shortName: d.ten_phong_ban, parentId: d.parent_id };
+    }),
+    workLocations: locations.filter(l => isAvailableWorkLocation(l.id, locations)).map(l => ({ id: l.id, label: locationPath(l.id, locations) })),
+  };
+}
 async function saveEmployee(input: unknown, updating: boolean) {
   const session = await getSession();
   if (!session || !hasPermission(session, "HR", "MANAGE"))

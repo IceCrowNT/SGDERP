@@ -4,7 +4,11 @@ Cập nhật **11/11/2026 — bản hiện tại đã triển khai và có kết
 
 Rule nghiệp vụ: [PROFILE-DASHBOARD-RULES](../../.agents/rules/PROFILE-DASHBOARD-RULES.md).
 
+Mở rộng đề xuất ngày 13/11/2026: chat trên dashboard và cá nhân hóa AI trong profile được quản lý tại [Plan trợ lý AI](AI-ASSISTANT-CHECKLIST.md). Mới lập thiết kế, chưa thay chức năng cá nhân hoặc CSDL; plan AI sở hữu cột/bảng, quyền, lịch sử và nghiệm thu của phần mở rộng này.
+
 ## Đồng bộ giao diện — 09/11/2026
+
+- [x] Bổ sung đích trở về hồ sơ tài sản sau đăng nhập/đổi mật khẩu bắt buộc theo yêu cầu QR ngày 16/11; chỉ nhận `/assets?asset=<id>` hợp lệ. Không thay quyền hoặc bỏ bước đổi mật khẩu. Kiểm chứng theo [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md#liên-kết-hồ-sơ-và-tem-qr--16112026).
 
 - [x] Profile có thẻ định danh, biểu tượng phòng/chức vụ, nhãn tài khoản và nhóm thông tin; các tab, trường sửa, đổi mật khẩu và upload giữ nguyên hành vi.
 - [x] Nhóm không gian cá nhân 5/5 E2E đạt; kiểm tra Chrome desktop/mobile, không tràn ngang. TypeScript/lint đạt; giữ hành vi cập nhật liên hệ, avatar và mật khẩu.

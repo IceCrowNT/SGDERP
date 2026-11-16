@@ -27,9 +27,8 @@ const name = `Người đã gán ${run}`,
   absent = `Người chỉ cùng phòng ban ${run}`;
 async function openHcns(page: Page) {
   await page.goto("/office-3d");
-  await page
-    .getByRole("button", { name: "Đến phòng HCNS", exact: true })
-    .click();
+  await page.getByRole("group", { name: "Chọn tầng", exact: true }).getByRole("button", { name: "Tầng 2", exact: true }).click();
+  await page.getByRole("button", { name: `Xem không gian ${roomName}, tầng 2`, exact: true }).click();
   return page.getByRole("region", { name: "Thông tin phòng" });
 }
 test.beforeAll(async () => {
@@ -121,8 +120,8 @@ test("explore three floors, enter HCNS, return and use mobile without errors", a
     .click();
   await expect(
     page
-      .getByRole("region", { name: "Danh sách phòng" })
-      .getByRole("button", { name: /Xem phòng/ }),
+      .getByRole("region", { name: "Danh sách không gian" })
+      .getByRole("button", { name: /Xem không gian/ }),
   ).toHaveCount(13);
   await page
     .getByRole("group", { name: "Chọn tầng" })
@@ -172,18 +171,18 @@ test("explore three floors, enter HCNS, return and use mobile without errors", a
     ),
   ).toBe(false);
   await page.evaluate(() => document.documentElement.classList.add("dark"));
-  await page.locator("summary", { hasText: "Đổi phòng" }).click();
+  await page.locator("summary", { hasText: "Đổi không gian" }).click();
   await page
-    .getByRole("textbox", { name: "Tìm phòng trong mô hình" })
+    .getByRole("textbox", { name: "Tìm không gian trong mô hình" })
     .fill("phong phat trien du an");
   await expect(
     page
-      .getByRole("region", { name: "Danh sách phòng" })
-      .getByRole("button", { name: /Xem phòng/ }),
+      .getByRole("region", { name: "Danh sách không gian" })
+      .getByRole("button", { name: /Xem không gian/ }),
   ).toHaveCount(1);
   await page
-    .getByRole("region", { name: "Danh sách phòng" })
-    .getByRole("button", { name: /Xem phòng/ })
+    .getByRole("region", { name: "Danh sách không gian" })
+    .getByRole("button", { name: /Xem không gian/ })
     .focus();
   await page.keyboard.press("Enter");
   await expect(
@@ -234,7 +233,7 @@ test("building uses workplace links, reflects DB changes, and drops stale room h
       .click();
     await page
       .getByRole("button", {
-        name: "Xem phòng Phòng HCNS & Pháp Chế, tầng 2",
+        name: "Xem không gian Phòng HCNS & Pháp Chế, tầng 2",
         exact: true,
       })
       .click();
@@ -313,9 +312,8 @@ test("WebGL failure keeps floor selection and accessible room information", asyn
   await expect(
     page.getByText(/Không thể hiển thị 3D trên trình duyệt này/),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Đến phòng HCNS", exact: true })
-    .click();
+  await page.getByRole("group", { name: "Chọn tầng", exact: true }).getByRole("button", { name: "Tầng 2", exact: true }).click();
+  await page.getByRole("button", { name: `Xem không gian ${roomName}, tầng 2`, exact: true }).click();
   await expect(
     page.getByRole("region", { name: "Thông tin phòng" }),
   ).toContainText(name);

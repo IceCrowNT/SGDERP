@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 type Profile = NonNullable<Awaited<ReturnType<typeof getMyProfile>>>;
-export function ProfileManager({ data }: { data: Profile }) {
+export function ProfileManager({ data, returnTo }: { data: Profile; returnTo?: string | null }) {
   const [pending, start] = useTransition();
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>(
     {},
@@ -245,7 +245,7 @@ export function ProfileManager({ data }: { data: Profile }) {
                   confirmation: f.get("confirmation"),
                 });
                 handleResult(r);
-                if (r.success) router.replace("/profile");
+                if (r.success) { router.replace(returnTo ?? "/profile"); router.refresh(); }
               })
             }
           >

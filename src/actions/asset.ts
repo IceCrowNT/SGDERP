@@ -13,17 +13,21 @@ import { isAvailableAssetLocation } from "@/lib/asset-location";
 class AssetError extends Error {}
 const denied = () => ({ success: false as const, message: "Bạn chưa được cấp quyền tài sản phù hợp." });
 const assetId = z.number().int().positive();
-const categorySelection = { id: true, ma_loai: true, ten_loai: true, mo_ta: true, dang_su_dung: true, updated_at: true } as const;
+const categorySelection = { id: true, ma_loai: true, ten_loai: true, mo_ta: true, dang_su_dung: true, khau_hao_mac_dinh_thang: true, updated_at: true } as const;
 const assetSelection = {
   id: true, ma_tai_san: true, ten_tai_san: true, loai_tai_san_id: true,
   phong_quan_ly_id: true, nguoi_su_dung_id: true, vi_tri_id: true,
   tinh_trang: true, hinh_thuc_su_dung: true, so_serial: true, hang_model: true,
   ghi_chu: true, created_at: true, updated_at: true,
+  ngay_mua: true, gia_mua: true, thoi_gian_khau_hao_thang: true, han_bao_hanh: true,
   loai_tai_san: { select: { id: true, ma_loai: true, ten_loai: true, dang_su_dung: true } },
   phong_quan_ly: { select: { id: true, ma_phong_ban: true, ten_phong_ban: true } },
   nguoi_su_dung: { select: { id: true, ma_nhan_su: true, ho_ten: true, tinh_trang_lam_viec: true } },
   vi_tri: { select: { id: true, ma_vi_tri: true, ten_vi_tri: true } },
 } as const;
+function serializeAsset(row: Prisma.tai_sanGetPayload<{ select: typeof assetSelection }>) {
+  return { ...row, gia_mua: row.gia_mua?.toFixed(0) ?? null };
+}
 function failure(error: unknown) {
   return { success: false as const, message: error instanceof AssetError ? error.message
     : error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002" ? "Mã đã được sử dụng. Hãy kiểm tra lại."
@@ -86,7 +90,7 @@ export async function getAssets(input: unknown = {}) {
         tx.tai_san.count({ where: { AND: [where, { hinh_thuc_su_dung: "CA_NHAN" }] } }),
         tx.tai_san.groupBy({ by: ["loai_tai_san_id"], where, _count: { _all: true } }),
       ]);
-      return { rows, total, remaining: total - retired, personal, byCategory: byCategory.map(r => ({ id: r.loai_tai_san_id, count: r._count._all })), page, pages, pageSize };
+      return { rows: rows.map(serializeAsset), total, remaining: total - retired, personal, byCategory: byCategory.map(r => ({ id: r.loai_tai_san_id, count: r._count._all })), page, pages, pageSize };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
     return { success: true as const, ...result, canManage: hasPermission(session, "ASSETS", "MANAGE") };
   } catch { return { success: false as const, message: "Không tải được danh sách tài sản. Vui lòng thử lại." }; }
@@ -136,7 +140,7 @@ export async function getAsset(id: number) {
   if (!assetId.safeParse(id).success) return { success: false as const, message: "Tài sản không hợp lệ." };
   const row = await db.tai_san.findFirst({ where: { id, company_id: session.companyId }, select: assetSelection });
   if (!row) return { success: false as const, message: "Không tìm thấy tài sản." };
-  return { success: true as const, row, canManage: hasPermission(session, "ASSETS", "MANAGE") };
+  return { success: true as const, row: serializeAsset(row), canManage: hasPermission(session, "ASSETS", "MANAGE") };
 }
 
 export async function getAssetHistory(id: number) {
@@ -174,7 +178,7 @@ export async function saveAssetCategory(input: unknown) {
       const before = v.id ? await tx.loai_tai_san.findFirst({ where: { id: v.id, company_id: session.companyId }, select: categorySelection }) : null;
       assertVersion(before, v.id, v.version);
       if (before && before.ma_loai !== v.code) throw new AssetError("Mã loại không thể thay đổi.");
-      const data = { ten_loai: v.name, mo_ta: v.description, dang_su_dung: v.active, updated_at: new Date(Math.max(Date.now(), (before?.updated_at.getTime() ?? 0) + 1)) };
+      const data = { ten_loai: v.name, mo_ta: v.description, dang_su_dung: v.active, khau_hao_mac_dinh_thang: v.defaultDepreciationMonths, updated_at: new Date(Math.max(Date.now(), (before?.updated_at.getTime() ?? 0) + 1)) };
       const after = before ? await tx.loai_tai_san.update({ where: { id: before.id }, data, select: categorySelection })
         : await tx.loai_tai_san.create({ data: { ...data, company_id: session.companyId, ma_loai: v.code }, select: categorySelection });
       await audit(tx, session, "loai_tai_san", after.id, after.ten_loai, before, after);
@@ -192,10 +196,14 @@ export async function saveAsset(input: unknown) {
   if (!parsed.success) return { success: false as const, message: "Kiểm tra các trường được đánh dấu.", fieldErrors: parsed.error.flatten().fieldErrors };
   const v = parsed.data;
   try {
-    const id = await db.$transaction(async tx => {
+    const saved = await db.$transaction(async tx => {
       await lock(tx, session);
       const before = v.id ? await tx.tai_san.findFirst({ where: { id: v.id, company_id: session.companyId }, select: assetSelection }) : null;
       assertVersion(before, v.id, v.version);
+      const purchaseDate = v.purchaseDate === undefined ? before?.ngay_mua : v.purchaseDate ? new Date(`${v.purchaseDate}T00:00:00Z`) : null;
+      const warrantyUntil = v.warrantyUntil === undefined ? before?.han_bao_hanh : v.warrantyUntil ? new Date(`${v.warrantyUntil}T00:00:00Z`) : null;
+      if (purchaseDate && warrantyUntil && warrantyUntil < purchaseDate)
+        throw new AssetError("Hạn bảo hành không được trước ngày mua.");
       if (before?.loai_tai_san_id !== v.categoryId && !await tx.loai_tai_san.count({ where: { id: v.categoryId, company_id: session.companyId, dang_su_dung: true } }))
         throw new AssetError("Chọn loại tài sản còn sử dụng trong công ty.");
       if (v.employeeId !== null && before?.nguoi_su_dung_id !== v.employeeId && !await tx.nhan_su.count({ where: { id: v.employeeId, company_id: session.companyId, tinh_trang_lam_viec: "ACTIVE" } }))
@@ -217,15 +225,17 @@ export async function saveAsset(input: unknown) {
         ten_tai_san: v.name, loai_tai_san_id: v.categoryId, phong_quan_ly_id: v.departmentId,
         nguoi_su_dung_id: v.employeeId, vi_tri_id: v.locationId, tinh_trang: v.condition,
         hinh_thuc_su_dung: v.usage, so_serial: v.serial, hang_model: v.model, ghi_chu: v.notes,
+        ngay_mua: purchaseDate, han_bao_hanh: warrantyUntil,
+        gia_mua: v.purchasePrice, thoi_gian_khau_hao_thang: v.depreciationMonths,
         updated_at: new Date(Math.max(Date.now(), (before?.updated_at.getTime() ?? 0) + 1)),
       };
       const after = before ? await tx.tai_san.update({ where: { id: before.id }, data, select: assetSelection })
         : await tx.tai_san.create({ data: { ...data, company_id: session.companyId }, select: assetSelection });
       await audit(tx, session, "tai_san", after.id, after.ten_tai_san, before, after);
-      return after.id;
+      return serializeAsset(after);
     });
     for (const path of ["/assets", "/locations", "/departments", "/office-3d", "/office-3d/hcns"]) revalidatePath(path);
-    return { success: true as const, id, message: "Đã lưu tài sản." };
+    return { success: true as const, id: saved.id, row: saved, message: "Đã lưu tài sản." };
   } catch (error) { return failure(error); }
 }
 

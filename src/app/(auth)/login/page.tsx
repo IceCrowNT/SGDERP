@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { assetReturnPath } from "@/lib/asset-link";
 
 
 export const metadata: Metadata = {
@@ -7,7 +8,8 @@ export const metadata: Metadata = {
   description: "Cổng đăng nhập hệ thống hoạch định tài nguyên doanh nghiệp Sao Đỏ Group",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ returnTo?: string | string[] }> }) {
+  const returnTo = assetReturnPath((await searchParams).returnTo);
   return (
     <main className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-muted/30 to-background relative overflow-hidden">
       {/* Decorative Brand Ambient Glow */}
@@ -15,7 +17,7 @@ export default function LoginPage() {
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-900/10 rounded-full blur-3xl pointer-events-none" />
       
       <div className="w-full max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-500">
-        <LoginForm />
+        <LoginForm returnTo={returnTo} />
       </div>
     </main>
   );

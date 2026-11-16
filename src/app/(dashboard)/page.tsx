@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowDown, ArrowUpRight, Building2, CalendarDays, CheckCheck, ChevronRight, ClipboardCheck, FileClock, FilePenLine, FolderKanban, Inbox, KeyRound, LayoutGrid, ListTodo, PauseCircle, ShieldCheck, UserRound, UsersRound, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AiAssistant } from "@/components/ai/AiAssistant";
+import { canUseAiPilot } from "@/lib/ai-pilot";
+import { aiConnectionView } from "@/lib/ai-connection";
 
 const panelVisuals: Record<string, { icon: LucideIcon; tone: string }> = {
   approve: { icon: ClipboardCheck, tone: "bg-primary/10 text-primary" },
@@ -49,6 +52,7 @@ export default async function Dashboard({
   const session = await getSession({ allowPasswordChange: true });
   if (!session) redirect("/login");
   if (session.mustChangePassword) redirect("/profile");
+  const aiSettings = canUseAiPilot(session) ? await aiConnectionView(session.companyId) : null;
   const { view, page } = await searchParams;
   const workflow = canWorkflow(session.workflowActions);
   const manage = canWorkflow(session.workflowActions, "MANAGE");
@@ -197,7 +201,9 @@ export default async function Dashboard({
         </section>
       )}
       <div className="grid items-start gap-6 xl:grid-cols-3">
-        <section className="min-w-0 overflow-hidden rounded-2xl border bg-card xl:col-span-2">
+        <div className="min-w-0 space-y-6 xl:col-span-2">
+        {aiSettings && <AiAssistant settings={aiSettings} />}
+        <section className="min-w-0 overflow-hidden rounded-2xl border bg-card">
           {selected ? (
             <>
               <div className="flex items-start justify-between gap-3 border-b p-5">
@@ -243,6 +249,7 @@ export default async function Dashboard({
             </div>
           )}
         </section>
+        </div>
         <aside className="min-w-0 space-y-6">
           {ownPanels.length > 0 && (
             <section className="rounded-2xl border bg-card p-5" aria-label="Biểu đồ yêu cầu của tôi">

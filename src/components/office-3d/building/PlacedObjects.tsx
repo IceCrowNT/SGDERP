@@ -1,4 +1,5 @@
 "use client";
+import type { EquipmentKind } from "@/lib/office-3d/hcns-layout";
 import { useMemo, useState } from "react";
 import { useCursor } from "@react-three/drei";
 import { Shape } from "three";
@@ -6,11 +7,15 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { BUILDING_ROOMS, floorElevation, HCNS_BUILDING_KEY, type FloorSelection } from "@/lib/office-3d/building-layout";
 import { placementSize, placementError, type PlacementDraft } from "@/lib/office-3d/placement";
 import type { PlacedObject } from "@/lib/office-3d/building-mapping";
-import { Desk, Block } from "../hcns/RoomFurniture";
+import { OfficePerson } from "../hcns/OfficePerson";
+import { Desk, EquipmentDisplay } from "../hcns/RoomFurniture";
 
-export function PlacedObjects({ objects,floor,detail,selected,onSelect,draft,onPlace }: {
+export function PlacedObjects({ objects,floor,detail,selected,person,onPerson,onSelect,onFocusPoint,onEquipment,activeEquipment,draft,onPlace }: {
   objects:PlacedObject[];floor:FloorSelection;detail:boolean;selected:string|null;
-  onSelect:(key:string)=>void;draft:PlacementDraft|null;onPlace:(x:number,z:number)=>void;
+  person:number|null;onPerson:(key:string,id:number)=>void;
+  onSelect:(key:string)=>void;
+  onFocusPoint:(key:string)=>void;
+  onEquipment:(key:string,kind:EquipmentKind,focus:boolean)=>void; activeEquipment?:EquipmentKind;draft:PlacementDraft|null;onPlace:(x:number,z:number)=>void;
 }) {
   const room = BUILDING_ROOMS.find(r=>r.key===draft?.roomKey);
   const [hovered,setHovered]=useState<string|null>(null);
@@ -29,12 +34,19 @@ export function PlacedObjects({ objects,floor,detail,selected,onSelect,draft,onP
       if (!r || (floor!=="all"&&floor!==r.floor) || (detail&&o.roomKey!==HCNS_BUILDING_KEY) || draft?.id===o.id) return null;
       const active=selected===o.point.key||hovered===o.point.key;
       return <group key={o.id} position={[r.x+o.x,floorElevation(r.floor,floor)+.28,r.z+o.z]} rotation={[0,o.angle*Math.PI/180,0]}
+        userData={{objectKey:o.point.key}}
         onPointerOver={e=>{if(!draft){e.stopPropagation();setHovered(o.point.key);}}} onPointerOut={()=>setHovered(null)}
-        onClick={e=>{e.stopPropagation();if(!draft)onSelect(o.point.key);}}>
-        {o.kind === "BAN" ? <Desk width={1.6} depth={.8} equipment={o.point.equipment} selected={active}/> : <>
+        onDoubleClick={e=>{e.stopPropagation();if(!draft && e.button===0 && e.delta<5)onFocusPoint(o.point.key);}}
+        onClick={e=>{e.stopPropagation();if(!draft && e.button===0 && e.delta<5)onSelect(o.point.key);}}>
+        {o.kind === "BAN" ? <Desk width={1.6} depth={.8} equipment={o.point.equipment} selected={active} activeEquipment={selected===o.point.key ? activeEquipment : undefined} onEquipment={!draft ? (kind,focus)=>onEquipment(o.point.key,kind,focus) : undefined}/> : <>
           <mesh position={[0,.06,0]}><cylinderGeometry args={[.35,.35,.12,20]}/><meshStandardMaterial color={active ? "#c44c37":"#789cae"}/></mesh>
-          {Boolean(o.point.assets?.length) && <Block at={[0,.3,0]} size={[.4,.4,.4]} color="#444c50"/>}
+          <EquipmentDisplay equipment={o.point.equipment} width={.7} depth={.7} height={.12} activeEquipment={selected===o.point.key ? activeEquipment : undefined} onEquipment={!draft ? (kind,focus)=>onEquipment(o.point.key,kind,focus) : undefined} />
         </>}
+        {(o.point.occupants ?? []).slice().sort((a,b)=>Number(b.id===person)-Number(a.id===person)).slice(0,3).map((p,index,people)=><group key={p.id}
+          position={[(index-(people.length-1)/2)*.5,0,o.kind==="BAN" ? .85:.6]} userData={{personId:p.id}}
+          onClick={e=>{e.stopPropagation();if(!draft && e.button===0 && e.delta<5)onPerson(o.point.key,p.id);}}>
+          <OfficePerson selected={selected===o.point.key&&person===p.id}/>
+        </group>)}
         {active && <mesh rotation={[-Math.PI/2,0,0]} position={[0,.015,0]}><planeGeometry args={[1.9,1.1]}/><meshBasicMaterial color="#c44c37" transparent opacity={.25}/></mesh>}
       </group>;
     })}

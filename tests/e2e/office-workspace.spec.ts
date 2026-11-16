@@ -26,7 +26,7 @@ test.beforeAll(async () => {
  asset = await db.tai_san.create({data:{company_id,loai_tai_san_id:category.id,ten_tai_san:`PC thử UX ${suffix.slice(0,5)}`,tinh_trang:'BINH_THUONG'}});
 });
 test.afterAll(()=>db.$disconnect());
-async function open(page: Page, context: Parameters<typeof signAccount>[0], url = HCNS_URL) {
+async function open(page: Page, context: Parameters<typeof signAccount>[0], url = `${HCNS_URL}&point=hcns-01`) {
  await signAccount(context, manager);
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto(url);
@@ -129,11 +129,14 @@ test('Escape respects overlays, traps focus, restores the trigger and releases b
  expect(await workspace(page).evaluate(el=>el.contains(document.activeElement))).toBe(true);
  await page.keyboard.press('Shift+Tab');
  expect(await workspace(page).evaluate(el=>el.contains(document.activeElement))).toBe(true);
+ await page.keyboard.press('Escape'); await expect(page).not.toHaveURL(/point=/);
+ await expect(page).toHaveURL(/mode=room/);
+ await expect(workspace(page)).toHaveAttribute('data-expanded','true');
+ await page.keyboard.press('Escape'); await expect(page).toHaveURL(/office-3d\?floor=2$/);
+ await page.keyboard.press('Escape'); await expect(page).toHaveURL(/office-3d$/);
  await page.keyboard.press('Escape');
  await expect(workspace(page)).toHaveAttribute('data-expanded','false');
  await expect(page.getByRole('button',{name:'Mở rộng không gian 3D'})).toBeFocused();
- await expect(page).toHaveURL(/mode=room/);
- await page.keyboard.press('Escape'); await expect(page).not.toHaveURL(/mode=room/);
  await expand(page); await expect(trigger).toBeVisible();
  await page.getByRole('button',{name:'Thao tác không gian'}).click(); await page.getByRole('menuitem',{name:'Quản lý vị trí'}).click();
  await expect(page).toHaveURL(/\/locations/);
@@ -187,7 +190,8 @@ test('mobile and dark mode: compact controls, bottom panel and assignment dialog
  await expect(page.locator('canvas')).toBeVisible();
  await expect.poll(async()=>{
   const model=(await page.locator('canvas').boundingBox())!, panel=(await page.locator('#building-information').boundingBox())!;
-  return model.height > 150 && model.x+model.width <= panel.x;
+  // Search/layer controls reserve the top of the current landscape layout.
+  return model.height >= 120 && model.x+model.width <= panel.x;
  }).toBe(true);
  await page.screenshot({path:`${dir}/mobile-landscape.png`});
  await page.setViewportSize({width:320,height:780});
@@ -198,7 +202,7 @@ test('mobile and dark mode: compact controls, bottom panel and assignment dialog
   expect(box.width).toBeGreaterThanOrEqual(40);expect(box.height).toBeGreaterThanOrEqual(40);
   expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(320);
  }
- await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Thu gọn không gian 3D',exact:true}).click();
  await expect(workspace(page)).toHaveAttribute('data-expanded','false');
 });
 
@@ -209,7 +213,7 @@ test('WebGL loss opens an accessible list with usable model controls', async({pa
  await expect(page.locator('#building-information')).toBeVisible();
  await chooseRoomPoint(page,'Vị trí 10');
  await expect(page.getByRole('region',{name:'Chi tiết vị trí'})).toContainText('Vị trí 10');
- await page.keyboard.press('Escape'); await expect(workspace(page)).toHaveAttribute('data-expanded','false');
+ await page.getByRole('button',{name:'Thu gọn không gian 3D',exact:true}).click(); await expect(workspace(page)).toHaveAttribute('data-expanded','false');
 });
 
 test('expand while orbit is settling preserves its direction and room navigation', async ({page,context})=>{
@@ -240,7 +244,7 @@ test('desktop to mobile expansion keeps a fitted room and returns the original s
  const before=await pose(page), original=(await page.locator('canvas').boundingBox())!;
  const zoom = (p:Awaited<ReturnType<typeof pose>>, width:number) => p.projection[0]*width/2;
  const beforeZoom=zoom(before,original.width);
- await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Thu gọn không gian 3D',exact:true}).click();
  await page.setViewportSize({width:390,height:844});
  await page.getByRole('button',{name:'Đóng bảng thông tin'}).click();
  await expand(page);

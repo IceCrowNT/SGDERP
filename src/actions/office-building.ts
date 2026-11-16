@@ -64,12 +64,11 @@ export async function getOfficeBuilding() {
   const canViewEmployees = hasPermission(session, "HR");
   const canViewAssets = hasPermission(session, "ASSETS");
   const ids = [...new Set(resolved.rooms.flatMap((r) => [...r.locationIds]))];
-  const [people, assets, placements] = await Promise.all([
+  const [people, assets, placements, categories] = await Promise.all([
     canViewEmployees ? db.nhan_su.findMany({
         where: {
           company_id: session.companyId,
           tinh_trang_lam_viec: "ACTIVE",
-          vi_tri_lam_viec_id: { in: ids },
         },
         select: {
           id: true,
@@ -88,6 +87,10 @@ export async function getOfficeBuilding() {
       orderBy: [{ ten_tai_san: "asc" }, { id: "asc" }],
     }) : Promise.resolve([]),
     db.vat_the_3d.findMany({where:{company_id:session.companyId},include:{vi_tri:true},orderBy:{id:"asc"}}),
+    canViewAssets ? db.loai_tai_san.findMany({
+      where: { company_id: session.companyId },
+      select: { ma_loai: true, ten_loai: true }, orderBy: { ten_loai: "asc" },
+    }) : Promise.resolve([]),
   ]);
   let hcns: BuildingData["hcns"] = null;
   const room = resolved.rooms.find((r) => r.key === HCNS_BUILDING_KEY);
@@ -127,6 +130,14 @@ export async function getOfficeBuilding() {
   const pointForLocation = (id:number) => objects.find(o => o.point.locationId === id)?.point.key ??
     hcns?.points.find(p => p.state === "active" && p.locationId === id)?.key ?? null;
   const building: BuildingData = {
+    ...(canViewEmployees ? { searchPeople: people.map(p => {
+      const location = rows.find(row => row.id === p.vi_tri_lam_viec_id);
+      const room = resolved.rooms.find(r => r.state === "active" && location && r.locationIds.has(location.id));
+      return { id: p.id, name: p.ho_ten, department: p.phong_ban?.ten_phong_ban ?? null,
+        location: location?.ten_vi_tri ?? null, roomKey: room?.key ?? null,
+        pointKey: room && location ? pointForLocation(location.id) : null };
+    }) } : {}),
+    ...(canViewAssets ? { assetCategories: categories.map(c => ({ code: c.ma_loai, name: c.ten_loai })) } : {}),
     objects,
     canManageEmployees:hasPermission(session,"HR","MANAGE"),
     canManageAssets:hasPermission(session,"ASSETS","MANAGE"),

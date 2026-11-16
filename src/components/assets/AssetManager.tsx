@@ -1,5 +1,8 @@
 "use client";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
+import { parseAssetId } from "@/lib/asset-link";
+import { toast } from "sonner";
 import { Boxes, Plus, Search, SlidersHorizontal, ChevronLeft, ChevronRight, Pencil, X, ArrowLeft } from "lucide-react";
 import { getAssets, getAsset, getAssetCategories, getAssetFilterOptions, getAssetOverview } from "@/actions/asset";
 import type { AssetQuery } from "@/lib/validations/asset";
@@ -19,6 +22,7 @@ import { AssetForm, AssetCategoryForm } from "./AssetForm";
 import { AssetDetail } from "./AssetDetail";
 import { AssetCategoryIcon } from "./AssetCategoryIcon";
 import { AssetInlineEditor } from "./AssetInlineEditor";
+import { AssetDepreciationBar } from "./AssetDepreciationBar";
 import { AssetGroups, type AssetGrouping } from "./AssetGroups";
 import type { AssetList, AssetCategory, AssetFilters, AssetRow, AssetOverview, AssetGroup } from "./types";
 
@@ -30,7 +34,7 @@ function Filter({ label, value, choices, onChange, disabled, searchable = false 
 function AssetIdentity({ row }: { row: AssetRow }) {
   return <span className="flex min-w-0 items-center gap-3">
     <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted"><AssetCategoryIcon code={row.loai_tai_san.ma_loai} /></span>
-    <span className="min-w-0"><span className="line-clamp-2 break-words font-medium">{row.ten_tai_san}</span><span className="mt-1 block text-xs font-normal text-muted-foreground">{row.ma_tai_san}</span></span>
+    <span className="min-w-0 flex-1"><span className="line-clamp-2 break-words font-medium">{row.ten_tai_san}</span><span className="mt-1 block text-xs font-normal text-muted-foreground">{row.ma_tai_san}</span><AssetDepreciationBar purchase={row.ngay_mua} months={row.thoi_gian_khau_hao_thang} /></span>
   </span>;
 }
 function userLabel(row: AssetRow) {
@@ -38,6 +42,9 @@ function userLabel(row: AssetRow) {
 }
 
 export function AssetManager({ initial, initialCategories, initialFilters }: { initial: AssetOverview; initialCategories: AssetCategory[]; initialFilters: AssetFilters }) {
+  const searchParams = useSearchParams();
+  const linkedAsset = searchParams.getAll("asset").join(",");
+  const hasLinkedAsset = searchParams.has("asset");
   const [overview, setOverview] = useState(initial);
   const [list, setList] = useState<AssetList>({ success: true, rows: [], total: 0, remaining: 0, personal: 0, byCategory: [], page: 1, pages: 1, pageSize: 20, canManage: initial.canManage });
   const [screen, setScreen] = useState<"groups" | "assets">("groups");
@@ -73,6 +80,7 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
   const [categoryEdit, setCategoryEdit] = useState<AssetCategory | null | undefined>(undefined);
   const latest = useRef(0), latestDetail = useRef(0), latestCatalog = useRef(0);
   const detailTrigger = useRef<HTMLButtonElement | null>(null);
+  const detailEditing = useRef<number | null>(null);
   const detailScroll = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
     if (pending || screen !== "assets") return;
@@ -143,7 +151,7 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
     detailTrigger.current = null; detailScroll.current = { x: window.scrollX, y: window.scrollY };
     setEditFocus(undefined); setEditing(null);
   }
-  function openDetail(id: number) {
+  const fetchDetail = useCallback((id: number) => {
     const ticket = ++latestDetail.current;
     setSelected(id); setDetail(null); setDetailError("");
     start(async () => {
@@ -153,6 +161,43 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
         if (r.success) setDetail(r.row); else setDetailError(r.message);
       } catch { if (ticket === latestDetail.current) setDetailError("Không tải được hồ sơ tài sản."); }
     });
+  }, []);
+  useEffect(() => {
+    const requests = latestDetail;
+    if (detailEditing.current !== null && parseAssetId(linkedAsset) !== detailEditing.current) {
+      const url = new URL(window.location.href); url.searchParams.set("asset", String(detailEditing.current));
+      window.history.pushState(null, "", url.pathname + url.search + url.hash);
+      toast.info("Lưu hoặc Hủy thông tin đang sửa trước khi rời hồ sơ.");
+      return;
+    }
+    if (detailEditing.current !== null) return;
+    // Apply the browser URL after navigation commits; cancelled navigation cannot reopen a stale panel.
+    const frame = requestAnimationFrame(() => {
+      if (!hasLinkedAsset) {
+        ++requests.current; setSelected(null); setDetail(null); setDetailError("");
+        return;
+      }
+      const id = parseAssetId(linkedAsset);
+      if (id === null) {
+        ++requests.current; setSelected(0); setDetail(null); setDetailError("Liên kết tài sản không hợp lệ.");
+        return;
+      }
+      fetchDetail(id);
+    });
+    return () => { cancelAnimationFrame(frame); ++requests.current; };
+  }, [linkedAsset, hasLinkedAsset, fetchDetail]);
+  function openDetail(id: number) {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("asset") === String(id)) { fetchDetail(id); return; }
+    url.searchParams.set("asset", String(id));
+    window.history.pushState(null, "", url.pathname + url.search + url.hash);
+  }
+  function closeDetail() {
+    if (detailEditing.current !== null) { toast.info("Lưu hoặc Hủy thông tin đang sửa trước khi đóng hồ sơ."); return; }
+    ++latestDetail.current; setSelected(null); setDetail(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("asset");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
   }
   const hasFilters = Boolean(query.search || query.categoryId || query.condition || query.usage || query.employeeId || query.departmentId || query.locationId !== undefined);
   const applied = [
@@ -203,7 +248,7 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
           </>}
     <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground"><p role="status">{list.total.toLocaleString("vi-VN")} hồ sơ · Trang {list.page}/{list.pages}</p><div className="flex gap-2"><Button className="min-h-10" variant="outline" size="icon-lg" aria-label="Trang trước" disabled={pending || locked || list.page <= 1} onClick={() => load({ ...query, page: list.page - 1 })}><ChevronLeft className="size-4" /></Button><Button className="min-h-10" variant="outline" size="icon-lg" aria-label="Trang sau" disabled={pending || locked || list.page >= list.pages} onClick={() => load({ ...query, page: list.page + 1 })}><ChevronRight className="size-4" /></Button></div></div>
     </>}
-    <Sheet open={selected !== null} onOpenChange={open => { if (!open) { ++latestDetail.current; setSelected(null); setDetail(null); } }}><SheetContent className="w-full max-w-none overflow-y-auto sm:max-w-xl" onCloseAutoFocus={e => { e.preventDefault(); if (editing === undefined) restoreListFocus(); }}><SheetHeader className="pr-12"><Button variant="ghost" className="min-h-10 justify-self-start px-0 sm:hidden" onClick={() => { ++latestDetail.current; setSelected(null); setDetail(null); }}><ArrowLeft aria-hidden="true" className="size-4" />Quay lại</Button><SheetTitle>Chi tiết tài sản</SheetTitle><SheetDescription>Thông tin hiện tại và lịch sử thay đổi.</SheetDescription></SheetHeader><div className="px-4 pb-6">{detail ? <AssetDetail key={`${detail.id}:${detail.updated_at.toISOString()}`} row={detail} canManage={canManage} onEdit={focus => { setEditFocus(focus); setEditing(detail); setSelected(null); }} /> : detailError ? <div role="alert" className="space-y-2"><p>{detailError}</p><Button className="min-h-10" variant="outline" onClick={() => selected && openDetail(selected)}>Tải lại hồ sơ</Button></div> : <Skeleton className="h-72 w-full" />}</div></SheetContent></Sheet>
+    <Sheet open={selected !== null && editing === undefined} onOpenChange={open => { if (!open) closeDetail(); }}><SheetContent className="w-full max-w-none overflow-y-auto sm:max-w-xl" onCloseAutoFocus={e => { e.preventDefault(); if (editing === undefined) restoreListFocus(); }}><SheetHeader className="pr-12"><Button variant="ghost" className="min-h-10 justify-self-start px-0 sm:hidden" onClick={closeDetail}><ArrowLeft aria-hidden="true" className="size-4" />Quay lại</Button><SheetTitle>Chi tiết tài sản</SheetTitle><SheetDescription>Thông tin hiện tại và lịch sử thay đổi.</SheetDescription></SheetHeader><div className="px-4 pb-6">{detail ? <AssetDetail key={detail.id} row={detail} canManage={canManage} categories={categories} onEditingChange={active => { detailEditing.current = active ? detail.id : null; }} onSaved={row => { setDetail(row); if (screen === "assets") load(query, true); else refreshOverview(); }} /> : detailError ? <div role="alert" className="space-y-2"><p>{detailError}</p>{selected !== null && selected > 0 && <Button className="min-h-10" variant="outline" onClick={() => fetchDetail(selected)}>Tải lại hồ sơ</Button>}</div> : <Skeleton className="h-72 w-full" />}</div></SheetContent></Sheet>
     <Dialog open={editing !== undefined} onOpenChange={open => { if (!open) setEditing(undefined); }}><DialogContent className="w-[95vw] max-h-[85vh] overflow-y-auto sm:max-w-2xl" onCloseAutoFocus={e => { e.preventDefault(); if (selected === null) restoreListFocus(); }}><DialogHeader><DialogTitle>{editing ? "Sửa tài sản" : "Thêm tài sản"}</DialogTitle><DialogDescription>Ghi nhận thông tin đã xác minh; có thể bổ sung người và vị trí sau.</DialogDescription></DialogHeader>{editing !== undefined && <AssetForm key={editing ? `${editing.id}:${editing.updated_at.toISOString()}` : "new"} row={editing} categories={categories} defaultCategoryId={contextCategory?.dang_su_dung ? contextCategory.id : undefined} initialFocus={editFocus} onCancel={() => setEditing(undefined)} onSaved={id => { setEditing(undefined); if (screen === "assets") load(query, true); else refreshOverview(); openDetail(id); }} />}</DialogContent></Dialog>
     <Dialog open={categoryList} onOpenChange={setCategoryList}><DialogContent className="w-[95vw] max-h-[85vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>Loại tài sản</DialogTitle><DialogDescription>Ngừng dùng loại sẽ giữ nguyên các hồ sơ đang liên kết.</DialogDescription></DialogHeader><Button className="min-h-10 justify-self-start" onClick={() => { setCategoryList(false); setCategoryEdit(null); }}><Plus className="size-4" />Thêm loại tài sản</Button>{!categories.length && <EmptyPanel title="Chưa có loại tài sản" />}{categories.map(c => <div key={c.id} className="flex items-center justify-between gap-3 rounded-xl border p-3"><div className="flex min-w-0 items-center gap-3"><AssetCategoryIcon code={c.ma_loai} /><div className="min-w-0"><p className="break-words font-medium">{c.ten_loai}</p><p className="text-xs text-muted-foreground">{c.ma_loai} · {c.dang_su_dung ? "Đang dùng" : "Ngừng dùng"}</p></div></div><Button className="min-h-10" variant="outline" size="icon-lg" aria-label={`Sửa loại ${c.ten_loai}`} onClick={() => { setCategoryList(false); setCategoryEdit(c); }}><Pencil className="size-4" /></Button></div>)}</DialogContent></Dialog>
     <Dialog open={categoryEdit !== undefined} onOpenChange={open => { if (!open) setCategoryEdit(undefined); }}><DialogContent className="w-[95vw] max-h-[85vh] overflow-y-auto sm:max-w-lg"><DialogHeader><DialogTitle>{categoryEdit ? "Sửa loại tài sản" : "Thêm loại tài sản"}</DialogTitle><DialogDescription>Mã loại dùng để phân biệt và giữ ổn định sau khi tạo.</DialogDescription></DialogHeader>{categoryEdit !== undefined && <AssetCategoryForm row={categoryEdit} onCancel={() => setCategoryEdit(undefined)} onSaved={() => { setCategoryEdit(undefined); if (screen === "assets") load(query, true); else refreshOverview(); }} />}</DialogContent></Dialog>

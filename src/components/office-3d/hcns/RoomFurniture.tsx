@@ -1,5 +1,6 @@
 "use client";
 import { RoundedBox } from "@react-three/drei";
+import { useState } from "react";
 import { Shape } from "three";
 import {
   HCNS_ROOM_OUTLINE,
@@ -162,17 +163,113 @@ function Printer() {
     </group>
   );
 }
+
+function Scanner() {
+  // Open flatbed lid, glass and a document distinguish it from a printer.
+  return <group>
+    <Block at={[0, .06, 0]} size={[.56, .12, .44]} color={materials.paper} />
+    <Block at={[0, .125, 0]} size={[.48, .015, .35]} color={materials.screenLight} />
+    <Block at={[.015, .138, .015]} size={[.31, .008, .25]} color={materials.white} shadow={false} />
+    <group position={[0, .14, -.19]} rotation={[-.65, 0, 0]}>
+      <Block at={[0, .015, .19]} size={[.54, .03, .4]} color={materials.device} />
+      <Block at={[0, -.005, .19]} size={[.47, .008, .33]} color={materials.paper} />
+    </group>
+    <Block at={[.21, .13, .19]} size={[.04, .015, .025]} color={materials.accent} shadow={false} />
+  </group>;
+}
+
+function Phone() {
+  return <group>
+    <Block at={[0, .08, 0]} size={[.4, .16, .42]} color={materials.device} rotation={[-.12, 0, 0]} />
+    <Block at={[.055, .18, -.1]} size={[.19, .02, .11]} color={materials.screenLight} rotation={[-.12, 0, 0]} />
+    <Block at={[-.16, .22, 0]} size={[.07, .065, .29]} color={materials.metal} />
+    {[-.14, .14].map(z => <Block key={z} at={[-.16, .2, z]} size={[.12, .1, .1]} color={materials.metal} />)}
+    {Array.from({length: 9}, (_, i) => <Block key={i} at={[.015 + i % 3 * .055, .17, .025 + Math.floor(i / 3) * .055]}
+      size={[.035, .018, .035]} color={materials.muted} shadow={false} />)}
+  </group>;
+}
+
+function Tower({ ups = false }: { ups?: boolean }) {
+  return <group>
+    <Block at={[0, .32, 0]} size={[.34, .64, .44]} color={materials.device} />
+    <Block at={[0, .34, .225]} size={[.29, .57, .02]} color={materials.metal} />
+    <Block at={[0, .51, .24]} size={[.17, ups ? .13 : .055, .015]} color={materials.screenLight} shadow={false} />
+    {Array.from({length: ups ? 4 : 3}, (_, i) => <Block key={i} at={[0, .13 + i * .065, .24]}
+      size={[.21, .025, .012]} color={materials.device} shadow={false} />)}
+    <Block at={[.09, .4, .24]} size={[.025, .025, .015]} color={materials.accent} shadow={false} />
+  </group>;
+}
+
+function NetworkDevice({ kind }: { kind: "pbx" | "router" | "switch" }) {
+  const ports = kind === "switch" ? 8 : kind === "pbx" ? 6 : 4;
+  return <group>
+    <Block at={[0, .095, 0]} size={[.7, .19, .36]} color={kind === "pbx" ? materials.paper : materials.metal} />
+    <Block at={[0, .1, .185]} size={[.65, .13, .015]} color={materials.device} />
+    {Array.from({length: ports}, (_, i) => <group key={i} position={[(i - (ports - 1) / 2) * .065, .1, .2]}>
+      <Block at={[0, 0, 0]} size={[.045, .045, .015]} color={materials.muted} shadow={false} />
+      <Block at={[0, .04, 0]} size={[.015, .012, .015]} color={materials.screenLight} shadow={false} />
+    </group>)}
+    {kind === "router" && <Block at={[0, .198, 0]} size={[.25, .015, .1]} color={materials.screenLight} shadow={false} />}
+    {kind === "pbx" && <Block at={[0, .198, 0]} size={[.3, .015, .13]} color={materials.device} shadow={false} />}
+  </group>;
+}
+
+export function EquipmentModel({ kind }: { kind: EquipmentKind }) {
+  // Only the requested model is mounted: no hidden library of meshes/textures.
+  switch (kind) {
+    case "pc": return <Monitor />;
+    case "laptop": return <Laptop />;
+    case "printer": return <Printer />;
+    case "scanner": return <Scanner />;
+    case "phone": return <Phone />;
+    case "server": return <Tower />;
+    case "ups": return <Tower ups />;
+    case "pbx": case "router": case "switch": return <NetworkDevice kind={kind} />;
+    case "access-point": return <group>
+      <Cylinder at={[0, .04, 0]} radius={.16} height={.07} color={materials.paper} />
+      <Block at={[0, .078, .06]} size={[.06, .008, .015]} color={materials.screenLight} shadow={false} />
+    </group>;
+    default: return <Block at={[0, .17, 0]} size={[.4, .34, .32]} color={materials.device} />;
+  }
+}
+
+export type EquipmentInteraction = {
+  activeEquipment?: EquipmentKind;
+  onEquipment?: (kind: EquipmentKind, focus: boolean) => void;
+};
+export function EquipmentDisplay({ equipment, width, depth, height = 0, activeEquipment, onEquipment }: {
+  equipment: EquipmentKind[]; width: number; depth: number; height?: number;
+} & EquipmentInteraction) {
+  const [hovered, setHovered] = useState<EquipmentKind | null>(null);
+  return <>{equipment.slice(0, 3).map((kind, index, visible) => (
+    <group key={kind} userData={{equipmentKind: kind}}
+      onPointerOver={onEquipment ? e => {e.stopPropagation(); setHovered(kind);} : undefined}
+      onPointerOut={() => setHovered(null)}
+      onClick={onEquipment ? e => {e.stopPropagation(); if(e.button === 0 && e.delta < 5) onEquipment(kind, false);} : undefined}
+      onDoubleClick={onEquipment ? e => {e.stopPropagation(); if(e.button === 0 && e.delta < 5) onEquipment(kind, true);} : undefined}
+      position={[(index - (visible.length - 1) / 2) * width / visible.length, height, 0]}
+      scale={Math.min(.85, width / (visible.length * 1.1), depth / .8)}>
+      <EquipmentModel kind={kind} />
+      {(activeEquipment === kind || hovered === kind) && onEquipment && <mesh rotation={[-Math.PI/2,0,0]} position={[0,.008,0]} raycast={() => {}}>
+        <planeGeometry args={[.85,.75]}/><meshBasicMaterial color={materials.accent} transparent opacity={.2} depthWrite={false}/>
+      </mesh>}
+
+    </group>
+  ))}</>;
+}
 export function Desk({
   width,
   depth,
   equipment,
   selected,
+  activeEquipment,
+  onEquipment,
 }: {
   width: number;
   depth: number;
   equipment: EquipmentKind[];
   selected: boolean;
-}) {
+} & EquipmentInteraction) {
   return (
     <group>
       <RoundedBox
@@ -212,23 +309,13 @@ export function Desk({
         size={[width - 0.2, 0.22, 0.04]}
         color={materials.woodEdge}
       />
-      {equipment.slice(0, 3).map((kind, index, visible) => (
-        <group key={kind}
-          position={[(index - (visible.length - 1) / 2) * width / visible.length, 0.85, -0.05]}
-          scale={Math.min(0.85, width / (visible.length * 1.1), depth / 0.8)}>
-          {kind === "pc" && <Monitor />}
-          {kind === "laptop" && <Laptop />}
-          {kind === "printer" && <Printer />}
-          {kind === "scanner" && <>
-            <Block at={[0, 0.05, 0]} size={[0.5, 0.1, 0.38]} color={materials.paper} />
-            <Block at={[0, 0.11, 0]} size={[0.45, 0.025, 0.32]} color={materials.metal} />
-          </>}
-          {kind === "access-point" && <Cylinder at={[0, 0.04, 0]} radius={0.16} height={0.07} color={materials.paper} />}
-          {kind === "generic" && <Block at={[0, 0.17, 0]} size={[0.4, 0.34, 0.32]} color={materials.device} />}
-        </group>
-      ))}
-      {equipment.includes("pc") && <Block
-        at={[-width / 2 + 0.3, 0.29, 0]} size={[0.22, 0.5, 0.4]} color={materials.device} />}
+      <group position={[0, 0, -.05]}><EquipmentDisplay equipment={equipment} width={width} depth={depth} height={.85}
+        activeEquipment={activeEquipment} onEquipment={onEquipment} /></group>
+      {equipment.slice(0,3).includes("pc") && <group userData={{equipmentKind:"pc"}}
+        onClick={onEquipment ? e => {e.stopPropagation(); if(e.button === 0 && e.delta < 5) onEquipment("pc",false);} : undefined}
+        onDoubleClick={onEquipment ? e => {e.stopPropagation(); if(e.button === 0 && e.delta < 5) onEquipment("pc",true);} : undefined}>
+        <Block at={[-width / 2 + 0.3, 0.29, 0]} size={[0.22, 0.5, 0.4]} color={materials.device} />
+      </group>}
 
     </group>
   );

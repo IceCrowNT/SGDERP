@@ -4,7 +4,7 @@ import {
   HCNS_PLACEMENT,
   type FloorSelection,
 } from "./building-layout";
-import { HCNS_LAYOUT } from "./hcns-layout";
+import { HCNS_LAYOUT, EQUIPMENT_KINDS, type EquipmentKind } from "./hcns-layout";
 import { isObjectKey } from "./placement";
 
 export type BuildingNavigation = {
@@ -12,7 +12,14 @@ export type BuildingNavigation = {
   room: string | null;
   detail: boolean;
   point: string | null;
+  asset?: number;
+  equipment?: EquipmentKind;
 };
+export type BuildingTarget =
+  | { kind: "room"; key: string }
+  | { kind: "point"; key: string; personId?: number; equipment?: EquipmentKind }
+  | { kind: "floor"; floor: 1 | 2 | 3 }
+  | { kind: "background" };
 export function readBuildingNavigation(
   query: Pick<URLSearchParams, "get">,
 ): BuildingNavigation {
@@ -20,7 +27,7 @@ export function readBuildingNavigation(
   const floor = query.get("floor");
   const detail =
     room?.key === HCNS_BUILDING_KEY && query.get("mode") === "room";
-  return {
+  const view: BuildingNavigation = {
     floor:
       room?.floor ??
       (floor === "1" ? 1 : floor === "2" ? 2 : floor === "3" ? 3 : "all"),
@@ -28,9 +35,26 @@ export function readBuildingNavigation(
     detail,
     point: room && isObjectKey(query.get("point")) ? query.get("point") : detail
       ? (HCNS_LAYOUT.find((p) => p.key === query.get("point"))?.key ??
-        "hcns-01")
+        null)
       : null,
   };
+  if (view.point) {
+    const asset = Number(query.get("asset"));
+    const equipment = query.get("equipment") as EquipmentKind;
+    if (Number.isSafeInteger(asset) && asset > 0) view.asset = asset;
+    if (EQUIPMENT_KINDS.includes(equipment)) view.equipment = equipment;
+  }
+  return view;
+}
+export function selectionCameraKey(view: BuildingNavigation) {
+  return `${view.detail ? "detail" : "floor"}:${view.floor}:${view.room ?? ""}:${view.point ?? ""}:${view.asset ?? view.equipment ?? ""}`;
+}
+export function parentBuildingNavigation(view: BuildingNavigation): BuildingNavigation {
+  if (view.asset || view.equipment) return { floor:view.floor,room:view.room,detail:view.detail,point:view.point };
+  if (view.point) return {...view,point:null};
+  // Detail HCNS -> floor overview in one step, without a duplicate room-selection step.
+  if (view.room) return {floor:view.floor,room:null,detail:false,point:null};
+  return {floor:"all",room:null,detail:false,point:null};
 }
 export function buildingUrl(view: BuildingNavigation) {
   const query = new URLSearchParams();
@@ -41,13 +65,15 @@ export function buildingUrl(view: BuildingNavigation) {
     query.set("mode", "room");
     if (view.point) query.set("point", view.point);
   }
+  if (view.point && view.asset) query.set("asset", String(view.asset));
+  if (view.point && view.equipment) query.set("equipment", view.equipment);
   return `/office-3d${query.size ? `?${query}` : ""}`;
 }
 export const HCNS_URL = buildingUrl({
   floor: 2,
   room: HCNS_BUILDING_KEY,
   detail: true,
-  point: "hcns-01",
+  point: null,
 });
 
 // Use the same transform as the embedded model for camera targets and hit labels.

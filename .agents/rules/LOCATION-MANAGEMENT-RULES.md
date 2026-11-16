@@ -4,6 +4,7 @@ Bản đầu đã triển khai và kiểm thử kỹ thuật đạt. DB, quyền
 
 - Vị trí là danh mục vật lý dùng chung, độc lập cơ cấu phòng ban. Nhân sự và tài sản tham chiếu ID; không tạo danh mục riêng cho mỗi phân hệ hoặc nhập tên làm khóa.
 - Chỉ phân hệ vị trí sở hữu việc tạo/sửa cây. Quyền quản lý HR/tài sản cho phép chọn vị trí có sẵn trong phạm vi công ty, không tự cấp quyền quản lý danh mục.
+- 3D được mở form sửa tên/mô tả tại chỗ với LOCATIONS MANAGE, dùng cùng `LocationForm` và `saveLocation`; không tạo luồng ghi riêng hoặc cho quyền HR/tài sản thay thế quyền vị trí. Phạm vi và nghiệm thu tham chiếu [plan 3D](../../docs/plans/OFFICE-3D-CHECKLIST.md#sửa-thông-tin-vị-trí-ngay-trên-3d).
 - Quyền xem vị trí không cấp quyền xem nhân sự/tài sản nằm tại đó. Kiểm tra riêng quyền của phân hệ cho dữ liệu liên quan.
 - Mã vị trí ổn định; đổi tên/cha không đổi ID hoặc tự gán lại người/thiết bị. Thay cha phải thông báo ảnh hưởng cả nhánh.
 - Xóa vị trí không có con: xem trước ảnh hưởng, tự gỡ vị trí khỏi tất cả nhân sự đang liên kết (kể cả đã nghỉ), ghi audit HR từng người và audit xóa cùng transaction. Cần LOCATIONS MANAGE và thêm HR MANAGE nếu có người; danh sách/phiên bản thay đổi phải xem lại và xác nhận. DB vẫn Restrict; xóa SQL trực tiếp không thay luồng nghiệp vụ. Ngừng dùng/đổi loại không phù hợp vẫn chặn nếu còn người. Vị trí còn tài sản thì chặn xóa/ngừng dùng, không tự gỡ thiết bị; xử lý theo [plan tài sản](../../docs/plans/ASSET-MANAGEMENT-CHECKLIST.md).

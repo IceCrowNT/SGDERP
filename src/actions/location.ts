@@ -35,6 +35,20 @@ const selection = {
   dang_su_dung: true,
   updated_at: true,
 } as const;
+// Load only the selected record when opening an inline editor, without HR data.
+export async function getLocationForEdit(id: number) {
+  const session = await getSession();
+  if (!session || !hasPermission(session, "LOCATIONS", "MANAGE"))
+    return { success: false as const, message: "Bạn không có quyền quản lý vị trí." };
+  if (!z.number().int().positive().safeParse(id).success)
+    return { success: false as const, message: "Vị trí không hợp lệ." };
+  const row = await db.vi_tri.findFirst({
+    where: { id, company_id: session.companyId }, select: selection,
+  });
+  if (!row) return { success: false as const, message: "Vị trí không tồn tại." };
+  const { updated_at, ...record } = row;
+  return { success: true as const, row: { ...record, version: updated_at.toISOString() } };
+}
 export async function getLocations() {
   const session = await getSession();
   if (!session || !hasPermission(session, "LOCATIONS"))

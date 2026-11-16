@@ -12,7 +12,7 @@ let person: { id: number; ho_ten: string; ma_nhan_su: string }, department: numb
 let saveRequest: Request;
 const name = `Laptop thử ${run}`;
 const action = (r: Request) => r.method() === "POST" && Boolean(r.headers()["next-action"]);
-const dialog = (page: Page) => page.getByRole("dialog", { name: /^(Thêm|Sửa) tài sản$/ });
+const dialog = (page: Page) => page.getByRole("dialog", { name: "Thêm tài sản", exact: true }).or(page.getByRole("form", { name: "Sửa thông tin tài sản", exact: true }));
 async function select(page: Page, label: string, option: string | RegExp) {
   await dialog(page).getByRole("combobox", { name: label, exact: true }).click();
   await page.getByRole("option", { name: option, exact: typeof option === "string" }).click();
@@ -86,19 +86,29 @@ test("empty state, required fields, category creation and personal assignment wo
 
 test("edit clears a personal assignment, changes location/status and preserves readable history", async ({ page, context }) => {
   await signAccount(context, manager); await page.goto("/assets"); await open(page);
-  await page.getByRole("button", { name: "Sửa tài sản", exact: true }).click();
+  await page.getByRole("button", { name: "Sửa người sử dụng", exact: true }).click();
+  await page.getByRole("combobox", { name: "Tìm người sử dụng", exact: true }).press("Escape");
   await select(page, "Hình thức sử dụng", "Dùng chung");
-  await expect(dialog(page).getByRole("combobox", { name: "Người sử dụng", exact: true })).toHaveCount(0);
-  await select(page, "Tình trạng", "Hỏng"); await select(page, "Vị trí", "Bàn thử B");
-  await dialog(page).locator("summary").filter({ hasText: "Thông tin bổ sung" }).click();
+  await dialog(page).getByRole("button", { name: "Lưu", exact: true }).click();
+  await expect(dialog(page)).not.toBeVisible();
+  await page.getByRole("button", { name: "Sửa tình trạng", exact: true }).click();
+  await page.getByRole("option", { name: "Hỏng", exact: true }).click();
+  await dialog(page).getByRole("button", { name: "Lưu", exact: true }).click();
+  await expect(dialog(page)).not.toBeVisible();
+  await page.getByRole("button", { name: "Sửa vị trí", exact: true }).click();
+  await page.getByRole("option", { name: "Bàn thử B", exact: true }).click();
+  await dialog(page).getByRole("button", { name: "Lưu", exact: true }).click();
+  await expect(dialog(page)).not.toBeVisible();
+  await page.getByRole("dialog", { name: "Chi tiết tài sản", exact: true }).locator("summary").filter({ hasText: "Ghi chú" }).click();
+  await page.getByRole("button", { name: "Sửa ghi chú", exact: true }).click();
   await page.getByLabel("Ghi chú", { exact: true }).fill("Kiểm tra bộ nguồn");
-  await page.getByRole("button", { name: "Lưu tài sản", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Chi tiết tài sản", exact: true })).toBeVisible();
+  await dialog(page).getByRole("button", { name: "Lưu", exact: true }).click();
+  await expect(dialog(page)).not.toBeVisible();
   const row = await db.tai_san.findUniqueOrThrow({ where: { id: asset } });
   expect(row.nguoi_su_dung_id).toBeNull(); expect(row.vi_tri_id).toBe(two); expect(row.tinh_trang).toBe("HONG");
   await page.getByRole("tab", { name: "Lịch sử", exact: true }).click();
   const history = page.getByRole("region", { name: "Lịch sử tài sản" });
-  await history.locator("summary").filter({ hasText: "Cập nhật hồ sơ" }).first().click();
+  for (const summary of await history.locator("summary").filter({ hasText: "Cập nhật hồ sơ" }).all()) await summary.click();
   await expect(history).toContainText("Cập nhật hồ sơ"); await expect(history).toContainText(person.ho_ten);
   await expect(history).not.toContainText("nguoi_su_dung_id");
   await page.getByRole("button", { name: "Close", exact: true }).click();
@@ -113,7 +123,7 @@ test("VIEW/none, direct action payloads, tenant bounds and revocation are enforc
   const payload = JSON.parse(saveRequest.postData()!)[0];
   await signAccount(context, viewer); await page.goto("/assets");
   await expect(page.getByRole("button", { name: "Thêm tài sản", exact: true })).toHaveCount(0);
-  await open(page); await expect(page.getByRole("button", { name: "Sửa tài sản", exact: true })).toHaveCount(0);
+  await open(page); await expect(page.getByRole("button", { name: "Sửa tên tài sản", exact: true })).toHaveCount(0);
   expect(await replay(page, saveRequest, payload)).toContain('"success":false');
   await signAccount(context, manager); await page.goto("/assets");
   expect(await replay(page, saveRequest, { ...payload, companyId: foreign })).toContain('"success":false');
@@ -130,11 +140,11 @@ test("VIEW/none, direct action payloads, tenant bounds and revocation are enforc
 
 test("stale edits keep input and do not overwrite; inactive links remain editable", async ({ page, context }) => {
   await signAccount(context, manager); await page.goto("/assets"); await open(page);
-  await page.getByRole("button", { name: "Sửa tài sản", exact: true }).click();
-  await dialog(page).locator("summary").filter({ hasText: "Thông tin bổ sung" }).click();
+  await page.getByRole("dialog", { name: "Chi tiết tài sản", exact: true }).locator("summary").filter({ hasText: "Ghi chú" }).click();
+  await page.getByRole("button", { name: "Sửa ghi chú", exact: true }).click();
   await page.getByLabel("Ghi chú", { exact: true }).fill("Nội dung chưa lưu");
   await db.tai_san.update({ where: { id: asset }, data: { ghi_chu: "Người khác đã cập nhật" } });
-  await page.getByRole("button", { name: "Lưu tài sản", exact: true }).click();
+  await page.getByRole("button", { name: "Lưu", exact: true }).click();
   await expect(dialog(page).getByRole("alert")).toContainText("Hồ sơ đã thay đổi");
   await expect(page.getByLabel("Ghi chú", { exact: true })).toHaveValue("Nội dung chưa lưu");
   expect((await db.tai_san.findUniqueOrThrow({ where: { id: asset } })).ghi_chu).toBe("Người khác đã cập nhật");
@@ -142,13 +152,14 @@ test("stale edits keep input and do not overwrite; inactive links remain editabl
   await db.tai_san.update({ where: { id: asset }, data: { hinh_thuc_su_dung: "CA_NHAN", nguoi_su_dung_id: person.id } });
   await db.nhan_su.update({ where: { id: person.id }, data: { tinh_trang_lam_viec: "LEFT" } });
   await db.loai_tai_san.update({ where: { id: category }, data: { dang_su_dung: false } });
-  await page.reload(); await open(page);
+  await page.reload();
+  await expect(page.getByRole("dialog", { name: "Chi tiết tài sản", exact: true }).getByRole("heading", { name, exact: true })).toBeVisible();
   await expect(page.getByText(/Cần kiểm tra và xử lý bàn giao thiết bị/)).toBeVisible();
-  await page.getByRole("button", { name: "Sửa tài sản", exact: true }).click();
-  await dialog(page).locator("summary").filter({ hasText: "Thông tin bổ sung" }).click();
+  await page.getByRole("dialog", { name: "Chi tiết tài sản", exact: true }).locator("summary").filter({ hasText: "Ghi chú" }).click();
+  await page.getByRole("button", { name: "Sửa ghi chú", exact: true }).click();
   await page.getByLabel("Ghi chú", { exact: true }).fill("Chờ bàn giao");
-  await page.getByRole("button", { name: "Lưu tài sản", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Chi tiết tài sản", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Lưu", exact: true }).click();
+  await expect(dialog(page)).not.toBeVisible();
   const saved = await db.tai_san.findUniqueOrThrow({ where: { id: asset } });
   expect(saved.nguoi_su_dung_id).toBe(person.id); expect(saved.ghi_chu).toBe("Chờ bàn giao");
   await db.loai_tai_san.update({ where: { id: category }, data: { dang_su_dung: true } });

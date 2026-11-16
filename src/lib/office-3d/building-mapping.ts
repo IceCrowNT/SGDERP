@@ -87,6 +87,8 @@ export type BuildingRoomData = {
   assets?: BuildingAsset[];
 };
 export type BuildingData = {
+  searchPeople?: { id: number; name: string; department: string | null; location: string | null; roomKey: string | null; pointKey: string | null }[];
+  assetCategories?: { code: string; name: string }[];
   objects?: PlacedObject[];
   canManageEmployees?: boolean;
   canManageAssets?: boolean;

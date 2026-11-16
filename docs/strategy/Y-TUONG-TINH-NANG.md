@@ -6,7 +6,7 @@ Tài liệu ghi nhận ý tưởng để xem xét và thử nghiệm. Việc ghi
 
 **Ngày ghi nhận:** 24/10/2026  
 **Nguồn:** Người phụ trách đề xuất thêm mã vạch vào quản lý tài sản, dùng camera điện thoại để quét trong phần mềm.  
-**Trạng thái:** Ý tưởng, chưa phát triển hoặc cài thư viện quét mã.
+**Trạng thái cập nhật 16/11/2026:** đã triển khai và kiểm chứng kỹ thuật tem QR chứa link mở hồ sơ bằng camera điện thoại, tải PNG/in một tem; tiến độ và nghiệm thu tại [plan tài sản](../plans/ASSET-MANAGEMENT-CHECKLIST.md#liên-kết-hồ-sơ-và-tem-qr--16112026). Chưa xây scanner trong ERP hoặc cài thư viện quét camera. Các luồng scanner/kiểm kê bên dưới vẫn là ý tưởng mở rộng, không phải hiện trạng triển khai.
 
 ### Mục tiêu
 

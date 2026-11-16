@@ -35,7 +35,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export function LoginForm() {
+export function LoginForm({ returnTo }: { returnTo?: string | null }) {
   const router = useRouter();
   const [isHydrated, setIsHydrated] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -68,7 +68,9 @@ export function LoginForm() {
           toast.success("Đăng nhập thành công!", {
             description: "Đang chuyển hướng vào hệ thống ERP...",
           });
-          router.replace(result.redirectTo ?? "/");
+          router.replace(result.redirectTo === "/profile"
+            ? `/profile${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`
+            : returnTo ?? result.redirectTo ?? "/");
           router.refresh();
         }
       } catch (error: unknown) {

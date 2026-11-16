@@ -1,4 +1,5 @@
 "use client";
+import type { EquipmentKind } from "@/lib/office-3d/hcns-layout";
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Group, Line, Mesh, Path, Shape, type Material } from "three";
@@ -24,6 +25,7 @@ import {
 
 const palette = { stone: "#e2dbd0", mutedFloor: "#dedbd5" };
 const NO_HOLES: ArchitecturalPoint[][] = [];
+const ignoreDecorativeRaycast = () => {};
 function ContextLayer({
   detail,
   children,
@@ -160,7 +162,7 @@ function RoomEnvelope({ room, selected }: { room: BuildingRoom; selected: boolea
         );
       })}
       {outlined && (
-        <lineLoop>
+        <lineLoop raycast={ignoreDecorativeRaycast}>
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" args={[edge, 3]} />
           </bufferGeometry>
@@ -178,11 +180,15 @@ export function BuildingModel({
   detail,
   point,
   onPoint,
+  onFocusPoint,
+  onEquipment,
+  activeEquipment,
   onEnter,
   hovered,
   onHover,
   person,
   onPerson,
+  onOverview,
 }: {
   building: BuildingData;
   floor: FloorSelection;
@@ -191,14 +197,23 @@ export function BuildingModel({
   detail: boolean;
   point: string | null;
   onPoint: (key: string) => void;
+  onFocusPoint: (key: string) => void;
+  onEquipment: (key: string, kind: EquipmentKind, focus: boolean) => void;
+  activeEquipment?: EquipmentKind;
   onEnter: (key: string) => void;
   hovered: string | null;
   onHover: (key: string | null) => void;
   person: number | null;
   onPerson: (key: string, id: number) => void;
+  onOverview: () => void;
 }) {
   return (
-    <group>
+    <group onClick={event => {
+      if (detail && event.button === 0 && event.delta < 5) {
+        event.stopPropagation();
+        onOverview();
+      }
+    }}>
       {BUILDING_FLOORS.map((f) => (
         <group
           key={f.floor}
@@ -243,6 +258,9 @@ export function BuildingModel({
                       points={building.hcns.points}
                       selected={detail ? point : null}
                       onSelect={detail ? onPoint : undefined}
+                      onFocusPoint={detail ? onFocusPoint : undefined}
+                      onEquipment={detail ? onEquipment : undefined}
+                      activeEquipment={activeEquipment}
                       hovered={hovered}
                       onHover={detail ? onHover : undefined}
                       person={person}

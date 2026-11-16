@@ -1,12 +1,14 @@
 # Kế hoạch vị trí & không gian dùng chung
 
-Cập nhật: **13/11/2026**. **Bản đầu đã triển khai; đã có cây vị trí do người phụ trách nhập và 10 vị trí HCNS theo bản phác.** Rule: [LOCATION-MANAGEMENT-RULES](../../.agents/rules/LOCATION-MANAGEMENT-RULES.md).
+Cập nhật: **16/11/2026**. **Bản đầu đã triển khai; đã có cây vị trí do người phụ trách nhập, 10 vị trí HCNS theo bản phác và sửa tên/mô tả trực tiếp từ 3D.** Rule: [LOCATION-MANAGEMENT-RULES](../../.agents/rules/LOCATION-MANAGEMENT-RULES.md).
 
 ## Ô chọn có tìm kiếm — 12/11/2026
 
 - [x] Ô chọn vị trí cấp trên: đã chuyển sang tìm/chọn có hỗ trợ không dấu; kiểm thử giao diện và hồi quy đạt. Cách dùng chung và kiểm chứng tại [tổng quan](README.md#ô-chọn-dữ-liệu-có-tìm-kiếm--12112026). Không đổi dữ liệu hoặc quyền.
 
 ## Phạm vi và trách nhiệm
+
+- [x] Tách `LocationForm` dùng chung; 3D mở `LocationEditDialog` sửa tên/mô tả tại chỗ qua action `saveLocation`, không có luồng ghi riêng. `getLocationForEdit` chỉ đọc một vị trí thuộc công ty khi có LOCATIONS MANAGE. Giữ kiểm tra version và audit; phạm vi/kiểm chứng tại [plan 3D](OFFICE-3D-CHECKLIST.md#sửa-thông-tin-vị-trí-ngay-trên-3d).
 
 - Tính năng riêng tại **Hệ thống & cấu hình → Vị trí & không gian**, đường dẫn `/locations`.
 - Sở hữu danh mục vật lý `vi_tri`, dùng chung cho nhân sự, tài sản và 3D. Phòng ban là cơ cấu tổ chức, không thay thế vị trí.

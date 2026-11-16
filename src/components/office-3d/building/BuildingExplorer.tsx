@@ -1,4 +1,6 @@
 "use client";
+import type { ObjectEditTarget } from "./ObjectEditDialog";
+import { LocationEditDialog } from "@/components/locations/LocationEditDialog";
 import {
   useEffect,
   useCallback,
@@ -8,7 +10,6 @@ import {
   useTransition,
 } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Building2,
@@ -28,15 +29,13 @@ import {
   CircleHelp,
   X,
   MapPin,
-  Search,
   RefreshCw,
-  CircleDot,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuLabel } from "@/components/ui/context-menu";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useExpandedWorkspace, hasWorkspaceOverlay } from "./useExpandedWorkspace";
 import { cn } from "@/lib/utils";
@@ -49,14 +48,22 @@ import type { BuildingData } from "@/lib/office-3d/building-mapping";
 import type { BuildingCamera } from "./BuildingCanvas";
 import {
   buildingUrl,
+  parentBuildingNavigation,
+  selectionCameraKey,
   readBuildingNavigation,
   type BuildingNavigation,
+  type BuildingTarget,
 } from "@/lib/office-3d/building-navigation";
-import { HcnsRoomPanel } from "../hcns/HcnsRoomPanel";
+import { HcnsRoomPanel, RoomPointList } from "../hcns/HcnsRoomPanel";
 import { RoomOverviewPanel, type RoomTab } from "./RoomOverviewPanel";
+import { SceneSearch, SceneFilterResults } from "./SceneSearch";
+import { SceneLayerControls } from "./SceneLayerControls";
+import { SpaceDirectory } from "./SpaceDirectory";
+import { filterScene, personDestination, assetDestination, DEFAULT_SCENE_LAYERS, type SceneLayers, type AssetSceneCategory } from "@/lib/office-3d/scene-filter";
 import { PlacementEditor } from "./PlacementEditor";
 import type { PlacementDraft } from "@/lib/office-3d/placement";
-import type { HcnsRoomData } from "@/lib/office-3d/hcns-layout";
+import { assetsForEquipment, equipmentForAssets, type EquipmentKind, type HcnsRoomData } from "@/lib/office-3d/hcns-layout";
+const ObjectEditDialog = dynamic(() => import("./ObjectEditDialog").then(m => m.ObjectEditDialog));
 const DEFAULT_CAMERA: BuildingCamera = {
   view: "overview",
   sequence: 0,
@@ -84,12 +91,6 @@ const Model = dynamic(() => import("./BuildingCanvas"), {
     <Skeleton className="h-full w-full" aria-label="Đang dựng tòa nhà 3D" />
   ),
 });
-const normalize = (s: string) =>
-  s
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/gi, "d")
-    .toLowerCase();
 export function BuildingExplorer({ building }: { building: BuildingData }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -111,6 +112,15 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
   const desktop = useSyncExternalStore(subscribeDesktop, () => window.matchMedia(desktopQuery).matches, () => false);
   const [panelOpen, setPanelOpen] = useState<boolean | null>(null);
   const showPanel = panelOpen ?? desktop;
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [toolbarHeight, setToolbarHeight] = useState(144);
+  useEffect(() => {
+    const toolbar = toolbarRef.current;
+    if (!toolbar) return;
+    const observer = new ResizeObserver(() => setToolbarHeight(Math.ceil(toolbar.getBoundingClientRect().height)));
+    observer.observe(toolbar);
+    return () => observer.disconnect();
+  }, []);
   const panelButtonRef = useRef<HTMLButtonElement>(null);
   const [modelUnavailable, setModelUnavailable] = useState(false);
   const [modelAttempt, setModelAttempt] = useState(0);
@@ -120,14 +130,19 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
   }, []);
   const revealPanel = useCallback(() => { setPanelOpen(true); setModelUnavailable(true); }, []);
   const [roomTabs, setRoomTabs] = useState<Record<string, RoomTab>>({});
-  const [selectedAsset, setSelectedAsset] = useState<{ point: string; id: number } | null>(null);
+  const selectedAsset = navigation.point && navigation.asset ? {point:navigation.point,id:navigation.asset} : null;
   const panelScrollRef = useRef<HTMLDivElement>(null);
   function closePanel() {
     if(draft) return;
     setPanelOpen(false);
     panelButtonRef.current?.focus({ preventScroll: true });
   }
-  const [search, setSearch] = useState("");
+  const [layers, setLayers] = useState<SceneLayers>(DEFAULT_SCENE_LAYERS);
+  const activeCategory = layers.assets && !navigation.point ? layers.category : null;
+  const [searchNotice, setSearchNotice] = useState<string | null>(null);
+  const scene = filterScene(building, layers, floor, selected);
+  const [contextBackground, setContextBackground] = useState(false);
+  const [editingObject, setEditingObject] = useState<ObjectEditTarget | null>(null);
   const [selectedPerson, setSelectedPerson] = useState<{
     point: string;
     id: number;
@@ -145,17 +160,17 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     }));
   }
   function navigate(next: BuildingNavigation) {
+    setSearchNotice(null);
     const url = buildingUrl(next);
     if (`${window.location.pathname}${window.location.search}` !== url)
       window.history.pushState(null, "", url);
     window.dispatchEvent(new Event(NAVIGATION_EVENT));
-    setSearch("");
   }
   function enterRoom() {
     if(draft) return;
     if (!building.hcns) return;
     setSelectedPerson(null);
-    setSelectedAsset(null);
+
     setCommands(old => ({ ...old, "room:hcns": {
       view: "overview", zoom: 1, sequence: (old["room:hcns"]?.sequence ?? 0) + 1,
     } }));
@@ -164,8 +179,17 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
       floor: 2,
       room: HCNS_BUILDING_KEY,
       detail: true,
-      point: "hcns-01",
+      point: null,
     });
+  }
+  function roomOverview() {
+    if (draft || !selected) return;
+    setSelectedPerson(null);
+
+    setPanelOpen(true);
+    navigate({ ...navigation, point: null, asset:undefined,equipment:undefined });
+    setCommand(c => ({ view: detail ? "overview" : "focus", key: detail ? undefined : selected,
+      zoom: 1, sequence: c.sequence + 1, restoreKey: selectionCameraKey({...navigation,point:null,asset:undefined,equipment:undefined}) }));
   }
   function leaveRoom() {
     if(draft) return;
@@ -175,25 +199,25 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     if(draft) return;
     setPanelOpen(true);
     setSelectedPerson(null);
-    setSelectedAsset(null);
+
     const object=objects.find(o=>o.point.key===point);
     if(object) {
       const r=BUILDING_ROOMS.find(r=>r.key===object.roomKey)!;
       navigate({floor:r.floor,room:r.key,detail:r.key===HCNS_BUILDING_KEY&&Boolean(building.hcns),point});
-    } else navigate({ ...navigation, point });
+    } else navigate({ ...navigation, point, asset:undefined,equipment:undefined });
   }
   function choosePerson(point: string, id: number) {
     if(draft) return;
     setPanelOpen(true);
     setSelectedPerson({ point, id });
-    setSelectedAsset(null);
-    navigate({ ...navigation, point });
+
+    navigate({ ...navigation, point, asset:undefined,equipment:undefined });
   }
   function focusRoomRecord(point: string, id: number, kind: "person" | "asset") {
     if(draft) return;
     setPanelOpen(true);
     setSelectedPerson(kind === "person" ? { point, id } : null);
-    setSelectedAsset(kind === "asset" ? { point, id } : null);
+
     const object=objects.find(o=>o.point.key===point);
     const r=BUILDING_ROOMS.find(r=>r.key===(object?.roomKey ?? HCNS_BUILDING_KEY))!;
     const isHcns=r.key===HCNS_BUILDING_KEY&&Boolean(building.hcns);
@@ -201,49 +225,134 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     setCommands(old => ({ ...old, [nextScope]: {
       view: "focus", key: point, zoom: 1, sequence: (old[nextScope]?.sequence ?? 0) + 1,
     } }));
-    navigate({ floor:r.floor, room:r.key, detail:isHcns, point });
+    navigate({ floor:r.floor, room:r.key, detail:isHcns, point, ...(kind === "asset" ? {asset:id} : {}) });
+  }
+  function filterCategory(category: AssetSceneCategory | null) {
+    if (draft) return;
+    setLayers(old => ({ ...old, category }));
+    if (category) setPanelOpen(true);
+  }
+  function findAsset(id: number) {
+    if (draft) return;
+    const destination = assetDestination(building, id);
+    if (!destination) return;
+    setLayers(old => ({ ...old, assets: true, category: null }));
+    setPanelOpen(true);
+    const { asset, navigation: next } = destination;
+    if (!next) {
+      setSearchNotice(`${asset.name}: vị trí chưa được liên kết với hình phòng trên mô hình này.`);
+      return;
+    }
+    if (next.point) focusRoomRecord(next.point, id, "asset");
+    else {
+      setSelectedPerson(null);
+
+      const nextScope = next.detail ? "room:hcns" : `floor:${next.floor}`;
+      setCommands(old => ({ ...old, [nextScope]: { view: "focus", key: next.room,
+        zoom: 1, sequence: (old[nextScope]?.sequence ?? 0) + 1 } }));
+      navigate(next);
+      setRoomTabs(old => ({ ...old, [next.room]: "assets" }));
+      setSearchNotice(`${asset.name}: đã đến phòng; vị trí chưa có điểm riêng trên mô hình.`);
+    }
+  }
+  function findPerson(id: number) {
+    if (draft) return;
+    const destination = personDestination(building, id);
+    if (!destination) return;
+    setLayers(old => ({ ...old, people: true }));
+    setPanelOpen(true);
+    const { person, navigation: next } = destination;
+    if (!next) {
+      setSearchNotice(`${person.name}: ${person.location ? `vị trí ${person.location} chưa được liên kết với mô hình này.` : "chưa được gán vị trí làm việc."}`);
+      return;
+    }
+    if (next.point) {
+      focusRoomRecord(next.point, id, "person");
+    } else {
+      setSelectedPerson(null);
+
+      const nextScope = next.detail ? "room:hcns" : `floor:${next.floor}`;
+      setCommands(old => ({ ...old, [nextScope]: { view: "focus", key: next.room,
+        zoom: 1, sequence: (old[nextScope]?.sequence ?? 0) + 1 } }));
+      navigate(next);
+      setRoomTabs(old => ({ ...old, [next.room]: "people" }));
+      setSearchNotice(`${person.name}: đã đến phòng; ${person.location ?? "vị trí làm việc"} chưa có điểm riêng trên mô hình.`);
+    }
   }
   useEffect(() => {
     panelScrollRef.current?.scrollTo({ top: 0 });
   }, [selected, detail, navigation.point, selectedAsset?.id, personId]);
+  function backOne() {
+    if (draft) return;
+    const next = parentBuildingNavigation(navigation);
+    if (buildingUrl(next) === buildingUrl(navigation)) { if (expanded) setExpanded(false); return; }
+    setSelectedPerson(null);
+    setPanelOpen(next.room || modelUnavailable || activeCategory ? true : null);
+    const nextScope = next.detail ? "room:hcns" : `floor:${next.floor}`;
+    setCommands(old => ({...old,[nextScope]:{view:next.point || next.room ? "focus":"overview",
+      key:next.point ?? next.room ?? undefined,zoom:1,sequence:(old[nextScope]?.sequence ?? 0)+1,
+      restoreKey:selectionCameraKey(next)}}));
+    navigate(next);
+  }
+  // One Escape handler for normal and expanded workspace; overlays/drafts own it first.
+  const backRef = useRef(backOne);
+  useEffect(() => { backRef.current = backOne; });
   useEffect(() => {
     function escape(event: KeyboardEvent) {
-      if (event.key !== "Escape" || event.defaultPrevented || hasWorkspaceOverlay(workspaceRef.current)) return;
-      if(draft) return;
-      if (expanded) {
-        event.preventDefault();
-        setExpanded(false);
-        return;
-      }
-      if (!detail) return;
-      if (
-        (event.target instanceof HTMLElement &&
-          (event.target.matches("input,textarea,select") ||
-            event.target.isContentEditable))
-      )
-        return;
-      window.history.pushState(
-        null,
-        "",
-        buildingUrl({
-          floor: 2,
-          room: HCNS_BUILDING_KEY,
-          detail: false,
-          point: null,
-        }),
-      );
-      window.dispatchEvent(new Event(NAVIGATION_EVENT));
+      if (event.key !== "Escape" || event.defaultPrevented || hasWorkspaceOverlay(workspaceRef.current) || draft) return;
+      if (event.target instanceof HTMLElement && (
+        (event.target !== document.body && !workspaceRef.current?.contains(event.target)) ||
+        event.target.matches("input,textarea,select") || event.target.isContentEditable)) return;
+      event.preventDefault(); backRef.current();
+    }
+    function historyCamera() {
+      const next = readBuildingNavigation(new URLSearchParams(window.location.search));
+      const nextScope = next.detail ? "room:hcns" : `floor:${next.floor}`;
+      setSelectedPerson(null);
+      setCommands(old => ({...old,[nextScope]:{view:next.point || next.room ? "focus":"overview",
+        key:next.point ?? next.room ?? undefined,equipment:next.equipment,zoom:1,
+        sequence:(old[nextScope]?.sequence ?? 0)+1,restoreKey:selectionCameraKey(next)}}));
     }
     window.addEventListener("keydown", escape);
-    return () => window.removeEventListener("keydown", escape);
-  }, [detail, expanded, setExpanded, workspaceRef,draft]);
+    window.addEventListener("popstate", historyCamera);
+    return () => {window.removeEventListener("keydown", escape);window.removeEventListener("popstate", historyCamera);};
+  }, [workspaceRef, draft]);
   const room = building.rooms.find((r) => r.key === selected);
   const shape = BUILDING_ROOMS.find((r) => r.key === selected);
   const roomObjects=objects.filter(o=>o.roomKey===selected);
-  const detailsData:HcnsRoomData|null = detail && building.hcns ? {...building.hcns,points:[...building.hcns.points,...roomObjects.map(o=>o.point)]}
+  const roomData:HcnsRoomData|null = detail && building.hcns ? {...building.hcns,points:[...building.hcns.points,...roomObjects.map(o=>o.point)]}
     : selectedObject && room ? {name:room.name,path:room.path ?? room.name,points:roomObjects.map(o=>o.point),
       canManage:building.canManage,canViewEmployees:building.canViewEmployees,canManageEmployees:Boolean(building.canManageEmployees),
       canViewAssets:building.canViewAssets,canManageAssets:Boolean(building.canManageAssets)} : null;
+  const detailsData = navigation.point ? roomData : null;
+  const currentPoint = roomData?.points.find(p=>p.key===navigation.point);
+  const activeEquipment = navigation.equipment ?? (navigation.asset && currentPoint?.assets
+    ? equipmentForAssets(currentPoint.assets.filter(a=>a.id===navigation.asset))[0] : undefined);
+  function focusPoint(key: string, equipment?: EquipmentKind) {
+    if(draft) return;
+    const object=objects.find(o=>o.point.key===key);
+    const r=BUILDING_ROOMS.find(r=>r.key===(object?.roomKey ?? HCNS_BUILDING_KEY))!;
+    const isHcns=r.key===HCNS_BUILDING_KEY && Boolean(building.hcns);
+    const nextScope=isHcns ? "room:hcns" : `floor:${r.floor}`;
+    if (!equipment) choosePoint(key);
+    setCommands(old=>({...old,[nextScope]:{view:"focus",key,equipment,zoom:1,sequence:(old[nextScope]?.sequence ?? 0)+1}}));
+  }
+  function chooseEquipment(key: string, kind: EquipmentKind, focus: boolean) {
+    if(draft || !building.canViewAssets) return;
+    const p = scene.hcns?.points.find(p=>p.key===key) ?? scene.objects?.find(o=>o.point.key===key)?.point;
+    const matches = assetsForEquipment(p?.assets ?? [],kind);
+    if (!matches.length) return;
+    const object=objects.find(o=>o.point.key===key);
+    const r=BUILDING_ROOMS.find(r=>r.key===(object?.roomKey ?? HCNS_BUILDING_KEY))!;
+    setSelectedPerson(null);setPanelOpen(true);
+    navigate({floor:r.floor,room:r.key,detail:r.key===HCNS_BUILDING_KEY && Boolean(building.hcns),point:key,
+      equipment:kind,...(matches.length===1 ? {asset:matches[0].id} : {})});
+    if(focus) focusPoint(key,kind);
+  }
+  function chooseAsset(id:number) {
+    if(!currentPoint?.assets?.some(a=>a.id===id) || !building.canViewAssets) return;
+    navigate({...navigation,asset:id});
+  }
   function beginPlacement(edit=false) {
     if(!room?.locationId || room.state!=="active" || shape?.kind!=="room" || !building.canManage || modelUnavailable) return;
     const object=edit ? selectedObject : undefined;
@@ -253,18 +362,13 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     setPanelOpen(true);
     setCommand(c=>({view:"top",key:room.key,zoom:1,sequence:c.sequence+1}));
   }
-  const visible = building.rooms.filter(
-    (r) =>
-      (floor === "all" ||
-        BUILDING_ROOMS.find((s) => s.key === r.key)?.floor === floor) &&
-      normalize(r.name).includes(normalize(search)),
-  );
   function changeFloor(next: FloorSelection) {
     if(draft) return;
     if (detail && next === 2) {
       leaveRoom();
       return;
     }
+    setPanelOpen(modelUnavailable || activeCategory ? true : null);
     navigate({ floor: next, room: null, detail: false, point: null });
   }
   function choose(key: string) {
@@ -276,9 +380,10 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
   }
   function view(next: BuildingCamera["view"]) {
     if(draft) return;
+    if(next === "focus" && navigation.point) {focusPoint(navigation.point,activeEquipment);return;}
     const targetScope = next === "top" && floor === "all" ? "floor:2" : scope;
     if (targetScope !== scope)
-      navigate({ floor: 2, room: null, detail: false, point: null });
+      navigate({ floor: 2, room: HCNS_BUILDING_KEY, detail: false, point: null });
     setCommands((old) => ({
       ...old,
       [targetScope]: {
@@ -289,8 +394,52 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
       },
     }));
   }
+  function contextTarget(target: BuildingTarget) {
+    if (draft) return;
+    setContextBackground(target.kind === "background");
+    if (target.kind === "room") choose(target.key);
+    if (target.kind === "floor") changeFloor(target.floor);
+    if (target.kind === "point") {
+      if (target.equipment) chooseEquipment(target.key,target.equipment,false);
+      else choosePoint(target.key);
+      if (target.personId) setSelectedPerson({ point: target.key, id: target.personId });
+    }
+  }
+  const selectedPoint = roomData?.points.find(p => p.key === navigation.point);
+  const contextPerson = selectedPoint?.occupants?.find(p => p.id === personId);
+  const contextAsset = selectedPoint?.assets?.find(a => a.id === selectedAsset?.id);
+  const equipmentPoint = scene.hcns?.points.find(p => p.key === navigation.point) ?? scene.objects?.find(o => o.point.key === navigation.point)?.point;
+  const contextAssets = contextAsset ? [contextAsset] : navigation.equipment ? assetsForEquipment(equipmentPoint?.assets ?? [], navigation.equipment) : [];
+  const assetContext = Boolean(navigation.asset || navigation.equipment);
+  const editLocationId = selectedPoint ? selectedPoint.state !== "unlinked" ? selectedPoint.locationId : undefined : room?.state !== "unlinked" ? room?.locationId : undefined;
+  const editTarget: ObjectEditTarget | null = assetContext
+    ? building.canManageAssets && contextAssets.length ? { kind: "asset", ids: contextAssets.map(a => a.id) } : null
+    : personId ? building.canManageEmployees && contextPerson ? { kind: "person", id: contextPerson.id } : null
+      : building.canManage && editLocationId ? { kind: "location", id: editLocationId } : null;
+  const editLabel = assetContext ? "Sửa tài sản" : personId ? "Sửa nhân sự" : "Sửa thông tin vị trí";
+  // One set of commands for mouse, touch and keyboard; authorization remains
+  // in the existing server actions and the same editor/assignment components.
+  function spaceActions(background = false) {
+    const editableRoom = Boolean(building.canManage && room?.state === "active" && shape?.placed && shape.kind === "room");
+    return [
+      { id: "focus", label: "Tập trung vào đối tượng", icon: Focus, show: !background && Boolean(room && shape?.placed), disabled: modelUnavailable, run: () => view("focus") },
+      { id: "edit-record", label: editLabel, icon: Pencil, show: !background && Boolean(editTarget), run: () => { if (editTarget) setEditingObject(editTarget); } },
+      { id: "information", label: "Xem thông tin", icon: PanelRight, show: !background && Boolean(room), run: () => setPanelOpen(true) },
+      { id: "overview", label: "Tổng quan phòng", icon: Box, show: Boolean(room), run: roomOverview },
+      { id: "enter", label: "Vào phòng HCNS", icon: ArrowUpRight, show: !detail && room?.key === HCNS_BUILDING_KEY && Boolean(building.hcns), run: enterRoom },
+      { id: "floor", label: `Trở lại tầng ${floor}`, icon: ArrowLeft, show: Boolean(room), run: () => navigate({ floor, room: null, detail: false, point: null }) },
+      { id: "add", label: "Thêm vị trí", icon: Plus, show: editableRoom, disabled: modelUnavailable, run: () => beginPlacement() },
+      { id: "edit", label: "Chỉnh bố trí", icon: Pencil, show: !background && editableRoom && Boolean(selectedObject), disabled: modelUnavailable, run: () => beginPlacement(true) },
+      { id: "reset", label: "Đặt lại góc nhìn", icon: RotateCcw, show: true, disabled: modelUnavailable, run: () => view("overview") },
+      { id: "refresh", label: "Cập nhật dữ liệu", icon: RefreshCw, show: true, disabled: pending, run: () => start(() => router.refresh()) },
+      { id: "locations", label: "Quản lý vị trí", icon: MapPin, show: building.canManage, run: () => router.push("/locations") },
+    ].filter(action => action.show);
+  }
+  const contextTitle = contextBackground ? (detail ? "Tổng quan phòng" : floor === "all" ? building.name : `Tầng ${floor}`)
+    : contextAsset?.name ?? (assetContext ? "Chọn tài sản" : contextPerson?.name) ?? selectedPoint?.name ?? room?.name ?? (floor === "all" ? building.name : `Tầng ${floor}`);
   return (
-    <div className="min-w-0 space-y-5">
+    <div className="min-w-0 space-y-3">
+      {editingObject && <ObjectEditDialog target={editingObject} onClose={() => { setEditingObject(null); requestAnimationFrame(() => panelButtonRef.current?.focus({ preventScroll: true })); }} />}
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-3">
@@ -299,14 +448,10 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
               {detail ? "Không gian HCNS" : "Bản đồ 3D tòa nhà"}
             </h1>
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {detail
-              ? building.hcns?.path
-              : `${building.name} · 3 tầng trong mô hình`}
-          </p>
+
         </div>
       </header>
-      <div className="h-[640px] min-w-0 sm:h-[720px]">
+      <div className="h-[760px] min-w-0 sm:h-[720px]">
         <div
           ref={workspaceRef}
           role={expanded ? "dialog" : "region"}
@@ -320,32 +465,32 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
             expanded ? "fixed inset-0 z-40 h-dvh w-full" : "relative h-full rounded-2xl",
           )}
         >
-          <section aria-label="Mô hình tòa nhà" className="relative min-w-0 flex-1 bg-muted/25">
-            <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-2">
-              <div role="group" aria-label="Chọn tầng" inert={Boolean(draft)} className="pointer-events-auto flex max-w-full items-center gap-1 rounded-xl border bg-card/95 p-1 shadow-sm">
+          <section aria-label="Mô hình tòa nhà" className="@container relative min-w-0 flex-1 bg-muted/25">
+            <div ref={toolbarRef} data-testid="scene-toolbar" className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start gap-2">
+              <div role="group" aria-label="Chọn tầng" inert={Boolean(draft)} className="pointer-events-auto order-1 flex max-w-full shrink-0 items-center gap-1 rounded-lg border border-border/60 bg-card/95 p-0.5">
                 {detail ? <>
                   <Button variant="ghost" className="min-h-10" aria-label="Trở lại tầng 2" onClick={leaveRoom}>
                     <ArrowLeft className="size-4" />
                     <span className="hidden sm:inline">Trở lại tầng 2</span>
                     <span className="sm:hidden">Tầng 2</span>
                   </Button>
-                  <span className="border-l px-3 text-sm font-semibold" aria-current="page">HCNS</span>
+                  <Button variant="ghost" className="min-h-10 border-l px-3" aria-label="Tổng quan phòng HCNS" aria-pressed={!navigation.point} onClick={roomOverview}>HCNS</Button>
                 </> : <>
-                  <Button variant={floor === "all" ? "default" : "ghost"} className="min-h-10 px-2 sm:px-3"
+                  <Button variant="ghost" className="min-h-10 px-2 shadow-none aria-pressed:bg-primary/10 aria-pressed:text-primary hover:bg-muted hover:text-foreground sm:px-3"
                     aria-label="Toàn tòa nhà" aria-pressed={floor === "all"} onClick={() => changeFloor("all")}>
                     <Layers3 className="size-4" />
                     <span className="hidden sm:inline">Toàn tòa nhà</span>
                     <span className="sm:hidden">Tòa nhà</span>
                   </Button>
                   {building.floors.map((f) => <Button key={f.floor}
-                    variant={floor === f.floor ? "default" : "ghost"} className="min-h-10 px-2 sm:px-3"
+                    variant="ghost" className="min-h-10 px-2 shadow-none aria-pressed:bg-primary/10 aria-pressed:text-primary hover:bg-muted hover:text-foreground sm:px-3"
                     aria-pressed={floor === f.floor} onClick={() => changeFloor(f.floor)}>{f.name}</Button>)}
                 </>}
               </div>
-              <div className="pointer-events-auto ml-auto flex items-center rounded-xl border bg-card/95 p-1 shadow-sm">
+              <div className="pointer-events-auto order-2 ml-auto flex shrink-0 items-center rounded-lg border border-border/60 bg-card/95 p-0.5 @[56rem]:order-3">
                 <Button ref={panelButtonRef} variant="ghost" size="icon" className="size-10"
                   aria-label={showPanel ? "Ẩn bảng thông tin" : "Hiện bảng thông tin"}
-                  title={showPanel ? "Ẩn bảng thông tin" : "Hiện bảng thông tin"}
+                  title={showPanel ? "Ẩn bảng thông tin" : selected ? "Hiện bảng thông tin" : "Danh sách không gian"}
                   aria-expanded={showPanel} aria-controls="building-information"
                   disabled={Boolean(draft)} onClick={() => setPanelOpen(!showPanel)}><PanelRight className="size-4" /></Button>
                 <Button ref={expandButtonRef} variant="ghost" size="icon" className="size-10"
@@ -358,29 +503,48 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
                   <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-10"
                     disabled={Boolean(draft)} aria-label="Thao tác không gian"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem disabled={pending} onSelect={() => start(() => router.refresh())}>
-                      <RefreshCw className={cn("size-4", pending && "animate-spin")} />Cập nhật dữ liệu
-                    </DropdownMenuItem>
-                    {building.canManage && <DropdownMenuItem asChild>
-                      <Link href="/locations"><MapPin className="size-4" />Quản lý vị trí</Link>
-                    </DropdownMenuItem>}
+                    {spaceActions().map(action => <DropdownMenuItem key={action.id} disabled={action.disabled} onSelect={action.run}>
+                      <action.icon className="size-4" />{action.label}
+                    </DropdownMenuItem>)}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
+              <div className="pointer-events-auto order-3 min-w-0 basis-full @[56rem]:order-2 @[56rem]:flex-1 @[56rem]:basis-64" inert={Boolean(draft)}>
+                <div className="relative flex flex-col items-start gap-2 @[20rem]:flex-row">
+                  <div className="w-full min-w-0 flex-1"><SceneSearch key={`${buildingUrl(navigation)}:${personId ?? ""}:${selectedAsset?.point === navigation.point ? selectedAsset.id : ""}`} building={building} disabled={Boolean(draft)}
+                    onSelect={item => item.kind === "person" ? findPerson(item.id) : findAsset(item.id)} /></div>
+                  <SceneLayerControls building={building} layers={layers} disabled={Boolean(draft)}
+                    onToggle={layer => setLayers(old => ({ ...old, [layer]: !old[layer] }))} onCategory={filterCategory} />
+                </div>
+                {layers.assets && layers.category && <p className="mt-1 w-fit max-w-full rounded-md bg-card/95 px-2 py-1 text-xs text-foreground" role="status">Tài sản: {layers.category.name}</p>}
+              </div>
             </div>
-            <div className={cn("absolute inset-x-2 top-32 sm:top-28 xl:top-20",
+            <ContextMenu>
+            <ContextMenuTrigger asChild disabled={Boolean(draft)}>
+            <div onContextMenuCapture={() => setContextBackground(true)} style={{top: toolbarHeight + 24}} className={cn("absolute inset-x-2",
               showPanel && !desktop
-                ? "bottom-[calc(45%+8rem)] min-[380px]:bottom-[calc(45%+5rem)]"
+                ? "bottom-[calc(35%+8rem)] min-[380px]:bottom-[calc(35%+5rem)]"
                 : "bottom-32 min-[380px]:bottom-20")} data-testid="building-canvas-container">
-              <Model building={building} floor={floor} selected={selected} command={command}
+              <Model building={building} scene={scene} floor={floor} selected={selected} command={command}
                 onSelect={choose} onFloor={changeFloor} detail={detail}
                 point={navigation.point} onPoint={choosePoint} onEnter={enterRoom}
-                key={modelAttempt} person={personId} onPerson={choosePerson} onUnavailable={revealPanel} onRetry={retryModel}
+                onFocusPoint={key=>focusPoint(key)} onEquipment={chooseEquipment} activeEquipment={activeEquipment}
+                selectionKey={selectionCameraKey(navigation)}
+                key={modelAttempt} person={personId} onPerson={choosePerson} onUnavailable={revealPanel} onRetry={retryModel} onOverview={roomOverview}
+                onContextTarget={contextTarget}
                 draft={draft} onPlace={(x,z)=>{if(!placementBusy)setDraft(d=>d ? {...d,point:{x,z}}:null);}} />
             </div>
+            </ContextMenuTrigger>
+            <ContextMenuContent aria-label="Thao tác trên mô hình">
+              <ContextMenuLabel>{contextTitle}</ContextMenuLabel>
+              {spaceActions(contextBackground).map(action => <ContextMenuItem key={action.id} disabled={action.disabled} onSelect={action.run}>
+                <action.icon />{action.label}
+              </ContextMenuItem>)}
+            </ContextMenuContent>
+            </ContextMenu>
             <div className={cn("pointer-events-none absolute inset-x-3 z-10 flex flex-wrap items-end justify-between gap-2",
-              showPanel && !desktop ? "bottom-[calc(45%+0.75rem)]" : "bottom-3")}>
-              <div inert={Boolean(draft)} className="pointer-events-auto flex rounded-xl border bg-card/95 p-1 shadow-sm" role="group" aria-label="Góc nhìn">
+              showPanel && !desktop ? "bottom-[calc(35%+0.75rem)]" : "bottom-3")}>
+              <div inert={Boolean(draft)} className="pointer-events-auto flex rounded-lg border border-border/60 bg-card/95 p-0.5" role="group" aria-label="Góc nhìn">
                 <Button size="sm" variant={command.view === "overview" ? "secondary" : "ghost"}
                   className="min-h-10 min-w-10 px-2" onClick={() => view("overview")}
                   aria-label="Phối cảnh" title="Phối cảnh" aria-pressed={command.view === "overview"}>
@@ -396,14 +560,15 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
                     aria-label="Hướng dẫn thao tác 3D"><CircleHelp className="size-4" /></Button></PopoverTrigger>
                   <PopoverContent side="top" className="w-72 p-4 text-sm leading-6" aria-label="Hướng dẫn thao tác 3D">
                     <p className="font-semibold">Khám phá mô hình</p>
-                    <p>Kéo để xoay, cuộn hoặc chụm để thu phóng. Chọn phòng, bàn hoặc người để xem thông tin.</p>
+                    <p>Kéo chuột trái để xoay, giữ chuột giữa để dịch chuyển; cuộn để thu phóng. Trên màn hình cảm ứng, dùng một ngón để xoay, hai ngón để dịch chuyển hoặc thu phóng.</p>
                     <p className="mt-2">Nhấp đúp HCNS để vào phòng, hoặc dùng nút trong bảng thông tin. Danh sách phòng/vị trí hỗ trợ bàn phím.</p>
-                    <p className="mt-2 text-muted-foreground">Esc đóng hộp thoại trước, sau đó thu gọn màn hình; ở chế độ thường sẽ quay về tầng.</p>
+                    <p className="mt-2">Bấm bàn/người/thiết bị để xem chi tiết; nhấp đúp bàn hoặc thiết bị để tập trung gần. Bấm nền hoặc tên phòng để về tổng quan. Chuột phải hoặc nút … mở các thao tác theo lựa chọn.</p>
+                    <p className="mt-2 text-muted-foreground">Esc đóng menu/hộp thoại trước, rồi lùi tài sản → vị trí → phòng → tầng → toàn nhà. Ở toàn nhà, Esc thu gọn khung mở rộng.</p>
                     <p className="mt-2 text-xs text-muted-foreground">Mặt bằng giản lược · Nội thất theo khảo sát, kích thước ước lượng.</p>
                   </PopoverContent>
                 </Popover>
               </div>
-              <div className="pointer-events-auto ml-auto flex rounded-xl border bg-card/95 p-1 shadow-sm" role="group" aria-label="Điều chỉnh mô hình">
+              <div className="pointer-events-auto ml-auto flex rounded-lg border border-border/60 bg-card/95 p-0.5" role="group" aria-label="Điều chỉnh mô hình">
                 {room && shape?.placed && <Button disabled={Boolean(draft)} size="icon" variant="ghost" className="size-10"
                   aria-label="Tập trung" title="Tập trung vào vị trí đang chọn" onClick={() => view("focus")}><Focus className="size-4" /></Button>}
                 <Button size="icon" variant="ghost" className="size-10" aria-label="Thu nhỏ mô hình" title="Thu nhỏ mô hình"
@@ -418,29 +583,35 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
           </section>
           <aside id="building-information" aria-label="Phòng và thông tin không gian"
             className={cn("z-20 min-w-0 flex-col bg-background",
-              desktop ? "h-full w-80 shrink-0 border-l" : "absolute inset-x-0 bottom-0 h-[45%] rounded-t-2xl border-t shadow-lg",
+              desktop ? "h-full w-80 shrink-0 border-l" : "absolute inset-x-0 bottom-0 h-[35%] rounded-t-2xl border-t shadow-lg",
               showPanel ? "flex" : "hidden")}>
             <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2">
-              <div className="min-w-0"><h2 className="break-words font-semibold">{detail ? "Vị trí và hồ sơ" : room?.name ?? "Thông tin không gian"}</h2>{!detail && room && shape && <p className="mt-1 text-xs text-muted-foreground">Tầng {shape.floor}</p>}</div>
+              <div className="min-w-0"><h2 className="break-words font-semibold">{activeCategory ? "Kết quả lọc" : detailsData ? "Vị trí và hồ sơ" : room?.name ?? (floor === "all" ? "Danh sách không gian" : building.floors.find(f => f.floor === floor)?.name ?? "Không gian")}</h2>{!detailsData && room && shape && <p className="mt-1 text-xs text-muted-foreground">Tầng {shape.floor}</p>}</div>
               <Button disabled={Boolean(draft)} variant="ghost" size="icon" className="size-10" aria-label="Đóng bảng thông tin" onClick={closePanel}><X className="size-4" /></Button>
             </div>
             <div ref={panelScrollRef} className="min-h-0 space-y-4 overflow-y-auto overscroll-contain p-3">
-          {draft ? <PlacementEditor draft={draft} roomName={building.rooms.find(r=>r.key===draft.roomKey)?.name ?? ""} objects={objects}
+          {searchNotice && <div role="status" className="rounded-xl border bg-muted/50 p-3 text-sm leading-6">{searchNotice}<Button variant="ghost" size="sm" className="mt-2" onClick={() => setSearchNotice(null)}>Đóng thông báo</Button></div>}
+          {activeCategory && !draft ? <SceneFilterResults building={building} category={activeCategory} floor={floor} room={selected}
+            onClear={() => filterCategory(null)} onRecord={focusRoomRecord} onRoom={choose} /> : draft ? <PlacementEditor draft={draft} roomName={building.rooms.find(r=>r.key===draft.roomKey)?.name ?? ""} objects={objects}
             onChange={setDraft} onBusy={setPlacementBusy} onCancel={()=>setDraft(null)} onSaved={point=>{
-              setDraft(null);setSelectedAsset(null);setSelectedPerson(null);
+              setDraft(null);setSelectedPerson(null);
               navigate({...navigation,room:draft.roomKey,floor:BUILDING_ROOMS.find(r=>r.key===draft.roomKey)!.floor,point});
               router.refresh();
             }}/> : <>
+          {detailsData && <Button variant="ghost" onClick={backOne}><ArrowLeft className="size-4"/>{navigation.asset || navigation.equipment ? "Trở lại vị trí" : "Tổng quan phòng"}</Button>}
+          {!detailsData && building.canManage && room?.locationId !== undefined && room.state !== "unlinked" &&
+            <LocationEditDialog key={room.locationId} locationId={room.locationId} />}
           {building.canManage && room?.state === "active" && shape?.placed && shape.kind==="room" && !modelUnavailable && <div className="flex flex-wrap gap-2">
-            <Button variant="outline" className="min-h-10" onClick={()=>beginPlacement()}><Plus className="size-4"/>Thêm vị trí</Button>
+            {!detailsData && <Button variant="outline" className="min-h-10" onClick={()=>beginPlacement()}><Plus className="size-4"/>Thêm vị trí</Button>}
             {selectedObject && <Button variant="outline" className="min-h-10" onClick={()=>beginPlacement(true)}>Chỉnh bố trí</Button>}
           </div>}
-          {selectedObject && !detail && <Button variant="ghost" onClick={()=>navigate({...navigation,point:null})}><ArrowLeft className="size-4"/>Tổng quan phòng</Button>}
           {detailsData ? (
             <HcnsRoomPanel
               room={detailsData}
               selected={navigation.point}
-              onSelect={choosePoint}
+              onSelect={key=>key===navigation.point && (navigation.asset || navigation.equipment) ? backOne() : choosePoint(key)}
+              equipmentKind={navigation.equipment}
+              onAsset={chooseAsset}
               personId={personId}
               assetId={selectedAsset?.point === navigation.point ? selectedAsset.id : null}
             />
@@ -448,105 +619,20 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
             <RoomOverviewPanel room={room} placed={shape.placed}
               canViewEmployees={building.canViewEmployees} canViewAssets={building.canViewAssets}
               tab={roomTabs[room.key]} onTabChange={tab => setRoomTabs(old => ({ ...old, [room.key]: tab }))}
-              onEnter={room.key === HCNS_BUILDING_KEY && building.hcns ? enterRoom : undefined}
+              onEnter={!detail && room.key === HCNS_BUILDING_KEY && building.hcns ? enterRoom : undefined}
               onPerson={(point, id) => focusRoomRecord(point, id, "person")}
               onAsset={(point, id) => focusRoomRecord(point, id, "asset")} />
-          ) : (
-            <section className="rounded-2xl border bg-card p-4">
-              <div className="mb-3 flex items-center gap-2 text-primary">
-                <CircleDot className="size-5" />
-                <h2 className="font-semibold">Khám phá không gian</h2>
-              </div>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Chọn một tầng hoặc phòng trên mô hình để xem thông tin.
-              </p>
-              {building.hcns && (
-                <Button
-                  variant="outline"
-                  className="mt-4 min-h-11 w-full"
-                  onClick={() => choose(HCNS_BUILDING_KEY)}
-                >
-                  Đến phòng HCNS
-                  <ArrowUpRight className="size-4" />
-                </Button>
-              )}
-            </section>
-          )}
-          {!detailsData && roomObjects.length>0 && <details className="rounded-xl border p-3">
+          ) : null}
+          {!detailsData && detail && roomData && <RoomPointList room={roomData} selected={null} onSelect={choosePoint} />}
+          {!detail && !detailsData && roomObjects.length>0 && <details className="rounded-xl border p-3">
             <summary className="cursor-pointer text-sm font-medium">Vị trí đã thêm · {roomObjects.length}</summary>
             <div className="mt-2 space-y-1">{roomObjects.map(o=><Button key={o.id} variant="ghost" className="h-auto min-h-10 w-full justify-start whitespace-normal text-left" onClick={()=>choosePoint(o.point.key)}><MapPin className="size-4 shrink-0"/>{o.point.name}</Button>)}</div>
           </details>}
-          {!detail && (
-            <details key={`${floor}:${selected ?? "none"}:${modelUnavailable}`} open={!room || modelUnavailable}
-              className="border-t pt-3">
-              <summary className="min-h-10 cursor-pointer rounded py-2 text-sm font-medium focus-visible:outline-ring">{room ? "Đổi phòng" : "Danh sách phòng"}</summary>
-              <div role="region" aria-label="Danh sách phòng">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h2 className="font-semibold">
-                  {floor === "all"
-                    ? "Các không gian"
-                    : building.floors.find((f) => f.floor === floor)?.name}
-                </h2>
-                <Badge variant="secondary">{visible.length}</Badge>
-              </div>
-              <div className="relative mb-3">
-                <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
-                <Input
-                  aria-label="Tìm phòng trong mô hình"
-                  placeholder="Tìm phòng…"
-                  className="pl-9 text-base"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              <div className="max-h-96 space-y-1 overflow-y-auto">
-                {visible.map((r) => {
-                  const s = BUILDING_ROOMS.find((v) => v.key === r.key)!;
-                  return (
-                    <Button
-                      key={r.key}
-                      variant={selected === r.key ? "secondary" : "ghost"}
-                      aria-label={`Xem phòng ${r.name}, tầng ${s.floor}`}
-                      aria-pressed={selected === r.key}
-                      className="h-auto min-h-12 w-full justify-start whitespace-normal px-2 py-2 text-left"
-                      onClick={() => choose(r.key)}
-                    >
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">
-                        {BUILDING_ROOMS.indexOf(s) + 1}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-medium">
-                          {r.name}
-                        </span>
-                        <span className="block text-xs font-normal text-muted-foreground">
-                          Tầng {s.floor}
-                          {r.key === HCNS_BUILDING_KEY && building.hcns
-                            ? " · Có nội thất chi tiết"
-                            : ""}
-                        </span>
-                      </span>
-                    </Button>
-                  );
-                })}
-                {!visible.length && (
-                  <p className="py-4 text-sm text-muted-foreground">
-                    Không tìm thấy phòng phù hợp.
-                  </p>
-                )}
-              </div>
-              </div>
-            </details>
-          )}
-          <details className="rounded-xl border bg-card p-3 text-xs leading-5 text-muted-foreground">
-            <summary className="cursor-pointer font-medium text-foreground">
-              Về mô hình này
-            </summary>
-            <p className="mt-2">
-              Mặt bằng ba tầng theo bản vẽ kiến trúc giản lược. HCNS có 10 vị trí
-              theo khảo sát; có thể thêm bàn hoặc điểm thiết bị trong phòng đã liên kết.
-              Kích thước nội thất ước lượng. Người và tài sản hiển thị theo dữ liệu đã gán.
-            </p>
-          </details>
+          {!detail && (room ? <details key={`${floor}:${selected}:${modelUnavailable}`} open={modelUnavailable} className="border-t pt-3">
+            <summary className="min-h-10 cursor-pointer rounded py-2 text-sm font-medium focus-visible:outline-ring">Đổi không gian</summary>
+            <SpaceDirectory building={building} floor={floor} selected={selected} forceOpen={modelUnavailable} onSelect={choose} />
+          </details> : <SpaceDirectory key={`${floor}:${modelUnavailable}`} building={building} floor={floor} selected={selected} forceOpen={modelUnavailable} onSelect={choose} />)}
+
           </>}
             </div>
           </aside>

@@ -25,6 +25,10 @@ Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng v�
 
 [Tài sản mức 1](plans/ASSET-MANAGEMENT-CHECKLIST.md) đã có `loai_tai_san`, `tai_san` và FK vị trí qua migration `20261111095809_tai_san_muc_1`. FK nullable `nhan_su.vi_tri_lam_viec_id` đã có từ migration `20261110160000_vi_tri_lam_viec_nhan_su`, cùng công ty/Restrict, không unique. Form HR và chi tiết vị trí cùng quản lý một liên kết; 3D HCNS chỉ đọc người ACTIVE theo quyền. Khi xóa vị trí qua ERP, action có đủ quyền/xác nhận tự bỏ gán nhân sự và audit nguyên tử trước khi xóa; FK Restrict vẫn giữ để chặn thao tác SQL làm mất liên kết. Vị trí còn tài sản thì chặn xóa/ngừng dùng; không tự gỡ thiết bị. Giao diện `/assets` đã có; dữ liệu thiết bị vận hành chưa nhập.
 
+## Kết nối AI — 16/11/2026
+
+Migration `20261116110000_ket_noi_ai` thêm một bảng metadata `ket_noi_ai`: `id`, `company_id` unique/FK công ty, `model_mac_dinh`, `tham_chieu_bi_mat`, `hau_to_khoa`, `phien_ban_khoa`, `dang_su_dung`, `created_at`, `updated_at`. Khóa thật mã hóa tại kho file server, không lưu plaintext hoặc ciphertext trong DB. Kiểu/ràng buộc và vòng đời tại [thiết kế kết nối pilot](THIET-KE-QUAN-TRI-AI.md#kết-nối-pilot--16112026). Chưa thêm cột cá nhân hóa/hạn mức hoặc bảng chat/usage.
+
 ## Danh mục hiện hành
 
 | Chức năng / ý nghĩa | Tên chung PostgreSQL và Prisma Studio | Model Prisma trước đây |
@@ -42,13 +46,14 @@ Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng v�
 | Quyền được cấp cho vai trò | `vai_tro_quyen` | RolePermission |
 | Vai trò được gán cho tài khoản | `tai_khoan_vai_tro` | UserRole |
 | Nhật ký hoạt động | `nhat_ky_hoat_dong` | AuditLog |
+| Kết nối và model AI | `ket_noi_ai` | — |
 | Mẫu và phiên bản quy trình | `mau_quy_trinh` | — |
 | Bước trong mẫu | `buoc_mau_quy_trinh` | — |
 | Hồ sơ/yêu cầu chạy quy trình | `ho_so_quy_trinh` | — |
 | Bước xử lý của từng hồ sơ | `buoc_xu_ly_quy_trinh` | — |
 | Lịch sử xử lý | `lich_su_quy_trinh` | — |
 
-DB có 18 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` đã triển khai; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
+DB có 19 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` đã triển khai; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
 
 Các giá trị enum `ACTIVE / LEFT / UNKNOWN`, mã quyền `HR / VIEW / MANAGE`, constraint/index/sequence lịch sử và JSON nhật ký cũ được giữ nguyên. Đây không phải tên bảng/cột. Relation field của Prisma là liên kết, không tạo cột PostgreSQL; tên liên kết cũng dùng tiếng Việt.
 
@@ -83,6 +88,11 @@ Hai bảng có `id`, `company_id`, `created_at`, `updated_at`. Mã unique trong 
 | | `hinh_thuc_su_dung` | Enum `HinhThucSuDungTaiSan`, mặc định `CHUA_XAC_DINH` |
 | | `so_serial`, `hang_model` | String(255)?, serial không unique |
 | | `ghi_chu` | Text?, ghi chú vận hành |
+| | `ngay_mua` | Date?, ngày mua đã xác minh |
+| | `gia_mua` | Decimal(18,0)?, giá mua VND không âm; truyền qua ứng dụng bằng chuỗi nguyên |
+| | `thoi_gian_khau_hao_thang` | Int?, số tháng 1–1200 để tham khảo quản lý |
+| | `han_bao_hanh` | Date?, ngày hết bảo hành, không trước ngày mua khi cùng có giá trị |
+| `loai_tai_san` | `khau_hao_mac_dinh_thang` | Int?, thời gian tham khảo 1–1200 tháng, chỉ áp dụng vào hồ sơ khi người dùng chọn |
 
 Quan hệ Prisma của thiết bị: `cong_ty`, `loai_tai_san`, `phong_quan_ly`, `nguoi_su_dung`, `vi_tri`; các bảng đích có `danh_sach_tai_san`. Công ty có thêm `danh_sach_loai_tai_san`. Audit tra bằng `company_id`, `ASSETS` và `tai_san:<id>` hoặc `loai_tai_san:<id>`, không tạo bảng lịch sử riêng.
 

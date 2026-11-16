@@ -7,7 +7,7 @@ test.skip(!/^\/sdg_assets_test_\d+$/.test(new URL(process.env.DATABASE_URL ?? "p
 test.describe.configure({ mode: "serial" });
 const db = new PrismaClient(), run = randomUUID().slice(0, 8);
 let manager: { id: number; company_id: number; phien_ban_dang_nhap: number };
-const form = (page: Page) => page.getByRole("dialog", { name: "Sửa tài sản", exact: true });
+const form = (page: Page) => page.getByRole("form", { name: "Sửa thông tin tài sản", exact: true });
 const detail = (page: Page) => page.getByRole("dialog", { name: "Chi tiết tài sản", exact: true });
 const table = (page: Page) => page.getByRole("table", { name: "Danh sách tài sản", exact: true });
 const note = "Ghi chú kiểm kê dài cần mở khi đối chiếu. ".repeat(30);
@@ -62,7 +62,7 @@ test("compact table, category icons, keyboard filtering and collapsed details/hi
   await page.screenshot({ animations: "disabled", path: "outputs/assets-compact/desktop.png" });
 });
 
-test("editing keeps pagination and scroll; hidden validation errors reopen and focus additional fields", async ({ page, context }) => {
+test("panel field editing keeps pagination and scroll; validation focuses the invalid field", async ({ page, context }) => {
   await signAccount(context, manager); await page.goto("/assets");
   await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
   await page.getByRole("button", { name: "Trang sau", exact: true }).click();
@@ -70,16 +70,13 @@ test("editing keeps pagination and scroll; hidden validation errors reopen and f
   const trigger = table(page).getByRole("button", { name: /^Mở tài sản/ }).nth(8);
   await trigger.scrollIntoViewIfNeeded();
   const scroll = await page.evaluate(() => window.scrollY);
-  await trigger.click(); await detail(page).getByRole("button", { name: "Sửa tài sản", exact: true }).click();
-  await expect(form(page).getByLabel("Serial / Service tag", { exact: true })).not.toBeVisible();
-  await form(page).locator("summary").filter({ hasText: "Thông tin bổ sung" }).click();
+  await trigger.click(); await detail(page).getByRole("button", { name: "Sửa serial / service tag", exact: true }).click();
   await form(page).getByLabel("Serial / Service tag", { exact: true }).fill("x".repeat(256));
-  await form(page).locator("summary").filter({ hasText: "Thông tin bổ sung" }).click();
-  await form(page).getByRole("button", { name: "Lưu tài sản", exact: true }).click();
+  await form(page).getByRole("button", { name: "Lưu", exact: true }).click();
   await expect(form(page).getByText("Tối đa 255 ký tự", { exact: true })).toBeVisible();
   await expect(form(page).getByLabel("Serial / Service tag", { exact: true })).toBeFocused();
   await form(page).getByLabel("Serial / Service tag", { exact: true }).fill("COMPACT-TEST");
-  await form(page).getByRole("button", { name: "Lưu tài sản", exact: true }).click();
+  await form(page).getByRole("button", { name: "Lưu", exact: true }).click();
   await expect(detail(page).getByText("COMPACT-TEST", { exact: true })).toBeVisible();
   await detail(page).getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByText("46 hồ sơ · Trang 2/3", { exact: true })).toBeVisible();

@@ -16,7 +16,7 @@ const name = `PC thử 3D ${randomUUID().slice(0, 8)}`;
 const panel = (page: Page) => page.getByRole("region", { name: "Tài sản tại vị trí" });
 const asset = () => db.tai_san.findUniqueOrThrow({ where: { id: assetId } });
 async function enter(page: Page) {
-  await page.goto(HCNS_URL);
+  await page.goto(`${HCNS_URL}&point=hcns-01`);
   await expect(page.locator("canvas[data-building-ready=true]")).toBeVisible({ timeout: 90000 });
 }
 async function choose(page: Page) {

@@ -122,8 +122,12 @@ export const HCNS_LAYOUT = [
   },
 ] as const;
 
-export type EquipmentKind =
-  "pc" | "laptop" | "printer" | "scanner" | "access-point" | "generic";
+export const EQUIPMENT_KINDS = ["pc", "laptop", "printer", "scanner", "access-point",
+  "phone", "pbx", "server", "ups", "router", "switch", "generic"] as const;
+export type EquipmentKind = typeof EQUIPMENT_KINDS[number];
+export function assetsForEquipment(assets: LocationAsset[], kind: EquipmentKind) {
+  return assets.filter(asset => equipmentForAssets([asset])[0] === kind);
+}
 export type RoomPoint = {
   key: string;
   locationId?: number;
@@ -180,6 +184,14 @@ export function personRoomPosition(
 // One representative per type; the panel lists every actual asset independently.
 export function equipmentForAssets(assets: Pick<LocationAsset, "category" | "categoryCode">[]): EquipmentKind[] {
   return [...new Set(assets.map((asset): EquipmentKind => {
+    // Stable category codes take priority over descriptive names. Unknown codes
+    // can still use familiar Vietnamese/English names; no database IDs are baked in.
+    const codes: Record<string, EquipmentKind> = {
+      PC: "pc", LAPTOP: "laptop", PRN: "printer", SCN: "scanner", AP: "access-point",
+      TEL: "phone", PHONE: "phone", PBX: "pbx", SRV: "server", UPS: "ups", LB: "router", SW: "switch",
+    };
+    const known = codes[asset.categoryCode.trim().toUpperCase()];
+    if (known) return known;
     const text = `${asset.categoryCode} ${asset.category}`
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -189,7 +201,13 @@ export function equipmentForAssets(assets: Pick<LocationAsset, "category" | "cat
     if (/\blaptop\b|may tinh xach tay/.test(text)) return "laptop";
     if (/\bpc\b|desktop|may tinh/.test(text)) return "pc";
     if (/\bprinter\b|may in/.test(text)) return "printer";
-    if (/\bscanner\b|\bscaner\b|may quet/.test(text)) return "scanner";
+    if (/\bscan(?:ner|er)?\b|may quet/.test(text)) return "scanner";
+    if (/\bpbx\b|tong dai/.test(text)) return "pbx";
+    if (/\btel\b|\bphone\b|telephone|dien thoai/.test(text)) return "phone";
+    if (/\bsrv\b|\bserver\b|may chu/.test(text)) return "server";
+    if (/\bups\b|luu dien/.test(text)) return "ups";
+    if (/\bswitch\b|chuyen mach/.test(text)) return "switch";
+    if (/\brouter\b|can bang tai|dinh tuyen|load balanc/.test(text)) return "router";
     if (/\bap\b|access\s*point|bo phat|wifi|wi fi/.test(text)) return "access-point";
     return "generic";
   }))];

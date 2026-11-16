@@ -33,6 +33,8 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 
 ## Đã hoàn thành
 
+- [x] Tái sử dụng `EmployeeForm` trong editor 3D; `getEmployeeForEdit` chỉ tải một hồ sơ và danh mục theo HR MANAGE/công ty, không mở phần tài khoản. Phạm vi và kiểm chứng tại [plan sửa đối tượng 3D](OFFICE-3D-CHECKLIST.md#sửa-hồ-sơ-từ-menu-đối-tượng--16112026).
+
 - [x] Tách nghiệp vụ khỏi rule Frontend/Backend chung sang `HR-RULES.md`; đăng ký router, giữ quyết định DB trong plan. Chỉ sắp xếp tài liệu, không thay tính năng.
 
 - [x] Nhập danh sách HR final 72 người; nhân sự và phòng ban vận hành độc lập trong ERP, không chờ API hoặc đối soát 1Office.
