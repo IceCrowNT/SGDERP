@@ -11,6 +11,7 @@ import {
   floorElevation,
   type BuildingRoom,
   type FloorSelection,
+  type FloorNumber,
 } from "@/lib/office-3d/building-layout";
 import type { BuildingData } from "@/lib/office-3d/building-mapping";
 import { HcnsRoomModel } from "../hcns/HcnsRoomModel";
@@ -29,9 +30,11 @@ const ignoreDecorativeRaycast = () => {};
 function ContextLayer({
   detail,
   children,
+  duration = .65,
 }: {
   detail: boolean;
   children: ReactNode;
+  duration?: number;
 }) {
   const ref = useRef<Group>(null);
   const opacity = useRef(detail ? 0 : 1);
@@ -57,7 +60,7 @@ function ContextLayer({
           Math.min(
             1,
             opacity.current +
-              ((detail ? -1 : 1) * Math.min(delta, 1 / 30)) / 0.65,
+              ((detail ? -1 : 1) * Math.min(delta, 1 / 30)) / duration,
           ),
         );
     group.visible = opacity.current > 0;
@@ -91,6 +94,19 @@ function ContextLayer({
       {children}
     </group>
   );
+}
+
+// All views share stable world coordinates, including database-backed furniture.
+export function FloorLayer({ number, floor, children, fade = true }: {
+  number: FloorNumber;
+  floor: FloorSelection;
+  children: ReactNode;
+  fade?: boolean;
+}) {
+  return <group userData={{ inactiveFloor: floor !== "all" && floor !== number }}
+    position={[0, floorElevation(number), 0]}>
+    {fade ? <ContextLayer detail={floor !== "all" && floor !== number} duration={.2}>{children}</ContextLayer> : children}
+  </group>;
 }
 function Surface({
   outline, holes = NO_HOLES, y, color, invisible = false,
@@ -183,6 +199,7 @@ export function BuildingModel({
   onFocusPoint,
   onEquipment,
   activeEquipment,
+  activeAsset,
   onEnter,
   hovered,
   onHover,
@@ -198,8 +215,9 @@ export function BuildingModel({
   point: string | null;
   onPoint: (key: string) => void;
   onFocusPoint: (key: string) => void;
-  onEquipment: (key: string, kind: EquipmentKind, focus: boolean) => void;
+  onEquipment: (key: string, kind: EquipmentKind, focus: boolean, assetId?: number) => void;
   activeEquipment?: EquipmentKind;
+  activeAsset?: number;
   onEnter: (key: string) => void;
   hovered: string | null;
   onHover: (key: string | null) => void;
@@ -215,12 +233,13 @@ export function BuildingModel({
       }
     }}>
       {BUILDING_FLOORS.map((f) => (
-        <group
+        <FloorLayer
           key={f.floor}
-          visible={floor === "all" || floor === f.floor}
-          position={[0, floorElevation(f.floor, floor), 0]}
+          number={f.floor} floor={floor} fade={false}
         >
-          <ContextLayer detail={detail}>
+          {/* Each material has one fade owner; nested fades would capture
+              partially faded opacity and dim the model after returning. */}
+          <ContextLayer detail={detail || (floor !== "all" && floor !== f.floor)} duration={detail ? .65 : .2}>
             <FloorSlab floor={f.floor} />
           </ContextLayer>
           {BUILDING_ROOMS.filter((r) => r.floor === f.floor && r.placed).map((room) => (
@@ -246,7 +265,7 @@ export function BuildingModel({
               }
             >
               {room.key === HCNS_BUILDING_KEY && building.hcns ? (
-                <>
+                <ContextLayer detail={floor !== "all" && floor !== f.floor} duration={.2}>
                   <Surface outline={room.outline} y={0.07}
                     color={!detail && selected === room.key ? m.selected : m.floor} />
                   <group
@@ -261,6 +280,7 @@ export function BuildingModel({
                       onFocusPoint={detail ? onFocusPoint : undefined}
                       onEquipment={detail ? onEquipment : undefined}
                       activeEquipment={activeEquipment}
+                      activeAsset={activeAsset}
                       hovered={hovered}
                       onHover={detail ? onHover : undefined}
                       person={person}
@@ -268,9 +288,9 @@ export function BuildingModel({
                       canViewEmployees={building.hcns.canViewEmployees}
                     />
                   </group>
-                </>
+                </ContextLayer>
               ) : (
-                <ContextLayer detail={detail}>
+                <ContextLayer detail={detail || (floor !== "all" && floor !== f.floor)} duration={detail ? .65 : .2}>
                   <RoomEnvelope room={room} selected={selected === room.key} />
                 </ContextLayer>
               )}
@@ -278,7 +298,7 @@ export function BuildingModel({
               <Surface outline={room.outline} y={0.08} color={m.floor} invisible />
             </group>
           ))}
-        </group>
+        </FloorLayer>
       ))}
     </group>
   );

@@ -15,6 +15,7 @@ import {
   type SessionUser,
 } from "@/lib/auth";
 import { readAccountSession } from "@/lib/account-session";
+import { AiPreferencesSchema } from "@/lib/ai-chat";
 import { avatarDirectory, removeAvatar } from "@/lib/profile-storage";
 
 async function actor(
@@ -87,7 +88,9 @@ export async function getMyProfile() {
         },
       })
     : null;
+  const ai = await db.tai_khoan.findFirst({ where: { id: session.userId, company_id: session.companyId }, select: { huong_dan_ai_ca_nhan: true, updated_at: true } });
   return {
+    aiPreferences: ai ? { instructions: ai.huong_dan_ai_ca_nhan ?? "", version: ai.updated_at.toISOString() } : null,
     username: session.username,
     name: session.fullName,
     avatar: session.avatarUrl,
@@ -289,4 +292,25 @@ export async function saveMyAvatar(form: FormData) {
         ? "Đã xóa ảnh đại diện."
         : "Đã cập nhật ảnh đại diện.",
   };
+}
+
+export async function saveMyAiPreferences(input: unknown) {
+  const session = await getSession();
+  if (!session) return { success: false as const, message: "Vui lòng đăng nhập và đổi mật khẩu tạm nếu được yêu cầu." };
+  const parsed = AiPreferencesSchema.safeParse(input);
+  if (!parsed.success) return { success: false as const, message: "Kiểm tra nội dung cài đặt.", fieldErrors: parsed.error.flatten().fieldErrors };
+  try {
+    const preferences = await db.$transaction(async tx => {
+      const account = await actor(tx, session);
+      if (account.updated_at.toISOString() !== parsed.data.version) throw Error("Hồ sơ đã thay đổi. Tải lại cài đặt trước khi lưu; nội dung đang nhập vẫn được giữ.");
+      const updated = await tx.tai_khoan.update({ where: { id: session.userId, company_id: session.companyId }, data: {
+        huong_dan_ai_ca_nhan: parsed.data.instructions || null,
+        updated_at: new Date(Math.max(Date.now(), account.updated_at.getTime() + 1)),
+      } });
+      await audit(tx, session, "Tự cập nhật cách trợ lý AI hỗ trợ.", ["huong_dan_ai_ca_nhan"]);
+      return { instructions: updated.huong_dan_ai_ca_nhan ?? "", version: updated.updated_at.toISOString() };
+    });
+    revalidatePath("/profile");
+    return { success: true as const, preferences, message: "Đã lưu. Áp dụng từ lượt chat tiếp theo." };
+  } catch (error) { return { success: false as const, message: errorMessage(error) }; }
 }

@@ -29,7 +29,11 @@ Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng v�
 
 Catalog có `AI / MANAGE_CONNECTIONS / ALL` qua migration `20261116150000_quyen_quan_tri_ai`, dùng RBAC hiện có; không thêm bảng/cột. Cấp/thu hồi tại `/roles`, quản lý kết nối tại `/settings/ai`; [plan cài đặt](plans/SYSTEM-SETTINGS-CHECKLIST.md) sở hữu đợt chuyển trang/quyền.
 
-Migration `20261116110000_ket_noi_ai` thêm một bảng metadata `ket_noi_ai`: `id`, `company_id` unique/FK công ty, `model_mac_dinh`, `tham_chieu_bi_mat`, `hau_to_khoa`, `phien_ban_khoa`, `dang_su_dung`, `created_at`, `updated_at`. Khóa thật mã hóa tại kho file server, không lưu plaintext hoặc ciphertext trong DB. Kiểu/ràng buộc và vòng đời tại [thiết kế kết nối pilot](THIET-KE-QUAN-TRI-AI.md#kết-nối-pilot--16112026). Chưa thêm cột cá nhân hóa/hạn mức hoặc bảng chat/usage.
+Migration `20261116110000_ket_noi_ai` thêm một bảng metadata `ket_noi_ai`: `id`, `company_id` FK công ty, `model_mac_dinh`, `tham_chieu_bi_mat`, `hau_to_khoa`, `phien_ban_khoa`, `dang_su_dung`, `created_at`, `updated_at`. Mở rộng `20261116190000_nhieu_ket_noi_ai` thêm `ten_ket_noi` (varchar100), `la_mac_dinh` (boolean), thay unique công ty bằng index và partial unique cho mặc định; cho phép nhiều key/công ty, giữ dữ liệu cũ. Khóa thật mã hóa tại kho file server, không lưu plaintext hoặc ciphertext trong DB. Kiểu/ràng buộc và vòng đời tại [thiết kế kết nối pilot](THIET-KE-QUAN-TRI-AI.md#kết-nối-pilot--16112026). Cá nhân hóa/chat được bổ sung ở migration phía dưới; hạn mức/usage bổ sung ở đợt 17/11 dưới đây.
+
+Migration `20261116210000_cong_viec_ai` thêm bảng công việc theo tài khoản/công ty, snapshot JSONB có phiên bản, trạng thái duyệt/hủy/kết quả và unique mã yêu cầu chống trùng. FK kép bảo đảm chủ cùng công ty; CHECK trạng thái/kết quả/thời điểm duyệt. Thiết kế đầy đủ tại [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#bảng-công-việc-ai-và-duyệt-thực-hiện--16112026). Không lưu lời chat hoặc thay đổi hồ sơ nghiệp vụ khi tạo bảng chờ duyệt.
+
+Migration `20261116220000_hoi_thoai_va_ca_nhan_hoa_ai` thêm hai bảng hội thoại/tin nhắn và cột `tai_khoan.huong_dan_ai_ca_nhan` Text nullable (CHECK tối đa 2.000 ký tự). FK chủ/hội thoại cùng công ty, chủ bất biến, unique mã lượt/vai trò và partial unique một lượt xử lý/hội thoại. Thiết kế/giới hạn tại [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#lịch-sử-bối-cảnh-chat-và-cá-nhân-hóa--triển-khai-16112026); chưa thêm log usage hoặc hạn mức.
 
 ## Danh mục hiện hành
 
@@ -41,6 +45,9 @@ Migration `20261116110000_ket_noi_ai` thêm một bảng metadata `ket_noi_ai`: 
 | Bố trí vật thể bổ sung trên 3D | `vat_the_3d` | — |
 | Loại thiết bị | `loai_tai_san` | — (thiết kế mức 1 mới) |
 | Hồ sơ từng thiết bị | `tai_san` | — (thiết kế mức 1 mới) |
+| Loại vật tư/phụ kiện | `loai_vat_tu` | — |
+| Mặt hàng theo số lượng | `mat_hang_vat_tu` | — |
+| Sổ nhập/cấp/thu hồi/đảo vật tư | `giao_dich_vat_tu` | — |
 | Hồ sơ nhân sự | `nhan_su` | Employee |
 | Tài khoản đăng nhập | `tai_khoan` | User |
 | Vai trò | `vai_tro` | Role |
@@ -49,13 +56,18 @@ Migration `20261116110000_ket_noi_ai` thêm một bảng metadata `ket_noi_ai`: 
 | Vai trò được gán cho tài khoản | `tai_khoan_vai_tro` | UserRole |
 | Nhật ký hoạt động | `nhat_ky_hoat_dong` | AuditLog |
 | Kết nối và model AI | `ket_noi_ai` | — |
+| Kết nối/model theo tác vụ | `cau_hinh_tac_vu_ai` | — |
+| Sổ gọi và chi phí AI | `nhat_ky_goi_ai` | — |
+| Công việc AI chờ duyệt và kết quả | `cong_viec_ai` | — |
+| Hội thoại riêng theo tài khoản | `hoi_thoai_ai` | — |
+| Tin nhắn, bối cảnh tham chiếu và trạng thái lượt | `tin_nhan_ai` | — |
 | Mẫu và phiên bản quy trình | `mau_quy_trinh` | — |
 | Bước trong mẫu | `buoc_mau_quy_trinh` | — |
 | Hồ sơ/yêu cầu chạy quy trình | `ho_so_quy_trinh` | — |
 | Bước xử lý của từng hồ sơ | `buoc_xu_ly_quy_trinh` | — |
 | Lịch sử xử lý | `lich_su_quy_trinh` | — |
 
-DB có 19 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` đã triển khai; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
+DB có 25 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` đã triển khai; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
 
 Các giá trị enum `ACTIVE / LEFT / UNKNOWN`, mã quyền `HR / VIEW / MANAGE`, constraint/index/sequence lịch sử và JSON nhật ký cũ được giữ nguyên. Đây không phải tên bảng/cột. Relation field của Prisma là liên kết, không tạo cột PostgreSQL; tên liên kết cũng dùng tiếng Việt.
 
@@ -341,3 +353,31 @@ Quan hệ Prisma: `cong_ty`, `vi_tri`, `phong`. Xóa vị trí hợp lệ cascad
 - 22/10: migration `20261022090000_viet_hoa_ten_bang_va_cot` Việt hóa tên vật lý.
 - 03/11: migration `20261103090000_thong_nhat_ten_nghiep_vu` thống nhất tên tài khoản/mã nhân sự và các cột nghiệp vụ; giữ nguyên dữ liệu.
 - 03/11, theo yêu cầu tiếp theo: đổi cả model/field Prisma thành tên vật lý hiện hành, bao gồm quan hệ trong Studio. Không cần migration mới vì Prisma diff không có DDL. Không sửa migration lịch sử; chúng vẫn chứa tên của thời điểm áp dụng.
+
+## Vật tư và phụ kiện — migration 17/11/2026
+
+Mã nguồn đã bổ sung ba bảng qua `20261117090000_vat_tu_va_phu_kien`; trạng thái áp dụng/kiểm chứng theo [plan vật tư](plans/INVENTORY-MANAGEMENT-CHECKLIST.md#thiết-kế-db-cần-giữ).
+
+| Bảng | Nội dung chính |
+| --- | --- |
+| `loai_vat_tu` | `ma_loai`, `ten_loai`, `hang_muc` (TIEU_HAO/PHU_KIEN), `mo_ta`, `dang_su_dung`; công ty và thời điểm |
+| `mat_hang_vat_tu` | `ma_mat_hang` tự cấp VT, tên, FK loại/phòng quản lý, `don_vi_tinh`, `muc_ton_toi_thieu`, ghi chú/trạng thái; không lưu tồn |
+| `giao_dich_vat_tu` | FK mặt hàng, loại/số lượng giao dịch, nơi xuất/nhập, người/phòng nhận, lần cấp gốc/bản đảo, giá/lý do/ghi chú, UUID `request_id`, người ghi và thời điểm; không `updated_at` |
+
+FK nghiệp vụ cùng công ty và Restrict; hai self-FK còn cùng mặt hàng. `ton_vat_tu`/`dang_cap_vat_tu` tính từ sổ; các trigger chặn sửa/xóa sổ, âm, thu hồi vượt, đảo sai, ngừng danh mục/nơi giữ còn tồn. Tồn mở đầu riêng mỗi mặt hàng/nơi giữ. Hai quyền mới chỉ được tạo trong catalog, không gán mặc định.
+
+## Quản trị sử dụng AI — 17/11/2026
+
+Migration `20261117120000_quan_tri_su_dung_ai` đã áp dụng local sau backup/khôi phục thử, giữ nguyên dữ liệu cũ theo [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#quản-trị-api-openai-mở-rộng--17112026).
+
+| Bảng/cột | Kiểu và ý nghĩa |
+| --- | --- |
+| `tai_khoan.han_muc_ai_thang` | Decimal(18,6) nullable, USD/tháng: NULL không giới hạn, 0 chặn, dương áp trần; không tạo bảng hạn mức |
+| `ket_noi_ai.han_muc_chi_phi_thang` | Cùng quy ước trên, chỉ áp lưu lượng qua ERP của kết nối này |
+| `ket_noi_ai.cau_hinh_gia` | JSONB nullable, `{version:1,model,input,cached,output}`; giá USD/triệu token dạng chuỗi, cache <= input |
+| `cau_hinh_tac_vu_ai` | `id`, `company_id`, `ma_tac_vu` (GENERAL/LOOKUP/DRAFT), `ket_noi_ai_id`/`model`/`cau_hinh_gia` nullable, timestamps; unique công ty/tác vụ; FK kết nối kép cùng công ty/Restrict |
+| `nhat_ky_goi_ai` | `id`, `company_id`, `account_id`, `ket_noi_ai_id`, `ma_yeu_cau` UUID, `buoc`, `ma_tac_vu`, `model`, `phien_ban_khoa`, snapshot `cau_hinh_gia` nullable; FK tài khoản/kết nối kép cùng công ty/Restrict |
+| Token/chi phí của sổ gọi | `token_dau_vao`, `token_cache`, `token_dau_ra` Int nullable; `chi_phi_uoc_tinh`, `du_phong` Decimal(18,6) nullable; NULL là chưa xác định, không phải 0 |
+| Trạng thái của sổ gọi | `trang_thai`: DANG_GOI/HOAN_TAT/LOI/CHUA_RO/CHUA_GIA/DOI_SOAT; `ma_phan_hoi`, `http_status` nullable, `created_at`, `hoan_tat_at` nullable |
+
+Sổ gọi unique công ty/tài khoản/mã lượt/bước; index công ty/tài khoản/thời gian và công ty/kết nối/thời gian. Kỳ được xác định từ created_at UTC theo ranh giới tháng Asia/Ho_Chi_Minh, không cần reset log hoặc cột số dư. CHECK giữ giá trị không âm và điều kiện trạng thái; không chứa secret/prompt/chat. Đối chiếu thủ công giữ token chưa biết là NULL và ghi audit cùng giao dịch.

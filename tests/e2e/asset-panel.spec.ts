@@ -12,7 +12,12 @@ let manager: Account, viewer: Account, id: number, category: number, person: num
 const detail = (page: Page) => page.getByRole("dialog", { name: "Chi tiết tài sản", exact: true });
 const edit = (page: Page) => page.getByRole("form", { name: "Sửa thông tin tài sản", exact: true });
 const link = () => `/assets?asset=${id}`;
-const save = async (page: Page) => { await edit(page).getByRole("button", { name: "Lưu", exact: true }).click(); await expect(edit(page)).not.toBeVisible(); };
+const save = async (page: Page) => {
+  await page.keyboard.press("Enter");
+  await expect(edit(page).getByRole("status")).toHaveText("Đã lưu");
+  await edit(page).getByRole("button", { name: "Đóng", exact: true }).click();
+  await expect(edit(page)).not.toBeVisible();
+};
 test.beforeAll(async () => {
   const company = await db.cong_ty.create({ data: { ten_cong_ty: `Panel ${run}` } });
   for (const level of ["MANAGE", "VIEW"]) {
@@ -33,14 +38,14 @@ test("click values edits within the panel; searchable person/location saves pres
   await expect(detail(page).getByLabel("Mã tài sản tự sinh, không thể sửa")).toBeVisible();
   await expect(detail(page).getByRole("button", { name: "Sửa tài sản", exact: true })).toHaveCount(0);
   await detail(page).getByRole("button", { name: "Sửa người sử dụng", exact: true }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await expect(detail(page)).toHaveCount(1);
+  await expect(page.getByRole("dialog", { name: "Sửa tài sản", exact: true })).toHaveCount(0);
   await page.getByRole("combobox", { name: "Tìm người sử dụng", exact: true }).fill("pham loan");
   await page.getByRole("option", { name: /Phạm Thị Kim Loan/ }).click();
-  await expect(edit(page).getByRole("combobox", { name: "Hình thức sử dụng", exact: true })).toContainText("Cá nhân");
-  await save(page); await expect(detail(page).getByRole("button", { name: "Sửa người sử dụng", exact: true })).toContainText("Phạm Thị Kim Loan");
+  await expect(edit(page)).not.toBeVisible(); await expect(detail(page).getByRole("button", { name: "Sửa người sử dụng", exact: true })).toContainText("Phạm Thị Kim Loan");
   await detail(page).getByRole("button", { name: "Sửa vị trí", exact: true }).click();
   await page.getByRole("combobox", { name: "Tìm vị trí", exact: true }).fill("phong thu");
-  await page.getByRole("option", { name: "Phòng thử", exact: true }).click(); await save(page);
+  await page.getByRole("option", { name: "Phòng thử", exact: true }).click(); await expect(edit(page)).not.toBeVisible();
   const row = await db.tai_san.findUniqueOrThrow({ where: { id } });
   expect(row.nguoi_su_dung_id).toBe(person); expect(row.vi_tri_id).toBe(location);
   expect(row.so_serial).toBe("SERIAL-KEEP"); expect(row.hang_model).toBe("MODEL-KEEP"); expect(row.ghi_chu).toBe("Ghi chú cần giữ");
@@ -48,26 +53,24 @@ test("click values edits within the panel; searchable person/location saves pres
   expect(await db.nhat_ky_hoat_dong.count({ where: { company_id: manager.company_id, doi_tuong_id: `tai_san:${id}` } })).toBe(2);
 });
 
-test("close, tabs and Back cannot discard a draft; failed save stays editable and Cancel restores value", async ({ page, context }) => {
+test("failed autosave protects the draft from close and Back; discard preserves saved value", async ({ page, context }) => {
   await signAccount(context, manager); await page.goto("/assets");
   await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
   await page.getByRole("button", { name: "Mở tài sản PC panel", exact: true }).click();
   await detail(page).getByRole("button", { name: "Sửa tên tài sản", exact: true }).click();
+  const block = async (route: import("@playwright/test").Route) => route.request().method() === "POST" ? route.abort() : route.continue();
+  await page.route("**/assets?asset=*", block);
   await edit(page).getByLabel("Tên tài sản", { exact: true }).fill("Bản nháp giữ lại");
   await detail(page).getByRole("button", { name: "Close", exact: true }).click();
-  await expect(edit(page).getByLabel("Tên tài sản", { exact: true })).toHaveValue("Bản nháp giữ lại");
+  await expect(edit(page).getByRole("alert")).toContainText("Nội dung đang sửa vẫn được giữ");
   await expect(detail(page).getByRole("tab", { name: "Lịch sử", exact: true })).toBeDisabled();
   await page.evaluate(() => history.back());
   await expect(page).toHaveURL(new RegExp(`asset=${id}$`));
   await expect(edit(page).getByLabel("Tên tài sản", { exact: true })).toHaveValue("Bản nháp giữ lại");
-  const block = async (route: import("@playwright/test").Route) => route.request().method() === "POST" ? route.abort() : route.continue();
-  await page.route("**/assets?asset=*", block);
-  await edit(page).getByRole("button", { name: "Lưu", exact: true }).click();
-  await expect(edit(page).getByRole("alert")).toContainText("Nội dung đang sửa vẫn được giữ");
+  await edit(page).getByRole("button", { name: "Bỏ thay đổi", exact: true }).click();
   await page.unroute("**/assets?asset=*", block);
-  await edit(page).getByRole("button", { name: "Hủy", exact: true }).click();
   await expect(detail(page).getByRole("heading", { name: "PC panel", exact: true })).toBeVisible();
-  await expect(detail(page).getByRole("button", { name: "Sửa tên tài sản", exact: true })).toBeFocused();
+  expect((await db.tai_san.findUniqueOrThrow({ where: { id } })).ten_tai_san).toBe("PC panel");
 });
 
 test("optional finance validates, applies category months explicitly and renders remaining-value bar/history", async ({ page, context }) => {
@@ -77,17 +80,22 @@ test("optional finance validates, applies category months explicitly and renders
   await detail(page).getByRole("button", { name: "Sửa ngày mua", exact: true }).click();
   await expect(edit(page).getByLabel("Khấu hao (tháng)", { exact: true })).toHaveValue("");
   await edit(page).getByRole("button", { name: "Áp dụng mặc định của loại: 12 tháng", exact: true }).click();
+  await expect(edit(page).getByRole("status")).toHaveText("Đã lưu");
   await edit(page).getByLabel("Ngày mua", { exact: true }).fill(todayVietnam());
+  await edit(page).getByLabel("Giá mua (VND)", { exact: true }).focus();
+  await expect(edit(page).getByRole("status")).toHaveText("Đã lưu");
   await edit(page).getByLabel("Giá mua (VND)", { exact: true }).fill("12000000");
+  await edit(page).getByLabel("Giá mua (VND)", { exact: true }).press("Tab");
+  await expect(edit(page).getByRole("status")).toHaveText("Đã lưu");
   await edit(page).getByLabel("Hết hạn bảo hành", { exact: true }).fill("2020-01-01");
-  await edit(page).getByRole("button", { name: "Lưu", exact: true }).click();
+  await edit(page).getByLabel("Hết hạn bảo hành", { exact: true }).press("Enter");
   await expect(edit(page).getByText("Hạn bảo hành không được trước ngày mua", { exact: true })).toBeVisible();
   await edit(page).getByLabel("Hết hạn bảo hành", { exact: true }).fill(""); await save(page);
   await expect(detail(page).getByRole("meter")).toHaveAttribute("aria-valuenow", "100");
   await expect(detail(page).getByText(/Giá trị còn lại: 12.000.000/)).toBeVisible();
   await detail(page).getByRole("tab", { name: "Lịch sử", exact: true }).click();
   const history = page.getByRole("region", { name: "Lịch sử tài sản" });
-  await history.locator("summary").first().click();
+  for (const summary of await history.locator("summary").all()) await summary.click();
   await expect(history).toContainText("12.000.000 ₫");
   await detail(page).getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
@@ -103,11 +111,19 @@ test("category presets are configurable and never retroactively change existing 
   await form.locator("summary").filter({ hasText: "Khấu hao mặc định" }).click();
   await form.getByLabel("Thời gian mặc định (tháng)", { exact: true }).fill("0");
   await form.locator("summary").filter({ hasText: "Khấu hao mặc định" }).click();
-  await form.getByRole("button", { name: "Lưu loại tài sản", exact: true }).click();
   await expect(form.getByText("Tối thiểu 1 tháng", { exact: true })).toBeVisible();
   await form.getByRole("button", { name: "5 năm", exact: true }).click();
-  await form.getByRole("button", { name: "Lưu loại tài sản", exact: true }).click();
-  await expect(form).not.toBeVisible();
+  await expect(form.getByRole("status")).toHaveText("Đã lưu");
+  await form.getByLabel("Mô tả", { exact: true }).fill("Mô tả lưu tiếp sau khấu hao");
+  await form.getByLabel("Mô tả", { exact: true }).press("Tab");
+  await expect(form.getByRole("status")).toHaveText("Đã lưu");
+  expect((await db.loai_tai_san.findUniqueOrThrow({ where: { id: category } })).mo_ta).toBe("Mô tả lưu tiếp sau khấu hao");
+  await form.getByRole("checkbox", { name: "Cho phép chọn khi thêm thiết bị", exact: true }).uncheck();
+  await expect(form.getByRole("status")).toHaveText("Đã lưu");
+  expect((await db.loai_tai_san.findUniqueOrThrow({ where: { id: category } })).dang_su_dung).toBe(false);
+  await form.getByRole("checkbox", { name: "Cho phép chọn khi thêm thiết bị", exact: true }).check();
+  await expect(form.getByRole("status")).toHaveText("Đã lưu");
+  await form.getByRole("button", { name: "Đóng", exact: true }).click();
   expect((await db.loai_tai_san.findUniqueOrThrow({ where: { id: category } })).khau_hao_mac_dinh_thang).toBe(60);
   expect((await db.tai_san.findUniqueOrThrow({ where: { id } })).thoi_gian_khau_hao_thang).toBe(12);
   await page.goto(link()); await detail(page).locator("summary").filter({ hasText: "Mua sắm & khấu hao" }).click();
@@ -131,9 +147,9 @@ test("VIEW is read-only; finance stays collapsed; mobile light/dark fit with inl
     await detail(page).locator("summary").filter({ hasText: "Mua sắm & khấu hao" }).click();
     await detail(page).getByRole("button", { name: "Sửa giá mua (vnd)", exact: true }).click();
     await edit(page).getByLabel("Giá mua (VND)", { exact: true }).fill("0");
-    await edit(page).getByRole("button", { name: "Lưu", exact: true }).scrollIntoViewIfNeeded();
+    await edit(page).getByRole("button", { name: "Bỏ thay đổi", exact: true }).scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ animations: "disabled", path: `outputs/assets-panel/mobile-${theme}.png` });
-    await edit(page).getByRole("button", { name: "Hủy", exact: true }).click();
+    await edit(page).getByRole("button", { name: "Bỏ thay đổi", exact: true }).click();
   }
 });

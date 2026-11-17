@@ -1,6 +1,8 @@
 "use client";
 import { RoundedBox } from "@react-three/drei";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { layoutEquipment } from "@/lib/office-3d/equipment-layout";
+import type { LocationAsset } from "@/lib/asset-location";
 import { Shape } from "three";
 import {
   HCNS_ROOM_OUTLINE,
@@ -235,23 +237,27 @@ export function EquipmentModel({ kind }: { kind: EquipmentKind }) {
 
 export type EquipmentInteraction = {
   activeEquipment?: EquipmentKind;
-  onEquipment?: (kind: EquipmentKind, focus: boolean) => void;
+  activeAsset?: number;
+  assets?: LocationAsset[];
+  layoutAssets?: LocationAsset[];
+  onEquipment?: (kind: EquipmentKind, focus: boolean, assetId?: number) => void;
 };
-export function EquipmentDisplay({ equipment, width, depth, height = 0, activeEquipment, onEquipment }: {
-  equipment: EquipmentKind[]; width: number; depth: number; height?: number;
+export function EquipmentDisplay({ equipment, assets, layoutAssets, width, depth, height = 0, desk = false, activeEquipment, activeAsset, onEquipment }: {
+  equipment: EquipmentKind[]; width: number; depth: number; height?: number; desk?: boolean;
 } & EquipmentInteraction) {
-  const [hovered, setHovered] = useState<EquipmentKind | null>(null);
-  return <>{equipment.slice(0, 3).map((kind, index, visible) => (
-    <group key={kind} userData={{equipmentKind: kind}}
-      onPointerOver={onEquipment ? e => {e.stopPropagation(); setHovered(kind);} : undefined}
+  const [hovered, setHovered] = useState<string | null>(null);
+  const placements = useMemo(()=>layoutEquipment({equipment,assets:layoutAssets ?? assets,width,depth,height,desk}),[equipment,assets,layoutAssets,width,depth,height,desk]);
+  const visible = assets ? new Set(assets.map(a=>a.id)) : null;
+  return <>{placements.filter(p=>p.assetId === undefined || !visible || visible.has(p.assetId)).map(({key, kind, assetId, part, position, scale, footprint}) => (
+    <group key={`${key}-${part}`} userData={{equipmentKind: kind, assetId}}
+      onPointerOver={onEquipment ? e => {e.stopPropagation(); setHovered(key);} : undefined}
       onPointerOut={() => setHovered(null)}
-      onClick={onEquipment ? e => {e.stopPropagation(); if(e.button === 0 && e.delta < 5) onEquipment(kind, false);} : undefined}
-      onDoubleClick={onEquipment ? e => {e.stopPropagation(); if(e.button === 0 && e.delta < 5) onEquipment(kind, true);} : undefined}
-      position={[(index - (visible.length - 1) / 2) * width / visible.length, height, 0]}
-      scale={Math.min(.85, width / (visible.length * 1.1), depth / .8)}>
-      <EquipmentModel kind={kind} />
-      {(activeEquipment === kind || hovered === kind) && onEquipment && <mesh rotation={[-Math.PI/2,0,0]} position={[0,.008,0]} raycast={() => {}}>
-        <planeGeometry args={[.85,.75]}/><meshBasicMaterial color={materials.accent} transparent opacity={.2} depthWrite={false}/>
+      onClick={onEquipment ? e => {e.stopPropagation(); if(e.button === 0 && e.delta < 5) onEquipment(kind, false, assetId);} : undefined}
+      onDoubleClick={onEquipment ? e => {e.stopPropagation(); if(e.button === 0 && e.delta < 5) onEquipment(kind, true, assetId);} : undefined}
+      position={position} scale={scale}>
+      {part === "pc-tower" ? <Block at={[0,.25,0]} size={[.22,.5,.4]} color={materials.device}/> : <EquipmentModel kind={kind} />}
+      {((activeAsset ? activeAsset === assetId : activeEquipment === kind) || hovered === key) && onEquipment && <mesh rotation={[-Math.PI/2,0,0]} position={[(footprint.x-position[0])/scale,.008,(footprint.z-position[2])/scale]} raycast={() => {}}>
+        <planeGeometry args={[footprint.width/scale,footprint.depth/scale]}/><meshBasicMaterial color={materials.accent} transparent opacity={.2} depthWrite={false}/>
       </mesh>}
 
     </group>
@@ -263,6 +269,9 @@ export function Desk({
   equipment,
   selected,
   activeEquipment,
+  activeAsset,
+  assets,
+  layoutAssets,
   onEquipment,
 }: {
   width: number;
@@ -309,13 +318,8 @@ export function Desk({
         size={[width - 0.2, 0.22, 0.04]}
         color={materials.woodEdge}
       />
-      <group position={[0, 0, -.05]}><EquipmentDisplay equipment={equipment} width={width} depth={depth} height={.85}
-        activeEquipment={activeEquipment} onEquipment={onEquipment} /></group>
-      {equipment.slice(0,3).includes("pc") && <group userData={{equipmentKind:"pc"}}
-        onClick={onEquipment ? e => {e.stopPropagation(); if(e.button === 0 && e.delta < 5) onEquipment("pc",false);} : undefined}
-        onDoubleClick={onEquipment ? e => {e.stopPropagation(); if(e.button === 0 && e.delta < 5) onEquipment("pc",true);} : undefined}>
-        <Block at={[-width / 2 + 0.3, 0.29, 0]} size={[0.22, 0.5, 0.4]} color={materials.device} />
-      </group>}
+      <EquipmentDisplay equipment={equipment} assets={assets} layoutAssets={layoutAssets} width={width} depth={depth} height={.85} desk
+        activeEquipment={activeEquipment} activeAsset={activeAsset} onEquipment={onEquipment} />
 
     </group>
   );

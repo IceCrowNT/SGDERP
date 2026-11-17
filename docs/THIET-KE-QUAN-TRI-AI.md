@@ -1,6 +1,14 @@
 # Thiết kế quản trị AI: kết nối, hạn mức và mức sử dụng
 
-Cập nhật **16/11/2026**. **Đã triển khai quản lý kết nối tại Cài đặt chung → Quản trị AI; quản trị hạn mức/thống kê đầy đủ còn kế hoạch**; tài liệu chi tiết được quản lý bởi [Plan trợ lý AI](plans/AI-ASSISTANT-CHECKLIST.md). Người phụ trách yêu cầu lưu hạn mức bằng một cột trên tài khoản, bỏ bảng hạn mức riêng. Plan sở hữu phạm vi, tiến độ và nghiệm thu; tài liệu này sở hữu cột hạn mức, bảng kết nối và phần quản trị. Không tự thay đổi tài khoản, hạn mức hoặc API key trên OpenAI.
+Cập nhật **17/11/2026**. **Đã có kết nối, định tuyến tác vụ, hạn mức tùy chọn và usage nội bộ; đối soát nhà cung cấp còn kế hoạch**; tài liệu chi tiết được quản lý bởi [Plan trợ lý AI](plans/AI-ASSISTANT-CHECKLIST.md). Người phụ trách yêu cầu lưu hạn mức bằng một cột trên tài khoản, bỏ bảng hạn mức riêng. Plan sở hữu phạm vi, tiến độ và nghiệm thu; tài liệu này sở hữu cột hạn mức, bảng kết nối và phần quản trị. Không tự thay đổi tài khoản, hạn mức hoặc API key trên OpenAI.
+
+## Hiện trạng quản trị nội bộ — 17/11/2026
+
+Theo yêu cầu mới, **chưa áp hạn mức**: cột `tai_khoan.han_muc_ai_thang` nullable, NULL/ô trống là không giới hạn; 0 chặn; số dương là trần USD/tháng. Không tạo bảng hạn mức hoặc tự gán ngân sách. Kết nối áp dụng cùng quy ước. Giá chưa cấu hình vẫn cho gọi khi không có trần; token được ghi, chi phí NULL. Khi bật trần phải có đơn giá đúng model và xử lý khoản chưa xác định trong kỳ.
+
+Trang AI có kết nối & model, theo tác vụ, hạn mức tài khoản và mức sử dụng theo quyền độc lập. Người dùng chọn tác vụ trước chat; model/key lỗi không tự chuyển nguồn chi. Quyền pilot giữ nguyên, chưa mở quyền AI USE. Không gỡ key môi trường hoặc tự cấp grant trong đợt này. Quản trị không đọc nội dung chat/cá nhân hóa.
+
+Thiết kế DB vật lý và tiến độ chuẩn tại [đợt quản trị API](plans/AI-ASSISTANT-CHECKLIST.md#quản-trị-api-openai-mở-rộng--17112026) và [từ điển DB](DATABASE-DICTIONARY.md#quản-trị-sử-dụng-ai--17112026). Thiết kế đầy đủ phía sau còn gồm lộ trình nguồn chi/project/credential đối soát, không mặc định mọi trường đã triển khai. Chưa đồng bộ Usage/Costs OpenAI; giao diện dẫn Usage/Billing chính thức và ghi chưa kết nối/chưa xác định số dư.
 
 ## 1. Mục tiêu và màn hình
 
@@ -19,7 +27,7 @@ Người phụ trách đã yêu cầu triển khai phương án này. **Đã có
 | Đăng nhập & bảo mật | Chính sách phiên/mật khẩu và phương thức đăng nhập khi được triển khai; cấp/gỡ quyền vẫn tại ma trận hiện có |
 | Dữ liệu & lưu trữ | Chính sách giữ lịch sử/tệp, tình trạng dung lượng và sao lưu; thao tác khôi phục/xóa cần thiết kế vận hành riêng |
 
-Quản trị AI hiện có **Kết nối & model**; **Hạn mức tài khoản** và **Mức sử dụng** chưa triển khai. Chat ở dashboard; cá nhân hóa và lịch sử riêng giữ theo plan hiện hành. Tái sử dụng `ket_noi_ai` và kho khóa, không tạo một bản cấu hình AI thứ hai trong bảng cài đặt tổng quát.
+Quản trị AI hiện có **Kết nối & model**, **Theo tác vụ**, **Hạn mức tài khoản** và **Mức sử dụng** theo đợt 17/11. Chat ở dashboard; cá nhân hóa và lịch sử riêng đã triển khai trong pilot theo plan hiện hành. Tái sử dụng `ket_noi_ai` và kho khóa, không tạo một bản cấu hình AI thứ hai trong bảng cài đặt tổng quát.
 
 Phân quyền theo từng nhóm và hành động, không dùng một quyền vào `/settings` để mở tất cả cấu hình. Trang đầu/menu hiện theo hợp các mục được phép; trang con, truy vấn và action kiểm tra quyền tương ứng, cùng công ty. `AI USE`, `AI MANAGE_CONNECTIONS`, `AI MANAGE_LIMITS`, `AI VIEW_USAGE` tiếp tục theo [ma trận quyền AI](#6-quyền-và-audit). Người quản lý kết nối không cần mặc nhiên có quyền quản lý tài sản/vị trí hoặc đọc chat của người khác. Quyền cài đặt chung không tự bao gồm quyền sửa ma trận vai trò.
 
@@ -27,7 +35,7 @@ Cấp quyền vẫn qua `/roles`; có thể đặt liên kết từ khu cài đ�
 
 ### Các vùng quản trị AI theo thiết kế đầy đủ
 
-Người phụ trách đề xuất quản lý hạn mức từng user, API key, quota/token đã dùng và phần còn lại. Khu `/settings/ai`, nhãn **Quản trị AI**, sẽ mở rộng các vùng sau theo quyền riêng; hiện mới có kết nối/key/model:
+Người phụ trách đề xuất quản lý hạn mức từng user, API key, quota/token đã dùng và phần còn lại. Khu `/settings/ai`, nhãn **Quản trị AI**, sẽ mở rộng các vùng sau theo quyền riêng; phần hiện hành theo đợt 17/11 ở đầu tài liệu:
 
 | Vùng | Nội dung / thao tác |
 | --- | --- |
@@ -58,11 +66,13 @@ User thường xem hạn mức và mức sử dụng của chính tài khoản t
 
 ### Kết nối pilot — 16/11/2026
 
-Đã triển khai theo yêu cầu quản lý API key và model; phần thiết kế đầy đủ phía sau vẫn là lộ trình. Pilot có **một kết nối OpenAI mỗi công ty**, quản lý qua `/settings/ai` bằng `AI MANAGE_CONNECTIONS`, độc lập quyền chat. Chưa có màn hình usage/quota; quyền kết nối đã có tại `/roles`.
+Đã triển khai theo yêu cầu quản lý API key và model; phần thiết kế đầy đủ phía sau vẫn là lộ trình. Pilot được mở rộng thành **nhiều kết nối OpenAI mỗi công ty**, mỗi kết nối giữ một key và model; chat dùng kết nối theo tác vụ hoặc kế thừa mặc định, quản lý qua `/settings/ai` bằng `AI MANAGE_CONNECTIONS`, độc lập quyền chat. Màn hình usage/hạn mức và quyền quản trị bổ sung theo đợt 17/11.
 
 | Trường trong `ket_noi_ai` | Quy tắc hiện hành |
 | --- | --- |
-| `id`, `company_id` | PK tự tăng; FK công ty Restrict; unique `company_id` bảo đảm một kết nối |
+| `id`, `company_id` | PK tự tăng; FK công ty Restrict; index `company_id` cho danh sách cùng công ty |
+| `ten_ket_noi` | Varchar(100), tên nhận diện bắt buộc, mặc định migration là OpenAI |
+| `la_mac_dinh` | Boolean; partial unique theo công ty khi true, tối đa một mặc định; bản ghi cũ được giữ làm mặc định |
 | `model_mac_dinh` | Varchar(200), tên model bắt buộc, kiểm tra ký tự; xuất hiện trong Models API không chứng minh hỗ trợ Responses/function calling |
 | `tham_chieu_bi_mat`, `hau_to_khoa` | UUID tham chiếu file mã hóa, bốn ký tự cuối để nhận diện; không lưu key hoặc ciphertext vào DB/audit |
 | `phien_ban_khoa` | Int >= 1; chỉ tăng khi thay key |
@@ -71,13 +81,15 @@ User thường xem hạn mức và mức sử dụng của chính tài khoản t
 
 ```mermaid
 erDiagram
-    cong_ty ||--o| ket_noi_ai : "một kết nối pilot"
+    cong_ty ||--o{ ket_noi_ai : "nhiều kết nối pilot"
     cong_ty {
         int id PK "Đã có"
     }
     ket_noi_ai {
         int id PK "Bảng mới trong pilot"
-        int company_id FK,UK
+        int company_id FK
+        string ten_ket_noi
+        boolean la_mac_dinh "Tối đa một mỗi công ty"
         string model_mac_dinh
         string tham_chieu_bi_mat "Tham chiếu kho khóa, không là FK SQL"
         boolean dang_su_dung
@@ -86,30 +98,32 @@ erDiagram
 
 - Khóa nhập là dữ liệu chỉ ghi; tải lại form luôn để trống, để trống khi lưu giữ key cũ. Key mới mã hóa AES-256-GCM với nonce ngẫu nhiên và ràng buộc công ty/tham chiếu; file và khóa mã hóa ngoài `public`/Git, quyền thư mục 0700/file 0600. Kho cục bộ cho môi trường hiện tại; đường dẫn và sao lưu tại Kiến trúc. Khóa mã hóa mất/hỏng thì chặn giải mã, không tự thay khóa làm mất khả năng đọc kho cũ.
 - Chuẩn bị file mới trước transaction, khóa công ty/phân quyền, đọc lại quyền và phiên bản, cập nhật metadata cùng audit trong transaction. Không xóa phiên bản khóa cũ đang có thể được request dùng; file chưa gắn do lỗi giữ để dọn khi đã đối chiếu, không xóa khi chưa rõ transaction đã commit.
-- Khi chưa có bản ghi, hỗ trợ cấu hình môi trường cũ chỉ trong công ty của tài khoản pilot được bind; sau khi có bản ghi thì dùng bản ghi đó. Tạm dừng hoặc kho bị lỗi phải chặn chat, không quay về key môi trường. Mỗi lượt chat giữ một phiên bản kết nối; cài đặt đổi giữa lượt thì dừng trước lần gọi API kế tiếp.
+- Khi chưa có bản ghi, hỗ trợ cấu hình môi trường cũ chỉ trong công ty của tài khoản pilot được bind; sau khi có bản ghi thì dùng kết nối DB được chọn mặc định. Tạm dừng hoặc kho bị lỗi phải chặn chat, không quay về key môi trường. Mỗi lượt chat giữ một phiên bản kết nối; cài đặt đổi giữa lượt thì dừng trước lần gọi API kế tiếp.
 - Kiểm tra khóa dùng `GET /v1/models`, chỉ trả tên model hợp lệ, không gọi model trả phí hoặc nhận URL nhà cung cấp tùy ý. Có giới hạn lượt kiểm tra; lỗi không ghi đè cấu hình hoạt động. Form mặc định dùng danh sách tìm/chọn, tự tải khi mở bằng khóa đã cấu hình; giữ lựa chọn cũ kể cả không có trong danh sách mới. Khóa nhập mới dùng nút kiểm tra/tải; có thể nhập model thủ công khi key không được phép đọc danh sách. [Models API](https://developers.openai.com/api/reference/typescript/resources/models/methods/list).
 - Không tự nhập khóa, chọn model, bật kết nối hay seed dữ liệu thật; bảng mới khởi đầu rỗng. Kiểm thử với khóa/API mô phỏng trên DB và kho file riêng.
 
+**Thêm nhiều key và chuyển từ môi trường:** mỗi kết nối thêm mới giữ bản cũ, không đổi mặc định đã có. Khi chưa có DB và công ty pilot đang dùng key môi trường, thêm key mới sẽ bảo toàn key/model môi trường thành kết nối mặc định trong kho mã hóa + DB, cùng transaction/audit với bản mới. Nút Lưu kết nối hiện tại chuyển riêng cấu hình máy chủ sang quản lý trong UI; không cho thay key môi trường ngay trong thao tác chuyển này. Có DB thì không quay về env khi thiếu mặc định/tạm dừng/lỗi. Không xóa key hoặc biến `.env` tự động. Chỉ gỡ `OPENAI_API_KEY`/`OPENAI_MODEL` sau khi đã lưu, kiểm tra kết nối DB, sao lưu DB và kho bí mật rồi khởi động lại ứng dụng; giữ `AI_PILOT_ACCOUNT_ID`, session và các cấu hình khác. [Tiến độ nhiều key](plans/SYSTEM-SETTINGS-CHECKLIST.md#nhiều-api-key-openai--16112026).
+
 ### Thiết kế đầy đủ còn kế hoạch
 
-Thiết kế tổng gồm **hai cột mới trên `tai_khoan` và bốn bảng AI mới**: cột cá nhân hóa ở plan, cột hạn mức bên dưới; ba bảng hội thoại/tin nhắn/log ở plan và bảng `ket_noi_ai` tại đây. Không tạo bảng hạn mức riêng. Bảng kết nối có `id Int` tự tăng, `company_id`, `created_at`, `updated_at`, FK/index theo chuẩn dự án; phần mở rộng này chưa có migration, không thay thiết kế kết nối pilot đã chạy ở trên.
+Thiết kế tổng gồm **hai cột mới trên `tai_khoan` và năm bảng AI mới**: cột cá nhân hóa ở plan, cột hạn mức bên dưới; ba bảng hội thoại/tin nhắn/log và bảng công việc `cong_viec_ai` ở plan; bảng `ket_noi_ai` tại đây. Không tạo bảng hạn mức riêng. Bảng kết nối có `id Int` tự tăng, `company_id`, `created_at`, `updated_at`, FK/index theo chuẩn dự án; phần mở rộng này chưa có migration, không thay thiết kế kết nối pilot đã chạy ở trên.
 
 ### Cột `tai_khoan.han_muc_ai_thang`
 
 | Trường dự kiến | Kiểu / ý nghĩa |
 | --- | --- |
-| `han_muc_ai_thang` | Decimal(18,6), NOT NULL, mặc định 0, CHECK >= 0; đề xuất ngân sách USD cho một tháng lịch |
+| `han_muc_ai_thang` | Decimal(18,6), nullable, mặc định NULL, CHECK >= 0; USD/tháng lịch: NULL không giới hạn, 0 chặn, dương áp trần |
 
 - Một tài khoản có một giá trị hạn mức hiện hành. Cách lưu một cột đã được người phụ trách yêu cầu; đơn vị tiền/kỳ tháng tiếp tục là phương án đã đề xuất, cần chốt mức cấp cụ thể trước pilot. Không dùng JSON hoặc một bảng chính sách chỉ để lưu con số này.
 - Chỉ quyền `AI MANAGE_LIMITS` được đổi cột này trong phạm vi công ty; user xem nhưng không tự sửa qua profile/cá nhân hóa. Dùng `updated_at` hiện có để kiểm tra xung đột, audit giá trị cũ/mới cùng transaction; không tăng phiên bản đăng nhập chỉ vì đổi hạn mức.
-- Mức 0 hoặc thiếu `AI USE` chặn gọi có phí. Migration khi được yêu cầu đặt 0 cho dữ liệu cũ; không tự cấp ngân sách hoặc grant. Model/tốc độ/lượt đồng thời/giới hạn đầu ra dùng cấu hình kết nối chung, không có tùy chỉnh riêng từng user trong bản đầu.
+- Mức 0 chặn gọi có phí. Theo yêu cầu 17/11, migration đặt NULL cho dữ liệu cũ để chưa giới hạn; quyền dùng chat giữ pilot, AI USE cho mở rộng chưa triển khai. Không tự cấp ngân sách/grant. Giới hạn kỹ thuật hiện có giữ nguyên, chưa có tùy chỉnh riêng từng user.
 - Mức đã dùng và phần đang giữ lấy từ `nhat_ky_goi_ai` theo công ty/tài khoản/kỳ; mức còn lại tính khi đọc. Không thêm cột “đã dùng”/“còn lại” trên tài khoản hoặc reset/xóa log đầu tháng.
 - Đề xuất tháng lịch theo `Asia/Ho_Chi_Minh`; timestamp UTC, ranh giới kỳ tường minh. Đổi khóa/kết nối không cấp lại hạn mức: tổng tài khoản tính trên mọi kết nối trong cùng kỳ. Giảm hạn mức dưới mức đã dùng chặn lần gọi mới; tăng hạn mức không xóa usage cũ.
 - Không tự gộp hạn mức theo nhân sự/phòng ban. Nếu một người có nhiều tài khoản thì quản trị phân bổ chủ động; quota tổng theo nhân sự/phòng là mở rộng riêng.
 
 ### `ket_noi_ai` — nguồn kết nối và thanh toán
 
-Một bản ghi là một kết nối OpenAI gắn project, có một phiên bản khóa hoạt động. Thay khóa giữ cùng kết nối và lịch sử; đổi project/nguồn thanh toán thì tạo kết nối mới, không viết lại nguồn của các lần gọi cũ.
+Một bản ghi là một kết nối OpenAI có một phiên bản khóa hoạt động; phần gắn project/nguồn chịu phí còn kế hoạch. Nhiều key có thể thuộc cùng project theo yêu cầu nhiều key mới. Thay khóa giữ cùng kết nối và lịch sử; đổi project/nguồn thanh toán thì tạo kết nối mới, không viết lại nguồn của các lần gọi cũ.
 
 | Trường dự kiến | Ý nghĩa |
 | --- | --- |
@@ -125,7 +139,7 @@ Một bản ghi là một kết nối OpenAI gắn project, có một phiên b�
 | `kiem_tra_gan_nhat_at`, `trang_thai_kiem_tra`, `ma_loi_gan_nhat` | Metadata kiểm tra; không chứa key/request header hoặc lỗi thô |
 | `doi_soat_nha_cung_cap` | JSONB nullable chứa snapshot tổng hợp có giới hạn, phạm vi/kỳ/nguồn/thời điểm/trạng thái; không là sổ chi phí chính |
 
-- Bản đầu chỉ ánh xạ mỗi cặp organization/project OpenAI tới một kết nối và một công ty ERP; unique `(nha_cung_cap, ma_to_chuc, ma_du_an)` để không cộng lặp/né trần bằng cách thêm khóa khác cùng project. Khóa thay mới thuộc cùng kết nối. Muốn chia sẻ project giữa công ty phải có thiết kế đối soát/phạm vi riêng.
+- Thiết kế unique organization/project trên kết nối trước đây được thay bởi yêu cầu cho phép nhiều key cùng project. Khi làm quota/đối soát, phải gom các kết nối cùng nguồn project để không cộng lặp snapshot hoặc né trần bằng key khác; mô hình nguồn chi và ràng buộc chi tiết cần chốt trước migration phần này. Hạn mức user cộng trên mọi kết nối. Chia sẻ project giữa công ty cần thiết kế phạm vi riêng.
 - Mã organization/project phải được khai báo rõ và kiểm chứng khi có khả năng; một lần gọi model thành công không tự chứng minh mọi quyền quản trị hoặc nguồn billing đã đúng. Không tự nhận tên model trả về là căn cứ xác minh chủ sở hữu project.
 - Partial unique index trên `company_id` khi `la_mac_dinh = true`: tối đa một kết nối mặc định mỗi công ty. Khi chưa có hoặc kết nối mặc định tạm dừng thì chặn gọi, không tự chọn khóa khác. Quản trị đổi mặc định trong transaction; lần gọi đã gửi giữ nguồn cũ trong log.
 - Các tài khoản dùng nguồn mặc định của công ty, không có FK kết nối riêng trên tài khoản hoặc bảng phân bổ chỉ để thay bảng hạn mức đã bỏ. Gán kết nối/model/giới hạn kỹ thuật riêng từng user để giai đoạn sau nếu có nhu cầu được yêu cầu rõ.
@@ -166,7 +180,7 @@ Giới hạn nội bộ chỉ ngăn ERP nhận thêm yêu cầu theo số liệu
 
 | Quyền đề xuất | Phạm vi |
 | --- | --- |
-| `AI USE` | Chat và xem mức dùng/hạn mức của chính tài khoản |
+| `AI USE` — chưa triển khai | Dành cho mở rộng ngoài pilot; pilot hiện hành giữ quyền cũ và xem mức dùng riêng |
 | `AI VIEW_USAGE` | Xem thống kê metadata các tài khoản/kết nối trong công ty |
 | `AI MANAGE_LIMITS` | Sửa `tai_khoan.han_muc_ai_thang`; cần thêm VIEW_USAGE để mở số liệu đối chiếu, không cấp quyền sửa các trường tài khoản khác |
 | `AI MANAGE_CONNECTIONS` | Thêm/thay/tạm dừng kết nối, quản lý model/giới hạn kết nối; cần thêm VIEW_USAGE để xem số liệu |

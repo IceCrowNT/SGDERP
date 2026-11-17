@@ -6,7 +6,7 @@ import sharp from "sharp";
 import { signAccount } from "../helpers/account-fixture";
 import { Matrix4, Vector4 } from "three";
 import { HCNS_LAYOUT } from "../../src/lib/office-3d/hcns-layout";
-import { BUILDING_ROOMS, HCNS_BUILDING_KEY } from "../../src/lib/office-3d/building-layout";
+import { BUILDING_ROOMS, HCNS_BUILDING_KEY, floorElevation } from "../../src/lib/office-3d/building-layout";
 import { hcnsWorldPoint } from "../../src/lib/office-3d/building-navigation";
 const db = new PrismaClient();
 test.setTimeout(180000);
@@ -506,7 +506,7 @@ test("HCNS equipment points remain selectable through hidden floor outlines", as
       // Wait for demand-rendered camera matrices after changing view.
       await page.waitForTimeout(1000);
       const matrices = await page.evaluate(() => (window as unknown as { sceneProbe: { view: number[]; projection: number[] } }).sceneProbe);
-      const target = new Vector4(shape.x + object.toa_do_x, .4, shape.z + object.toa_do_z, 1)
+      const target = new Vector4(shape.x + object.toa_do_x, floorElevation(shape.floor) + .4, shape.z + object.toa_do_z, 1)
         .applyMatrix4(new Matrix4().fromArray(matrices.view)).applyMatrix4(new Matrix4().fromArray(matrices.projection));
       const bounds = (await canvas.boundingBox())!;
       const x = bounds.x + (target.x / target.w + 1) * bounds.width / 2;

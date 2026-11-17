@@ -42,6 +42,7 @@ const object = (properties: Record<string, unknown>, required: string[] = []) =>
 const tool = (name: string, description: string, parameters: unknown) => ({ type: "function", name, description, parameters, strict: false });
 
 export const AI_PILOT_TOOLS = [
+  tool("plan_category_depreciation", "Lập bảng chờ duyệt khấu hao mặc định cho TẤT CẢ loại tài sản trong công ty, kể cả loại ngừng dùng. Không cập nhật các tài sản đã có. Chỉ dùng khi người dùng yêu cầu toàn bộ loại; 5 năm = 60 tháng. Server tự đọc đầy đủ danh mục, không cần lookup; không ghi thay đổi cho đến khi người dùng bấm duyệt.", object({ months: { type: "integer", minimum: 1, maximum: 1200 }, scope: { type: "string", enum: ["all_categories"] } }, ["months", "scope"])),
   tool("lookup", "Tìm danh mục theo tên không dấu: loại tài sản, vị trí có đường dẫn, phòng quản lý hoặc người dùng thiết bị. Tối đa 50 kết quả, thu hẹp tên khi còn nhiều.", object({ kind: { type: "string", enum: ["categories", "locations", "departments", "people"] }, search: string }, ["kind"])),
   tool("search_assets", "Tra tài sản; locationId bao gồm vị trí con. departmentId là phòng quản lý, độc lập với vị trí. 20 hồ sơ/trang.", object({ search: string, categoryId: number, locationId: number, departmentId: number, page: number })),
   tool("get_asset", "Đọc hồ sơ tài sản hiện hành trước khi đề xuất sửa.", object({ id: number }, ["id"])),

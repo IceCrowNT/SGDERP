@@ -21,7 +21,7 @@ const originalFetch = global.fetch;
 let manager, other, viewer, category, asset, location, foreignAsset, foreignLocation, role, grant;
 let calls = 0, responses = [];
 const as = async (account, fn) => request.run(account ? await createSessionToken({ userId: account.id, companyId: account.company_id, sessionVersion: account.phien_ban_dang_nhap }) : undefined, fn);
-const ask = (account, overrides = {}) => as(account, () => askAi({ requestId: randomUUID(), message: 'Yêu cầu thử nghiệm', history: [], ...overrides }));
+const ask = (account, overrides = {}) => as(account, () => askAi({ requestId: randomUUID(), message: 'Yêu cầu thử nghiệm', ...overrides }));
 const response = output => new Response(JSON.stringify({ id: 'resp_test', status: 'completed', output, usage: { input_tokens: 100, output_tokens: 30, input_tokens_details: { cached_tokens: 20 } } }), { status: 200 });
 const tool = (name, args) => response([{ type: 'function_call', name, arguments: JSON.stringify(args), call_id: randomUUID() }]);
 const reply = text => response([{ type: 'message', content: [{ type: 'output_text', text }] }]);
@@ -111,7 +111,7 @@ test('duplicate and concurrent requests cannot trigger another API call', async 
   responses = [async()=>{entered();await new Promise(resolve=>unblock=resolve);return reply('Hoàn tất.');}];
   const requestId = randomUUID(), first=ask(manager,{requestId}); await enteredPromise;
   const before=calls;assert.equal((await ask(manager,{requestId})).success,false);assert.equal((await ask(manager)).success,false);assert.equal(calls,before);
-  unblock();assert((await first).success);assert.equal((await ask(manager,{requestId})).success,false);assert.equal(calls,before);
+  unblock();assert((await first).success);assert.equal((await ask(manager,{requestId})).success,true);assert.equal(calls,before);
 });
 
 test('permission revoked during model call prevents tool output and draft', async () => {

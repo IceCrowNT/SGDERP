@@ -1,4 +1,5 @@
 "use client";
+import { AiPreferences } from "@/components/profile/AiPreferences";
 import { useState, useTransition } from "react";
 import { UserRound, Building2, BriefcaseBusiness, BadgeCheck, ContactRound, LockKeyhole } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -289,6 +290,7 @@ export function ProfileManager({ data, returnTo }: { data: Profile; returnTo?: s
           </form>
         </div>
       )}
+      {!data.mustChangePassword && data.aiPreferences && <AiPreferences initial={data.aiPreferences} />}
     </div>
   );
 }

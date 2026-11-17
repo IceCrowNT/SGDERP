@@ -151,6 +151,7 @@ export async function saveRole(input: unknown) {
         (p) =>
           isEditableGrant(p) &&
           (p.phan_he !== "ASSETS" || v.permissions.ASSETS !== undefined) &&
+          (p.phan_he !== "INVENTORY" || v.permissions.INVENTORY !== undefined) &&
           (p.phan_he !== "WORKFLOW" || v.workflowActions !== undefined) &&
           (p.phan_he !== "AI" || v.aiActions !== undefined) &&
           (p.phan_he !== "LOCATIONS" || v.permissions.LOCATIONS !== undefined),

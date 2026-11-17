@@ -60,25 +60,26 @@ function AssetHistory({ id }: { id: number }) {
 
 export function AssetDetail({ row, canManage, categories, onSaved, onEditingChange }: { row: AssetRow; canManage: boolean; categories: AssetCategory[]; onSaved: (row: AssetRow) => void; onEditingChange: (editing: boolean) => void }) {
   const [active, setActive] = useState<DetailField | null>(null);
+  const [blocked, setBlocked] = useState(false);
   const depreciation = assetDepreciation(row.ngay_mua, row.thoi_gian_khau_hao_thang, row.gia_mua);
-  function begin(target: DetailField) { if (!canManage || active) return; onEditingChange(true); setActive(target); }
+  function begin(target: DetailField) { if (!canManage || blocked) return; setActive(target); }
   function finish(updated?: AssetRow) {
-    const target = active; setActive(null); onEditingChange(false);
+    const target = active; setActive(null); setBlocked(false); onEditingChange(false);
     if (updated) onSaved(updated);
     requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-detail-field="${target}"]`)?.focus({ preventScroll: true }));
   }
   function editor(target: DetailField) {
-    return <AssetDetailEditor row={row} target={target} categories={categories} onCancel={() => finish()} onSaved={finish} />;
+    return <AssetDetailEditor row={row} target={target} categories={categories} onCancel={() => finish()} onSaved={finish} onUpdated={onSaved} onBlockedChange={value => { setBlocked(value); onEditingChange(value); }} />;
   }
   function valueButton(target: DetailField, label: string, value: React.ReactNode) {
-    return canManage ? <Button data-detail-field={target} variant="ghost" aria-label={`Sửa ${label.toLocaleLowerCase("vi")}`} disabled={active !== null} onClick={() => begin(target)} className={`group h-auto min-h-10 w-full justify-start gap-2 px-2 py-1 text-left whitespace-normal font-medium ${target === "name" ? "text-xl font-semibold" : ""}`}><span className="min-w-0 flex-1 break-words">{value}</span><Pencil aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground opacity-50 group-hover:opacity-100" /></Button>
+    return canManage ? <Button data-detail-field={target} variant="ghost" aria-label={`Sửa ${label.toLocaleLowerCase("vi")}`} disabled={blocked} onClick={() => begin(target)} className={`group h-auto min-h-10 w-full justify-start gap-2 px-2 py-1 text-left whitespace-normal font-medium ${target === "name" ? "text-xl font-semibold" : ""}`}><span className="min-w-0 flex-1 break-words">{value}</span><Pencil aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground opacity-50 group-hover:opacity-100" /></Button>
       : <span className="block min-h-10 break-words py-2">{value}</span>;
   }
   function field(target: DetailField, label: string, value: string | null | undefined) {
     return <div key={target} className={active === target ? "sm:col-span-2" : ""}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 text-sm">{active === target ? editor(target) : valueButton(target, label, value || "Chưa xác định")}</dd></div>;
   }
   function guardCollapse(event: React.MouseEvent, target: DetailField) {
-    if (active === target) { event.preventDefault(); toast.info("Lưu hoặc Hủy thông tin đang sửa trước khi thu gọn."); }
+    if (active === target && blocked) { event.preventDefault(); toast.info("Chờ lưu xong hoặc bỏ phần chưa lưu trước khi thu gọn."); }
   }
   return <div className="space-y-5">
     <div className="flex items-start gap-3"><span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted"><AssetCategoryIcon code={row.loai_tai_san.ma_loai} className="size-6" /></span><div className="min-w-0 flex-1">{active === "name" ? editor("name") : <h2 aria-label={row.ten_tai_san} className="break-words text-xl font-semibold">{valueButton("name", "Tên tài sản", row.ten_tai_san)}</h2>}<p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground"><LockKeyhole aria-hidden="true" className="size-3" /><span aria-label="Mã tài sản tự sinh, không thể sửa">{row.ma_tai_san}</span></p></div></div>
@@ -88,7 +89,7 @@ export function AssetDetail({ row, canManage, categories, onSaved, onEditingChan
     </div>
     {row.nguoi_su_dung && row.nguoi_su_dung.tinh_trang_lam_viec !== "ACTIVE" && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">Người sử dụng không còn ở trạng thái đang làm việc. Cần kiểm tra và xử lý bàn giao thiết bị.</p>}
     {!row.loai_tai_san.dang_su_dung && <p className="text-sm text-muted-foreground">Loại tài sản này đã ngừng dùng cho hồ sơ mới.</p>}
-    <Tabs defaultValue="information"><TabsList className="mb-3 min-h-11 w-full"><TabsTrigger className="min-h-10" value="information">Thông tin</TabsTrigger><TabsTrigger disabled={active !== null} className="min-h-10" value="history"><History aria-hidden="true" className="size-4" />Lịch sử</TabsTrigger></TabsList>
+    <Tabs defaultValue="information"><TabsList className="mb-3 min-h-11 w-full"><TabsTrigger className="min-h-10" value="information">Thông tin</TabsTrigger><TabsTrigger disabled={blocked} className="min-h-10" value="history"><History aria-hidden="true" className="size-4" />Lịch sử</TabsTrigger></TabsList>
       <TabsContent value="information" className="space-y-4">
         <dl className="grid gap-4 sm:grid-cols-2">
           {field("categoryId", "Loại tài sản", row.loai_tai_san.ten_loai)}

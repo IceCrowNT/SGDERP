@@ -173,7 +173,7 @@ export async function saveAssetCategory(input: unknown) {
   if (!parsed.success) return { success: false as const, message: "Kiểm tra các trường được đánh dấu.", fieldErrors: parsed.error.flatten().fieldErrors };
   const v = parsed.data;
   try {
-    const id = await db.$transaction(async tx => {
+    const saved = await db.$transaction(async tx => {
       await lock(tx, session);
       const before = v.id ? await tx.loai_tai_san.findFirst({ where: { id: v.id, company_id: session.companyId }, select: categorySelection }) : null;
       assertVersion(before, v.id, v.version);
@@ -182,10 +182,10 @@ export async function saveAssetCategory(input: unknown) {
       const after = before ? await tx.loai_tai_san.update({ where: { id: before.id }, data, select: categorySelection })
         : await tx.loai_tai_san.create({ data: { ...data, company_id: session.companyId, ma_loai: v.code }, select: categorySelection });
       await audit(tx, session, "loai_tai_san", after.id, after.ten_loai, before, after);
-      return after.id;
+      return after;
     });
     revalidatePath("/assets");
-    return { success: true as const, id, message: "Đã lưu loại tài sản." };
+    return { success: true as const, id: saved.id, row: saved, message: "Đã lưu loại tài sản." };
   } catch (error) { return failure(error); }
 }
 

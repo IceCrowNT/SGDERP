@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { Matrix4, Vector4 } from "three";
 import { signAccount } from "../helpers/account-fixture";
+import {layoutEquipment} from "../../src/lib/office-3d/equipment-layout";
 import { HCNS_LAYOUT } from "../../src/lib/office-3d/hcns-layout";
 import { hcnsWorldPoint } from "../../src/lib/office-3d/building-navigation";
 const db = new PrismaClient(), map = JSON.parse(readFileSync("var/office-3d/hcns.json", "utf8"));
@@ -50,7 +51,13 @@ async function open(page:Page,context:Parameters<typeof signAccount>[0],actor=ma
   });
   await signAccount(context,actor);await page.goto(base+"&point=hcns-04");await expect(page.locator("canvas[data-building-ready=true]")).toBeVisible({timeout:90000});
 }
-async function rightMesh(page:Page,xOffset=0,zOffset=0,height=1.1) {
+async function rightMesh(page:Page,xOffset?:number,zOffset=0,height=1.1,assetId=asset) {
+  if(xOffset===undefined) {
+    const records=await db.tai_san.findMany({where:{company_id:map.companyId,vi_tri_id:seat},include:{loai_tai_san:true}});
+    const d=HCNS_LAYOUT.find(p=>p.key==="hcns-04")!;
+    const placed=layoutEquipment({equipment:[],width:d.width,depth:d.depth,assets:records.map(a=>({id:a.id,code:a.ma_tai_san,name:a.ten_tai_san,category:a.loai_tai_san.ten_loai,categoryCode:a.loai_tai_san.ma_loai,condition:a.tinh_trang,locationId:seat,version:""}))}).find(p=>p.assetId===assetId && p.part==="device")!;
+    [xOffset,,zOffset]=placed.position;height=placed.position[1]+.2;
+  }
   const people=page.getByRole("button",{name:"Hiển thị nhân sự",exact:true});
   if(await people.count() && await people.getAttribute("aria-pressed")==="true") await people.click();
   await page.getByRole("button",{name:"Mặt bằng",exact:true}).click();
@@ -71,7 +78,7 @@ test("right-click actual equipment edits the exact asset inline and keeps Canvas
   await menu(page).getByRole("menuitem",{name:"Sửa tài sản",exact:true}).click();
   const edit=dialog(page,"Sửa tài sản");await edit.getByRole("button",{name:"Sửa tên tài sản",exact:true}).click();
   await edit.getByLabel("Tên tài sản",{exact:false}).fill(`Máy in đã sửa ${run}`);
-  await edit.getByRole("button",{name:"Lưu",exact:true}).click();await expect(edit.getByRole("heading",{name:`Máy in đã sửa ${run}`,exact:true})).toBeVisible();
+  await edit.getByLabel("Tên tài sản",{exact:false}).press("Enter");await expect(edit.getByRole("heading",{name:`Máy in đã sửa ${run}`,exact:true})).toBeVisible();
   await edit.getByRole("button",{name:"Close",exact:true}).click();
   await expect(page.locator("#building-information")).toContainText(`Máy in đã sửa ${run}`);expect(page.url()).toBe(url);
   expect(await canvas!.evaluate(el=>el===document.querySelector("canvas"))).toBe(true);
@@ -92,13 +99,19 @@ test("right-click person uses HR editor; draft survives Escape/network and save 
   expect((await db.nhan_su.findUniqueOrThrow({where:{id:person}})).vi_tri_lam_viec_id).toBe(seat);
   expect(await db.nhat_ky_hoat_dong.count({where:{account_id:manager.id,phan_he:"HR"}})).toBeGreaterThan(0);
 });
-test("desk menu edits location; shared equipment requires choosing a dossier; background has no edit",async({page,context})=>{
+test("desk menu edits location; duplicate types select exact records; legacy groups still choose a dossier",async({page,context})=>{
   await open(page,context);await rightMesh(page,.45,.3,.82);
   await menu(page).getByRole("menuitem",{name:"Sửa thông tin vị trí",exact:true}).click();
   const edit=dialog(page,"Sửa thông tin vị trí");await edit.getByLabel("Mô tả / hướng dẫn tìm").fill(`Ghi chú ${run}`);await edit.getByRole("button",{name:"Lưu vị trí",exact:true}).click();await expect(edit).toHaveCount(0);
   expect((await db.vi_tri.findUniqueOrThrow({where:{id:seat}})).mo_ta).toBe(`Ghi chú ${run}`);
-  await db.tai_san.update({where:{id:second},data:{vi_tri_id:seat}});await page.reload();await expect(page.locator("canvas[data-building-ready=true]")).toBeVisible();await rightMesh(page);
-  await menu(page).getByRole("menuitem",{name:"Sửa tài sản",exact:true}).click();
+  await db.tai_san.update({where:{id:second},data:{vi_tri_id:seat}});await page.reload();await expect(page.locator("canvas[data-building-ready=true]")).toBeVisible();await rightMesh(page,undefined,0,1.1,second);
+  await expect(page).toHaveURL(new RegExp(`asset=${second}(?:&|$)`));
+  await expect(menu(page)).toContainText(`Máy in thử 2 ${run}`);
+  await page.keyboard.press("Escape");
+  // Legacy grouped deep links still allow choosing a record explicitly.
+  await page.goto(base+"&point=hcns-04&equipment=printer");
+  await expect(page.locator("canvas[data-building-ready=true]")).toBeVisible();
+  await toolbar(page,"Sửa tài sản");
   const assetEdit=dialog(page,"Sửa tài sản");await expect(assetEdit.getByText("Hình này đại diện nhiều tài sản. Chọn hồ sơ cần sửa.")).toBeVisible();
   await assetEdit.getByLabel("Tìm tài sản cần sửa").fill("Máy in thử 2");await assetEdit.getByRole("button",{name:new RegExp(`Máy in thử 2 ${run}`)}).click();
   await expect(assetEdit.getByRole("heading",{name:`Máy in thử 2 ${run}`,exact:true})).toBeVisible();
@@ -114,5 +127,5 @@ test("rights stay independent; denied HR read cannot disclose a dossier; mobile 
   await open(page,context,assets);await rightMesh(page);await expect(menu(page).getByRole("menuitem",{name:"Sửa tài sản",exact:true})).toBeVisible();await page.keyboard.press("Escape");
   await page.setViewportSize({width:390,height:844});await page.evaluate(()=>document.documentElement.classList.add("dark"));await toolbar(page,"Sửa tài sản");
   const edit=dialog(page,"Sửa tài sản");await edit.getByRole("button",{name:"Sửa tên tài sản",exact:true}).click();await expect(edit.getByLabel("Tên tài sản",{exact:false})).toBeVisible();
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:"outputs/3d-object-edit/mobile-dark.png"});await edit.getByRole("button",{name:"Hủy",exact:true}).click();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:"outputs/3d-object-edit/mobile-dark.png"});await edit.getByRole("button",{name:"Đóng",exact:true}).click();await expect(edit.getByRole("textbox",{name:"Tên tài sản",exact:true})).toHaveCount(0);
 });

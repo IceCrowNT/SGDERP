@@ -101,6 +101,6 @@ export function SceneFilterResults({ building, category, floor, room, onRecord, 
         {!r.pointKey && <span className="mt-1 block text-xs font-normal text-muted-foreground">Chưa có điểm mô hình · Xem phòng</span>}
       </span>
     </Button>)}
-    <p className="text-xs leading-5 text-muted-foreground">Giữ sàn, tường và bàn để dễ định hướng. Hình thiết bị đại diện theo loại; số lượng lấy từ hồ sơ.</p>
+    <p className="text-xs leading-5 text-muted-foreground">Giữ sàn, tường và bàn để dễ định hướng. Số lượng thiết bị lấy từ hồ sơ.</p>
   </section>;
 }

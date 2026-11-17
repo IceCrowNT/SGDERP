@@ -337,7 +337,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
       const nextScope = next.detail ? "room:hcns" : `floor:${next.floor}`;
       setSelectedPerson(null);
       setCommands(old => ({...old,[nextScope]:{view:next.point || next.room ? "focus":"overview",
-        key:next.point ?? next.room ?? undefined,equipment:next.equipment,zoom:1,
+        key:next.point ?? next.room ?? undefined,equipment:next.equipment,assetId:next.asset,zoom:1,
         sequence:(old[nextScope]?.sequence ?? 0)+1,restoreKey:selectionCameraKey(next)}}));
     }
     window.addEventListener("keydown", escape);
@@ -355,26 +355,26 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
   const currentPoint = roomData?.points.find(p=>p.key===navigation.point);
   const activeEquipment = navigation.equipment ?? (navigation.asset && currentPoint?.assets
     ? equipmentForAssets(currentPoint.assets.filter(a=>a.id===navigation.asset))[0] : undefined);
-  function focusPoint(key: string, equipment?: EquipmentKind) {
+  function focusPoint(key: string, equipment?: EquipmentKind, assetId?: number) {
     if(draft) return;
     const object=objects.find(o=>o.point.key===key);
     const r=BUILDING_ROOMS.find(r=>r.key===(object?.roomKey ?? HCNS_BUILDING_KEY))!;
     const isHcns=r.key===HCNS_BUILDING_KEY && Boolean(building.hcns);
     const nextScope=isHcns ? "room:hcns" : `floor:${r.floor}`;
     if (!equipment) choosePoint(key);
-    setCommands(old=>({...old,[nextScope]:{view:"focus",key,equipment,zoom:1,sequence:(old[nextScope]?.sequence ?? 0)+1}}));
+    setCommands(old=>({...old,[nextScope]:{view:"focus",key,equipment,assetId,zoom:1,sequence:(old[nextScope]?.sequence ?? 0)+1}}));
   }
-  function chooseEquipment(key: string, kind: EquipmentKind, focus: boolean) {
+  function chooseEquipment(key: string, kind: EquipmentKind, focus: boolean, assetId?: number) {
     if(draft || !building.canViewAssets) return;
     const p = scene.hcns?.points.find(p=>p.key===key) ?? scene.objects?.find(o=>o.point.key===key)?.point;
-    const matches = assetsForEquipment(p?.assets ?? [],kind);
+    const matches = assetsForEquipment(p?.assets ?? [],kind).filter(a=>assetId === undefined || a.id === assetId);
     if (!matches.length) return;
     const object=objects.find(o=>o.point.key===key);
     const r=BUILDING_ROOMS.find(r=>r.key===(object?.roomKey ?? HCNS_BUILDING_KEY))!;
     setSelectedPerson(null);setPanelOpen(true);
     navigate({floor:r.floor,room:r.key,detail:r.key===HCNS_BUILDING_KEY && Boolean(building.hcns),point:key,
       equipment:kind,...(matches.length===1 ? {asset:matches[0].id} : {})});
-    if(focus) focusPoint(key,kind);
+    if(focus) focusPoint(key,kind,matches.length===1 ? matches[0].id : undefined);
   }
   function chooseAsset(id:number) {
     if(!currentPoint?.assets?.some(a=>a.id===id) || !building.canViewAssets) return;
@@ -407,7 +407,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
   }
   function view(next: BuildingCamera["view"]) {
     if(draft) return;
-    if(next === "focus" && navigation.point) {focusPoint(navigation.point,activeEquipment);return;}
+    if(next === "focus" && navigation.point) {focusPoint(navigation.point,activeEquipment,navigation.asset);return;}
     const targetScope = next === "top" && floor === "all" ? "floor:2" : scope;
     if (targetScope !== scope)
       navigate({ floor: 2, room: HCNS_BUILDING_KEY, detail: false, point: null });
@@ -427,7 +427,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     if (target.kind === "room") choose(target.key);
     if (target.kind === "floor") changeFloor(target.floor);
     if (target.kind === "point") {
-      if (target.equipment) chooseEquipment(target.key,target.equipment,false);
+      if (target.equipment) chooseEquipment(target.key,target.equipment,false,target.assetId);
       else choosePoint(target.key);
       if (target.personId) setSelectedPerson({ point: target.key, id: target.personId });
     }
@@ -558,7 +558,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
               <Model building={building} scene={scene} floor={floor} selected={selected} command={command}
                 onSelect={choose} onFloor={changeFloor} detail={detail}
                 point={navigation.point} onPoint={choosePoint} onEnter={enterRoom}
-                onFocusPoint={key=>focusPoint(key)} onEquipment={chooseEquipment} activeEquipment={activeEquipment}
+                onFocusPoint={key=>focusPoint(key)} onEquipment={chooseEquipment} activeEquipment={activeEquipment} activeAsset={navigation.asset}
                 selectionKey={selectionCameraKey(navigation)}
                 key={modelAttempt} person={personId} onPerson={choosePerson} onUnavailable={revealPanel} onRetry={retryModel} onOverview={roomOverview}
                 onContextTarget={contextTarget}

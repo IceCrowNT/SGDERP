@@ -66,7 +66,8 @@ export const BUILDING_ROOMS: BuildingRoom[] = [
 ];
 // Room-local HCNS geometry uses the same scale and axes as the floor plan.
 export const HCNS_PLACEMENT = { scale: 1, rotation: 0 };
-export function floorElevation(floor: FloorNumber, selection: FloorSelection) {
+export function floorElevation(floor: FloorNumber) {
+  // Stable world elevation in every view; camera navigation never moves floors.
   // Exploded spacing is for readability, not a building-height measurement.
-  return selection === "all" ? (floor - 1) * 11 : 0;
+  return (floor - 1) * 11;
 }

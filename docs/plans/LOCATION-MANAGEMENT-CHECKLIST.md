@@ -96,3 +96,7 @@ flowchart TB
     T["Tài sản: vi_tri_id"] --> V
     V --> D["3D tòa nhà đọc vị trí — chi tiết 10 điểm HCNS"]
 ```
+
+### Liên kết vật tư — 17/11/2026
+
+- [x] Xóa vị trí bị chặn khi có lịch sử vật tư, kể cả tồn 0; ngừng/đổi nơi giữ có kiểm tra tồn và nhánh tại DB. Không tự gỡ liên kết hoặc cấp quyền LOCATIONS cho người quản lý vật tư. Thiết kế và kiểm chứng tại [plan vật tư](INVENTORY-MANAGEMENT-CHECKLIST.md).

@@ -72,11 +72,11 @@ test("panel field editing keeps pagination and scroll; validation focuses the in
   const scroll = await page.evaluate(() => window.scrollY);
   await trigger.click(); await detail(page).getByRole("button", { name: "Sửa serial / service tag", exact: true }).click();
   await form(page).getByLabel("Serial / Service tag", { exact: true }).fill("x".repeat(256));
-  await form(page).getByRole("button", { name: "Lưu", exact: true }).click();
+  await form(page).getByLabel("Serial / Service tag", { exact: true }).press("Enter");
   await expect(form(page).getByText("Tối đa 255 ký tự", { exact: true })).toBeVisible();
   await expect(form(page).getByLabel("Serial / Service tag", { exact: true })).toBeFocused();
   await form(page).getByLabel("Serial / Service tag", { exact: true }).fill("COMPACT-TEST");
-  await form(page).getByRole("button", { name: "Lưu", exact: true }).click();
+  await form(page).getByLabel("Serial / Service tag", { exact: true }).press("Enter");
   await expect(detail(page).getByText("COMPACT-TEST", { exact: true })).toBeVisible();
   await detail(page).getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByText("46 hồ sơ · Trang 2/3", { exact: true })).toBeVisible();

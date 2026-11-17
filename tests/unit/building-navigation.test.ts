@@ -14,6 +14,7 @@ import {
 } from "../../src/lib/office-3d/hcns-layout";
 import {
   BUILDING_ROOMS,
+  floorElevation,
   HCNS_BUILDING_KEY,
   HCNS_PLACEMENT,
 } from "../../src/lib/office-3d/building-layout";
@@ -65,7 +66,7 @@ test("all transformed desk anchors stay inside HCNS and preserve relative distan
     const [x, y, z] = hcnsWorldPoint(slot.x, 1.4, slot.z);
     assert.ok(Math.abs(x - room.x) < room.width / 2);
     assert.ok(Math.abs(z - room.z) < room.depth / 2);
-    assert.ok(y > 0.28);
+    assert.equal(y, floorElevation(room.floor) + 0.28 + 1.4 * HCNS_PLACEMENT.scale);
   }
   const a = hcnsWorldPoint(0, 0, 0),
     b = hcnsWorldPoint(3, 0, 4);

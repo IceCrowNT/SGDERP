@@ -15,7 +15,7 @@ Thay trang chờ `/settings` bằng khu cài đặt có các mục đã hoạt �
 | Cấp/gỡ quyền | Checkbox Quản lý kết nối & model AI tại `/roles`; kiểm tra menu, URL và action theo DB |
 | Các nhóm khác | Thông tin chung, tích hợp, thông báo, bảo mật, lưu trữ theo [định hướng](../THIET-KE-QUAN-TRI-AI.md#đề-xuất-đưa-ai-vào-khu-cài-đặt-hệ-thống--16112026); chưa tạo form hoặc menu trống |
 
-Đề xuất tiếp theo theo câu hỏi người phụ trách: [model theo tác vụ](#model-theo-tác-vụ--đề-xuất), chưa triển khai. Quản trị chọn model riêng cho từng loại việc tại trang AI; tác vụ chưa cấu hình dùng model mặc định.
+Đã triển khai theo yêu cầu người phụ trách: [model theo tác vụ](#model-theo-tác-vụ--triển-khai-17112026), đã kiểm chứng kỹ thuật với API mô phỏng. Quản trị chọn model riêng cho từng loại việc tại trang AI; tác vụ chưa cấu hình dùng model mặc định.
 
 ```mermaid
 flowchart LR
@@ -33,13 +33,13 @@ Quyền quản trị kết nối độc lập quyền dùng chat và tài sản/
 
 ### Thiết kế DB cần giữ
 
-Không thêm bảng/cột. Dùng `ket_noi_ai` và kho bí mật theo [thiết kế AI](../THIET-KE-QUAN-TRI-AI.md#kết-nối-pilot--16112026). Thêm catalog `AI / MANAGE_CONNECTIONS / ALL` qua migration, dùng RBAC hiện có. Các quyền AI chưa triển khai không đưa vào ma trận. Payload role cũ thiếu `aiActions` giữ grant AI; truyền mảng rỗng là thu hồi rõ ràng.
+Đợt chuyển trang không thêm bảng/cột; đợt nhiều key mở rộng hai cột/index theo mục bên dưới. Dùng `ket_noi_ai` và kho bí mật theo [thiết kế AI](../THIET-KE-QUAN-TRI-AI.md#kết-nối-pilot--16112026). Thêm catalog `AI / MANAGE_CONNECTIONS / ALL` qua migration, dùng RBAC hiện có. Các quyền AI chưa triển khai không đưa vào ma trận. Payload role cũ thiếu `aiActions` giữ grant AI; truyền mảng rỗng là thu hồi rõ ràng.
 
 Kết nối môi trường chỉ được xem/sử dụng/nhận quản lý ở công ty của tài khoản pilot được bind; quản trị công ty khác phải cấu hình kết nối riêng. Bản ghi DB luôn ưu tiên, không fallback env khi tạm dừng/lỗi kho bí mật.
 
 ### Danh sách model tự động — 16/11/2026
 
-Theo yêu cầu người phụ trách: mặc định ô Model là danh sách tìm/chọn, tự tải từ OpenAI bằng khóa đã cấu hình khi mở trang. Khóa mới dùng nút kiểm tra/tải; giữ model đang chọn, không tự chọn hoặc lưu model khác. Có tải lại và nhập thủ công khi khóa thiếu quyền danh sách hoặc mạng lỗi; không ghi danh mục model vào DB. Tái sử dụng action có kiểm tra quyền/công ty/phiên bản và giới hạn lượt, không thêm API endpoint/thư viện.
+Theo yêu cầu người phụ trách: mặc định ô Model là danh sách tìm/chọn, tự tải từ OpenAI bằng khóa đã cấu hình khi mở form kết nối. Khóa mới dùng nút kiểm tra/tải; giữ model đang chọn, không tự chọn hoặc lưu model khác. Có tải lại và nhập thủ công khi khóa thiếu quyền danh sách hoặc mạng lỗi; không ghi danh mục model vào DB. Tái sử dụng action có kiểm tra quyền/công ty/phiên bản và giới hạn lượt, không thêm API endpoint/thư viện.
 
 - [x] Đọc hướng dẫn Next.js/rule và chuyển trường Model sang danh sách; tự tải một lần khi mở, tránh gọi lặp do Strict Mode hoặc lưu chỉ đổi model.
 - [x] Kiểm tra Models API thật bằng khóa hiện tại: OpenAI trả 96 model, dropdown có 96 lựa chọn, không lỗi JavaScript; cấu hình/key/model không đổi, không gọi model tạo nội dung.
@@ -55,14 +55,23 @@ Theo yêu cầu người phụ trách: mặc định ô Model là danh sách tì
 - [x] Cấp riêng quyền kết nối cho role hiện chỉ gán tài khoản pilot (1 tài khoản), giữ grant cũ và ghi audit cùng transaction. Mở trang cài đặt/AI và checkbox quyền ở local đạt; chat không còn form cài đặt, không sửa key/model hoặc gọi API thật.
 - [x] TypeScript/lint cuối, 226 liên kết/anchor trong 11 tài liệu và `git diff --check` đạt. Đã đồng bộ rule/plan/kiến trúc/từ điển DB, giữ ba rule kỹ thuật chung. Đã dừng app thử và dọn đúng DB tạm; backup/log/ảnh giữ cục bộ.
 
-### Model theo tác vụ — đề xuất
+### Model theo tác vụ — triển khai 17/11/2026
 
-- [x] Đọc mã hiện hành: `readAiConnection` trả một model chung; action chat dùng model đó xuyên suốt vòng gọi công cụ. Cấu hình hiện tại chưa phân theo job. Lượt này chỉ khảo sát và ghi phương hướng, không sửa mã/DB hoặc gọi OpenAI.
-- [x] Đối chiếu phạm vi nhiều API key: [thiết kế đầy đủ](../THIET-KE-QUAN-TRI-AI.md#ket_noi_ai--nguồn-kết-nối-và-thanh-toán) đã dự kiến nhiều kết nối, nhưng mỗi organization/project chỉ có một kết nối với một phiên bản khóa hoạt động; công ty dùng một kết nối mặc định. Đề xuất hội thoại mới về nhiều key và gán kết nối/model theo job chưa được hợp nhất thành thiết kế DB; cần chốt quan hệ key–project và thay phương án JSON đơn kết nối phía dưới nếu triển khai. Rà soát này không thay hành vi đã duyệt hoặc cấu hình vận hành.
-- [ ] Đề xuất thêm các lựa chọn model cho hội thoại chung, tra cứu tài sản/vị trí và chuẩn bị bản nháp thêm/sửa; mỗi ô dùng danh sách OpenAI và có lựa chọn dùng mặc định. Tóm tắt/báo cáo bổ sung khi có chức năng tương ứng.
-- [ ] Chốt cách xác định tác vụ: giai đoạn đầu chế độ/chức năng được người dùng chọn, máy chủ kiểm tra mã tác vụ hợp lệ và quyền; tự phân loại câu chat là bước riêng. Không suy job bằng từ khóa đơn giản hoặc để client truyền tên model tùy ý. Chọn model trước khi gọi AI, giữ nguyên trong vòng xử lý của tác vụ; ngữ cảnh hội thoại được giữ trong giới hạn hiện có.
-- [ ] Phương án DB dự kiến: thêm một cột JSONB ánh xạ mã tác vụ cố định sang tên model trong `ket_noi_ai`, không thêm bảng hoặc key riêng. Cấu hình rỗng dùng `model_mac_dinh`; thiếu cấu hình khác với model lỗi, không tự đổi model/nguồn thanh toán khi lỗi. Thiết kế/migration chi tiết thực hiện khi có yêu cầu triển khai.
-- [ ] Nghiệm thu dự kiến: định tuyến đúng model trước cuộc gọi, kế thừa mặc định, quyền/công ty/phiên bản và audit giữ nguyên; nhật ký có job/model thực dùng. Kiểm tra model hỗ trợ kiểu tác vụ qua ca thử phù hợp, không coi xuất hiện trong Models API là bằng chứng tương thích. Thêm/sửa vẫn qua form xác nhận hiện có.
+Đã có mã chọn kết nối/model cho GENERAL (tổng hợp), LOOKUP (chỉ đọc) và DRAFT (soạn hồ sơ/công việc). Người dùng chọn tác vụ trước khi gửi chat. Tác vụ chưa cấu hình kế thừa kết nối/model mặc định; model riêng có đơn giá tùy chọn, không tự xoay key khi lỗi. Dropdown tải từ đúng kết nối; có nhập thủ công. Chi tiết DB/ngân sách và tiến độ nghiệm thu quản lý tại [đợt quản trị API](AI-ASSISTANT-CHECKLIST.md#quản-trị-api-openai-mở-rộng--17112026), không duy trì checklist trùng.
+
+### Nhiều API key OpenAI — 16/11/2026
+
+**Đã triển khai.** Người phụ trách yêu cầu thêm key giữ key cũ, xác nhận chỉ OpenAI. Trang AI có danh sách kết nối, thêm riêng, sửa/thay key riêng và chọn mặc định. Model theo job thuộc đợt 17/11 ở trên. Key `.env` giữ nguyên; trước khi thêm kết nối đầu tiên, máy chủ bảo toàn kết nối môi trường trong kho mã hóa và DB cùng transaction tạo mới. Có thao tác lưu riêng kết nối máy chủ để chuyển sang quản lý tại UI. Không tự xóa biến môi trường.
+
+Thiết kế DB đợt này: mở rộng `ket_noi_ai` với `ten_ket_noi` và `la_mac_dinh`; bỏ unique toàn cột `company_id`, thêm index công ty và partial unique bảo đảm tối đa một mặc định/công ty. Bản ghi cũ giữ ID/secret/model/trạng thái và trở thành mặc định. Không thêm bảng, không xóa dữ liệu. Mỗi bản ghi là một key có thể thay phiên bản, cho phép các key cùng project; không suy ngân sách độc lập theo key. Thiết kế đối soát project của bản đầy đủ phải gom đúng nguồn khi triển khai quota.
+
+`cong_ty (đã có) 1 → N ket_noi_ai (mở rộng)`: FK công ty bắt buộc/Restrict; mặc định có thể tạm dừng và khi đó chat bị chặn. Không fallback môi trường nếu đã có bất kỳ kết nối DB. Thêm key không đổi mặc định đang dùng. Chọn mặc định kiểm tra phiên bản kết nối và mặc định cũ dưới khóa công ty; cập nhật/audit nguyên tử. Mọi đọc/ghi/test theo ID đều kiểm tra công ty/quyền, Models API dùng đúng key của bản ghi đang mở.
+
+- [x] Đọc rule, code, hướng dẫn Next.js; chốt phạm vi nhiều key OpenAI và giữ cấu hình môi trường.
+- [x] Backup/khôi phục thử đạt; migration trên DB riêng giữ nguyên 19 bảng (so các cột cũ). Ca migration với hai kết nối cũ thuộc hai công ty giữ ID/secret/version/model/timestamp/trạng thái, đặt mặc định đúng; generate client đạt. Đã backup mới và áp dụng local: 19 bảng giữ nguyên các cột/dữ liệu cũ, schema diff rỗng và partial unique mặc định đúng.
+- [x] Danh sách/thêm/sửa/chọn mặc định, bảo toàn key môi trường và kiểm tra model theo kết nối đã có mã. 24 kiểm thử tích hợp (14 cài đặt, gồm chuyển riêng key môi trường + 10 chat hồi quy) đạt trên DB riêng với HTTP mô phỏng: giữ key cũ, đúng nguồn, quyền/công ty, xung đột, unique mặc định, rollback nhập môi trường, tạm dừng và chạy khi bỏ biến key/model khỏi tiến trình thử. TypeScript/lint đạt.
+- [x] 9 E2E đạt: giữ các ca cũ và thêm key thứ hai, đổi mặc định, sửa đúng key, nguồn chat đúng, desktop/mobile sáng/tối; đã xem ảnh. Local mở danh sách/form thêm và form kết nối hiện tại đạt, GET Models thật thành công, không lỗi JavaScript và không thay cấu hình/key/model. Đã restart dev để nạp Prisma Client mới.
+- [x] Đồng bộ rule/thiết kế/kiến trúc/từ điển DB/router; 231 liên kết/anchor và `git diff --check` đạt. Đã dừng app thử 4135 và dọn đúng DB tạm, giữ app local 4000. Bằng chứng/backup/ảnh tại `outputs/ai-multiple-keys/`; không đổi `.env`, không tạo/revoke key ở OpenAI hoặc gọi tạo nội dung thật.
 
 ### Kiểm chứng
 

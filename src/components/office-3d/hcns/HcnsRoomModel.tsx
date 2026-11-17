@@ -16,6 +16,7 @@ export function HcnsRoomModel({
   onFocusPoint,
   onEquipment,
   activeEquipment,
+  activeAsset,
   hovered,
   onHover,
   person,
@@ -26,8 +27,9 @@ export function HcnsRoomModel({
   selected?: string | null;
   onSelect?: (key: string) => void;
   onFocusPoint?: (key: string) => void;
-  onEquipment?: (key: string, kind: EquipmentKind, focus: boolean) => void;
+  onEquipment?: (key: string, kind: EquipmentKind, focus: boolean, assetId?: number) => void;
   activeEquipment?: EquipmentKind;
+  activeAsset?: number;
   hovered?: string | null;
   onHover?: (key: string | null) => void;
   person?: number | null;
@@ -71,9 +73,11 @@ export function HcnsRoomModel({
                 width={slot.width}
                 depth={slot.depth}
                 equipment={point.equipment}
+                assets={point.assets} layoutAssets={point.layoutAssets}
                 selected={highlighted}
                 activeEquipment={chosen ? activeEquipment : undefined}
-                onEquipment={onEquipment ? (kind,focus) => onEquipment(slot.key,kind,focus) : undefined}
+                activeAsset={chosen ? activeAsset : undefined}
+                onEquipment={onEquipment ? (kind,focus,assetId) => onEquipment(slot.key,kind,focus,assetId) : undefined}
               />
               {people.slice(0, 3).map((p, index) => (
                 <group

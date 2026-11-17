@@ -1,5 +1,8 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
+import { assertChatSources, chatContext, chatMessage } from "@/lib/ai-chat-server";
+import { ChatMetadataSchema, type ChatMetadata, type ChatTrace } from "@/lib/ai-chat";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -8,6 +11,8 @@ import { currentActor } from "@/lib/rbac-server";
 import { AI_PILOT_INSTRUCTIONS, AiChatSchema, canUseAiPilot } from "@/lib/ai-pilot";
 import { readAiConnection } from "@/lib/ai-connection";
 import { AiConnectionError } from "@/lib/validations/ai-settings";
+import { AiPricesSchema, aiMonth, aiMonthBounds, type AiJob } from "@/lib/validations/ai-governance";
+import { aiCost, aiReserve } from "@/lib/ai-cost";
 import { AI_PILOT_TOOLS, AssetDraftSchema, AssetSearchSchema, LocationDraftSchema, LookupSchema, type AiChange, type AiDraft } from "@/lib/ai-pilot-tools";
 import { getAsset, getAssetCategories, getAssetAssignmentOptions } from "@/actions/asset";
 import { assetFormValues } from "@/components/assets/asset-form-values";
@@ -15,6 +20,9 @@ import { SaveAssetSchema } from "@/lib/validations/asset";
 import { LocationFormSchema, LOCATION_TYPES } from "@/lib/validations/location";
 import { ASSET_CONDITIONS, ASSET_USAGES } from "@/lib/asset-labels";
 import { descendantIds, locationPath } from "@/lib/location-tree";
+
+import { prepareCategoryDepreciationWork } from "@/actions/ai-work";
+import { CategoryWorkSchema, type AiWorkView } from "@/lib/ai-work";
 
 class AiError extends Error {}
 const denied = "Tài khoản này chưa được mở trợ lý AI hoặc quyền đã thay đổi.";
@@ -35,12 +43,34 @@ function auditData(session: SessionUser, requestId: string, action: string, data
   };
 }
 
-async function admit(session: SessionUser, requestId: string) {
-  await db.$transaction(async tx => {
+async function admit(session: SessionUser, requestId: string, message: string, conversationId: number | undefined, job: AiJob) {
+  return db.$transaction(async tx => {
     await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
     const current = await currentActor(tx, session, "ROLES");
     if (!canUseAiPilot({ ...session, permissions: current.permissions })) throw new AiError(denied);
+    const owner = { company_id: session.companyId, account_id: session.userId };
+    const duplicate = await tx.tin_nhan_ai.findFirst({ where: { ma_yeu_cau: requestId, vai_tro: "NGUOI_DUNG", hoi_thoai: owner } });
+    if (duplicate) {
+      const originalJob = z.object({ job: z.string() }).safeParse(duplicate.du_lieu_kem_theo);
+      if (duplicate.noi_dung !== message || (originalJob.success ? originalJob.data.job : "GENERAL") !== job || (conversationId && conversationId !== duplicate.hoi_thoai_id)) throw new AiError("Mã yêu cầu đã được dùng cho nội dung hoặc tác vụ khác.");
+      const rows = await tx.tin_nhan_ai.findMany({ where: { hoi_thoai_id: duplicate.hoi_thoai_id } });
+      await assertChatSources(tx, session, rows);
+      const answer = rows.find(r => r.ma_yeu_cau === requestId && r.vai_tro === "TRO_LY");
+      if (!answer) throw new AiError("Lượt chat chưa đầy đủ. Hãy tải lại hội thoại.");
+      return { duplicate: chatMessage(answer), conversationId: duplicate.hoi_thoai_id };
+    }
+    const chat = conversationId ? await tx.hoi_thoai_ai.findFirst({ where: { ...owner, id: conversationId, trang_thai: "DANG_MO" } }) : null;
+    if (conversationId && !chat) throw new AiError("Không tìm thấy cuộc chat đang mở của bạn.");
+    if (chat) {
+      await tx.tin_nhan_ai.updateMany({ where: { hoi_thoai_id: chat.id, trang_thai: "DANG_XU_LY", het_han_xu_ly: { lte: new Date() } }, data: {
+        trang_thai: "GIAN_DOAN", noi_dung: "Lượt xử lý đã gián đoạn. Gửi lại có thể phát sinh thêm phí API.", ma_xu_ly: null, het_han_xu_ly: null } });
+      if (await tx.tin_nhan_ai.count({ where: { hoi_thoai_id: chat.id, trang_thai: "DANG_XU_LY" } })) throw new AiError("Cuộc chat đang xử lý một yêu cầu. Hãy tải trạng thái và chờ hoàn tất.");
+    }
+    const rows = chat ? await tx.tin_nhan_ai.findMany({ where: { hoi_thoai_id: chat.id }, orderBy: { id: "asc" } }) : [];
+    if (rows.length >= 400) throw new AiError("Cuộc chat đã đủ 200 lượt. Hãy mở chat mới; lịch sử cũ vẫn được giữ.");
+    try { await assertChatSources(tx, session, rows); } catch { throw new AiError("Nguồn dữ liệu trong chat không còn hợp lệ. Hãy mở chat mới và tra cứu lại."); }
+    const history = chatContext(rows);
     const where = { company_id: session.companyId, account_id: session.userId, phan_he: "AI" };
     if (await tx.nhat_ky_hoat_dong.count({ where: { ...where, doi_tuong_id: `ai:${requestId}`, hanh_dong: "AI_REQUEST" } }))
       throw new AiError("Yêu cầu này đã được nhận. Không tự gọi lại để tránh tính phí lặp; nếu chưa có phản hồi, hãy gửi yêu cầu mới.");
@@ -54,7 +84,69 @@ async function admit(session: SessionUser, requestId: string) {
     if (starts.some(r => r.created_at.getTime() > now - 180_000 && !recent.some(end => end.hanh_dong === "AI_DONE" && end.doi_tuong_id === r.doi_tuong_id)))
       throw new AiError("Một yêu cầu AI đang xử lý. Hãy chờ hoàn tất trước khi gửi tiếp.");
     await tx.nhat_ky_hoat_dong.create({ data: auditData(session, requestId, "AI_REQUEST") });
+    const thread = chat ?? await tx.hoi_thoai_ai.create({ data: owner });
+    const lease = randomUUID();
+    await tx.tin_nhan_ai.create({ data: { company_id: session.companyId, hoi_thoai_id: thread.id, ma_yeu_cau: requestId, vai_tro: "NGUOI_DUNG", noi_dung: message, trang_thai: "HOAN_TAT", du_lieu_kem_theo: { job } } });
+    const answer = await tx.tin_nhan_ai.create({ data: { company_id: session.companyId, hoi_thoai_id: thread.id, ma_yeu_cau: requestId, vai_tro: "TRO_LY", noi_dung: "", trang_thai: "DANG_XU_LY", ma_xu_ly: lease, het_han_xu_ly: new Date(Date.now() + 180000) } });
+    const account = await tx.tai_khoan.findUniqueOrThrow({ where: { id: session.userId }, select: { huong_dan_ai_ca_nhan: true } });
+    await tx.hoi_thoai_ai.update({ where: { id: thread.id }, data: { updated_at: new Date() } });
+    return { conversationId: thread.id, answerId: answer.id, lease, history, personalization: account.huong_dan_ai_ca_nhan };
+
   });
+}
+
+type Turn = { session: SessionUser; requestId: string; conversationId: number; answerId: number; lease: string; truncated: boolean };
+async function activeTurn(turn: Turn) {
+  if (!await db.tin_nhan_ai.count({ where: { id: turn.answerId, ma_xu_ly: turn.lease, trang_thai: "DANG_XU_LY", het_han_xu_ly: { gt: new Date() } } })) throw new AiError("Lượt chat đã hết thời gian xử lý. Tải lại trạng thái trước khi gửi tiếp.");
+}
+async function finishTurn(turn: Turn, text: string, metadata: ChatMetadata) {
+  return db.$transaction(async tx => {
+    const session = turn.session;
+    await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
+    const current = await currentActor(tx, session, "ROLES");
+    if (!canUseAiPilot({ ...session, permissions: current.permissions })) throw new AiError(denied);
+    ChatMetadataSchema.parse(metadata);
+    const sources = await tx.tin_nhan_ai.findMany({ where: { hoi_thoai_id: turn.conversationId }, select: { vai_tro: true, trang_thai: true, du_lieu_kem_theo: true } });
+    await assertChatSources(tx, session, [...sources, { vai_tro: "TRO_LY", trang_thai: "HOAN_TAT", du_lieu_kem_theo: metadata }]);
+    const result = await tx.tin_nhan_ai.updateMany({ where: { id: turn.answerId, ma_xu_ly: turn.lease, trang_thai: "DANG_XU_LY", het_han_xu_ly: { gt: new Date() } },
+      data: { noi_dung: text, du_lieu_kem_theo: metadata, trang_thai: "HOAN_TAT", ma_xu_ly: null, het_han_xu_ly: null } });
+    if (result.count !== 1) throw new AiError("Lượt chat đã hết thời gian xử lý. Hãy tải lại hội thoại.");
+    await tx.hoi_thoai_ai.update({ where: { id: turn.conversationId }, data: { updated_at: new Date() } });
+  });
+}
+function toolTrace(name: string, input: unknown, result: { output: unknown; draft?: AiDraft; work?: AiWorkView }): ChatTrace {
+  const args = z.record(z.unknown()).parse(input);
+  if (z.object({ error: z.unknown() }).safeParse(result.output).success && result.output && "error" in (result.output as object)) return { tool: name, filters: {}, references: [] };
+  const filters: ChatTrace["filters"] = {};
+  for (const key of ["kind", "search", "categoryId", "locationId", "departmentId", "assetId", "id", "page", "months", "scope"]) {
+    const value = args[key]; if (typeof value === "string" || typeof value === "number" || value === null) filters[key] = value;
+  }
+  const references: ChatTrace["references"] = [];
+  const add = (kind: ChatTrace["references"][number]["kind"], ids: number[]) => { if (ids.length) references.push({ kind, ids: [...new Set(ids)] }); };
+  const output = z.object({ rows: z.array(z.object({ id: z.number() })).optional(), row: z.object({ id: z.number() }).optional() }).passthrough().safeParse(result.output);
+  if (output.success) {
+    if (name === "lookup") add(args.kind as ChatTrace["references"][number]["kind"], output.data.rows?.map(r => r.id) ?? []);
+    if (name === "search_assets") add("assets", output.data.rows?.map(r => r.id) ?? []);
+    if (name === "get_asset" && output.data.row) add("assets", [output.data.row.id]);
+  }
+  if (result.draft?.row) add(result.draft.kind === "asset" ? "assets" : "locations", [result.draft.row.id]);
+  for (const [key, kind] of [["categoryId", "categories"], ["locationId", "locations"], ["departmentId", "departments"]] as const) {
+    if (typeof args[key] === "number") add(kind, [args[key] as number]);
+  }
+  const raw = z.object({ row: z.record(z.unknown()).optional(), rows: z.array(z.record(z.unknown())).optional() }).passthrough().safeParse(result.output);
+  if (raw.success) for (const row of [...(raw.data.row ? [raw.data.row] : []), ...(raw.data.rows ?? [])]) {
+    for (const [scalar, relation, kind] of [["loai_tai_san_id", "loai_tai_san", "categories"], ["vi_tri_id", "vi_tri", "locations"], ["phong_quan_ly_id", "phong_quan_ly", "departments"], ["nguoi_su_dung_id", "nguoi_su_dung", "people"]] as const) {
+      const nested = z.object({ id: z.number() }).safeParse(row[relation]);
+      const id = typeof row[scalar] === "number" ? row[scalar] as number : nested.success ? nested.data.id : null;
+      if (id) add(kind, [id]);
+    }
+  }
+  const merged = new Map<ChatTrace["references"][number]["kind"], Set<number>>();
+  for (const ref of references) { const values = merged.get(ref.kind) ?? new Set<number>(); for (const id of ref.ids) values.add(id); merged.set(ref.kind, values); }
+  const listed = z.object({ rows: z.array(z.object({ id: z.number(), name: z.string().optional(), ten_tai_san: z.string().optional(), ma_tai_san: z.string().optional() }).passthrough()) }).passthrough().safeParse(result.output);
+  const results = (name === "lookup" || name === "search_assets") && listed.success ? listed.data.rows.map(row => ({ id: row.id, label: `${row.name ?? row.ten_tai_san ?? "Hồ sơ"}${row.ma_tai_san ? ` · ${row.ma_tai_san}` : ""}`.slice(0, 160) })) : undefined;
+  return { tool: name, filters, references: [...merged].map(([kind, ids]) => ({ kind, ids: [...ids] })), ...(results ? { results } : {}) };
 }
 
 async function locations(session: SessionUser) {
@@ -75,8 +167,14 @@ function changes(before: Record<string, unknown>, after: Record<string, unknown>
 }
 function display(value: unknown) { return value === null || value === undefined || value === "" ? "Chưa có" : typeof value === "boolean" ? value ? "Có" : "Không" : String(value); }
 
-async function executeTool(session: SessionUser, name: string, input: unknown): Promise<{ output: unknown; draft?: AiDraft }> {
+async function executeTool(session: SessionUser, name: string, input: unknown, requestId: string): Promise<{ output: unknown; draft?: AiDraft; work?: AiWorkView }> {
   await actor(session);
+  if (name === "plan_category_depreciation") {
+    const parameters = CategoryWorkSchema.parse(input);
+    const result = await prepareCategoryDepreciationWork({ ...parameters, requestId });
+    if (!result.success) throw new AiError(result.message);
+    return { output: { prepared: true, saved: false }, work: result.work };
+  }
   if (name === "lookup") {
     const { kind, search } = LookupSchema.parse(input);
     let rows: { id: number; name: string; [key: string]: unknown }[];
@@ -110,7 +208,7 @@ async function executeTool(session: SessionUser, name: string, input: unknown): 
       ...(v.search ? { OR: ["ten_tai_san", "ma_tai_san", "hang_model", "so_serial"].map(field => ({ [field]: { contains: v.search, mode: "insensitive" } })) } : {}),
     };
     const [rows, total] = await Promise.all([
-      db.tai_san.findMany({ where, select: { id: true, ma_tai_san: true, ten_tai_san: true, hang_model: true, tinh_trang: true, hinh_thuc_su_dung: true, vi_tri: { select: { ten_vi_tri: true } }, phong_quan_ly: { select: { ten_phong_ban: true } } }, orderBy: { id: "asc" }, take: 20, skip: (v.page - 1) * 20 }),
+      db.tai_san.findMany({ where, select: { id: true, ma_tai_san: true, ten_tai_san: true, hang_model: true, tinh_trang: true, hinh_thuc_su_dung: true, vi_tri: { select: { id: true, ten_vi_tri: true } }, phong_quan_ly: { select: { id: true, ten_phong_ban: true } } }, orderBy: { id: "asc" }, take: 20, skip: (v.page - 1) * 20 }),
       db.tai_san.count({ where }),
     ]);
     return { output: { rows, total, page: v.page, pageSize: 20 } };
@@ -168,45 +266,103 @@ async function executeTool(session: SessionUser, name: string, input: unknown): 
 const responseSchema = z.object({
   id: z.string().optional(), status: z.string(),
   output: z.array(z.object({ type: z.string() }).passthrough()),
-  usage: z.object({ input_tokens: z.number().nonnegative(), output_tokens: z.number().nonnegative(),
-    input_tokens_details: z.object({ cached_tokens: z.number().nonnegative().optional() }).optional() }).nullable().optional(),
+  usage: z.object({ input_tokens: z.number().int().min(0).max(2147483647), output_tokens: z.number().int().min(0).max(2147483647),
+    input_tokens_details: z.object({ cached_tokens: z.number().int().nonnegative().optional() }).optional() })
+    .refine(v => (v.input_tokens_details?.cached_tokens ?? 0) <= v.input_tokens).nullable().optional(),
 });
 const callSchema = z.object({ type: z.literal("function_call"), name: z.string(), arguments: z.string().max(24000), call_id: z.string() });
 
+async function reserveCall(session: SessionUser, requestId: string, step: number, job: AiJob, connection: Awaited<ReturnType<typeof readAiConnection>>, body: string) {
+  return db.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
+    const current = await currentActor(tx, session, "ROLES");
+    if (!canUseAiPilot({ ...session, permissions: current.permissions })) throw new AiError(denied);
+    const live = await readAiConnection(session.companyId, job, tx);
+    if (live.stamp !== connection.stamp) throw new AiError("Cài đặt AI đã thay đổi. Hãy gửi lại yêu cầu để dùng cấu hình mới.");
+    if (!live.connectionId || !live.keyVersion) throw new AiError("Lưu kết nối từ máy chủ vào Quản trị AI trước khi sử dụng sổ usage.");
+    const account = await tx.tai_khoan.findUniqueOrThrow({ where: { id: session.userId }, select: { han_muc_ai_thang: true } });
+    if (!live.prices && (account.han_muc_ai_thang !== null || live.limit !== null)) throw new AiError("Cần cấu hình bảng giá đúng model để áp dụng hạn mức. Để trống hạn mức nếu chưa muốn giới hạn.");
+    const reserved = live.prices ? aiReserve(live.prices, body, 2000) : null, period = { company_id: session.companyId, created_at: aiMonthBounds(aiMonth()) };
+    const [user, source] = await Promise.all([
+      tx.nhat_ky_goi_ai.aggregate({ where: { ...period, account_id: session.userId }, _sum: { chi_phi_uoc_tinh: true, du_phong: true } }),
+      tx.nhat_ky_goi_ai.aggregate({ where: { ...period, ket_noi_ai_id: live.connectionId }, _sum: { chi_phi_uoc_tinh: true, du_phong: true } }),
+    ]);
+    const required = (sum: typeof user._sum) => (reserved ?? new Prisma.Decimal(0)).add(sum.chi_phi_uoc_tinh ?? 0).add(sum.du_phong ?? 0);
+    const unknown = await tx.nhat_ky_goi_ai.count({ where: { ...period, chi_phi_uoc_tinh: null, du_phong: null, OR: [ ...(account.han_muc_ai_thang !== null ? [{ account_id: session.userId }] : []), ...(live.limit !== null ? [{ ket_noi_ai_id: live.connectionId }] : []) ] } });
+    if (unknown) throw new AiError("Còn lần gọi chưa xác định chi phí trong kỳ. Đối chiếu các khoản này trước khi áp dụng hạn mức.");
+    if (account.han_muc_ai_thang !== null && (account.han_muc_ai_thang.lte(0) || required(user._sum).gt(account.han_muc_ai_thang))) throw new AiError("Hạn mức AI tháng của tài khoản chưa đủ cho lần gọi tiếp theo, bao gồm ngân sách đang giữ. Liên hệ người quản lý hạn mức.");
+    if (live.limit !== null && (live.limit.lte(0) || required(source._sum).gt(live.limit))) throw new AiError("Ngân sách tháng của kết nối AI chưa đủ. Quản trị kiểm tra tại Cài đặt chung → Quản trị AI.");
+    const row = await tx.nhat_ky_goi_ai.create({ data: { company_id: session.companyId, account_id: session.userId, ket_noi_ai_id: live.connectionId,
+      ma_yeu_cau: requestId, buoc: step, ma_tac_vu: job, model: live.model, phien_ban_khoa: live.keyVersion, cau_hinh_gia: live.prices ?? Prisma.DbNull, du_phong: reserved } });
+    await tx.nhat_ky_hoat_dong.create({ data: auditData(session, requestId, "AI_API_START", { step, model: live.model, job, connectionId: live.connectionId, keyVersion: live.keyVersion, callId: row.id }) });
+    return row.id;
+  });
+}
+async function settleCall(session: SessionUser, id: number, usage: z.infer<typeof responseSchema>["usage"], status: "HOAN_TAT" | "CHUA_RO" | "LOI", responseId?: string, httpStatus?: number) {
+  // Record charges even if the caller's permission was revoked while the provider was running.
+  await db.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+    const row = await tx.nhat_ky_goi_ai.findFirstOrThrow({ where: { id, company_id: session.companyId, account_id: session.userId } });
+    if (row.trang_thai !== "DANG_GOI") return;
+    const prices = AiPricesSchema.safeParse(row.cau_hinh_gia).data, cached = usage?.input_tokens_details?.cached_tokens ?? 0;
+    await tx.nhat_ky_goi_ai.update({ where: { id }, data: {
+      trang_thai: usage ? prices ? "HOAN_TAT" : "CHUA_GIA" : status === "HOAN_TAT" ? "CHUA_RO" : status, hoan_tat_at: new Date(), http_status: httpStatus,
+      ma_phan_hoi: responseId && /^[A-Za-z0-9_-]{1,200}$/.test(responseId) ? responseId : null,
+      ...(usage ? { token_dau_vao: usage.input_tokens, token_cache: cached, token_dau_ra: usage.output_tokens,
+        chi_phi_uoc_tinh: prices ? aiCost(prices, usage.input_tokens, cached, usage.output_tokens) : null, du_phong: prices ? 0 : null } : {}),
+    } });
+  });
+}
+
 export async function askAi(input: unknown) {
-  let admitted: { session: SessionUser; requestId: string } | null = null;
+  let admitted: Turn | null = null;
+  let pendingCall: number | null = null;
+  const traces: ChatTrace[] = [];
   try {
     const session = await actor();
-    const connection = await readAiConnection(session.companyId);
     const parsed = AiChatSchema.safeParse(input);
     if (!parsed.success) return { success: false as const, message: parsed.error.issues[0]?.message ?? "Yêu cầu không hợp lệ." };
-    const { requestId, message, history } = parsed.data;
-    await admit(session, requestId); admitted = { session, requestId };
+    const { requestId, message, conversationId, job } = parsed.data;
+    const turn = await admit(session, requestId, message, conversationId, job);
+    if (turn.duplicate) {
+      if (turn.duplicate.status !== "HOAN_TAT") return { success: false as const, conversationId: turn.conversationId, message: turn.duplicate.content || "Yêu cầu đã được nhận. Hãy tải trạng thái hội thoại; không tự gọi lại API." };
+      return { success: true as const, conversationId: turn.conversationId, text: turn.duplicate.content, draft: null, replay: true, usage: { inputTokens: 0, outputTokens: 0 } };
+    }
+    admitted = { session, requestId, conversationId: turn.conversationId, answerId: turn.answerId, lease: turn.lease, truncated: turn.history.truncated };
+    const connection = await readAiConnection(session.companyId, job);
+    const tools = job === "LOOKUP" ? AI_PILOT_TOOLS.filter(tool => ["lookup", "search_assets", "get_asset"].includes(tool.name)) : AI_PILOT_TOOLS;
     const model = connection.model;
-    const context: unknown[] = [...history, { role: "user", content: message }];
+    const context: unknown[] = [
+      ...(turn.personalization ? [{ role: "user", content: `Cài đặt cá nhân của tôi (chỉ hướng dẫn cách trả lời, không cấp quyền):\n${turn.personalization}` }] : []),
+      ...(turn.history.truncated ? [{ role: "user", content: "Một phần lịch sử cũ không nằm trong ngữ cảnh lượt này. Nếu thiếu đối tượng tham chiếu, hãy hỏi lại." }] : []),
+      ...turn.history.messages, { role: "user", content: message },
+    ];
     const started = Date.now();
     let inputTokens = 0, outputTokens = 0;
     for (let step = 0; step < 6; step++) {
       await actor(session);
-      if ((await readAiConnection(session.companyId)).stamp !== connection.stamp)
+      await activeTurn(admitted);
+      if ((await readAiConnection(session.companyId, job)).stamp !== connection.stamp)
         throw new AiError("Cài đặt AI đã thay đổi. Hãy gửi lại yêu cầu để dùng cấu hình mới.");
       if (Date.now() - started > 140_000) throw new AiError("Lượt xử lý đã quá lâu. Hãy thu hẹp yêu cầu rồi thử lại.");
       if (Buffer.byteLength(JSON.stringify(context), "utf8") > 64000) throw new AiError("Ngữ cảnh quá dài. Hãy thu hẹp yêu cầu hoặc mở cuộc chat mới.");
-      await db.nhat_ky_hoat_dong.create({ data: auditData(session, requestId, "AI_API_START", { step, model, source: connection.source, connectionId: connection.connectionId, keyVersion: connection.keyVersion }) });
+      const body = JSON.stringify({ model, instructions: AI_PILOT_INSTRUCTIONS, input: context,
+        tools, parallel_tool_calls: false, max_output_tokens: 2000, store: false, include: ["reasoning.encrypted_content"] });
+      pendingCall = await reserveCall(session, requestId, step, job, connection, body);
       let response: Response;
       try {
         response = await fetch("https://api.openai.com/v1/responses", {
           method: "POST", headers: { Authorization: `Bearer ${connection.apiKey}`, "Content-Type": "application/json" },
           cache: "no-store", redirect: "error", signal: AbortSignal.timeout(25000),
-          body: JSON.stringify({ model, instructions: AI_PILOT_INSTRUCTIONS, input: context,
-            tools: AI_PILOT_TOOLS, parallel_tool_calls: false, max_output_tokens: 2000, store: false,
-            include: ["reasoning.encrypted_content"] }),
+          body,
         });
       } catch {
         await db.nhat_ky_hoat_dong.create({ data: auditData(session, requestId, "AI_API_ERROR", { step, model, status: "unknown" }) });
         throw new AiError("Kết nối AI bị gián đoạn; lượt này có thể đã phát sinh phí. Chưa có hồ sơ nào được lưu. Bạn có thể gửi lại yêu cầu.");
       }
       if (!response.ok) {
+        await settleCall(session, pendingCall, null, "LOI", undefined, response.status); pendingCall = null;
         await db.nhat_ky_hoat_dong.create({ data: auditData(session, requestId, "AI_API_ERROR", { step, model, httpStatus: response.status, status: "unknown" }) });
         throw new AiError(response.status === 401 || response.status === 403 ? "Khóa API hoặc quyền truy cập model chưa hợp lệ. Kiểm tra cấu hình trên máy chủ."
           : response.status === 429 ? "Dịch vụ AI đang giới hạn lượt gọi hoặc đã hết hạn mức. Kiểm tra tài khoản API rồi thử lại."
@@ -215,6 +371,7 @@ export async function askAi(input: unknown) {
       const raw = responseSchema.safeParse(await response.json());
       if (!raw.success) throw new AiError("Phản hồi AI không hợp lệ. Chưa có hồ sơ nào được lưu.");
       const result = raw.data;
+      await settleCall(session, pendingCall, result.usage, "HOAN_TAT", result.id, response.status); pendingCall = null;
       await db.nhat_ky_hoat_dong.create({ data: auditData(session, requestId, "AI_API_USAGE", {
         step, model, responseId: result.id ?? null, status: result.status,
         inputTokens: result.usage?.input_tokens ?? null, outputTokens: result.usage?.output_tokens ?? null,
@@ -231,22 +388,32 @@ export async function askAi(input: unknown) {
           return content.success ? content.data.map(c => c.type === "output_text" ? c.text ?? "" : c.refusal ?? "") : [];
         }).join("\n").slice(0, 8000);
         if (!text.trim()) throw new AiError("AI chưa trả được nội dung. Hãy diễn đạt lại yêu cầu.");
-        return { success: true as const, text, draft: null, usage: { inputTokens, outputTokens } };
+        await finishTurn(admitted, text, { version: 1, ngu_canh: traces, contextTruncated: admitted.truncated });
+        return { success: true as const, conversationId: turn.conversationId, text, draft: null, usage: { inputTokens, outputTokens } };
       }
       const call = callSchema.parse(calls[0]);
-      let tool: { output: unknown; draft?: AiDraft };
-      try { tool = await executeTool(session, call.name, JSON.parse(call.arguments)); }
+      if (!tools.some(tool => tool.name === call.name)) throw new AiError("Công cụ này không được phép trong tác vụ đang chọn.");
+      let tool: { output: unknown; draft?: AiDraft; work?: AiWorkView };
+      try { await activeTurn(admitted); const input = JSON.parse(call.arguments); tool = await executeTool(session, call.name, input, requestId); traces.push(toolTrace(call.name, input, tool)); }
       catch (error) {
         if (error instanceof z.ZodError || error instanceof SyntaxError) tool = { output: { error: "Tham số công cụ chưa hợp lệ. Kiểm tra kiểu dữ liệu và các trường được phép." } };
         else throw error;
       }
       await actor(session);
-      if (tool.draft) return { success: true as const, text: "Đã chuẩn bị bản nháp. Bạn kiểm tra nội dung và bấm Lưu để cập nhật hồ sơ.", draft: tool.draft, usage: { inputTokens, outputTokens } };
+      if (tool.work || tool.draft) {
+        const text = tool.work ? "Đã lập bảng công việc từ danh mục hiện hành. Hãy xem bảng trước–sau và duyệt để thực hiện; chưa cập nhật khấu hao."
+          : "Đã chuẩn bị bản nháp trong lượt này, chưa lưu hồ sơ. Bạn kiểm tra và bấm Lưu; nếu mở lại chat sau này, hãy yêu cầu lập lại bản nháp từ dữ liệu hiện hành.";
+        await finishTurn(admitted, text, { version: 1, ngu_canh: traces, ...(tool.work ? { workId: tool.work.id } : { draft: true }), contextTruncated: admitted.truncated });
+        return { success: true as const, conversationId: turn.conversationId, text, draft: tool.draft ?? null, work: tool.work, usage: { inputTokens, outputTokens } };
+      }
       context.push(...result.output, { type: "function_call_output", call_id: call.call_id, output: JSON.stringify(tool.output) });
     }
     throw new AiError("Đã đến giới hạn tra cứu của lượt này. Hãy nêu rõ một hồ sơ hoặc chia nhỏ yêu cầu.");
   } catch (error) {
-    return { success: false as const, message: error instanceof AiError || error instanceof AiConnectionError ? error.message : "Chưa xử lý được yêu cầu AI. Kiểm tra quyền hoặc thử lại sau." };
+    if (admitted && pendingCall !== null) await settleCall(admitted.session, pendingCall, null, "CHUA_RO").catch(() => undefined);
+    const message = error instanceof AiError || error instanceof AiConnectionError ? error.message : "Chưa xử lý được yêu cầu AI. Kiểm tra quyền hoặc thử lại sau.";
+    if (admitted) await db.tin_nhan_ai.updateMany({ where: { id: admitted.answerId, ma_xu_ly: admitted.lease, trang_thai: "DANG_XU_LY" }, data: { trang_thai: "LOI", noi_dung: message, ma_xu_ly: null, het_han_xu_ly: null } }).catch(() => undefined);
+    return { success: false as const, ...(admitted ? { conversationId: admitted.conversationId } : {}), message };
   } finally {
     if (admitted) {
       // Preserve the request lease on audit failure; a subsequent request remains blocked until expiry.

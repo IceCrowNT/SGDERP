@@ -2,6 +2,7 @@ import type { PermissionLevel } from "@/lib/auth";
 
 // Only functions whose server guards are implemented belong in this matrix.
 export const ROLE_MODULES = [
+  { code: "INVENTORY", label: "Vật tư và phụ kiện", description: "Mặt hàng, tồn kho, cấp phát và thu hồi toàn công ty", levels: ["NONE", "VIEW", "MANAGE"] },
   {
     code: "ASSETS",
     label: "Tài sản",
@@ -50,16 +51,24 @@ export type PermissionGrant = {
   pham_vi: string;
 };
 // Only implemented AI actions belong in the editable catalog.
-export const AI_ACTIONS = ["MANAGE_CONNECTIONS"] as const;
+export const AI_ACTIONS = ["MANAGE_CONNECTIONS", "MANAGE_LIMITS", "VIEW_USAGE"] as const;
 export type AiAction = (typeof AI_ACTIONS)[number];
 export const AI_LABELS: Record<AiAction, string> = {
   MANAGE_CONNECTIONS: "Quản lý kết nối & model AI",
+  MANAGE_LIMITS: "Quản lý hạn mức AI",
+  VIEW_USAGE: "Xem mức sử dụng AI trong công ty",
 };
 export function aiActions(grants: PermissionGrant[]): AiAction[] {
   return AI_ACTIONS.filter(action => grants.some(p => p.phan_he === "AI" && p.hanh_dong === action && p.pham_vi === "ALL"));
 }
 export function canManageAiConnections(session: { aiActions?: AiAction[]; mustChangePassword?: boolean } | null | undefined) {
   return Boolean(session && !session.mustChangePassword && session.aiActions?.includes("MANAGE_CONNECTIONS"));
+}
+export function canAi(session: { aiActions?: AiAction[]; mustChangePassword?: boolean } | null | undefined, action: AiAction) {
+  return Boolean(session && !session.mustChangePassword && session.aiActions?.includes(action));
+}
+export function canAdministerAi(session: { aiActions?: AiAction[]; mustChangePassword?: boolean } | null | undefined) {
+  return (["MANAGE_CONNECTIONS", "MANAGE_LIMITS", "VIEW_USAGE"] as const).some(action => canAi(session, action));
 }
 export function permissionLevels(grants: PermissionGrant[]) {
   const result: Record<string, PermissionLevel> = {};

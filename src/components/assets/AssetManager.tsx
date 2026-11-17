@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { AssetForm, AssetCategoryForm } from "./AssetForm";
 import { AssetDetail } from "./AssetDetail";
 import { AssetCategoryIcon } from "./AssetCategoryIcon";
-import { AssetInlineEditor } from "./AssetInlineEditor";
+import { AssetInlineEditor, type AssetInlineTarget } from "./AssetInlineEditor";
 import { AssetDepreciationBar } from "./AssetDepreciationBar";
 import { AssetGroups, type AssetGrouping } from "./AssetGroups";
 import type { AssetList, AssetCategory, AssetFilters, AssetRow, AssetOverview, AssetGroup } from "./types";
@@ -52,6 +52,7 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
   const [groupSearch, setGroupSearch] = useState("");
   const [group, setGroup] = useState<AssetGroup | null>(null);
   const [inlineRow, setInlineRow] = useState<AssetRow | null>(null);
+  const [inlineTarget, setInlineTarget] = useState<AssetInlineTarget>("name");
   const locked = inlineRow !== null;
   const [editFocus, setEditFocus] = useState<"employee" | "location" | undefined>();
   const groupScroll = useRef(0);
@@ -80,6 +81,8 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
   const [categoryEdit, setCategoryEdit] = useState<AssetCategory | null | undefined>(undefined);
   const latest = useRef(0), latestDetail = useRef(0), latestCatalog = useRef(0);
   const detailTrigger = useRef<HTMLButtonElement | null>(null);
+  const formBlocked = useRef(false);
+  const categoryBlocked = useRef(false);
   const detailEditing = useRef<number | null>(null);
   const detailScroll = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
@@ -92,11 +95,26 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
   }, [list, pending, screen]);
   function restoreListFocus() {
     const id = detailTrigger.current?.dataset.assetId;
-    const visible = Array.from(document.querySelectorAll<HTMLButtonElement>(`button[data-asset-id="${id}"]`)).find(button => button.getClientRects().length > 0);
+    const field = detailTrigger.current?.dataset.editTarget;
+    const visible = Array.from(document.querySelectorAll<HTMLButtonElement>(`button[data-asset-id="${id}"]`)).find(button => button.getClientRects().length > 0 && (!field || button.dataset.editTarget === field));
     const target = visible ?? document.querySelector<HTMLInputElement>('input[aria-label="Tìm tài sản"]');
     target?.focus({ preventScroll: true });
     const scroll = detailScroll.current;
     if (scroll) requestAnimationFrame(() => window.scrollTo({ left: scroll.x, top: scroll.y, behavior: "instant" }));
+  }
+  function startInlineEdit(row: AssetRow, target: AssetInlineTarget, trigger: HTMLButtonElement) {
+    if (!overview.canManage || locked || pending) return;
+    detailTrigger.current = trigger;
+    detailScroll.current = { x: window.scrollX, y: window.scrollY };
+    setInlineTarget(target);
+    setInlineRow(row);
+  }
+  function editableValue(row: AssetRow, target: AssetInlineTarget, label: string, value: React.ReactNode) {
+    if (!canManage) return value;
+    return <Button type="button" variant="ghost" disabled={locked || pending}
+      className="h-auto min-h-10 w-full justify-start px-0 py-2 text-left font-normal whitespace-normal hover:underline"
+      data-asset-id={row.id} data-edit-target={target} aria-label={`Sửa ${label} của ${row.ten_tai_san}`}
+      onClick={e => startInlineEdit(row, target, e.currentTarget)}>{value}</Button>;
   }
   const canManage = overview.canManage;
   const contextCategory = group?.query.categoryId ? categories.find(c => c.id === group.query.categoryId) : undefined;
@@ -167,7 +185,7 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
     if (detailEditing.current !== null && parseAssetId(linkedAsset) !== detailEditing.current) {
       const url = new URL(window.location.href); url.searchParams.set("asset", String(detailEditing.current));
       window.history.pushState(null, "", url.pathname + url.search + url.hash);
-      toast.info("Lưu hoặc Hủy thông tin đang sửa trước khi rời hồ sơ.");
+      toast.info("Chờ lưu xong hoặc bỏ phần chưa lưu trước khi rời hồ sơ.");
       return;
     }
     if (detailEditing.current !== null) return;
@@ -193,7 +211,7 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
     window.history.pushState(null, "", url.pathname + url.search + url.hash);
   }
   function closeDetail() {
-    if (detailEditing.current !== null) { toast.info("Lưu hoặc Hủy thông tin đang sửa trước khi đóng hồ sơ."); return; }
+    if (detailEditing.current !== null) { toast.info("Chờ lưu xong hoặc bỏ phần chưa lưu trước khi đóng hồ sơ."); return; }
     ++latestDetail.current; setSelected(null); setDetail(null);
     const url = new URL(window.location.href);
     url.searchParams.delete("asset");
@@ -238,19 +256,19 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
     {error ? <div role="alert" className="space-y-3 rounded-xl border p-4"><p className="text-sm text-destructive">{error}</p><Button className="min-h-10" variant="outline" onClick={() => load(query, true)}>Tải lại danh sách</Button></div>
         : pending && !list.rows.length ? <div role="status" aria-label="Đang tải tài sản" className="space-y-2">{[1, 2, 3].map(i => <Skeleton key={i} className="h-16" />)}</div> : !list.rows.length ? <div className="space-y-3"><EmptyPanel title={hasFilters ? "Không có tài sản phù hợp" : "Chưa có hồ sơ tài sản"} description={hasFilters ? "Thử thay đổi hoặc xóa bộ lọc." : canManage ? "Tạo loại thiết bị, sau đó thêm từng tài sản đã xác minh." : "Chưa có thiết bị được ghi nhận."} />{canManage && !hasActiveCategory && <div className="text-center"><Button className="min-h-10" variant="outline" onClick={() => setCategoryEdit(null)}><Plus className="size-4" />Thêm loại tài sản</Button></div>}</div>
           : <>
-            <div className="min-w-0 overflow-hidden rounded-xl border bg-card"><Table aria-label="Danh sách tài sản" className="min-w-[960px] table-fixed"><TableHeader><TableRow className="bg-muted/40"><TableHead className="w-[27%] pl-4">Tài sản</TableHead><TableHead className="w-[24%]">Người sử dụng</TableHead><TableHead className="w-[23%]">Vị trí</TableHead><TableHead className="w-[17%]">Tình trạng</TableHead>{canManage && <TableHead className="w-[9%]"><span className="sr-only">Thao tác</span></TableHead>}</TableRow></TableHeader><TableBody>{list.rows.map(row => inlineRow?.id === row.id ? <AssetInlineEditor key={row.id} row={inlineRow} onCancel={() => { setInlineRow(null); requestAnimationFrame(restoreListFocus); }} onSaved={() => { setInlineRow(null); load(query, true, detailScroll.current?.y, restoreListFocus); }} /> : <TableRow key={row.id}>
+            <div className="min-w-0 overflow-hidden rounded-xl border bg-card"><Table aria-label="Danh sách tài sản" className="min-w-[960px] table-fixed"><TableHeader><TableRow className="bg-muted/40"><TableHead className="w-[27%] pl-4">Tài sản</TableHead><TableHead className="w-[24%]">Người sử dụng</TableHead><TableHead className="w-[23%]">Vị trí</TableHead><TableHead className="w-[17%]">Tình trạng</TableHead>{canManage && <TableHead className="w-[9%]"><span className="sr-only">Thao tác</span></TableHead>}</TableRow></TableHeader><TableBody>{list.rows.map(row => inlineRow?.id === row.id ? <AssetInlineEditor key={row.id} row={inlineRow} target={inlineTarget} onCancel={() => { setInlineRow(null); requestAnimationFrame(restoreListFocus); }} onSaved={() => { setInlineRow(null); load(query, true, detailScroll.current?.y, restoreListFocus); }} /> : <TableRow key={row.id}>
               <TableCell className="whitespace-normal pl-2"><Button variant="ghost" disabled={locked} className="h-auto min-h-14 w-full justify-start px-2 py-1.5 text-left whitespace-normal" data-asset-id={row.id} aria-label={`Mở tài sản ${row.ten_tai_san}`} onClick={e => { detailTrigger.current = e.currentTarget; detailScroll.current = { x: window.scrollX, y: window.scrollY }; openDetail(row.id); }}><AssetIdentity row={row} /></Button></TableCell>
-              <TableCell className="break-words whitespace-normal">{userLabel(row)}{row.nguoi_su_dung && row.nguoi_su_dung.tinh_trang_lam_viec !== "ACTIVE" && <span className="mt-1 block text-xs text-destructive">Cần bàn giao</span>}</TableCell>
-              <TableCell className="break-words whitespace-normal text-muted-foreground">{row.vi_tri?.ten_vi_tri || "Chưa rõ"}</TableCell>
-              <TableCell className="whitespace-normal"><Badge variant={row.tinh_trang === "HONG" ? "destructive" : "secondary"}>{ASSET_CONDITIONS[row.tinh_trang]}</Badge></TableCell>
-              {canManage && <TableCell><Button variant="ghost" className="min-h-10" disabled={locked || pending} data-asset-id={row.id} aria-label={`Sửa nhanh ${row.ten_tai_san}`} onClick={e => { detailTrigger.current = e.currentTarget; detailScroll.current = { x: window.scrollX, y: window.scrollY }; setInlineRow(row); }}><Pencil aria-hidden="true" className="size-4" /><span className="sr-only">Sửa</span></Button></TableCell>}
+              <TableCell className="break-words whitespace-normal">{editableValue(row, "assignment", "người sử dụng", userLabel(row))}{row.nguoi_su_dung && row.nguoi_su_dung.tinh_trang_lam_viec !== "ACTIVE" && <span className="mt-1 block text-xs text-destructive">Cần bàn giao</span>}</TableCell>
+              <TableCell className="break-words whitespace-normal text-muted-foreground">{editableValue(row, "locationId", "vị trí", row.vi_tri?.ten_vi_tri || "Chưa rõ")}</TableCell>
+              <TableCell className="whitespace-normal">{editableValue(row, "condition", "tình trạng", <Badge variant={row.tinh_trang === "HONG" ? "destructive" : "secondary"}>{ASSET_CONDITIONS[row.tinh_trang]}</Badge>)}</TableCell>
+              {canManage && <TableCell><Button variant="ghost" className="min-h-10" disabled={locked || pending} data-asset-id={row.id} aria-label={`Sửa nhanh ${row.ten_tai_san}`} onClick={e => startInlineEdit(row, "name", e.currentTarget)}><Pencil aria-hidden="true" className="size-4" /><span className="sr-only">Sửa</span></Button></TableCell>}
             </TableRow>)}</TableBody></Table></div>
           </>}
     <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground"><p role="status">{list.total.toLocaleString("vi-VN")} hồ sơ · Trang {list.page}/{list.pages}</p><div className="flex gap-2"><Button className="min-h-10" variant="outline" size="icon-lg" aria-label="Trang trước" disabled={pending || locked || list.page <= 1} onClick={() => load({ ...query, page: list.page - 1 })}><ChevronLeft className="size-4" /></Button><Button className="min-h-10" variant="outline" size="icon-lg" aria-label="Trang sau" disabled={pending || locked || list.page >= list.pages} onClick={() => load({ ...query, page: list.page + 1 })}><ChevronRight className="size-4" /></Button></div></div>
     </>}
     <Sheet open={selected !== null && editing === undefined} onOpenChange={open => { if (!open) closeDetail(); }}><SheetContent className="w-full max-w-none overflow-y-auto sm:max-w-xl" onCloseAutoFocus={e => { e.preventDefault(); if (editing === undefined) restoreListFocus(); }}><SheetHeader className="pr-12"><Button variant="ghost" className="min-h-10 justify-self-start px-0 sm:hidden" onClick={closeDetail}><ArrowLeft aria-hidden="true" className="size-4" />Quay lại</Button><SheetTitle>Chi tiết tài sản</SheetTitle><SheetDescription>Thông tin hiện tại và lịch sử thay đổi.</SheetDescription></SheetHeader><div className="px-4 pb-6">{detail ? <AssetDetail key={detail.id} row={detail} canManage={canManage} categories={categories} onEditingChange={active => { detailEditing.current = active ? detail.id : null; }} onSaved={row => { setDetail(row); if (screen === "assets") load(query, true); else refreshOverview(); }} /> : detailError ? <div role="alert" className="space-y-2"><p>{detailError}</p>{selected !== null && selected > 0 && <Button className="min-h-10" variant="outline" onClick={() => fetchDetail(selected)}>Tải lại hồ sơ</Button>}</div> : <Skeleton className="h-72 w-full" />}</div></SheetContent></Sheet>
-    <Dialog open={editing !== undefined} onOpenChange={open => { if (!open) setEditing(undefined); }}><DialogContent className="w-[95vw] max-h-[85vh] overflow-y-auto sm:max-w-2xl" onCloseAutoFocus={e => { e.preventDefault(); if (selected === null) restoreListFocus(); }}><DialogHeader><DialogTitle>{editing ? "Sửa tài sản" : "Thêm tài sản"}</DialogTitle><DialogDescription>Ghi nhận thông tin đã xác minh; có thể bổ sung người và vị trí sau.</DialogDescription></DialogHeader>{editing !== undefined && <AssetForm key={editing ? `${editing.id}:${editing.updated_at.toISOString()}` : "new"} row={editing} categories={categories} defaultCategoryId={contextCategory?.dang_su_dung ? contextCategory.id : undefined} initialFocus={editFocus} onCancel={() => setEditing(undefined)} onSaved={id => { setEditing(undefined); if (screen === "assets") load(query, true); else refreshOverview(); openDetail(id); }} />}</DialogContent></Dialog>
+    <Dialog open={editing !== undefined} onOpenChange={open => { if (!open && !formBlocked.current) setEditing(undefined); }}><DialogContent className="w-[95vw] max-h-[85vh] overflow-y-auto sm:max-w-2xl" onCloseAutoFocus={e => { e.preventDefault(); if (selected === null) restoreListFocus(); }}><DialogHeader><DialogTitle>{editing ? "Sửa tài sản" : "Thêm tài sản"}</DialogTitle><DialogDescription>Ghi nhận thông tin đã xác minh; có thể bổ sung người và vị trí sau.</DialogDescription></DialogHeader>{editing !== undefined && <AssetForm key={editing ? `${editing.id}:${editing.updated_at.toISOString()}` : "new"} row={editing} categories={categories} onBusy={busy => { formBlocked.current = busy; }} onAutoSaved={() => { if (screen === "assets") load(query, true); else refreshOverview(); }} defaultCategoryId={contextCategory?.dang_su_dung ? contextCategory.id : undefined} initialFocus={editFocus} onCancel={() => setEditing(undefined)} onSaved={id => { setEditing(undefined); if (screen === "assets") load(query, true); else refreshOverview(); openDetail(id); }} />}</DialogContent></Dialog>
     <Dialog open={categoryList} onOpenChange={setCategoryList}><DialogContent className="w-[95vw] max-h-[85vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>Loại tài sản</DialogTitle><DialogDescription>Ngừng dùng loại sẽ giữ nguyên các hồ sơ đang liên kết.</DialogDescription></DialogHeader><Button className="min-h-10 justify-self-start" onClick={() => { setCategoryList(false); setCategoryEdit(null); }}><Plus className="size-4" />Thêm loại tài sản</Button>{!categories.length && <EmptyPanel title="Chưa có loại tài sản" />}{categories.map(c => <div key={c.id} className="flex items-center justify-between gap-3 rounded-xl border p-3"><div className="flex min-w-0 items-center gap-3"><AssetCategoryIcon code={c.ma_loai} /><div className="min-w-0"><p className="break-words font-medium">{c.ten_loai}</p><p className="text-xs text-muted-foreground">{c.ma_loai} · {c.dang_su_dung ? "Đang dùng" : "Ngừng dùng"}</p></div></div><Button className="min-h-10" variant="outline" size="icon-lg" aria-label={`Sửa loại ${c.ten_loai}`} onClick={() => { setCategoryList(false); setCategoryEdit(c); }}><Pencil className="size-4" /></Button></div>)}</DialogContent></Dialog>
-    <Dialog open={categoryEdit !== undefined} onOpenChange={open => { if (!open) setCategoryEdit(undefined); }}><DialogContent className="w-[95vw] max-h-[85vh] overflow-y-auto sm:max-w-lg"><DialogHeader><DialogTitle>{categoryEdit ? "Sửa loại tài sản" : "Thêm loại tài sản"}</DialogTitle><DialogDescription>Mã loại dùng để phân biệt và giữ ổn định sau khi tạo.</DialogDescription></DialogHeader>{categoryEdit !== undefined && <AssetCategoryForm row={categoryEdit} onCancel={() => setCategoryEdit(undefined)} onSaved={() => { setCategoryEdit(undefined); if (screen === "assets") load(query, true); else refreshOverview(); }} />}</DialogContent></Dialog>
+    <Dialog open={categoryEdit !== undefined} onOpenChange={open => { if (!open && !categoryBlocked.current) setCategoryEdit(undefined); }}><DialogContent className="w-[95vw] max-h-[85vh] overflow-y-auto sm:max-w-lg"><DialogHeader><DialogTitle>{categoryEdit ? "Sửa loại tài sản" : "Thêm loại tài sản"}</DialogTitle><DialogDescription>Mã loại dùng để phân biệt và giữ ổn định sau khi tạo.</DialogDescription></DialogHeader>{categoryEdit !== undefined && <AssetCategoryForm row={categoryEdit} onBusy={busy => { categoryBlocked.current = busy; }} onAutoSaved={() => { if (screen === "assets") load(query, true); else refreshOverview(); }} onCancel={() => setCategoryEdit(undefined)} onSaved={() => { setCategoryEdit(undefined); if (screen === "assets") load(query, true); else refreshOverview(); }} />}</DialogContent></Dialog>
   </div>;
 }

@@ -31,6 +31,7 @@ export const RoleSchema = z
     permissions: z
       .object({
         ASSETS: level.optional(),
+        INVENTORY: level.optional(),
         LOCATIONS: level.optional(),
         HR: level,
         ACCOUNTS: z.enum(["NONE", "MANAGE"]),

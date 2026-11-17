@@ -2,6 +2,7 @@ import {
   BUILDING_ROOMS,
   HCNS_BUILDING_KEY,
   HCNS_PLACEMENT,
+  floorElevation,
   type FloorSelection,
 } from "./building-layout";
 import { HCNS_LAYOUT, EQUIPMENT_KINDS, type EquipmentKind } from "./hcns-layout";
@@ -17,7 +18,7 @@ export type BuildingNavigation = {
 };
 export type BuildingTarget =
   | { kind: "room"; key: string }
-  | { kind: "point"; key: string; personId?: number; equipment?: EquipmentKind }
+  | { kind: "point"; key: string; personId?: number; equipment?: EquipmentKind; assetId?: number }
   | { kind: "floor"; floor: 1 | 2 | 3 }
   | { kind: "background" };
 export function readBuildingNavigation(
@@ -86,7 +87,7 @@ export function hcnsWorldPoint(
   const { scale, rotation } = HCNS_PLACEMENT;
   return [
     room.x + scale * (Math.cos(rotation) * x + Math.sin(rotation) * z),
-    0.28 + scale * y,
+    floorElevation(room.floor) + 0.28 + scale * y,
     room.z + scale * (-Math.sin(rotation) * x + Math.cos(rotation) * z),
   ];
 }

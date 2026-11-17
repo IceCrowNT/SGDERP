@@ -8,7 +8,7 @@ Nghiệp vụ hiện hành của HR; tiến độ và thiết kế DB tại [Pla
 - Trong cơ cấu phòng ban, cây, sơ đồ và ô chọn người phụ trách lấy cùng chức vụ từ hồ sơ nhân sự, có nhãn “Chức vụ”; thiếu thì hiện “Chưa có chức vụ”. Ô chọn tách dòng “Phòng công tác” và mã nhân sự để phân biệt người, giữ cùng thông tin sau chọn, tìm được theo tên/mã/chức vụ/phòng không dấu. Phòng công tác không thay thế chức vụ; phân công phụ trách không sửa hai trường này.
 - HR VIEW chỉ xem; HR MANAGE tạo/sửa hồ sơ và CRUD phòng ban. Dữ liệu hoạt động độc lập tại ERP sau khởi tạo; nguồn HR/1Office chỉ truy nguyên, không khóa trường hoặc bắt đối soát khi sửa.
 - Input hồ sơ strict, không nhận `employeeCode`, `companyId` hoặc metadata nguồn. Mã nhân sự tự cấp và bất biến; phòng bắt buộc thuộc cây cùng công ty. `notes` sửa ghi chú vận hành, không sửa `hrNotes` gốc qua form.
-- Phòng ban cho sửa tên/mã/mô tả/cha; chặn cha khác công ty, chính mình hoặc hậu duệ. Chỉ xóa phòng không còn con/nhân sự ở bất kỳ trạng thái nào và không còn tài sản do phòng quản lý; xử lý liên kết tài sản theo [rule tài sản](ASSET-MANAGEMENT-RULES.md). Khóa và audit theo mục DB của plan.
+- Phòng ban cho sửa tên/mã/mô tả/cha; chặn cha khác công ty, chính mình hoặc hậu duệ. Chỉ xóa phòng không còn con/nhân sự ở bất kỳ trạng thái nào và không còn tài sản do phòng quản lý; xử lý liên kết tài sản theo [rule tài sản](ASSET-MANAGEMENT-RULES.md). Phòng có mặt hàng hoặc lịch sử nhận vật tư được giữ theo [rule vật tư](INVENTORY-MANAGEMENT-RULES.md). Khóa và audit theo mục DB của plan.
 - Chọn head cùng công ty, chỉ chọn mới người ACTIVE; giữ head cũ không ACTIVE khi sửa trường khác và cảnh báo cần bàn giao. Không tự chọn người thay, không suy từ tên/chức vụ, không đổi vị trí 3D khi đổi cơ cấu.
 
 ## Vị trí làm việc

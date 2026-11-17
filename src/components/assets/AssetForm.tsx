@@ -21,14 +21,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { AssetRow, AssetCategory, AssetAssignments } from "./types";
 import { AssetCategoryIcon } from "./AssetCategoryIcon";
 import { AssetFinanceFields } from "./AssetFinanceFields";
+import { useAssetAutosave, AssetAutosaveStatus, CATEGORY_AUTO_FIELDS } from "./use-asset-autosave";
+import { assetFormValues } from "./asset-form-values";
 import { dateInput } from "@/lib/asset-depreciation";
 
 type AssetInput = z.input<typeof SaveAssetSchema>;
 type CategoryInput = z.input<typeof SaveAssetCategorySchema>;
 
-export function AssetForm({ row, categories, onSaved, onCancel, defaultCategoryId, initialFocus, initialValues, onBusy }: { row: AssetRow | null; categories: AssetCategory[]; onSaved: (id: number) => void; onCancel: () => void; defaultCategoryId?: number; initialFocus?: "employee" | "location"; initialValues?: AssetInput; onBusy?: (busy: boolean) => void }) {
-  const [pending, start] = useTransition();
-  useEffect(() => { onBusy?.(pending); }, [pending, onBusy]);
+export function AssetForm({ row, categories, onSaved, onCancel, defaultCategoryId, initialFocus, initialValues, onBusy, onAutoSaved }: { row: AssetRow | null; categories: AssetCategory[]; onSaved: (id: number) => void; onCancel: () => void; defaultCategoryId?: number; initialFocus?: "employee" | "location"; initialValues?: AssetInput; onBusy?: (busy: boolean) => void; onAutoSaved?: (id: number) => void }) {
+  const [manualPending, start] = useTransition();
+  const root = useRef<HTMLFormElement>(null);
+  const autoEnabled = Boolean(row) && !initialValues;
   const [error, setError] = useState("");
   const [choices, setChoices] = useState<{ people: AssetAssignments["employees"]; departments: AssetAssignments["departments"]; locations: { id: number; name: string }[] } | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -48,6 +51,10 @@ export function AssetForm({ row, categories, onSaved, onCancel, defaultCategoryI
       ...initialValues,
     },
   });
+  const auto = useAssetAutosave({ form, root, save: saveAsset, valuesFromResult: assetFormValues,
+    enabled: autoEnabled, ready: Boolean(choices), onInvalid: focusError, onSaved: saved => onAutoSaved?.(saved.id), onCancel });
+  const pending = manualPending || auto.pending;
+  useEffect(() => { onBusy?.(manualPending || auto.blocked); }, [manualPending, auto.blocked, onBusy]);
   const usage = useWatch({ control: form.control, name: "usage" });
   const selectedCategory = useWatch({ control: form.control, name: "categoryId" });
   const focused = useRef(false);
@@ -90,7 +97,7 @@ export function AssetForm({ row, categories, onSaved, onCancel, defaultCategoryI
       toast.success(r.message); onSaved(r.id);
     } catch { setError("Không kết nối được máy chủ. Nội dung đã nhập vẫn được giữ; hãy thử lại."); }
   }), errors => { setError("Kiểm tra thông tin được đánh dấu bên dưới."); focusError(Object.keys(errors)); });
-  return <Form {...form}><form noValidate onSubmit={submit} className="space-y-5">
+  return <Form {...form}><form ref={root} {...auto.bindings} noValidate onSubmit={autoEnabled ? event => { event.preventDefault(); auto.requestSave(); } : submit} className="space-y-5"><fieldset disabled={pending} className="min-w-0 space-y-5">
     <FormRequiredHint />
     {row && <p className="text-sm text-muted-foreground">Mã tài sản: {row.ma_tai_san}</p>}
     <FormField control={form.control} name="name" render={({ field }) => <FormItem><FormLabel required>Tên tài sản</FormLabel><FormControl><Input {...field} aria-required="true" className="text-base" /></FormControl><FormMessage /></FormItem>} />
@@ -102,7 +109,7 @@ export function AssetForm({ row, categories, onSaved, onCancel, defaultCategoryI
       <FormField control={form.control} name="departmentId" render={({ field }) => <FormItem><FormLabel>Phòng quản lý</FormLabel><FormControl><SearchableSelect label="Phòng quản lý" ref={field.ref} onBlur={field.onBlur} value={field.value ? String(field.value) : "none"} onValueChange={v => field.onChange(v === "none" ? null : Number(v))} disabled={!choices} options={[{ value: "none", label: "Chưa xác định" }, ...(choices?.departments.map(p => ({ value: String(p.id), label: p.ten_phong_ban, keywords: p.ma_phong_ban })) ?? [])]} /></FormControl><FormMessage /></FormItem>} />
       <FormField control={form.control} name="locationId" render={({ field }) => <FormItem><FormLabel>Vị trí</FormLabel><FormControl><SearchableSelect label="Vị trí" ref={field.ref} onBlur={field.onBlur} value={field.value ? String(field.value) : "none"} onValueChange={v => field.onChange(v === "none" ? null : Number(v))} disabled={!choices} searchPlaceholder="Tìm tên hoặc đường dẫn vị trí…" options={[{ value: "none", label: "Chưa xác định" }, ...(choices?.locations.map(p => ({ value: String(p.id), label: p.name })) ?? [])]} /></FormControl><FormMessage /></FormItem>} />
     </div>
-    <details open={extraOpen} onToggle={e => setExtraOpen(e.currentTarget.open)} className="rounded-lg border">
+    <details open={extraOpen} onToggle={e => { if (!e.currentTarget.open && (["serial", "model", "notes"] as const).some(field => form.getFieldState(field).invalid)) e.currentTarget.open = true; setExtraOpen(e.currentTarget.open); }} className="rounded-lg border">
       <summary className="min-h-10 cursor-pointer rounded-lg p-3 text-sm font-medium focus-visible:outline-ring">Thông tin bổ sung</summary>
       <div className="space-y-4 border-t p-3"><div className="grid gap-4 sm:grid-cols-2">
       {([['serial', 'Serial / Service tag'], ['model', 'Hãng / Model']] as const).map(([name, label]) => <FormField key={name} control={form.control} name={name} render={({ field }) => <FormItem><FormLabel>{label}</FormLabel><FormControl><Input {...field} value={field.value ?? ""} className="text-base" /></FormControl><FormMessage /></FormItem>} />)}
@@ -110,20 +117,28 @@ export function AssetForm({ row, categories, onSaved, onCancel, defaultCategoryI
     <FormField control={form.control} name="notes" render={({ field }) => <FormItem><FormLabel>Ghi chú</FormLabel><FormControl><Textarea {...field} value={field.value ?? ""} rows={3} className="text-base" /></FormControl><FormMessage /></FormItem>} />
       </div>
     </details>
-    <details open={financeOpen} onToggle={e => setFinanceOpen(e.currentTarget.open)} className="rounded-lg border"><summary className="min-h-11 cursor-pointer rounded-lg p-3 text-sm font-medium focus-visible:outline-ring">Mua sắm & khấu hao</summary><div className="border-t p-3"><AssetFinanceFields defaultMonths={categories.find(c => c.id === selectedCategory)?.khau_hao_mac_dinh_thang} /></div></details>
+    <details open={financeOpen} onToggle={e => { if (!e.currentTarget.open && (["purchaseDate", "purchasePrice", "depreciationMonths", "warrantyUntil"] as const).some(field => form.getFieldState(field).invalid)) e.currentTarget.open = true; setFinanceOpen(e.currentTarget.open); }} className="rounded-lg border"><summary className="min-h-11 cursor-pointer rounded-lg p-3 text-sm font-medium focus-visible:outline-ring">Mua sắm & khấu hao</summary><div className="border-t p-3"><AssetFinanceFields onApply={autoEnabled ? auto.requestSave : undefined} defaultMonths={categories.find(c => c.id === selectedCategory)?.khau_hao_mac_dinh_thang} /></div></details>
     {!choices && !loadError && <p role="status" className="text-sm text-muted-foreground">Đang tải danh mục lựa chọn…</p>}
     {loadError && <div role="alert" className="space-y-2 text-sm text-destructive"><p>{loadError}</p><Button className="min-h-10" type="button" variant="outline" onClick={() => setAttempt(v => v + 1)}>Tải lại danh mục</Button></div>}
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    <div className="flex justify-end gap-2 border-t pt-4"><Button className="min-h-10" type="button" variant="outline" onClick={onCancel} disabled={pending}>Hủy</Button><Button className="min-h-10" type="submit" disabled={pending || !choices}>{pending && <Loader2 className="size-4 animate-spin" />}Lưu tài sản</Button></div>
+    {autoEnabled && <AssetAutosaveStatus auto={auto} />}
+    <div className="flex justify-end gap-2 border-t pt-4"><Button data-autosave-cancel className="min-h-10" type="button" variant="outline" onClick={autoEnabled ? auto.cancel : onCancel} disabled={pending}>{autoEnabled ? auto.dirty || auto.error ? "Bỏ thay đổi" : "Đóng" : "Hủy"}</Button>{!autoEnabled && <Button className="min-h-10" type="submit" disabled={pending || !choices}>{pending && <Loader2 className="size-4 animate-spin" />}Lưu tài sản</Button>}</div>
+    </fieldset>
   </form></Form>;
 }
 
-export function AssetCategoryForm({ row, onSaved, onCancel }: { row: AssetCategory | null; onSaved: () => void; onCancel: () => void }) {
-  const [pending, start] = useTransition();
+export function AssetCategoryForm({ row, onSaved, onCancel, onAutoSaved, onBusy }: { row: AssetCategory | null; onSaved: () => void; onCancel: () => void; onAutoSaved?: () => void; onBusy?: (busy: boolean) => void }) {
+  const [manualPending, start] = useTransition();
+  const root = useRef<HTMLFormElement>(null);
   const [error, setError] = useState("");
   const [depreciationOpen, setDepreciationOpen] = useState(false);
   const form = useForm<CategoryInput, unknown, z.output<typeof SaveAssetCategorySchema>>({ resolver: zodResolver(SaveAssetCategorySchema), defaultValues: { id: row?.id, version: row?.updated_at.toISOString(), code: row?.ma_loai ?? "", name: row?.ten_loai ?? "", description: row?.mo_ta ?? "", active: row?.dang_su_dung ?? true, defaultDepreciationMonths: row?.khau_hao_mac_dinh_thang ?? null } });
-  return <Form {...form}><form noValidate className="space-y-4" onSubmit={form.handleSubmit(v => start(async () => {
+  const auto = useAssetAutosave({ form, root, save: saveAssetCategory, immediateFields: CATEGORY_AUTO_FIELDS,
+    valuesFromResult: saved => ({ id: saved.id, version: saved.updated_at.toISOString(), code: saved.ma_loai, name: saved.ten_loai, description: saved.mo_ta, active: saved.dang_su_dung, defaultDepreciationMonths: saved.khau_hao_mac_dinh_thang }),
+    enabled: Boolean(row), onInvalid: fields => { if (fields.includes("defaultDepreciationMonths")) setDepreciationOpen(true); }, onSaved: () => onAutoSaved?.(), onCancel });
+  const pending = manualPending || auto.pending;
+  useEffect(() => { onBusy?.(manualPending || auto.blocked); }, [manualPending, auto.blocked, onBusy]);
+  return <Form {...form}><form ref={root} {...auto.bindings} noValidate className="space-y-4" onSubmit={row ? event => { event.preventDefault(); auto.requestSave(); } : form.handleSubmit(v => start(async () => {
     setError("");
     try {
       const r = await saveAssetCategory(v);
@@ -133,12 +148,15 @@ export function AssetCategoryForm({ row, onSaved, onCancel }: { row: AssetCatego
   }), errors => {
     if (errors.defaultDepreciationMonths) { setDepreciationOpen(true); requestAnimationFrame(() => form.setFocus("defaultDepreciationMonths")); }
   })}>
+    <fieldset disabled={pending} className="min-w-0 space-y-4">
     <FormRequiredHint />
     {([['code', 'Mã loại'], ['name', 'Tên loại']] as const).map(([name, label]) => <FormField key={name} control={form.control} name={name} render={({ field }) => <FormItem><FormLabel required={name === "name" || !row}>{label}</FormLabel><FormControl><Input {...field} aria-required={name === "name" || !row} readOnly={name === "code" && Boolean(row)} className="text-base" /></FormControl><FormMessage /></FormItem>} />)}
     <FormField control={form.control} name="description" render={({ field }) => <FormItem><FormLabel>Mô tả</FormLabel><FormControl><Textarea {...field} value={field.value ?? ""} className="text-base" /></FormControl><FormMessage /></FormItem>} />
     <FormField control={form.control} name="active" render={({ field }) => <FormItem className="flex items-center gap-3"><FormControl><Checkbox ref={field.ref} onBlur={field.onBlur} checked={field.value} onCheckedChange={v => field.onChange(v === true)} /></FormControl><FormLabel>Cho phép chọn khi thêm thiết bị</FormLabel><FormMessage /></FormItem>} />
-    <details open={depreciationOpen} onToggle={event => setDepreciationOpen(event.currentTarget.open)} className="rounded-lg border"><summary className="min-h-11 cursor-pointer p-3 text-sm font-medium focus-visible:outline-ring">Khấu hao mặc định</summary><div className="space-y-3 border-t p-3"><FormField control={form.control} name="defaultDepreciationMonths" render={({ field }) => <FormItem><FormLabel>Thời gian mặc định (tháng)</FormLabel><FormControl><Input {...field} type="number" min={1} max={1200} step={1} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? null : e.target.valueAsNumber)} className="text-base" /></FormControl><FormMessage /></FormItem>} /><div className="flex flex-wrap gap-2">{[3, 5, 7].map(years => <Button key={years} type="button" variant="outline" className="min-h-10" onClick={() => form.setValue("defaultDepreciationMonths", years * 12, { shouldDirty: true, shouldValidate: true })}>{years} năm</Button>)}</div><p className="text-xs text-muted-foreground">Mức tham khảo để áp dụng cho từng tài sản; không tự cập nhật hồ sơ đã có.</p></div></details>
+    <details open={depreciationOpen} onToggle={event => { if (!event.currentTarget.open && form.getFieldState("defaultDepreciationMonths").invalid) event.currentTarget.open = true; setDepreciationOpen(event.currentTarget.open); }} className="rounded-lg border"><summary className="min-h-11 cursor-pointer p-3 text-sm font-medium focus-visible:outline-ring">Khấu hao mặc định</summary><div className="space-y-3 border-t p-3"><FormField control={form.control} name="defaultDepreciationMonths" render={({ field }) => <FormItem><FormLabel>Thời gian mặc định (tháng)</FormLabel><FormControl><Input {...field} type="number" min={1} max={1200} step={1} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === "" ? null : e.target.valueAsNumber)} className="text-base" /></FormControl><FormMessage /></FormItem>} /><div className="flex flex-wrap gap-2">{[3, 5, 7].map(years => <Button key={years} type="button" variant="outline" className="min-h-10" onClick={() => { form.setValue("defaultDepreciationMonths", years * 12, { shouldDirty: true, shouldValidate: true }); if (row) auto.requestSave(); }}>{years} năm</Button>)}</div><p className="text-xs text-muted-foreground">Mức tham khảo để áp dụng cho từng tài sản; không tự cập nhật hồ sơ đã có.</p></div></details>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    <div className="flex justify-end gap-2 border-t pt-4"><Button className="min-h-10" type="button" variant="outline" disabled={pending} onClick={onCancel}>Hủy</Button><Button className="min-h-10" type="submit" disabled={pending}>{pending && <Loader2 className="size-4 animate-spin" />}Lưu loại tài sản</Button></div>
+    {row && <AssetAutosaveStatus auto={auto} />}
+    <div className="flex justify-end gap-2 border-t pt-4"><Button data-autosave-cancel className="min-h-10" type="button" variant="outline" disabled={pending} onClick={row ? auto.cancel : onCancel}>{row ? auto.dirty || auto.error ? "Bỏ thay đổi" : "Đóng" : "Hủy"}</Button>{!row && <Button className="min-h-10" type="submit" disabled={pending}>{pending && <Loader2 className="size-4 animate-spin" />}Lưu loại tài sản</Button>}</div>
+    </fieldset>
   </form></Form>;
 }

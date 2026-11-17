@@ -1,10 +1,10 @@
 # Tài khoản mặc định và không gian cá nhân
 
-Cập nhật **16/11/2026 — đã kiểm chứng chính sách cấp mới và ô mật khẩu; thông báo cho workflow kéo thả chưa triển khai**. Đối chiếu code/DB xác nhận profile, dashboard, đổi mật khẩu và avatar dùng các bảng sẵn có; DEFAULT không grant, cờ đổi mật khẩu/trigger đã có. Số tài khoản và grant tại các mốc backup/reset bên dưới là lịch sử; hiện trạng tại [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db). Chi tiết tại [Thiết kế tài khoản và không gian cá nhân](../THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md).
+Cập nhật **16/11/2026 — đã kiểm chứng chính sách cấp mới và ô mật khẩu; thông báo cho workflow kéo thả chưa triển khai**. Đối chiếu code/DB xác nhận profile, dashboard, đổi mật khẩu và avatar dùng các bảng sẵn có; cột cá nhân hóa và hai bảng chat mới do plan AI quản lý; DEFAULT không grant, cờ đổi mật khẩu/trigger đã có. Số tài khoản và grant tại các mốc backup/reset bên dưới là lịch sử; hiện trạng tại [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db). Chi tiết tại [Thiết kế tài khoản và không gian cá nhân](../THIET-KE-TAI-KHOAN-VA-KHONG-GIAN-CA-NHAN.md).
 
 Rule nghiệp vụ: [PROFILE-DASHBOARD-RULES](../../.agents/rules/PROFILE-DASHBOARD-RULES.md).
 
-Mở rộng đề xuất ngày 13/11/2026: chat trên dashboard và cá nhân hóa AI trong profile được quản lý tại [Plan trợ lý AI](AI-ASSISTANT-CHECKLIST.md). Mới lập thiết kế, chưa thay chức năng cá nhân hoặc CSDL; plan AI sở hữu cột/bảng, quyền, lịch sử và nghiệm thu của phần mở rộng này.
+Mở rộng đã triển khai ngày 16/11/2026: chat trên dashboard và cá nhân hóa AI trong profile được quản lý tại [Plan trợ lý AI](AI-ASSISTANT-CHECKLIST.md). Profile có hộp cài đặt cá nhân hóa AI, dashboard lưu/mở lại hội thoại; plan AI sở hữu cột/bảng, quyền, lịch sử và nghiệm thu của phần mở rộng này.
 
 ## Đồng bộ giao diện — 09/11/2026
 

@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { canManageAccounts } from "@/lib/account-access"
 import { SessionUser } from "@/lib/auth"
-import { canManageAiConnections } from "@/lib/role-catalog"
+import { canAdministerAi } from "@/lib/role-catalog"
 import {
   LayoutDashboard,
   Users,
@@ -54,7 +54,7 @@ export const mainOverviewItem: SubMenuItem = {
 export const menuGroups: MenuGroup[] = [
   {
     id: "assets", title: "TÀI SẢN", icon: Package, requiredModule: "ASSETS", defaultOpen: true,
-    items: [{ label: "Quản lý tài sản", href: "/assets", icon: Package }],
+    items: [{ label: "Quản lý tài sản", href: "/assets", icon: Package }, { label: "Vật tư và phụ kiện", href: "/inventory", icon: Package, requiredModule: "INVENTORY" }],
   },
   {
     id: "hr",
@@ -138,7 +138,7 @@ export function NavigationLinks({ session, onNavigate }: NavigationLinksProps) {
   const visibleGroups = menuGroups.map(group => ({ ...group, items: group.items.filter(item => {
     if (session?.mustChangePassword) return false;
     if (item.href === "/accounts") return canManageAccounts(session);
-    if (item.href === "/settings") return canManageAiConnections(session);
+    if (item.href === "/settings") return canAdministerAi(session);
     const moduleCode = item.requiredModule ?? group.requiredModule;
     return !moduleCode || ["VIEW", "MANAGE"].includes(session?.permissions[moduleCode] ?? "");
   }) })).filter(group => group.items.length > 0);

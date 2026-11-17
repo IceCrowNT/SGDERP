@@ -127,11 +127,11 @@ test("create and rename preserve link; edit cancel restores detail", async ({ pa
   await detail(page).getByRole("button", { name: "Sửa tên tài sản", exact: true }).click();
   const edit = page.getByRole("form", { name: "Sửa thông tin tài sản", exact: true });
   await edit.getByLabel("Tên tài sản", { exact: false }).fill("QR đổi tên");
-  await edit.getByRole("button", { name: "Lưu", exact: true }).click();
+  await edit.getByLabel("Tên tài sản", { exact: true }).press("Enter");
   await expect(detail(page).getByRole("heading", { name: "QR đổi tên", exact: true })).toBeVisible();
   await expect(page).toHaveURL(url);
   await detail(page).getByRole("button", { name: "Sửa tên tài sản", exact: true }).click();
-  await edit.getByRole("button", { name: "Hủy", exact: true }).click();
+  await edit.getByRole("button", { name: "Đóng", exact: true }).click();
   await expect(detail(page)).toBeVisible();
   await detail(page).locator("summary").filter({ hasText: "Tem QR" }).click();
   await expect(page.getByLabel("Liên kết tài sản", { exact: true })).toHaveValue(url);

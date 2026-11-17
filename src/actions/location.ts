@@ -1,5 +1,6 @@
 "use server";
 import { createHash } from "node:crypto";
+import { inventoryDbMessage } from "@/lib/inventory";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -17,7 +18,7 @@ function failure(error: unknown) {
   return {
     success: false as const,
     message:
-      error instanceof LocationError
+      inventoryDbMessage(error) ? inventoryDbMessage(error)! : error instanceof LocationError
         ? error.message
         : error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === "P2003"
@@ -288,6 +289,7 @@ export async function getLocationDeletionPreview(id: number) {
     return { success: false as const, message: "Vị trí không hợp lệ." };
   const location = await db.vi_tri.findFirst({ where: { id, company_id: session.companyId }, select: selection });
   if (!location) return { success: false as const, message: "Vị trí không tồn tại." };
+  if (await db.giao_dich_vat_tu.count({ where: { company_id: session.companyId, OR: [{ vi_tri_nhap_id: id }, { vi_tri_xuat_id: id }] } })) return { success: false as const, message: "Vị trí có lịch sử vật tư, không thể xóa. Có thể ngừng dùng sau khi chuyển hết tồn." };
   if (await db.tai_san.count({ where: { company_id: session.companyId, vi_tri_id: id } }))
     return { success: false as const, message: "Vị trí còn tài sản. Hãy chuyển hoặc gỡ vị trí trong hồ sơ tài sản trước." };
   if (await db.vi_tri.count({ where: { parent_id: id, company_id: session.companyId } }))
@@ -326,6 +328,7 @@ export async function deleteLocation(input: unknown) {
         select: selection,
       });
       if (!before) throw new LocationError("Vị trí không tồn tại.");
+      if (await tx.giao_dich_vat_tu.count({ where: { company_id: session.companyId, OR: [{ vi_tri_nhap_id: before.id }, { vi_tri_xuat_id: before.id }] } })) throw new LocationError("Vị trí có lịch sử vật tư, không thể xóa. Có thể ngừng dùng sau khi chuyển hết tồn.");
       if (await tx.tai_san.count({ where: { company_id: session.companyId, vi_tri_id: before.id } }))
         throw new LocationError("Vị trí còn tài sản. Hãy chuyển hoặc gỡ vị trí trong hồ sơ tài sản trước.");
       if (before.updated_at.toISOString() !== parsed.data.version)

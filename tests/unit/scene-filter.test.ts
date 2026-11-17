@@ -4,6 +4,7 @@ import { filterScene, personDestination, assetDestination, scopedRooms, sceneSug
 import type { BuildingData } from "../../src/lib/office-3d/building-mapping";
 import type { LocationAsset } from "../../src/lib/asset-location";
 import { HCNS_BUILDING_KEY } from "../../src/lib/office-3d/building-layout";
+import {layoutEquipment} from "../../src/lib/office-3d/equipment-layout";
 
 function fixture(): BuildingData {
   const asset = (id:number, categoryCode:string):LocationAsset => ({id,name:categoryCode,code:`TS-${id}`,category:categoryCode,categoryCode,condition:"BINH_THUONG",locationId:100,version:"v1"});
@@ -23,6 +24,9 @@ test("filter actual category records before choosing geometry; keep desks and or
   const filtered=filterScene(b,{people:true,assets:true,category:{code:"PHONE",name:"Điện thoại"}},"all",null);
   assert.deepEqual(filtered.hcns!.points[0].assets!.map(a=>a.id),[1,3]);
   assert.deepEqual(filtered.hcns!.points[0].equipment,["phone"]);
+  const originalPlacement=layoutEquipment({equipment:[],assets:b.hcns!.points[0].assets,width:1.6,depth:.8});
+  const afterPlacement=layoutEquipment({equipment:[],assets:filtered.hcns!.points[0].layoutAssets,width:1.6,depth:.8});
+  assert.deepEqual(afterPlacement,originalPlacement);
   assert.equal(filtered.hcns!.points[0].occupants!.length,1);
   assert.equal(filtered.objects!.length,b.objects!.length);
   assert.deepEqual(filtered.objects!.map(({kind,x,z,angle})=>({kind,x,z,angle})),b.objects!.map(({kind,x,z,angle})=>({kind,x,z,angle})));
@@ -62,6 +66,7 @@ test("no HR or ASSETS visibility means no corresponding search destination or fi
   assert.equal(personDestination(b,1),null);
   assert.equal(filterScene(b,{people:true,assets:false,category:null},"all",null).hcns!.points[0].occupants!.length,0);
   assert.equal(filterScene(b,{people:false,assets:true,category:{code:"PHONE",name:"Phone"}},"all",null).hcns!.points[0].assets!.length,0);
+  assert.deepEqual(filterScene(b,{people:false,assets:true,category:null},"all",null).hcns!.points[0].layoutAssets,[]);
 });
 
 test("independent layer combinations retain desk geometry and do not mutate business records", () => {

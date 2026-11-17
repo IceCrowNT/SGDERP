@@ -76,7 +76,11 @@ async function main() {
   // 3. Tạo Danh mục Quyền cơ bản (Permissions)
   const permissionDefs = [
     { module: "AI", action: "MANAGE_CONNECTIONS", name: "Quản lý kết nối & model AI", scope: "ALL" },
+    { module: "AI", action: "MANAGE_LIMITS", name: "Quản lý hạn mức AI", scope: "ALL" },
+    { module: "AI", action: "VIEW_USAGE", name: "Xem mức sử dụng AI trong công ty", scope: "ALL" },
     { module: "ASSETS", action: "VIEW", name: "Xem tài sản", scope: "ALL" },
+    { module: "INVENTORY", action: "VIEW", name: "Xem vật tư và phụ kiện", scope: "ALL" },
+    { module: "INVENTORY", action: "MANAGE", name: "Quản lý vật tư và phụ kiện", scope: "ALL" },
     { module: "ASSETS", action: "MANAGE", name: "Quản lý tài sản và loại thiết bị", scope: "ALL" },
     { module: "ACCOUNTS", action: "MANAGE", name: "Quản lý tài khoản đăng nhập", scope: "ALL" },
     { module: "LOCATIONS", action: "VIEW", name: "Xem vị trí và không gian", scope: "ALL" },

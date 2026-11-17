@@ -82,7 +82,6 @@ test("empty category preselects creation and contextual edit focuses location wi
   const edit = page.getByRole("form", { name: "Sửa thông tin tài sản", exact: true });
   await expect(page.getByRole("combobox", { name: "Tìm vị trí", exact: true })).toBeFocused();
   await page.getByRole("option", { name: /Bàn số 07/ }).click();
-  await edit.getByRole("button", { name: "Lưu", exact: true }).click();
   await expect(edit).not.toBeVisible();
   await expect(detail(page).getByText("Bàn số 07", { exact: true })).toBeVisible();
   await detail(page).getByRole("button", { name: "Close", exact: true }).click();

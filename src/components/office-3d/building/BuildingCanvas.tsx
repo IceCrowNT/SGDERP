@@ -26,6 +26,7 @@ import type { BuildingData } from "@/lib/office-3d/building-mapping";
 import { BuildingModel } from "./BuildingModel";
 import { hcnsWorldPoint, type BuildingTarget } from "@/lib/office-3d/building-navigation";
 import { HCNS_LAYOUT, HCNS_ROOM_BOUNDS, personRoomPosition, type EquipmentKind } from "@/lib/office-3d/hcns-layout";
+import { layoutEquipment } from "@/lib/office-3d/equipment-layout";
 import { materials } from "../hcns/RoomFurniture";
 import { ARCHITECTURAL_BOUNDS } from "@/lib/office-3d/architectural-layout";
 import { PlacedObjects } from "./PlacedObjects";
@@ -33,7 +34,7 @@ import type { PlacementDraft } from "@/lib/office-3d/placement";
 
 function isVisibleInScene(object: Object3D) {
   for (let node: Object3D | null = object; node; node = node.parent) {
-    if (!node.visible) return false;
+    if (!node.visible || node.userData.inactiveFloor) return false;
   }
   return true;
 }
@@ -53,6 +54,7 @@ export type BuildingCamera = {
   sequence: number;
   zoom: number;
   equipment?: EquipmentKind;
+  assetId?: number;
   restoreKey?: string;
 };
 type Props = {
@@ -67,8 +69,9 @@ type Props = {
   point: string | null;
   onPoint: (key: string) => void;
   onFocusPoint: (key: string) => void;
-  onEquipment: (key: string, kind: EquipmentKind, focus: boolean) => void;
+  onEquipment: (key: string, kind: EquipmentKind, focus: boolean, assetId?: number) => void;
   activeEquipment?: EquipmentKind;
+  activeAsset?: number;
   selectionKey: string;
   onEnter: (key: string) => void;
   person: number | null;
@@ -137,7 +140,7 @@ function floorFitZoom(
   const { width, depth } = ARCHITECTURAL_BOUNDS;
   const corners = [-width / 2 - 2, width / 2 + 2].flatMap((x) =>
     [-depth / 2, depth / 2].flatMap((z) =>
-      [0, all ? floorElevation(3, "all") + 2.4 : 2.4].map((y) =>
+      [0, all ? floorElevation(3) + 2.4 : 2.4].map((y) =>
         new Vector3(x, y, z).applyQuaternion(inverse),
       ),
     ),
@@ -250,21 +253,23 @@ function CameraRig({
     if (command.view === "focus" && (slot || placed)) {
       const r = BUILDING_ROOMS.find(r=>r.key===placed?.roomKey);
       const p = slot ? building.hcns?.points.find(p=>p.key===slot.key) : placed?.point;
-      const kinds = p?.equipment.slice(0,3) ?? [];
-      const index = command.equipment ? kinds.indexOf(command.equipment) : -1;
       const width = slot?.width ?? (placed?.kind === "BAN" ? 1.6 : .7);
-      const offsetX = index < 0 ? 0 : (index-(kinds.length-1)/2)*width/kinds.length;
-      const offsetZ = index < 0 ? 0 : placed?.kind === "DIEM" ? 0 : -.05;
+      const depth = slot?.depth ?? (placed?.kind === "BAN" ? .8 : .7);
+      const placements = layoutEquipment({equipment:p?.equipment ?? [],assets:p?.layoutAssets ?? p?.assets,
+        width,depth,height:placed?.kind === "DIEM" ? .12 : .85,desk:placed?.kind !== "DIEM"});
+      const device = placements.find(d=>d.part === "device" && (command.assetId ? d.assetId === command.assetId : command.equipment && d.kind === command.equipment));
+      const offsetX = device?.position[0] ?? 0;
+      const offsetZ = device?.position[2] ?? 0;
       const angle = (slot?.facingDegrees ?? placed?.angle ?? 0)*Math.PI/180;
       const x = offsetX*Math.cos(angle)+offsetZ*Math.sin(angle);
       const z = -offsetX*Math.sin(angle)+offsetZ*Math.cos(angle);
-      const y = index < 0 ? .7 : placed?.kind === "DIEM" ? .45 : 1.05;
+      const y = device ? device.position[1]+.2 : .7;
       const target = new Vector3(...(slot ? hcnsWorldPoint(slot.x+x,y,slot.z+z)
-        : [r!.x+placed!.x+x,.28+y,r!.z+placed!.z+z] as [number,number,number]));
+        : [r!.x+placed!.x+x,floorElevation(r!.floor)+.28+y,r!.z+placed!.z+z] as [number,number,number]));
       const offset = c.getPosition(new Vector3(),false).sub(c.getTarget(new Vector3(),false));
       const position = target.clone().add(offset);
       void c.setLookAt(...position.toArray(),...target.toArray(),animate);
-      const zoom = Math.min(size.width/(index < 0 ? 5 : 2.2),size.height/(index < 0 ? 6 : 2.6));
+      const zoom = Math.min(size.width/(device ? 2.2 : 5),size.height/(device ? 2.6 : 6));
       void c.zoomTo(zoom/(slot ? HCNS_PLACEMENT.scale : 1),animate);
       return;
     }
@@ -272,7 +277,8 @@ function CameraRig({
     if (placementRoom && ((placing && command.view === "top") || (placed && command.view === "focus"))) {
       const x = placementRoom.x + (placing ? 0 : placed?.x ?? 0);
       const z = placementRoom.z + (placing ? 0 : placed?.z ?? 0);
-      void c.setLookAt(x + (placing ? 0 : 8), 24, z + (placing ? .01 : 10), x, .3, z, animate);
+      const elevation = floorElevation(placementRoom.floor);
+      void c.setLookAt(x + (placing ? 0 : 8), elevation + 24, z + (placing ? .01 : 10), x, elevation + .3, z, animate);
       void c.zoomTo(placing ? Math.min(size.width/(placementRoom.width+2),size.height/(placementRoom.depth+2)) : Math.min(size.width/6,size.height/7),animate);
       return;
     }
@@ -320,10 +326,10 @@ function CameraRig({
     if (command.view === "focus" && room?.placed && floor !== "all") {
       void c.setLookAt(
         room.x + 22,
-        25,
+        floorElevation(room.floor) + 25,
         room.z + 28,
         room.x,
-        0.3,
+        floorElevation(room.floor) + 0.3,
         room.z,
         animate,
       );
@@ -332,11 +338,14 @@ function CameraRig({
         size.height / (Math.max(room.width, room.depth) * 1.6),
       );
     } else if (command.view === "top" && floor !== "all") {
-      void c.setLookAt(0, 65, 0.01, 0, 0, 0, animate);
-      zoom = floorFitZoom(camera, size, [0, 65, 0.01], [0, 0, 0], false);
+      const elevation = floorElevation(floor);
+      void c.setLookAt(0, elevation + 65, 0.01, 0, elevation, 0, animate);
+      zoom = floorFitZoom(camera, size, [0, elevation + 65, 0.01], [0, elevation, 0], false);
     } else {
-      const targetY = floor === "all" ? floorElevation(2, "all") : 0;
-      const position: [number, number, number] = [60, targetY + 46, 65];
+      const targetY = floor === "all" ? floorElevation(2) : floorElevation(floor);
+      const movingFloor = old && old.scope !== scope;
+      const offset = movingFloor ? c.getPosition(new Vector3(), false).sub(c.getTarget(new Vector3(), false)) : null;
+      const position: [number, number, number] = offset ? [offset.x, targetY + offset.y, offset.z] : [60, targetY + 46, 65];
       const target: [number, number, number] = [0, targetY, 0];
       void c.setLookAt(...position, ...target, animate);
       zoom = floorFitZoom(camera, size, position, target, floor === "all");
@@ -465,7 +474,9 @@ export default function BuildingCanvas(props: Props) {
       let node: Object3D | null = hit.object;
       let personId: number | undefined;
       let equipment: EquipmentKind | undefined;
+      let assetId: number | undefined;
       while (node) {
+        if (typeof node.userData.assetId === "number") assetId = node.userData.assetId;
         if (node.userData.equipmentKind) equipment = node.userData.equipmentKind;
         if (typeof node.userData.personId === "number") personId = node.userData.personId;
         const key = node.userData.objectKey;
@@ -475,7 +486,7 @@ export default function BuildingCanvas(props: Props) {
           } else {
             // At floor level the fixed HCNS interior belongs to its room.
             contextTarget(!props.detail && key.startsWith("hcns-")
-              ? { kind: "room", key: HCNS_BUILDING_KEY } : { kind: "point", key, personId, equipment });
+              ? { kind: "room", key: HCNS_BUILDING_KEY } : { kind: "point", key, personId, equipment, assetId });
           }
           return;
         }
@@ -532,7 +543,7 @@ export default function BuildingCanvas(props: Props) {
     const placed = props.building.objects?.find(o=>o.point.key===props.point);
     if (placed) {
       const r=BUILDING_ROOMS.find(r=>r.key===placed.roomKey)!;
-      return [{key:placed.point.key,at:[r.x+placed.x,1.3,r.z+placed.z],priority:4}];
+      return [{key:placed.point.key,at:[r.x+placed.x,floorElevation(r.floor)+1.3,r.z+placed.z],priority:4}];
     }
     if (props.detail)
       return people.map((p) => ({
@@ -549,7 +560,7 @@ export default function BuildingCanvas(props: Props) {
     if (props.floor === "all")
       return BUILDING_FLOORS.map((f) => ({
         key: `floor-${f.floor}`,
-        at: [-ARCHITECTURAL_BOUNDS.width / 2 - 1, floorElevation(f.floor, props.floor) + 0.6, 9],
+        at: [-ARCHITECTURAL_BOUNDS.width / 2 - 1, floorElevation(f.floor) + 0.6, 9],
       }));
     return BUILDING_ROOMS.filter(
       (r) =>
@@ -559,7 +570,7 @@ export default function BuildingCanvas(props: Props) {
           r.key === props.selected),
     ).map((r) => ({
       key: r.key,
-      at: [r.label[0], 0.7, r.label[1]],
+      at: [r.label[0], floorElevation(r.floor) + 0.7, r.label[1]],
       priority: r.key === props.selected ? 3 : r.key === HCNS_BUILDING_KEY ? 1 : 0,
     }));
   }, [
@@ -635,7 +646,7 @@ export default function BuildingCanvas(props: Props) {
             onHover={setHovered}
           />
           <PlacedObjects objects={scene.objects ?? []} floor={props.floor} detail={props.detail}
-            selected={props.point} person={props.person} onPerson={props.onPerson} onSelect={props.onPoint} onFocusPoint={props.onFocusPoint} onEquipment={props.onEquipment} activeEquipment={props.activeEquipment} draft={props.draft ?? null} onPlace={props.onPlace ?? (()=>{})}/>
+            selected={props.point} person={props.person} onPerson={props.onPerson} onSelect={props.onPoint} onFocusPoint={props.onFocusPoint} onEquipment={props.onEquipment} activeEquipment={props.activeEquipment} activeAsset={props.activeAsset} draft={props.draft ?? null} onPlace={props.onPlace ?? (()=>{})}/>
           </group>
           <CameraRig
             floor={props.floor}

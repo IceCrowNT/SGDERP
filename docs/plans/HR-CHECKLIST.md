@@ -103,3 +103,7 @@ Sau đó, theo yêu cầu tạo lại dữ liệu demo ngày 06/11: chạy đủ
 Ngày 04/11: bộ 28 ca đã đạt sau sửa selector của kiểm thử cũ; TypeScript, lint phần thay đổi và Prisma diff đạt. Đã xem desktop/mobile; dữ liệu 9 bảng giữ nguyên sau dọn fixture. Chưa coi đây là nghiệm thu sử dụng thực tế.
 
 Tra cứu: [Từ điển DB](../DATABASE-DICTIONARY.md) · [Rule DB](../../.agents/rules/DATABASE-RULES.md) · [Rule backend](../../.agents/rules/BACKEND-RULES.md).
+
+### Tham chiếu vật tư — 17/11/2026
+
+- [x] Chặn xóa phòng có mặt hàng quản lý hoặc lịch sử nhận vật tư, với thông báo nghiệp vụ. Giữ FK và lịch sử người nhận đã nghỉ; không tự đổi vị trí HR khi cấp/thu hồi. Thiết kế và kiểm chứng tại [plan vật tư](INVENTORY-MANAGEMENT-CHECKLIST.md).

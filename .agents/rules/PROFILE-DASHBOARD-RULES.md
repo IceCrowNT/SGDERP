@@ -12,10 +12,12 @@ Nghiệp vụ hiện hành; tiến độ và thiết kế DB tại [Plan cá nh�
 
 ## Profile và ảnh đại diện
 
-- Action lấy người/tài khoản/công ty từ phiên, không nhận ID chủ hồ sơ từ client. Chỉ tự sửa liên hệ (điện thoại/email/địa chỉ) và ảnh; không sửa dữ liệu HR, cơ cấu, trạng thái hay quyền. Không trả ghi chú HR hoặc metadata nhập liệu.
+- Action lấy người/tài khoản/công ty từ phiên, không nhận ID chủ hồ sơ từ client. Đối với hồ sơ nhân sự, chỉ tự sửa liên hệ (điện thoại/email/địa chỉ) và ảnh; không sửa dữ liệu HR khác, cơ cấu, trạng thái hay quyền. Cài đặt AI của tài khoản được quản lý riêng bên dưới. Không trả ghi chú HR hoặc metadata nhập liệu.
 - Tài khoản hệ thống không gắn nhân sự vẫn đổi mật khẩu được; không tạo người giả hoặc cho tự gắn tài khoản sang người khác. Tài khoản khóa/người LEFT bị chặn theo rule HR.
 - Avatar upload qua Server Action: sharp giải mã JPEG/PNG/WebP (tối đa 2 MB, 16 triệu pixel), chuẩn hóa WebP, bỏ metadata, tên file server sinh, lưu ngoài public/Git. Không nhận URL tùy ý. Chỉ bỏ ảnh cũ sau commit, dọn ảnh mới khi rollback.
 - GET `/media/avatar/[file]` chỉ đọc ảnh: phiên hợp lệ và chủ ảnh hoặc HR VIEW cùng công ty; khi buộc đổi mật khẩu chỉ đọc ảnh của mình, không cache công khai. Mutation vẫn dùng Server Action.
+
+- Profile có hộp “Cài đặt trợ lý AI”: tài khoản tự sửa bối cảnh/cách trả lời (tối đa 2.000 ký tự), xóa về mặc định, lưu có phiên bản và audit không chứa nội dung. Áp dụng từ lượt chat kế tiếp; không cấp quyền AI, không tự lưu thông tin rút ra từ chat. Thiết kế và kiểm thử do [plan AI](../../docs/plans/AI-ASSISTANT-CHECKLIST.md#lịch-sử-bối-cảnh-chat-và-cá-nhân-hóa--triển-khai-16112026) sở hữu.
 
 ## Dashboard và điều hướng cá nhân
 

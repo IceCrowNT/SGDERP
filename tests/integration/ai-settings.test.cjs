@@ -13,14 +13,15 @@ Module._load=function(name,...args){
 };
 const {db}=require('../../src/lib/db.ts');
 const {createSessionToken}=require('../../src/lib/session-token.ts');
-const {getAiSettings,saveAiSettings,testAiKey}=require('../../src/actions/ai-settings.ts');
+const {getAiSettings,saveAiSettings,testAiKey: testKeyAction,getAiConnections,setDefaultAiConnection}=require('../../src/actions/ai-settings.ts');
 const {askAi}=require('../../src/actions/ai.ts');
 const {readAiConnection}=require('../../src/lib/ai-connection.ts');
 const {readAiSecret,storeAiSecret}=require('../../src/lib/ai-secret-store.ts');
 const key1='sk-test-key-settings-FIRST-1111',key2='sk-test-key-settings-SECOND-2222';
 const as=async(account,fn)=>request.run(account?await createSessionToken({userId:account.id,companyId:account.company_id,sessionVersion:account.phien_ban_dang_nhap}):undefined,fn);
-const current=()=>db.ket_noi_ai.findUniqueOrThrow({where:{company_id:manager.company_id}});
-const save=(values)=>as(manager,()=>saveAiSettings(values));
+const current=()=>db.ket_noi_ai.findFirstOrThrow({where:{company_id:manager.company_id,la_mac_dinh:true}});
+const save=async(values)=>{const row=await db.ket_noi_ai.findFirst({where:{company_id:manager.company_id,la_mac_dinh:true}});return as(manager,()=>saveAiSettings({target:row?.id??'new',name:row?.ten_ket_noi??'Main key',...values}));};
+const testAiKey=async(values)=>testKeyAction({target:(await current()).id,...values});
 const json=data=>new Response(JSON.stringify(data),{status:200});
 let manager,other,foreignCompany,role,grant,vault,originalFetch,calls=0,transport,operator,operatorRole,foreignOperator;
 before(async()=>{
@@ -41,7 +42,7 @@ before(async()=>{
 after(async()=>{global.fetch=originalFetch;await db.$disconnect();});
 
 test('only current AI grants allow settings; pilot/admin/asset privileges do not substitute for them',async()=>{
- for(const a of [null,other]){assert.equal((await as(a,getAiSettings)).success,false);assert.equal((await as(a,()=>saveAiSettings({version:null,apiKey:key1,model:'test-model',enabled:true}))).success,false);}
+ for(const a of [null,other]){assert.equal((await as(a,getAiSettings)).success,false);assert.equal((await as(a,()=>saveAiSettings({target:'new',name:'Test connection',version:null,apiKey:key1,model:'test-model',enabled:true}))).success,false);}
  assert.equal((await save({version:null,apiKey:'',model:'test-model',enabled:true})).success,false);
  assert.equal((await save({version:null,apiKey:key1,model:'bad\nmodel',enabled:true})).success,false);
  assert.equal((await save({version:null,apiKey:key1,model:'test-model',enabled:true,companyId:foreignCompany.id})).success,false);
@@ -125,10 +126,10 @@ test('AI-only manager is independent of chat and RBAC; company cannot adopt anot
  assert.equal((await as(operator,()=>askAi({requestId:randomUUID(),message:'test'}))).success,false);
  const {getRoles}=require('../../src/actions/role.ts');assert.equal((await as(operator,getRoles)).success,false);
  const foreign=await as(foreignOperator,getAiSettings);assert(foreign.success);assert.equal(foreign.settings.hasKey,false);assert.equal(foreign.settings.model,'');assert.equal(foreign.settings.maskedKey,null);
- assert.equal((await as(foreignOperator,()=>saveAiSettings({version:null,apiKey:'',model:'foreign-model',enabled:true}))).success,false);
- assert.equal((await as(foreignOperator,()=>testAiKey({version:null,apiKey:''}))).success,false);
+ assert.equal((await as(foreignOperator,()=>saveAiSettings({target:'new',name:'Test connection',version:null,apiKey:'',model:'foreign-model',enabled:true}))).success,false);
+ assert.equal((await as(foreignOperator,()=>testKeyAction({target:'new',version:null,apiKey:''}))).success,false);
  assert.equal(calls,previousCalls);
- const before=await current();assert((await as(foreignOperator,()=>saveAiSettings({version:null,apiKey:key1,model:'foreign-model',enabled:true}))).success);
+ const before=await current();assert((await as(foreignOperator,()=>saveAiSettings({target:'new',name:'Test connection',version:null,apiKey:key1,model:'foreign-model',enabled:true}))).success);
  assert.deepEqual(await current(),before);assert.equal((await readAiConnection(foreignCompany.id)).model,'foreign-model');
 });
 
@@ -141,4 +142,81 @@ test('role matrix grants/revokes AI immediately and old payload preserves the ac
  assert((await as(manager,async()=>saveRole(await payload([])))).success);assert.equal((await as(operator,getAiSettings)).success,false);
  assert((await as(manager,async()=>saveRole(await payload(['MANAGE_CONNECTIONS'])))).success);assert((await as(operator,getAiSettings)).success);
  const row=await db.tai_khoan.findUniqueOrThrow({where:{id:operator.id}});assert((await as(manager,()=>assignAccountRoles({accountId:operator.id,roleIds:[],version:row.updated_at.toISOString()}))).success);assert.equal((await as(operator,getAiSettings)).success,false);
+});
+
+test('adding keys preserves previous secrets/default; lists and key tests are scoped to the selected connection',async()=>{
+ const before=await current();
+ const r=await as(manager,()=>saveAiSettings({target:'new',name:'Second independent key',version:null,apiKey:key1,model:'second-model',enabled:true}));assert(r.success,r.message);
+ assert.notEqual(r.settings.target,before.id);assert.equal(r.settings.isDefault,false);assert.deepEqual(await current(),before);
+ const second=await db.ket_noi_ai.findUniqueOrThrow({where:{id:r.settings.target}});
+ assert.equal(await readAiSecret(manager.company_id,second.tham_chieu_bi_mat),key1);assert.equal((await readAiConnection(manager.company_id)).apiKey,key2);
+ const list=await as(manager,getAiConnections);assert(list.success);assert.equal(list.connections.length,2);assert.equal(list.connections.filter(r=>r.isDefault).length,1);assert(!JSON.stringify(list).includes(key1));
+ await db.nhat_ky_hoat_dong.deleteMany({where:{company_id:manager.company_id,hanh_dong:'AI_KEY_TEST'}});
+ transport=async(url,options)=>{assert.equal(options.headers.Authorization,`Bearer ${key1}`);return json({data:[{id:'second-model'}]});};
+ assert.deepEqual((await as(manager,()=>testKeyAction({target:second.id,version:second.updated_at.toISOString(),apiKey:''}))).models,['second-model']);
+ const callsBefore=calls;
+ for(const op of [()=>getAiSettings(second.id),()=>testKeyAction({target:second.id,version:second.updated_at.toISOString(),apiKey:''}),()=>saveAiSettings({target:second.id,name:'Stolen',version:second.updated_at.toISOString(),apiKey:key2,model:'stolen-model',enabled:true}),()=>setDefaultAiConnection({id:second.id,version:second.updated_at.toISOString(),expectedDefault:list.defaultStamp})])assert.equal((await as(foreignOperator,op)).success,false);
+ assert.equal(calls,callsBefore);assert.deepEqual(await current(),before);
+});
+
+test('default switch is explicit, concurrent stale switches fail and DB enforces only one default',async()=>{
+ const old=await current(),list=await as(manager,getAiConnections),second=list.connections.find(r=>!r.isDefault);
+ const input={id:second.target,version:second.version,expectedDefault:list.defaultStamp};
+ const switched=await as(manager,()=>setDefaultAiConnection(input));assert(switched.success,switched.message);
+ assert.equal((await readAiConnection(manager.company_id)).model,second.model);assert.equal((await readAiConnection(manager.company_id)).apiKey,key1);
+ assert.equal((await as(manager,()=>setDefaultAiConnection(input))).success,false);
+ const updatedOld=await db.ket_noi_ai.findUniqueOrThrow({where:{id:old.id}});
+ assert.equal(updatedOld.tham_chieu_bi_mat,old.tham_chieu_bi_mat);assert.equal(updatedOld.la_mac_dinh,false);
+ await assert.rejects(()=>db.ket_noi_ai.update({where:{id:old.id},data:{la_mac_dinh:true}}));
+ const next=await as(manager,()=>saveAiSettings({target:'new',name:'Third key',version:null,apiKey:key2,model:'third-model',enabled:true}));assert(next.success);
+ const currentList=await as(manager,getAiConnections);
+ const contenders=[updatedOld.id,next.settings.target];
+ const results=await Promise.all(contenders.map(async id=>{const row=await db.ket_noi_ai.findUniqueOrThrow({where:{id}});return as(manager,()=>setDefaultAiConnection({id,version:row.updated_at.toISOString(),expectedDefault:currentList.defaultStamp}));}));
+ assert.equal(results.filter(r=>r.success).length,1);assert.equal(await db.ket_noi_ai.count({where:{company_id:manager.company_id,la_mac_dinh:true}}),1);
+ const active=await current();assert((await save({version:active.updated_at.toISOString(),apiKey:'',model:active.model_mac_dinh,enabled:false})).success);
+ await assert.rejects(()=>readAiConnection(manager.company_id),/tạm dừng/);
+ const paused=await current(),pausedList=await as(manager,getAiConnections);
+ assert.equal((await as(manager,()=>setDefaultAiConnection({id:paused.id,version:paused.updated_at.toISOString(),expectedDefault:pausedList.defaultStamp}))).success,false);
+ await db.ket_noi_ai.update({where:{id:paused.id},data:{la_mac_dinh:false}});
+ await assert.rejects(()=>readAiConnection(manager.company_id),/Chưa chọn/);
+});
+
+test('adding first new key preserves environment key/model and managed connections work without environment',async()=>{
+ const company=await db.cong_ty.create({data:{ten_cong_ty:'Environment migration '+randomUUID()}});
+ const role=await db.vai_tro.create({data:{company_id:company.id,ma_vai_tro:'AI',ten_vai_tro:'AI',danh_sach_quyen:{create:{permission_id:grant.id}}}});
+ const account=await db.tai_khoan.create({data:{company_id:company.id,ten_dang_nhap:'ai-env-'+randomUUID(),ten_hien_thi:'Environment',mat_khau_bam:'disabled',danh_sach_vai_tro:{create:{role_id:role.id}}}});
+ const original={account:process.env.AI_PILOT_ACCOUNT_ID,key:process.env.OPENAI_API_KEY,model:process.env.OPENAI_MODEL};
+ try{
+  process.env.AI_PILOT_ACCOUNT_ID=String(account.id);process.env.OPENAI_API_KEY=key1;process.env.OPENAI_MODEL='environment-model';
+  const initial=await as(account,getAiConnections);assert.equal(initial.connections[0].target,'environment');
+  assert.equal((await as(account,()=>saveAiSettings({target:'environment',name:'Unsafe replacement',version:null,apiKey:key2,model:'environment-model',enabled:true}))).success,false);
+  // Audit failure must roll back both the environment import and the new connection.
+  await db.$executeRawUnsafe(`CREATE FUNCTION ai_multi_test_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.company_id = ${company.id} AND NEW.mo_ta = 'Cập nhật kết nối và model AI' THEN RAISE EXCEPTION 'test'; END IF; RETURN NEW; END $$`);
+  await db.$executeRawUnsafe('CREATE TRIGGER ai_multi_test_fail BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION ai_multi_test_fail()');
+  const input={target:'new',name:'New API key',version:null,apiKey:key2,model:'new-model',enabled:true};
+  try{assert.equal((await as(account,()=>saveAiSettings(input))).success,false);assert.equal(await db.ket_noi_ai.count({where:{company_id:company.id}}),0);assert.equal((await readAiConnection(company.id)).source,'environment');}
+  finally{await db.$executeRawUnsafe('DROP TRIGGER ai_multi_test_fail ON nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION ai_multi_test_fail()');}
+  const r=await as(account,()=>saveAiSettings(input));assert(r.success,r.message);
+  const rows=await db.ket_noi_ai.findMany({where:{company_id:company.id}});assert.equal(rows.length,2);
+  const old=rows.find(r=>r.la_mac_dinh);assert.equal(old.model_mac_dinh,'environment-model');assert.equal(await readAiSecret(company.id,old.tham_chieu_bi_mat),key1);
+  assert.equal(process.env.OPENAI_API_KEY,key1);assert.equal((await readAiConnection(company.id)).model,'environment-model');
+  process.env.OPENAI_API_KEY='';process.env.OPENAI_MODEL='';assert.equal((await readAiConnection(company.id)).apiKey,key1);
+  assert.equal((await as(account,()=>getAiSettings('environment'))).success,false);
+  const list=await as(account,getAiConnections);assert((await as(account,()=>setDefaultAiConnection({id:r.settings.target,version:r.settings.version,expectedDefault:list.defaultStamp}))).success);
+  assert.equal((await readAiConnection(company.id)).apiKey,key2);
+ }finally{process.env.AI_PILOT_ACCOUNT_ID=original.account;process.env.OPENAI_API_KEY=original.key;process.env.OPENAI_MODEL=original.model;}
+});
+
+test('explicit environment import stores the existing key without replacing it and stale import fails',async()=>{
+ const company=await db.cong_ty.create({data:{ten_cong_ty:'Import environment '+randomUUID()}});
+ const role=await db.vai_tro.create({data:{company_id:company.id,ma_vai_tro:'AI',ten_vai_tro:'AI',danh_sach_quyen:{create:{permission_id:grant.id}}}});
+ const account=await db.tai_khoan.create({data:{company_id:company.id,ten_dang_nhap:'ai-import-'+randomUUID(),ten_hien_thi:'Import',mat_khau_bam:'disabled',danh_sach_vai_tro:{create:{role_id:role.id}}}});
+ const original={account:process.env.AI_PILOT_ACCOUNT_ID,key:process.env.OPENAI_API_KEY,model:process.env.OPENAI_MODEL};
+ try{
+  process.env.AI_PILOT_ACCOUNT_ID=String(account.id);process.env.OPENAI_API_KEY=key1;process.env.OPENAI_MODEL='environment-model';
+  const input={target:'environment',name:'Key hiện tại',version:null,apiKey:'',model:'environment-model',enabled:true};
+  const r=await as(account,()=>saveAiSettings(input));assert(r.success,r.message);assert(r.settings.isDefault);assert.equal(r.settings.source,'managed');
+  assert.equal(await db.ket_noi_ai.count({where:{company_id:company.id}}),1);assert.equal((await as(account,()=>saveAiSettings(input))).success,false);
+  process.env.OPENAI_API_KEY='';process.env.OPENAI_MODEL='';assert.equal((await readAiConnection(company.id)).apiKey,key1);assert.equal((await readAiConnection(company.id)).model,'environment-model');
+ }finally{process.env.AI_PILOT_ACCOUNT_ID=original.account;process.env.OPENAI_API_KEY=original.key;process.env.OPENAI_MODEL=original.model;}
 });

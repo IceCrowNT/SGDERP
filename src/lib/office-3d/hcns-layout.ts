@@ -137,6 +137,8 @@ export type RoomPoint = {
   state: "active" | "inactive" | "unlinked";
   equipment: EquipmentKind[];
   assets?: LocationAsset[];
+  // Rendering-only snapshot: retain packing positions while layers are filtered.
+  layoutAssets?: LocationAsset[];
   occupants?: {
     id: number;
     name: string;
@@ -181,7 +183,7 @@ export function personRoomPosition(
   ];
 }
 
-// One representative per type; the panel lists every actual asset independently.
+// Type catalog for filtering/legacy group selection. Rendering uses asset IDs.
 export function equipmentForAssets(assets: Pick<LocationAsset, "category" | "categoryCode">[]): EquipmentKind[] {
   return [...new Set(assets.map((asset): EquipmentKind => {
     // Stable category codes take priority over descriptive names. Unknown codes

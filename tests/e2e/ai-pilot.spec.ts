@@ -59,7 +59,7 @@ test("editing retains serial/finance and rejects a stale draft without dismissin
   expect(after.ten_tai_san).toBe("Máy in đã sửa bằng AI"); expect(after.so_serial).toBe("KEEP-SERIAL"); expect(after.gia_mua?.toString()).toBe("12000000");
 });
 
-test("location draft can be saved on mobile; light/dark layouts fit and chat clears on reload", async ({ page, context }) => {
+test("location draft can be saved on mobile; light/dark layouts fit and chat history persists on reload", async ({ page, context }) => {
   await signAccount(context, manager); await page.setViewportSize({ width: 390, height: 844 }); await page.goto("/");
   await ask(page, "Thêm vị trí thử nghiệm");
   await chat(page).getByRole("button", { name: "Kiểm tra và lưu" }).click();
@@ -73,5 +73,6 @@ test("location draft can be saved on mobile; light/dark layouts fit and chat cle
   await expect(chat(page)).toContainText("Đã lưu vị trí.");
   expect(await db.vi_tri.count({ where: { company_id: manager.company_id, ten_vi_tri: "Vị trí AI thử nghiệm" } })).toBe(1);
   await page.reload(); await expect(chat(page)).not.toContainText("Đã lưu vị trí.");
-  await expect(chat(page).getByText("Bạn muốn tra cứu hoặc cập nhật hồ sơ nào?")).toBeVisible();
+  await expect(chat(page).getByRole("log")).toContainText("Đã chuẩn bị bản nháp");
+  await expect(chat(page).getByRole("button", { name: "Kiểm tra và lưu", exact: true })).toHaveCount(0);
 });

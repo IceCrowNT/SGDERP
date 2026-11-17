@@ -35,7 +35,7 @@ export function filterScene(building: BuildingData, layers: SceneLayers, floor: 
       ? p.assets?.filter(a => !layers.category || a.categoryCode === layers.category.code) ?? [] : [];
     const occupants = building.canViewEmployees && layers.people
       ? p.occupants ?? [] : [];
-    return { ...p, assets, occupants, equipment: equipmentForAssets(assets) };
+    return { ...p, layoutAssets: building.canViewAssets ? p.assets : [], assets, occupants, equipment: equipmentForAssets(assets) };
   }
   return { ...building,
     hcns: building.hcns ? { ...building.hcns, points: building.hcns.points.map(p => point(p, HCNS_BUILDING_KEY)) } : null,
