@@ -1,8 +1,25 @@
 # Kế hoạch nhân sự, phòng ban và tài khoản
 
-Cập nhật: **12/11/2026**. Nền chức năng đã triển khai, đang ở mức thử nghiệm. Đã đối chiếu `/employees`, `/departments`, actions HR và DB: hồ sơ/cơ cấu, người phụ trách và FK vị trí đều có; số liệu hiện tại tại [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db). Các con số backup/reset trong biên bản bên dưới là lịch sử, không phải trạng thái vận hành cố định.
+Cập nhật: **20/11/2026**. Nền chức năng đã triển khai, đang ở mức thử nghiệm. Đã đối chiếu `/employees`, `/departments`, actions HR và DB: hồ sơ/cơ cấu, người phụ trách và FK vị trí đều có; số liệu hiện tại tại [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db). Các con số backup/reset trong biên bản bên dưới là lịch sử, không phải trạng thái vận hành cố định.
 
 Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
+
+## Tổng quan phân hệ Nhân sự — 18/11/2026
+
+**Mục tiêu:** bấm tên Nhân sự vào `/hr`; rê chuột ở rail vẫn mở các tác vụ con. Tổng quan giúp thấy quy mô, tình trạng và phân bố người trước khi vào hồ sơ/cơ cấu; không thay dashboard cá nhân.
+
+| Vùng | Nội dung / thao tác |
+| --- | --- |
+| Thẻ tình trạng | Tổng hồ sơ, đang làm việc, đã nghỉ, chưa xác nhận; bấm mở `/employees?status=…` đúng bộ lọc |
+| Phân bố phòng ban | Biểu đồ thanh người ACTIVE, gộp từng nhánh cấp trên và bộ phận con, mỗi người đếm một lần. Bấm nhánh mở danh bạ đúng phòng và ACTIVE |
+| Chức năng | Hồ sơ nhân sự, Cơ cấu phòng ban; có thẻ mở khối KPI minh họa trong cùng trang theo [phạm vi bản mẫu](#bản-mẫu-kpi-trên-dashboard--19112026) |
+| Điều hướng | Rail: click/Enter tên Nhân sự tới tổng quan, hover/ArrowDown mở flyout. Sidebar mở rộng/mobile: tên là link, chevron riêng mở/đóng nhóm; có Tổng quan trong menu con |
+
+**Thiết kế DB cần giữ:** không thêm bảng/cột. Server Component kiểm tra phiên và HR VIEW/MANAGE trước truy vấn; `phong_ban` và tổng hợp `nhan_su` giới hạn công ty từ session, đọc cùng snapshot transaction. Không đọc tài khoản hay dữ liệu cá nhân để làm số liệu tổng quan. Người ACTIVE chưa thuộc nhánh xác định được ghi riêng, không đưa vào nhánh giả. Trạng thái UNKNOWN không tính là đang làm việc; số 0 là dữ liệu thật. Mutation hồ sơ/cơ cấu revalidate `/hr`.
+
+- [x] Trang `/hr`, số liệu và biểu đồ bằng dữ liệu thật; empty state và guard quyền trên server.
+- [x] Thêm bộ lọc đầu vào `status` cho danh bạ; giá trị không hợp lệ về ALL, giữ tải danh bạ hiện có. Menu HR có trang đích, hover không tự điều hướng; dùng lại Popover/Link theo quyền.
+- [x] Kiểm tra Chrome chỉ đọc: số thẻ khớp DB; thẻ tình trạng/lọc nhánh, reload bộ lọc, hover không điều hướng, click/Enter tới tổng quan, ArrowDown/Escape, menu mở rộng và Sheet mobile đạt. Đã xem ảnh desktop 1366×768 và mobile giả lập 390×844 sáng/tối, không tràn ngang/lỗi JS. TypeScript/ESLint và 6 unit điều hướng/quyền đạt. Ẩn danh về login; guard HR/công ty đã rà trong code, chưa chạy tài khoản thiếu HR trên trình duyệt vì không có tài khoản phù hợp sẵn (không tạo hoặc đổi quyền trên DB vận hành). Bằng chứng `outputs/nav-rail/hr-*` ngoài Git; chưa nghiệm thu trên điện thoại thật.
 
 ## Ô chọn có tìm kiếm — 12/11/2026
 
@@ -43,7 +60,7 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 - [x] Thêm/sửa hồ sơ, tìm kiếm, lọc trạng thái/phòng; các trường bắt buộc có dấu `*` và báo lỗi. Liên hệ/ngày/ghi chú bổ sung sau.
 - [x] CRUD phòng ban, cây cha–con, sơ đồ từ trên xuống, mở nhánh xem nhân sự; chặn vòng lặp và xóa phòng còn người/đơn vị con.
 - [x] Chọn người phụ trách từng phòng; một người có thể phụ trách nhiều phòng. Hiển thị các phòng phụ trách trong danh sách nhân sự.
-- [x] Tạo hồ sơ kèm tài khoản tùy chọn trong một lần lưu cho người đủ quyền; `/accounts` quản lý tài khoản và gán vai trò hiện có. Ngày 16/11 bỏ bắt buộc đổi mật khẩu cho tài khoản cấp mới và thêm con mắt ở ô mật khẩu; chính sách, tiến độ kiểm chứng tại [plan cá nhân](PROFILE-DASHBOARD-CHECKLIST.md#cấp-tài-khoản-và-xem-mật-khẩu--16112026).
+- [x] Tạo hồ sơ kèm tài khoản tùy chọn trong một lần lưu cho người đủ quyền; `/accounts` quản lý tài khoản và gán vai trò hiện có. Theo quyết định 20/11, tài khoản cấp mới phải đổi mật khẩu tạm ở lần đăng nhập đầu; giữ con mắt ở ô mật khẩu. Chính sách, tiến độ kiểm chứng tại [plan cá nhân](PROFILE-DASHBOARD-CHECKLIST.md#cấp-tài-khoản-và-xem-mật-khẩu--16112026).
 - [x] Lưu nghỉ việc tự khóa các tài khoản liên kết đang mở và thu hồi phiên. Làm việc trở lại không tự mở tài khoản; bảo vệ quản trị cuối cùng.
 - [x] Kiểm tra quyền tại giao diện/server, cùng công ty và ghi nhật ký; sửa hồ sơ không tự cấp thêm quyền.
 - [x] Chuẩn hóa khóa DB sang `id`, `company_id`, `department_id`, `employee_id`, `parent_id`; dữ liệu 73 người/61 tài khoản/19 phòng ban giữ nguyên sau migration 06/11.
@@ -62,6 +79,9 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 
 ## Việc tiếp theo
 
+- [x] Ghi nhận nhu cầu quản lý KPI từng nhân sự ngày 19/11/2026; đã rà rule HR, plan và tìm trong mã nguồn/schema, chưa thấy chức năng KPI cá nhân. KPI cá nhân nằm ngoài phạm vi bản đầu của [báo cáo tuần](WEEKLY-REPORT-CHECKLIST.md). Hiện ở bước khảo sát nhu cầu, chưa chốt thiết kế hoặc triển khai.
+- [ ] Làm rõ mẫu KPI đang dùng, kỳ đánh giá, người giao/chấm/chốt và cách tính điểm. Sau khi rõ phạm vi, lập plan KPI riêng theo quy chuẩn, liên kết hồ sơ nhân sự hiện có; phương án chức năng, quyền và DB cần phân biệt đề xuất với quyết định đã thống nhất.
+
 - [x] Tách quyết định DB của HR/phòng ban khỏi rule DB tổng quát; tập trung ở mục dưới, giữ nguyên schema và dữ liệu.
 
 - [x] Khảo sát mẫu Excel HCNS và lập [plan báo cáo công việc tuần dùng chung](WEEKLY-REPORT-CHECKLIST.md) theo yêu cầu ngày 11/11/2026. Kết quả khảo sát, thiết kế JSONB/audit, giao diện giống Excel, các điểm cần chốt và bước triển khai được quản lý tại plan riêng; chưa triển khai chức năng hoặc migration.
@@ -76,6 +96,17 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 - [x] 8/8 E2E (3 gán vị trí, 2 danh bạ, 3 HCNS) và 5 unit đạt. Kiểm tra gán/chuyển/gỡ, audit, HR MANAGE không cần LOCATIONS, HR VIEW không sửa, quyền vị trí không lộ người, action khác công ty/version cũ. TypeScript/lint đạt; đã xem ảnh form desktop/mobile và mô hình sáng/tối, không lỗi JS hoặc tràn ngang. Kiểm thử ghi chỉ chạy trên DB khôi phục tạm; `employee-location.spec.ts` tự bỏ qua khi không dùng DB `sdg_hr_location_test_*` có ánh xạ HCNS.
 - [x] Bản đồ tòa nhà đã chuyển sang đọc người ACTIVE theo nhánh vị trí đã xác nhận, cần LOCATIONS + HR; bỏ ghép người theo mã phòng ban. Tòa nhà và HCNS dùng cùng nội thất, kiểm chứng tại [plan 3D](OFFICE-3D-CHECKLIST.md).
 
+## Bản mẫu KPI trên dashboard — 19/11/2026
+
+**A. Phạm vi đã duyệt:** chỉ vẽ giao diện trên dashboard theo yêu cầu, chưa triển khai quản lý KPI. Khối “KPI nhân sự” tại tổng quan Nhân sự (`/hr#kpi`), có thẻ mở nhanh trong nhóm chức năng nhân sự có tổng quan, lọc phòng ban, chọn nhân sự và chi tiết chỉ tiêu. Nhãn dữ liệu minh họa luôn hiện; dùng 6 nhân sự hư cấu, không lấy hồ sơ thật. Kỳ tháng 11/2026, chỉ tiêu, trọng số và ngưỡng điểm chỉ phục vụ xem bố cục, chưa là nghiệp vụ đã thống nhất.
+
+**B. Chi tiết và kiểm chứng:** `KpiDashboardPreview` trong nhóm component nhân sự giữ dữ liệu tĩnh và lựa chọn ở bộ nhớ trình duyệt; các số tổng hợp và danh sách cùng phạm vi lọc. Theo điều chỉnh ngày 20/11, bản mẫu nằm trong `/hr`, dùng guard HR VIEW/MANAGE hiện có; đã gỡ tab và phần truyền bản mẫu khỏi Bàn làm việc/AI. Khối KPI không gửi hoặc lưu dữ liệu, không cấp thêm quyền. **Thiết kế DB cần giữ:** không đổi schema, truy vấn hồ sơ, API, quyền hoặc dữ liệu vận hành; chưa thiết kế bảng KPI.
+
+- [x] Dựng bản mẫu; ngày 20/11 chuyển vào dashboard Nhân sự, bên dưới tổng quan hồ sơ/cơ cấu, có lối mở `/hr#kpi`. Gỡ hoàn toàn KPI khỏi Bàn làm việc cá nhân; lọc/chọn chỉ thay giao diện.
+- [x] Bản mẫu đã kiểm tra ngày 19/11: TypeScript/lint, Chrome desktop 1440px và mobile giả lập 390/320px sáng/tối; chọn/lọc khớp điểm và số người, không POST hoặc lỗi JavaScript. Bằng chứng tại `outputs/kpi-preview/` ngoài Git; chưa nghiệm thu điện thoại thật hoặc nghiệp vụ KPI.
+- [x] Kiểm chứng vị trí mới ngày 20/11: TypeScript/lint đạt; Chrome xác nhận `/hr` có khối KPI và thẻ mở nhanh, lọc/chọn đúng, desktop/mobile 390px không tràn ngang hoặc lỗi JavaScript; đã xem ảnh sáng/tối. Bàn làm việc không còn tab/nội dung KPI kể cả URL cũ `/?desk=kpi`; AI/Việc của tôi và Back vẫn hoạt động. Lọc/chọn KPI không có POST. Phiên ẩn danh mới bị chuyển về login; guard HR giữ nguyên trong server page, chưa kiểm tra bằng tài khoản thiếu HR do không có tài khoản phù hợp sẵn. Bằng chứng `outputs/kpi-preview/hr-*` ngoài Git.
+- [ ] Người phụ trách góp ý bố cục; việc triển khai quản lý KPI thật phụ thuộc khảo sát nghiệp vụ ở trên.
+
 ## Thiết kế DB cần giữ
 
 - `nhan_su.vi_tri_lam_viec_id` nullable → `vi_tri(id, company_id)`, Restrict, không unique: mỗi người một vị trí chính, một vị trí có thể nhiều người. Chỉ gán mới người ACTIVE vào PHONG/KHU_VUC/CHO_NGOI với cả nhánh đang dùng; nghỉ việc giữ liên kết nhưng không hiện là người đang ngồi trên 3D. Chuyển phòng ban không tự chuyển vị trí.
@@ -88,7 +119,7 @@ Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 - `ma_nhan_su` bắt buộc, unique trong công ty, cấp bằng `so_thu_tu_ma_nhan_su`/`tao_ma_nhan_su()`, bất biến qua trigger `ma_nhan_su_bat_bien`. Không dùng STT, tên hoặc mã phòng làm định danh; export giữ mã dạng text. Import theo mã phải báo mã lạ/trùng/mâu thuẫn; import không mã cần đối chiếu trước. Định danh nguồn unique theo phạm vi công ty/hệ thống nguồn như schema.
 - Phòng ban có mã unique trong công ty; mutation khóa hàng `cong_ty`, rồi khóa phân quyền `(260126, companyId)` khi cần, kiểm tra cây và ghi audit cùng transaction. Xóa phải khóa phòng và kiểm tra không còn con/nhân sự ở bất kỳ trạng thái nào; không dùng SetNull để đẩy con ra cấp công ty.
 - HR final là nguồn khởi tạo, ERP quản lý độc lập. Các trường `tep_nguon_nhan_su_hr`, `ngay_chot_nhan_su_hr`, `ghi_chu_nhan_su_hr`, `he_thong_nguon`, `dinh_danh_nguon`, `thoi_diem_chup_du_lieu_nguon` chỉ truy nguyên; `ghi_chu` là nội dung vận hành chỉnh được. Không khóa trường theo nguồn, suy danh tính từ mapping chưa xác minh hoặc suy nghỉ việc do thiếu trong export. Ngày Excel đọc theo UTC calendar date.
-- Seed HR chỉ bootstrap khi chưa có hồ sơ và marker; seed cơ cấu chỉ khởi tạo khi chưa có phòng, người hoặc nhật ký DEPARTMENT. Không chạy lại importer cũ, tạo tài khoản hàng loạt hay tái tạo dữ liệu đã dọn. Bảng tài sản cũ đã gỡ; nền mức 1 mới đã triển khai theo [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md). Xóa phòng quản lý còn tài sản bị chặn; không đổi người/vị trí thiết bị khi nhân sự thay đổi.
+- Seed HR chỉ bootstrap khi chưa có hồ sơ và marker; seed cơ cấu chỉ khởi tạo khi chưa có phòng, người hoặc nhật ký DEPARTMENT. Không chạy lại importer cũ, tạo tài khoản hàng loạt hay tái tạo dữ liệu đã dọn. Bảng tài sản cũ đã gỡ; nền tài sản hiện hành đã triển khai theo [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md). Xóa phòng quản lý còn tài sản bị chặn; không đổi người/vị trí thiết bị khi nhân sự thay đổi.
 
 Chi tiết cột ở [Từ điển DB](../DATABASE-DICTIONARY.md); quy chuẩn kỹ thuật ở [Rule DB](../../.agents/rules/DATABASE-RULES.md). Lịch sử làm sạch/chuyển đổi đã hoàn thành không phải hướng dẫn chạy lại.
 
@@ -107,3 +138,13 @@ Tra cứu: [Từ điển DB](../DATABASE-DICTIONARY.md) · [Rule DB](../../.agen
 ### Tham chiếu vật tư — 17/11/2026
 
 - [x] Chặn xóa phòng có mặt hàng quản lý hoặc lịch sử nhận vật tư, với thông báo nghiệp vụ. Giữ FK và lịch sử người nhận đã nghỉ; không tự đổi vị trí HR khi cấp/thu hồi. Thiết kế và kiểm chứng tại [plan vật tư](INVENTORY-MANAGEMENT-CHECKLIST.md).
+
+
+### Quản lý trực tiếp cho công việc — 20/11/2026
+
+- [x] Bổ sung FK tự tham chiếu `nhan_su.quan_ly_truc_tiep_id` nullable/cùng công ty, chặn tự quản lý và chu trình đồng thời; không tự backfill từ người phụ trách phòng.
+- [x] Hồ sơ nhân sự có **Quản lý trực tiếp → Xem / thay đổi → Lưu quản lý trực tiếp**; quyền HR MANAGE, kiểm tra phiên bản và audit trong transaction. Lưu độc lập với các trường hồ sơ khác.
+- [x] Kiểm thử tích hợp gán/cycle đồng thời đạt trên DB riêng. E2E thay quản lý, lưu độc lập và đối chiếu DB đạt. Giao diện và migration theo [plan Công việc](TASK-MANAGEMENT-CHECKLIST.md#b7-checklist-triển-khai).
+- [ ] Người phụ trách khai báo quan hệ thực tế trước pilot. Người phụ trách phòng vẫn là đầu mối hàng đợi, không thay thế quan hệ này.
+
+- [x] Thử Công việc trên local 20/11 theo yêu cầu: hai phòng/năm nhân sự-tài khoản/bốn role có nhãn TEST, tạo/gán qua action có audit; tài khoản thử đã khóa sau kiểm chứng. Dữ liệu thật của `namdh` giữ nguyên. Phạm vi và kết quả tại [plan Công việc B.8](TASK-MANAGEMENT-CHECKLIST.md#b8-thử-luồng-trên-web-local-bằng-tài-khoản-riêng--20112026).

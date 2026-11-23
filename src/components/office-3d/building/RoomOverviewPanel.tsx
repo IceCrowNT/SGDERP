@@ -8,6 +8,8 @@ import { AssetCategoryIcon } from "@/components/assets/AssetCategoryIcon";
 import { ASSET_CONDITIONS } from "@/lib/asset-labels";
 import type { BuildingRoomData, BuildingAsset } from "@/lib/office-3d/building-mapping";
 
+import { BUILDING_ROOMS } from "@/lib/office-3d/building-layout";
+
 export type RoomTab = "people" | "assets";
 
 export function RoomOverviewPanel({ room, placed, canViewEmployees, canViewAssets, tab, onTabChange,
@@ -54,7 +56,7 @@ export function RoomOverviewPanel({ room, placed, canViewEmployees, canViewAsset
       {room.state === "inactive" ? "Phòng hoặc tầng đã ngừng sử dụng." : "Bố cục tham khảo · Chưa có dữ liệu vị trí."}
     </p>}
     {!placed && <p className="text-sm text-muted-foreground">Chưa xác định vị trí trên mặt bằng mới.</p>}
-    {onEnter && <Button variant="outline" className="min-h-11 w-full" onClick={onEnter}>Vào phòng<ArrowUpRight className="size-4" /></Button>}
+    {onEnter && <Button variant="outline" className="min-h-11 w-full" onClick={onEnter}>{BUILDING_ROOMS.find(r=>r.key===room.key)?.kind === "reception" ? "Xem quầy lễ tân" : "Vào phòng"}<ArrowUpRight className="size-4" /></Button>}
     {room.state === "active" && (canViewEmployees || canViewAssets) && <Tabs value={activeTab} onValueChange={value => onTabChange(value as RoomTab)}>
       <TabsList className="w-full min-h-11" aria-label="Dữ liệu trong phòng">
         {canViewEmployees && <TabsTrigger value="people" className="min-h-10 text-foreground"><Users className="size-4" />Nhân sự · {people.length}</TabsTrigger>}

@@ -31,3 +31,10 @@ Nghiệp vụ hiện hành của HR; tiến độ và thiết kế DB tại [Pla
 - Mặc định đi từ thẻ phòng cấp trên → phòng/bộ phận → hồ sơ xem bên phải; có chế độ bảng phân trang khi cần rà soát. Nhãn người phụ trách lấy từ quan hệ phân công, không suy từ chức vụ.
 - Số người của nhánh gồm các đơn vị con, ghi rõ phạm vi; không cộng các số nhánh chồng nhau thành tổng công ty. Bộ lọc tình trạng áp dụng đồng nhất cho số đếm và danh sách. Hồ sơ chưa gắn phòng vẫn có lối xem riêng.
 - Tìm kiếm toàn công ty bỏ giới hạn phòng đang chọn, hỗ trợ tên/mã/chức vụ/phòng và không dấu. Đóng chi tiết giữ bộ lọc, trang và vị trí xem. Thông tin phụ và sửa nằm trong chi tiết; HR VIEW không thấy nút sửa, chi tiết tài khoản chỉ hiện khi có quyền quản lý tài khoản.
+
+## Tổng quan phân hệ
+
+- `/hr` dành cho HR VIEW/MANAGE, tổng hợp hồ sơ cùng công ty; người thật không đếm theo tài khoản. Phân bố chỉ tính ACTIVE theo nhánh phòng ban, không cộng chồng cha/con; chưa gắn nhánh ghi riêng. Thẻ và biểu đồ mở danh bạ với bộ lọc tương ứng. Thiết kế/kiểm chứng tại [plan HR](../../docs/plans/HR-CHECKLIST.md#tổng-quan-phân-hệ-nhân-sự--18112026).
+
+
+Quản lý trực tiếp của từng nhân sự lưu riêng tại `nhan_su.quan_ly_truc_tiep_id`, gán bằng quyền HR MANAGE, cùng công ty và không tạo chu trình. Không suy hoặc tự backfill từ người phụ trách phòng. Chi tiết/kiểm chứng tại [plan HR](../../docs/plans/HR-CHECKLIST.md#quản-lý-trực-tiếp-cho-công-việc--20112026); vai trò trong ticket theo [plan Công việc](../../docs/plans/TASK-MANAGEMENT-CHECKLIST.md).

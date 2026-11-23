@@ -2,9 +2,10 @@ import { z } from "zod";
 import {
   BUILDING_ROOMS,
   BUILDING_FLOORS,
+  isDirectWorkPoint,
   type FloorNumber,
 } from "./building-layout";
-import type { HcnsRoomData } from "./hcns-layout";
+import type { RoomDetailData } from "./hcns-layout";
 import { locationPath } from "@/lib/location-tree";
 
 export const BuildingMappingSchema = z
@@ -78,6 +79,8 @@ export type BuildingAsset = {
 };
 export type BuildingRoomData = {
   locationId?: number;
+  directPoint?: { id: number; name: string; kind: "BAN" | "DIEM"; version: string };
+  availablePoints?: { id: number; name: string; kind: "BAN" | "DIEM"; version: string }[];
   key: string;
   name: string;
   state: "active" | "inactive" | "unlinked";
@@ -99,7 +102,7 @@ export type BuildingData = {
     state: "active" | "inactive" | "unlinked";
   }[];
   rooms: BuildingRoomData[];
-  hcns: HcnsRoomData | null;
+  hcns: RoomDetailData | null;
   canManage: boolean;
   canViewEmployees: boolean;
   canViewAssets: boolean;
@@ -119,7 +122,7 @@ export function relativeRoomLocation(id: number, roomId: number, rows: BuildingL
   const byId = new Map(rows.map(row => [row.id, row]));
   let current: number | null = id;
   while (current !== null && !seen.has(current)) {
-    if (current === roomId) return parts.reverse().join(" / ") || "Trong phòng";
+    if (current === roomId) return parts.reverse().join(" / ") || (isDirectWorkPoint(byId.get(roomId)?.loai_vi_tri) ? "Tại vị trí này" : "Trong phòng");
     seen.add(current);
     const row = byId.get(current);
     if (!row) break;
@@ -168,7 +171,8 @@ export function resolveBuilding(
         r.id === mapping.rooms.find((m) => m.key === shape.key)?.locationId &&
         floor.row &&
         r.parent_id === floor.row.id &&
-        ["PHONG", "KHU_VUC"].includes(r.loai_vi_tri),
+        (["PHONG", "KHU_VUC"].includes(r.loai_vi_tri) ||
+          (shape.kind === "reception" && isDirectWorkPoint(r.loai_vi_tri))),
     );
     const state = !row
       ? ("unlinked" as const)

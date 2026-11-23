@@ -1,4 +1,6 @@
 "use client";
+import { layoutPersonLabels, type LabelBox } from "@/lib/office-3d/person-label-layout";
+import { canEnterRoom, roomCameraScope } from "@/lib/office-3d/room-detail";
 import {
   Component,
   useEffect,
@@ -15,17 +17,17 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   BUILDING_ROOMS,
+  compactRoomName,
   BUILDING_FLOORS,
   floorElevation,
   type FloorSelection,
   type FloorNumber,
-  HCNS_PLACEMENT,
   HCNS_BUILDING_KEY,
 } from "@/lib/office-3d/building-layout";
 import type { BuildingData } from "@/lib/office-3d/building-mapping";
 import { BuildingModel } from "./BuildingModel";
 import { hcnsWorldPoint, type BuildingTarget } from "@/lib/office-3d/building-navigation";
-import { HCNS_LAYOUT, HCNS_ROOM_BOUNDS, personRoomPosition, type EquipmentKind } from "@/lib/office-3d/hcns-layout";
+import { HCNS_ROOM_BOUNDS, type EquipmentKind } from "@/lib/office-3d/hcns-layout";
 import { layoutEquipment } from "@/lib/office-3d/equipment-layout";
 import { materials } from "../hcns/RoomFurniture";
 import { ARCHITECTURAL_BOUNDS } from "@/lib/office-3d/architectural-layout";
@@ -60,6 +62,7 @@ export type BuildingCamera = {
 type Props = {
   building: BuildingData;
   scene?: BuildingData;
+  showRoomLabels?: boolean;
   floor: FloorSelection;
   selected: string | null;
   command: BuildingCamera;
@@ -114,15 +117,15 @@ class DemandCameraControls extends CameraControlsImpl {
     return super.update(Math.min(delta, 1 / 30));
   }
 }
-function roomFitZoom(camera: Camera, size: { width: number; height: number }) {
+function roomFitZoom(camera: Camera, size: { width: number; height: number }, roomKey: string | null) {
   const inverse = camera.quaternion.clone().invert();
-  const corners = [HCNS_ROOM_BOUNDS.minX, HCNS_ROOM_BOUNDS.maxX].flatMap((x) =>
-    [HCNS_ROOM_BOUNDS.minZ, HCNS_ROOM_BOUNDS.maxZ].flatMap((z) =>
-      [0, 2.4].map((y) =>
-        new Vector3(...hcnsWorldPoint(x, y, z)).applyQuaternion(inverse),
-      ),
-    ),
-  );
+  const room = BUILDING_ROOMS.find(r => r.key === roomKey);
+  const points = roomKey === HCNS_BUILDING_KEY
+    ? [HCNS_ROOM_BOUNDS.minX, HCNS_ROOM_BOUNDS.maxX].flatMap(x =>
+      [HCNS_ROOM_BOUNDS.minZ, HCNS_ROOM_BOUNDS.maxZ].flatMap(z => [0, 2.4].map(y => hcnsWorldPoint(x,y,z))))
+    : (room?.outline ?? []).flatMap(([x,z]) => [0,2.4].map(y =>
+      [room!.x+x, floorElevation(room!.floor)+y, room!.z+z] as [number,number,number]));
+  const corners = points.map(p => new Vector3(...p).applyQuaternion(inverse));
   const width =
     Math.max(...corners.map((v) => v.x)) - Math.min(...corners.map((v) => v.x));
   const height =
@@ -156,12 +159,13 @@ function CameraRig({
   detail,
   building,
   placing,
+  selected,
   selectionKey,
-}: Pick<Props, "command" | "floor" | "detail" | "building" | "selectionKey"> & {placing:boolean}) {
+}: Pick<Props, "command" | "floor" | "detail" | "building" | "selected" | "selectionKey"> & {placing:boolean}) {
   const ref = useRef<CameraControls>(null);
   const { size, gl, camera } = useThree();
   const resizeZoom = useRef<{ requested: number; applied: number } | null>(null);
-  const scope = detail ? "room:hcns" : `floor:${floor}`;
+  const scope = detail ? roomCameraScope(selected) : `floor:${floor}`;
   const previous = useRef<{
     scope: string;
     selectionKey: string;
@@ -232,7 +236,7 @@ function CameraRig({
         ? resizeZoom.current.requested : state.zoom;
       const nextZoom = sourceZoom *
           (detail
-            ? roomFitZoom(camera, size) / roomFitZoom(camera, old)
+            ? roomFitZoom(camera, size, selected) / roomFitZoom(camera, old, selected)
             : floorFitZoom(camera, size, state.position, state.target, floor === "all") /
               floorFitZoom(camera, old, state.position, state.target, floor === "all"));
       resizeZoom.current = { requested: nextZoom, applied: Math.max(c.minZoom, Math.min(c.maxZoom, nextZoom)) };
@@ -249,28 +253,27 @@ function CameraRig({
       return;
     }
     const placed = building.objects?.find(o => o.point.key === command.key);
-    const slot = detail ? HCNS_LAYOUT.find(p=>p.key===command.key) : undefined;
-    if (command.view === "focus" && (slot || placed)) {
+
+    if (command.view === "focus" && placed) {
       const r = BUILDING_ROOMS.find(r=>r.key===placed?.roomKey);
-      const p = slot ? building.hcns?.points.find(p=>p.key===slot.key) : placed?.point;
-      const width = slot?.width ?? (placed?.kind === "BAN" ? 1.6 : .7);
-      const depth = slot?.depth ?? (placed?.kind === "BAN" ? .8 : .7);
+      const p = placed.point;
+      const width = placed.width ?? (placed.kind === "BAN" ? 1.6 : .7);
+      const depth = placed.depth ?? (placed.kind === "BAN" ? .8 : .7);
       const placements = layoutEquipment({equipment:p?.equipment ?? [],assets:p?.layoutAssets ?? p?.assets,
         width,depth,height:placed?.kind === "DIEM" ? .12 : .85,desk:placed?.kind !== "DIEM"});
       const device = placements.find(d=>d.part === "device" && (command.assetId ? d.assetId === command.assetId : command.equipment && d.kind === command.equipment));
       const offsetX = device?.position[0] ?? 0;
       const offsetZ = device?.position[2] ?? 0;
-      const angle = (slot?.facingDegrees ?? placed?.angle ?? 0)*Math.PI/180;
+      const angle = placed.angle*Math.PI/180;
       const x = offsetX*Math.cos(angle)+offsetZ*Math.sin(angle);
       const z = -offsetX*Math.sin(angle)+offsetZ*Math.cos(angle);
       const y = device ? device.position[1]+.2 : .7;
-      const target = new Vector3(...(slot ? hcnsWorldPoint(slot.x+x,y,slot.z+z)
-        : [r!.x+placed!.x+x,floorElevation(r!.floor)+.28+y,r!.z+placed!.z+z] as [number,number,number]));
+      const target = new Vector3(r!.x+placed.x+x,floorElevation(r!.floor)+.28+y,r!.z+placed.z+z);
       const offset = c.getPosition(new Vector3(),false).sub(c.getTarget(new Vector3(),false));
       const position = target.clone().add(offset);
       void c.setLookAt(...position.toArray(),...target.toArray(),animate);
       const zoom = Math.min(size.width/(device ? 2.2 : 5),size.height/(device ? 2.6 : 6));
-      void c.zoomTo(zoom/(slot ? HCNS_PLACEMENT.scale : 1),animate);
+      void c.zoomTo(zoom,animate);
       return;
     }
     const placementRoom = BUILDING_ROOMS.find(r => r.key === (placed?.roomKey ?? command.key));
@@ -285,40 +288,25 @@ function CameraRig({
     if (detail && old && old.scope !== scope) {
       // Translate and zoom from the current pose. Do not rotate to a second
       // prebuilt room camera when entering the same embedded geometry.
-      const slot = command.view === "focus" ? HCNS_LAYOUT.find(p => p.key === command.key) : undefined;
-      const target = new Vector3(...(slot ? hcnsWorldPoint(slot.x, 0.7, slot.z) : hcnsWorldPoint(0, 0.8, 0.3)));
+      const room = BUILDING_ROOMS.find(r => r.key === selected)!;
+      const target = new Vector3(...(selected === HCNS_BUILDING_KEY ? hcnsWorldPoint(0, 0.8, 0.3) :
+        [room.x, floorElevation(room.floor)+.8, room.z] as [number,number,number]));
       const offset = c
         .getPosition(new Vector3(), false)
         .sub(c.getTarget(new Vector3(), false));
       const position = target.clone().add(offset);
       void c.setLookAt(...position.toArray(), ...target.toArray(), animate);
-      void c.zoomTo(slot ? Math.min(size.width / 5, size.height / 6) / HCNS_PLACEMENT.scale : roomFitZoom(camera, size), animate);
+      void c.zoomTo(roomFitZoom(camera, size, selected), animate);
       return;
     }
     if (detail) {
-      const slot = HCNS_LAYOUT.find((p) => p.key === command.key);
-      let position: [number, number, number] = [15, 18, 20];
-      let target: [number, number, number] = [0, 0, 0];
-      let zoom = Math.min(size.width / (HCNS_ROOM_BOUNDS.width * 1.4), size.height / (HCNS_ROOM_BOUNDS.depth * 1.2));
-      if (command.view === "top") {
-        position = [0, 24, 0.01];
-        zoom = Math.min(size.width / (HCNS_ROOM_BOUNDS.width + 2), size.height / (HCNS_ROOM_BOUNDS.depth + 2));
-      } else if (command.view === "focus" && slot) {
-        position = [slot.x + 8, 12, slot.z + 10];
-        target = [slot.x, 0.7, slot.z];
-        zoom = Math.min(size.width / 5, size.height / 6);
-      }
-      const worldPosition = hcnsWorldPoint(...position);
-      const worldTarget = hcnsWorldPoint(...target);
-      // Fit the projected bounds, also on narrow screens after opening search
-      // results. Use the same fit as resize so opening the panel is reversible.
-      const viewCamera = camera.clone();
-      viewCamera.position.set(...worldPosition);
-      viewCamera.lookAt(...worldTarget);
-      const fitted = command.view === "focus" && slot
-        ? zoom / HCNS_PLACEMENT.scale : roomFitZoom(viewCamera, size);
-      void c.setLookAt(...worldPosition, ...worldTarget, animate);
-      void c.zoomTo(fitted * command.zoom, animate);
+      const room = BUILDING_ROOMS.find(r => r.key === selected)!;
+      const target: [number,number,number] = [room.x, floorElevation(room.floor)+.3, room.z];
+      const position: [number,number,number] = command.view === "top"
+        ? [target[0],target[1]+24,target[2]+.01] : [target[0]+15,target[1]+18,target[2]+20];
+      const viewCamera = camera.clone(); viewCamera.position.set(...position); viewCamera.lookAt(...target);
+      void c.setLookAt(...position,...target,animate);
+      void c.zoomTo(roomFitZoom(viewCamera,size,selected)*command.zoom,animate);
       return;
     }
     const room = BUILDING_ROOMS.find((r) => r.key === command.key);
@@ -351,7 +339,7 @@ function CameraRig({
       zoom = floorFitZoom(camera, size, position, target, floor === "all");
     }
     void c.zoomTo(Math.max(3, zoom * command.zoom), animate);
-  }, [scope, command, detail, floor, size, camera, building.objects, building.hcns, placing, selectionKey]);
+  }, [scope, command, detail, selected, floor, size, camera, building.objects, building.hcns, placing, selectionKey]);
   useEffect(() => {
     gl.domElement.setAttribute("aria-label", "Mô hình 3D tòa nhà Sao Đỏ");
     gl.domElement.setAttribute("data-building-ready", "true");
@@ -385,7 +373,9 @@ function ProjectedLabels({
   elements,
   anchors,
   ready,
+  leaders,
 }: {
+  leaders: RefObject<Map<string, SVGLineElement>>;
   elements: RefObject<Map<string, HTMLElement>>;
   anchors: LabelAnchor[];
   ready: boolean;
@@ -397,7 +387,9 @@ function ProjectedLabels({
   }, [ready, anchors, invalidate]);
   useFrame(({ camera, size }) => {
     camera.updateMatrixWorld();
-    const boxes: { x: number; y: number; w: number; h: number }[] = [];
+    const boxes: LabelBox[] = [];
+    const people: LabelBox[] = [];
+    for (const line of leaders.current.values()) line.style.visibility = "hidden";
     for (const element of elements.current.values())
       element.style.visibility = "hidden";
     for (const anchor of [...anchors].sort(
@@ -417,6 +409,10 @@ function ProjectedLabels({
       );
       const y = ((1 - p.y) * size.height) / 2 - (anchor.point ? 24 : 0);
       if (y < h / 2 || y > size.height - h / 2) continue;
+      if (anchor.key.startsWith("person:")) {
+        people.push({ key: anchor.key, x, y, w, h, priority: anchor.priority });
+        continue;
+      }
       // Name labels are secondary to the actual mesh. Keep them from covering
       // one another; the full list remains available beside the canvas.
       if (
@@ -430,15 +426,48 @@ function ProjectedLabels({
       element.style.visibility = "visible";
       element.style.left = `${x}px`;
       element.style.top = `${y}px`;
-      boxes.push({ x, y, w, h });
+      boxes.push({ key: anchor.key, x, y, w, h });
+    }
+    for (const box of layoutPersonLabels(people, size.width, size.height, boxes)) {
+      const element = elements.current.get(box.key)!;
+      element.style.visibility = "visible";
+      element.style.left = `${box.x}px`;
+      element.style.top = `${box.y}px`;
+      const origin = people.find(p => p.key === box.key)!;
+      const line = leaders.current.get(box.key);
+      if (line && Math.hypot(box.x - origin.x, box.y - origin.y) > 12) {
+        line.setAttribute("x1", String(box.x));
+        line.setAttribute("y1", String(box.y + box.h / 2));
+        line.setAttribute("x2", String(origin.x));
+        line.setAttribute("y2", String(origin.y + 24));
+        line.style.visibility = "visible";
+      }
     }
   });
   return null;
+}
+type PersonLabel = {key:string;point:string;id:number;name:string};
+function PersonMarker({person:p,selected,register,onHover,onContextTarget,onPerson,onPoint}:{
+  person:PersonLabel; selected:boolean; register:(key:string,element:HTMLElement|null)=>void;
+  onHover:(key:string|null)=>void; onContextTarget:(target:BuildingTarget)=>void;
+  onPerson:Props["onPerson"];onPoint:Props["onPoint"];
+}) {
+  return <Button ref={el=>register(p.key,el)} variant={selected ? "default" : "outline"}
+    className="pointer-events-auto invisible absolute h-auto min-h-10 max-w-40 -translate-x-1/2 -translate-y-1/2 rounded-xl px-2 py-1 text-xs shadow-sm"
+    data-person-marker={p.id ? "person" : "group"}
+    aria-label={p.id ? `Xem nhân sự ${p.name}` : "Xem tất cả nhân sự tại vị trí này"}
+    onPointerEnter={()=>onHover(p.point)} onPointerLeave={()=>onHover(null)}
+    onFocus={()=>onHover(p.point)} onBlur={()=>onHover(null)}
+    onContextMenu={()=>onContextTarget({kind:"point",key:p.point,personId:p.id || undefined})}
+    onClick={()=>p.id ? onPerson(p.point,p.id) : onPoint(p.point)}>
+    <span className="truncate">{p.name}</span>
+  </Button>;
 }
 export default function BuildingCanvas(props: Props) {
   const [ready, setReady] = useState(false),
     [lost, setLost] = useState(false);
   const elements = useRef(new Map<string, HTMLElement>());
+  const leaders = useRef(new Map<string, SVGLineElement>());
   const [hovered, setHovered] = useState<string | null>(null);
   const pickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
@@ -459,7 +488,7 @@ export default function BuildingCanvas(props: Props) {
     if (props.draft) return;
     if (pickTimer.current) clearTimeout(pickTimer.current);
     if (props.floor === "all") props.onSelect(key);
-    else if (key === HCNS_BUILDING_KEY && props.building.hcns)
+    else if (canEnterRoom(props.building, key))
       props.onEnter(key);
   }
   function contextTarget(target: BuildingTarget) {
@@ -508,55 +537,29 @@ export default function BuildingCanvas(props: Props) {
       canvas.current?.removeEventListener("webglcontextlost", handler);
   }, []);
   const scene = props.scene ?? props.building;
-  const people = useMemo(
-    () =>
-      scene.hcns?.canViewEmployees
-        ? scene.hcns.points
-            .filter((p) => p.state === "active")
-            .flatMap((p) => {
-              const slot = HCNS_LAYOUT.find((s) => s.key === p.key)!;
-              const occupants = (p.occupants ?? []).slice().sort((a, b) => Number(b.id === props.person) - Number(a.id === props.person));
-              const result = occupants.slice(0, 3).map((person, index) => ({
-                key: `person:${p.key}:${person.id}`,
-                point: p.key,
-                id: person.id,
-                name: person.name,
-                at: hcnsWorldPoint(
-                  ...personRoomPosition(slot, index, occupants.length),
-                ),
-              }));
-              if (occupants.length > 3)
-                result.push({
-                  key: `group:${p.key}`,
-                  point: p.key,
-                  id: 0,
-                  name: `+${occupants.length - 3} người`,
-                  at: hcnsWorldPoint(slot.x, 1.3, slot.z),
-                });
-              return result;
-            })
-        : [],
-    [scene.hcns, props.person],
-  );
+  const people = useMemo(() => [
+    ...(scene.objects ?? []).filter(o => o.roomKey === props.selected).flatMap(o => {
+      const r = BUILDING_ROOMS.find(r => r.key === o.roomKey)!;
+      const angle = o.angle * Math.PI / 180;
+      return (o.point.occupants ?? []).slice().sort((a,b)=>Number(b.id===props.person)-Number(a.id===props.person)).slice(0,3).map((p,i,all) => {
+        const x=(i-(all.length-1)/2)*.48, z=o.kind === "BAN" ? (o.depth ?? .8)/2+.2 : .6;
+        return {key:`person:${o.point.key}:${p.id}`,point:o.point.key,id:p.id,name:p.name,
+          at:[r.x+o.x+x*Math.cos(angle)+z*Math.sin(angle),floorElevation(r.floor)+1.7,r.z+o.z-x*Math.sin(angle)+z*Math.cos(angle)] as [number,number,number]};
+      });
+    }),
+  ], [props.selected, props.person, scene.objects]);
   const anchors = useMemo<LabelAnchor[]>(() => {
     if (props.draft) return [];
     const placed = props.building.objects?.find(o=>o.point.key===props.point);
-    if (placed) {
+    const personAnchors = props.detail ? people.map(p => ({
+      ...p,
+      priority: p.id === props.person ? 3 : p.point === hovered ? 2 : p.point === props.point ? 1 : 0,
+    })) : [];
+    if (placed && !people.some(p => p.point === props.point && p.id === props.person)) {
       const r=BUILDING_ROOMS.find(r=>r.key===placed.roomKey)!;
-      return [{key:placed.point.key,at:[r.x+placed.x,floorElevation(r.floor)+1.3,r.z+placed.z],priority:4}];
+      return [{key:placed.point.key,at:[r.x+placed.x,floorElevation(r.floor)+1.3,r.z+placed.z] as [number,number,number],priority:4}, ...personAnchors];
     }
-    if (props.detail)
-      return people.map((p) => ({
-        ...p,
-        priority:
-          p.id === props.person
-            ? 3
-            : p.point === hovered
-              ? 2
-              : p.point === props.point
-                ? 1
-                : 0,
-      }));
+    if (props.detail) return personAnchors;
     if (props.floor === "all")
       return BUILDING_FLOORS.map((f) => ({
         key: `floor-${f.floor}`,
@@ -564,17 +567,18 @@ export default function BuildingCanvas(props: Props) {
       }));
     return BUILDING_ROOMS.filter(
       (r) =>
-        r.placed && r.floor === props.floor && (r.showLabel || r.key === props.selected) &&
+        r.placed && !r.suppressLabel && r.floor === props.floor && ((props.showRoomLabels !== false && r.showLabel && (r.kind === "room" || r.kind === "reception")) || r.key === props.selected || r.key === hovered) &&
         (props.command.view !== "focus" ||
           !props.selected ||
           r.key === props.selected),
     ).map((r) => ({
       key: r.key,
-      at: [r.label[0], floorElevation(r.floor) + 0.7, r.label[1]],
-      priority: r.key === props.selected ? 3 : r.key === HCNS_BUILDING_KEY ? 1 : 0,
+      at: [r.label[0], floorElevation(r.floor) + 0.7, r.label[1] - r.depth * .22],
+      priority: r.key === props.selected ? 3 : r.key === hovered ? 2 : 0,
     }));
   }, [
     props.detail,
+    props.showRoomLabels,
     props.floor,
     props.command.view,
     props.selected,
@@ -585,6 +589,10 @@ export default function BuildingCanvas(props: Props) {
     people,
     hovered,
   ]);
+  const registerLeader = (key: string, line: SVGLineElement | null) => {
+    if (line) leaders.current.set(key, line);
+    else leaders.current.delete(key);
+  };
   const register = (key: string, element: HTMLElement | null) => {
     if (element) elements.current.set(key, element);
     else elements.current.delete(key);
@@ -595,7 +603,7 @@ export default function BuildingCanvas(props: Props) {
       <div
         className={cn(
           "relative h-full w-full",
-          props.detail && hovered && "cursor-pointer",
+          hovered && "cursor-pointer",
         )}
       >
         <Canvas
@@ -645,18 +653,20 @@ export default function BuildingCanvas(props: Props) {
             hovered={hovered}
             onHover={setHovered}
           />
-          <PlacedObjects objects={scene.objects ?? []} floor={props.floor} detail={props.detail}
+          <PlacedObjects objects={scene.objects ?? []} floor={props.floor} detail={props.detail} roomKey={props.selected}
             selected={props.point} person={props.person} onPerson={props.onPerson} onSelect={props.onPoint} onFocusPoint={props.onFocusPoint} onEquipment={props.onEquipment} activeEquipment={props.activeEquipment} activeAsset={props.activeAsset} draft={props.draft ?? null} onPlace={props.onPlace ?? (()=>{})}/>
           </group>
           <CameraRig
             floor={props.floor}
             command={props.command}
             detail={props.detail}
+            selected={props.selected}
             building={scene}
             selectionKey={props.selectionKey}
             placing={Boolean(props.draft)}
           />
           <ProjectedLabels
+            leaders={leaders}
             elements={elements}
             anchors={anchors}
             ready={ready}
@@ -664,42 +674,19 @@ export default function BuildingCanvas(props: Props) {
         </Canvas>
         {ready && (
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            {scene.objects?.filter(o => o.point.key === props.point).map(o=><Button key={o.id} ref={el=>register(o.point.key,el)} variant="outline"
+            <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full overflow-hidden text-muted-foreground/60">
+              {props.detail && people.map(p => <line key={p.key} ref={line => registerLeader(p.key, line)}
+                className="invisible" stroke="currentColor" strokeWidth="1" />)}
+            </svg>
+            {scene.objects?.filter(o => o.point.key === props.point && !o.point.occupants?.some(p => p.id === props.person)).map(o=><Button key={o.id} ref={el=>register(o.point.key,el)} variant="outline"
               aria-label={`Xem vị trí ${o.point.name}`} onClick={()=>props.onPoint(o.point.key)}
               onDoubleClick={()=>props.onFocusPoint(o.point.key)}
               onContextMenu={()=>contextTarget({kind:"point",key:o.point.key})}
               className="pointer-events-auto invisible absolute h-auto min-h-10 max-w-44 -translate-x-1/2 -translate-y-1/2 whitespace-normal rounded-xl bg-card/95 text-xs shadow-sm">{o.point.occupants?.find(p => p.id === props.person)?.name ?? o.point.name}</Button>)}
-            {props.detail &&
-              people.map((p) => (
-                <Button
-                  key={p.key}
-                  ref={(el) => register(p.key, el)}
-                  variant={
-                    props.person === p.id && props.point === p.point
-                      ? "default"
-                      : "outline"
-                  }
-                  className="pointer-events-auto invisible absolute h-auto min-h-10 max-w-40 -translate-x-1/2 -translate-y-1/2 rounded-xl px-2 py-1 text-xs shadow-sm"
-                  data-person-marker={p.id ? "person" : "group"}
-                  aria-label={
-                    p.id
-                      ? `Xem nhân sự ${p.name}`
-                      : `Xem tất cả nhân sự tại vị trí này`
-                  }
-                  onPointerEnter={() => setHovered(p.point)}
-                  onPointerLeave={() => setHovered(null)}
-                  onFocus={() => setHovered(p.point)}
-                  onBlur={() => setHovered(null)}
-                  onContextMenu={() => contextTarget({kind:"point",key:p.point,personId:p.id || undefined})}
-                  onClick={() =>
-                    p.id
-                      ? props.onPerson(p.point, p.id)
-                      : props.onPoint(p.point)
-                  }
-                >
-                  <span className="truncate">{p.name}</span>
-                </Button>
-              ))}
+            {props.detail && people.map(p => <PersonMarker key={p.key} person={p}
+              selected={props.person === p.id && props.point === p.point}
+              register={register} onHover={setHovered} onContextTarget={contextTarget}
+              onPerson={props.onPerson} onPoint={props.onPoint} />)}
             {BUILDING_FLOORS.map((f) => (
               <Button
                 key={f.floor}
@@ -718,30 +705,22 @@ export default function BuildingCanvas(props: Props) {
                 key={r.key}
                 ref={(el) => register(r.key, el)}
                 variant="ghost"
-                title={r.name}
                 aria-label={`Trên mô hình: ${r.name}`}
                 aria-pressed={r.key === props.selected}
+                onPointerEnter={() => setHovered(r.key)} onPointerLeave={() => setHovered(null)}
+                onFocus={() => setHovered(r.key)} onBlur={() => setHovered(null)}
                 onClick={() => pickRoom(r.key)}
                 onDoubleClick={() => enterRoom(r.key)}
                 onContextMenu={() => contextTarget({kind:"room",key:r.key})}
-                className={cn(
-                  "pointer-events-auto invisible absolute h-auto min-h-10 max-w-40 -translate-x-1/2 -translate-y-1/2 whitespace-normal rounded-xl border px-2 py-1.5 text-xs shrink-0 shadow-sm max-sm:size-10 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none max-sm:hover:bg-transparent",
-                  r.key === props.selected
-                    ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
-                    : "border-border bg-card/95 text-foreground",
-                )}
+                className="pointer-events-auto invisible absolute h-auto w-max min-h-10 min-w-10 max-w-52 -translate-x-1/2 -translate-y-1/2 whitespace-normal rounded px-1 py-0 text-xs font-medium text-foreground hover:bg-transparent hover:text-foreground dark:hover:bg-transparent"
               >
-                <span
-                  className={cn(
-                    "flex size-6 items-center justify-center rounded-full border text-[10px] shadow-sm sm:hidden",
-                    r.key === props.selected
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card text-foreground",
-                  )}
-                >
-                  {BUILDING_ROOMS.findIndex((s) => s.key === r.key) + 1}
+                <span className={cn("inline-flex items-center gap-1.5 rounded-md border bg-card/90 px-2 py-1 leading-snug shadow-sm",
+                  r.key === props.selected ? "border-primary/40 text-primary" :
+                  r.key === hovered ? "border-foreground/30 text-foreground" : "border-border/60 text-foreground/80")}>
+                  <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full",
+                    r.key === props.selected ? "bg-primary" : "bg-muted-foreground/50")} />
+                  {compactRoomName(r.name)}
                 </span>
-                <span className="hidden sm:block">{r.name}</span>
               </Button>
             ))}
           </div>

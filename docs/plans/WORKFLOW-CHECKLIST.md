@@ -1,6 +1,12 @@
 # Kế hoạch quy trình và duyệt công việc
 
-Cập nhật: **12/11/2026**. **Bản thử nghiệm tuần tự đã triển khai và có kết quả kiểm thử trước đây; chờ cấu hình pilot thực tế. Đã chốt hướng thiết kế trình tạo quy trình kéo thả, luồng sử dụng mẫu, thông báo và dashboard; chưa triển khai phần mở rộng.** Đối chiếu code/DB: 5 bảng hiện có đều rỗng, quyền WORKFLOW đã được gán ở một số role; không dùng kết quả “chưa có grant” của lần kiểm tra cũ làm hiện trạng. Xem [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db) và [Thiết kế quy trình](../THIET-KE-QUY-TRINH.md).
+Cập nhật: **20/11/2026**. **Tiến độ ghi nhận của Quy trình: 0%. Người phụ trách xác nhận chưa đánh giá phân hệ ở bước plan, chưa thử nghiệm và nghiệm thu.** Giữ file plan để xem xét; mã nguồn/schema hiện có và kết quả kiểm thử trước đây chỉ là bản nháp kỹ thuật, không coi là thiết kế đã được người phụ trách chấp thuận hoặc kết quả hoàn thành. Hướng kéo thả, biểu mẫu, thông báo và dashboard dưới đây là đề xuất chờ đánh giá. Xem [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db) và [Thiết kế quy trình](../THIET-KE-QUY-TRINH.md).
+
+## Trạng thái chờ đánh giá plan — 20/11/2026
+
+- [x] Ghi nhận yêu cầu chỉ đưa **Quy trình** về 0%; các phân hệ khác tiếp tục báo cáo tiến độ kỹ thuật theo thực tế. Checkbox kỹ thuật bên dưới là bằng chứng công việc trên bản nháp, không phải xác nhận nghiệm thu hoặc duyệt plan.
+- [x] Kiểm tra DB local `sdg_erp` bằng transaction chỉ đọc: `mau_quy_trinh`, `buoc_mau_quy_trinh`, `ho_so_quy_trinh`, `buoc_xu_ly_quy_trinh`, `lich_su_quy_trinh` và `dong_vat_tu_quy_trinh` đều có 0 hàng; không có giao dịch vật tư liên kết. Không có bản ghi để xóa; giữ cấu trúc bảng, quyền và mã nguồn. Bằng chứng cục bộ: `outputs/workflow-status-review-20261120/db-check.json`.
+- [ ] Người phụ trách đánh giá yêu cầu và thiết kế trong plan, xác nhận phạm vi trước khi tiếp tục triển khai/cấu hình pilot. Không tự phát hành mẫu hoặc coi việc giữ bản nháp là phê duyệt.
 
 Rule nghiệp vụ: [WORKFLOW-RULES](../../.agents/rules/WORKFLOW-RULES.md).
 
@@ -16,6 +22,8 @@ Rule nghiệp vụ: [WORKFLOW-RULES](../../.agents/rules/WORKFLOW-RULES.md).
 ## Bản đầu
 
 `/workflows`: tạo mẫu có phiên bản → phát hành → nhân sự gửi hồ sơ → duyệt/thực hiện tuần tự → kết quả và lịch sử. Luồng hỗ trợ IT được kiểm thử bằng công ty và tài khoản giả; chưa gán người hoặc quyền cho dữ liệu vận hành.
+
+Nhu cầu ngày 17/11: ticket hỗ trợ có dòng vật tư thực dùng do IT bổ sung; hoàn thành ticket đồng thời chốt xuất tiêu hao. Yêu cầu, giới hạn và bước thiết kế tại [plan vật tư](INVENTORY-MANAGEMENT-CHECKLIST.md#nhu-cầu-tồn-chung-và-tiêu-hao-theo-ticket--17112026). Đợt 18/11 đã triển khai/kiểm chứng tích hợp dòng vật tư có cấu trúc: lưu nháp ở bước TASK chưa trừ tồn, hoàn thành hồ sơ mới xuất nguyên tử. Người sửa cần WORKFLOW EXECUTE và INVENTORY MANAGE, đúng người được giao; người chốt cuối có dòng tiêu hao cần thêm INVENTORY MANAGE. Không tự chuyển nội dung ghi chú thành giao dịch hoặc tự cấu hình mẫu/người pilot.
 
 - [x] Tách nghiệp vụ khỏi rule Frontend/Backend chung sang `WORKFLOW-RULES.md`; đăng ký router, giữ quyết định DB trong plan. Chỉ sắp xếp tài liệu, không thay tính năng.
 
@@ -66,12 +74,12 @@ Chưa gồm tệp đính kèm, biểu mẫu động, duyệt song song, điều 
 
 ## Hướng mở rộng trình thiết kế kéo thả
 
-- [x] Chốt thiết kế giao diện dạng flowchart tương tự Visio với bảng công cụ, vùng vẽ, bảng cấu hình, kiểm tra và phát hành phiên bản.
-- [x] Chốt 8 hình ban đầu: bắt đầu, kết thúc, xử lý, phê duyệt, điều kiện, nhập dữ liệu, dữ liệu và điểm nối.
-- [x] Phân biệt người thiết kế mẫu với người tạo hồ sơ; dữ liệu tự lấy theo người tạo hồ sơ, người đang xử lý, hệ thống, bước trước hoặc danh mục được phép.
-- [x] Chốt hai luồng giao diện: quản trị viên thiết kế/phát hành mẫu; người dùng chọn mẫu, điền biểu mẫu và tạo yêu cầu/hồ sơ quy trình.
-- [x] Chốt dashboard ưu tiên “đang đến lượt tôi”; thông báo chỉ là tín hiệu, bước PENDING và quyền tại server mới quyết định khả năng xử lý.
-- [x] Chốt nguyên tắc phát hành: một điểm bắt đầu, có điểm kết thúc, không có hình rời, nhánh điều kiện có mặc định, phiên bản đã phát hành bất biến.
+- [x] Lập đề xuất giao diện dạng flowchart tương tự Visio với bảng công cụ, vùng vẽ, bảng cấu hình, kiểm tra và phát hành phiên bản; chờ người phụ trách đánh giá.
+- [x] Đề xuất 8 hình ban đầu: bắt đầu, kết thúc, xử lý, phê duyệt, điều kiện, nhập dữ liệu, dữ liệu và điểm nối.
+- [x] Đề xuất tách người thiết kế mẫu với người tạo hồ sơ; dữ liệu tự lấy theo người tạo hồ sơ, người đang xử lý, hệ thống, bước trước hoặc danh mục được phép.
+- [x] Đề xuất hai luồng giao diện: quản trị viên thiết kế/phát hành mẫu; người dùng chọn mẫu, điền biểu mẫu và tạo yêu cầu/hồ sơ quy trình.
+- [x] Đề xuất dashboard ưu tiên “đang đến lượt tôi”; thông báo chỉ là tín hiệu, bước PENDING và quyền tại server mới quyết định khả năng xử lý.
+- [x] Đề xuất nguyên tắc phát hành: một điểm bắt đầu, có điểm kết thúc, không có hình rời, nhánh điều kiện có mặc định, phiên bản đã phát hành bất biến.
 - [ ] Lập bản mẫu kỹ thuật vùng kéo thả và đánh giá thư viện phù hợp; chưa cài thêm dependency.
 - [ ] Thiết kế migration từ danh sách bước tuần tự sang nút, liên kết và trường dữ liệu; phải giữ mẫu/hồ sơ hiện có và thử trên DB tạm trước.
 - [ ] Triển khai cấu hình biểu mẫu, tự điền dữ liệu và chạy một nhánh tại một thời điểm; chưa hỗ trợ vòng lặp hoặc song song ở giai đoạn đầu.

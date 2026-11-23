@@ -22,5 +22,7 @@ export const WORKFLOW_EVENTS: Record<string, string> = {
   REASSIGNED: "Chuyển giao",
   BLOCKED: "Tạm dừng bước",
   CANCELLED: "Hủy hồ sơ",
+  MATERIALS_UPDATED: "Cập nhật vật tư sử dụng",
+  MATERIALS_POSTED: "Ghi nhận tiêu hao",
   FINISHED: "Hoàn tất quy trình",
 };

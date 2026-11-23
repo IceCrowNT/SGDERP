@@ -38,7 +38,9 @@ test("preview includes real before/after, persists on reload and commits only af
   await expect(card).toContainText("Ngừng dùng"); await expect(card).toContainText("2 loại cần đổi");
   expect(await db.loai_tai_san.count({ where: { company_id: manager.company_id, khau_hao_mac_dinh_thang: 60 } })).toBe(1);
   await page.reload(); await expect(card).toContainText("Chờ bạn duyệt");
-  await chat(page).getByRole("button", { name: "Chat mới", exact: true }).click(); await expect(card).toBeVisible();
+  await chat(page).getByRole("button", { name: "Chat mới", exact: true }).click(); await expect(card).not.toBeVisible();
+  await page.getByRole("tab", { name: "Việc của tôi", exact: true }).click();
+  await page.getByRole("region", { name: "Công việc AI đã lưu" }).getByRole("button", { name: /Khấu hao mặc định loại tài sản/ }).first().click(); await expect(card).toBeVisible();
   await card.getByRole("button", { name: "Duyệt và thực hiện (2)", exact: true }).click();
   await expect(card).toContainText("Đã cập nhật 2 loại; 1 loại không cần đổi.");
   await expect(card.getByRole("button", { name: /Duyệt và thực hiện/ })).toHaveCount(0);
@@ -57,7 +59,7 @@ test("stale snapshot requires refresh and another click; adjustment cancels old 
   await expect(card).toContainText("Danh mục đã thay đổi sau khi lập bảng");
   expect((await db.loai_tai_san.findUniqueOrThrow({ where: { id: category.id } })).khau_hao_mac_dinh_thang).toBe(24);
   await card.getByRole("button", { name: "Làm mới bảng để duyệt lại", exact: true }).click();
-  await expect(card).toContainText("Phiên bản 2"); await expect(card).toContainText("24 tháng (2 năm)");
+  await expect.poll(async () => (await db.cong_viec_ai.findUniqueOrThrow({ where: { id: record.id } })).phien_ban).toBe(2); await expect(card).toContainText("24 tháng (2 năm)");
   await expect(card.getByRole("button", { name: "Duyệt và thực hiện (3)", exact: true })).toBeEnabled();
   await card.getByRole("button", { name: "Điều chỉnh yêu cầu", exact: true }).click();
   await expect(card).toContainText("Đã hủy công việc");

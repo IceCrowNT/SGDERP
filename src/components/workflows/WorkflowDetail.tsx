@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { WorkflowMaterials } from "./WorkflowMaterials";
 import { CommandForm, DraftForm } from "./WorkflowForms";
 type Data = Extract<
   Awaited<ReturnType<typeof getWorkflowDetail>>,
@@ -55,6 +56,7 @@ export function WorkflowDetail({
   );
   const router = useRouter();
   const r = data.record;
+  const [materialsBlocked, setMaterialsBlocked] = useState(false);
   const [command, setCommand] = useState<
     WorkflowCommandInput["command"] | null
   >(null);
@@ -66,7 +68,7 @@ export function WorkflowDetail({
   const act = (cmd: WorkflowCommandInput["command"]) => (
     <Button
       key={cmd}
-      disabled={!ready}
+      disabled={!ready || materialsBlocked}
       variant={cmd === "REJECT" || cmd === "CANCEL" ? "outline" : "default"}
       onClick={() => setCommand(cmd)}
     >
@@ -113,7 +115,7 @@ export function WorkflowDetail({
         {r.status === "DRAFT" && create && (
           <>
             <Button
-              disabled={!ready}
+              disabled={!ready || materialsBlocked}
               variant="outline"
               onClick={() =>
                 setDraft({
@@ -133,7 +135,7 @@ export function WorkflowDetail({
         )}
         {r.status === "REJECTED" && create && (
           <Button
-            disabled={!ready}
+            disabled={!ready || materialsBlocked}
             onClick={() =>
               setDraft({
                 previousId: r.id,
@@ -180,6 +182,7 @@ export function WorkflowDetail({
           </>
         )}
       </div>
+      <WorkflowMaterials key={r.version} data={data} onBlocked={setMaterialsBlocked} />
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-xl border p-5 space-y-4">
           <h2 className="flex items-center gap-2 font-semibold"><ListChecks className="size-5 text-primary" aria-hidden="true" />Các bước xử lý</h2>

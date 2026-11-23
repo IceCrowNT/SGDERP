@@ -1,22 +1,35 @@
+import { taskActor } from "./support-task-access";
 import type { Prisma, tin_nhan_ai } from "@prisma/client";
-import type { SessionUser } from "@/lib/auth";
+import { hasPermission, type SessionUser } from "@/lib/auth";
+import { canUseBusinessTool } from "@/lib/ai-tool-access";
 import { ChatMetadataSchema, type ChatMetadata, type ChatMessage } from "@/lib/ai-chat";
 
 // Integrity checks shared by read/send actions; mutations stay in Server Actions.
 export async function assertChatSources(tx: Prisma.TransactionClient, session: SessionUser, rows: Pick<tin_nhan_ai, "vai_tro" | "trang_thai" | "du_lieu_kem_theo">[]) {
-  const ids = { assets: new Set<number>(), locations: new Set<number>(), categories: new Set<number>(), departments: new Set<number>(), people: new Set<number>() };
+  const ids = { assets: new Set<number>(), locations: new Set<number>(), categories: new Set<number>(), departments: new Set<number>(), people: new Set<number>(), files: new Set<number>(), inventoryItems: new Set<number>(), inventoryCategories: new Set<number>() };
   const works = new Set<number>();
   for (const row of rows) {
-    if (row.vai_tro !== "TRO_LY" || row.trang_thai !== "HOAN_TAT") continue;
+    if (row.vai_tro !== "TRO_LY") continue;
+    // Generated files may survive a later model error: keep their source checks active.
+    if (row.trang_thai !== "HOAN_TAT" && !(row.du_lieu_kem_theo && typeof row.du_lieu_kem_theo === "object" && "version" in row.du_lieu_kem_theo)) continue;
     const metadata = ChatMetadataSchema.parse(row.du_lieu_kem_theo);
-    for (const trace of metadata.ngu_canh) for (const ref of trace.references) for (const id of ref.ids) ids[ref.kind].add(id);
+    if (metadata.supportTaskDraft || metadata.ngu_canh.some(t=>["lookup_support_targets","prepare_support_ticket"].includes(t.tool))) await taskActor(tx,session,"CREATE");
+    for (const trace of metadata.ngu_canh) {
+      // File-only traces are personal; business traces retain the rights required to obtain them.
+      const businessSource = trace.references.some(ref => ref.kind !== "files") ||
+        ["search_assets", "get_asset", "lookup", "prepare_asset", "prepare_location", "plan_category_depreciation"].includes(trace.tool) || trace.tool.includes("inventory") || ["lookup_support_targets", "prepare_support_ticket"].includes(trace.tool);
+      if (businessSource && !canUseBusinessTool(session, "GENERAL", trace.tool, trace.filters))
+        throw Error("Quyền truy cập dữ liệu ERP của hội thoại đã thay đổi.");
+      for (const ref of trace.references) for (const id of ref.ids) ids[ref.kind].add(id);
+    }
     if (metadata.workId) works.add(metadata.workId);
   }
   const where = (values: Set<number>) => ({ company_id: session.companyId, id: { in: [...values] } });
   const counts = await Promise.all([
     tx.tai_san.count({ where: where(ids.assets) }), tx.vi_tri.count({ where: where(ids.locations) }),
     tx.loai_tai_san.count({ where: where(ids.categories) }), tx.phong_ban.count({ where: where(ids.departments) }),
-    tx.nhan_su.count({ where: where(ids.people) }), tx.cong_viec_ai.count({ where: { ...where(works), account_id: session.userId } }),
+    tx.nhan_su.count({ where: where(ids.people) }), tx.tep_dinh_kem_ai.count({ where: { ...where(ids.files), account_id: session.userId } }),
+    tx.mat_hang_vat_tu.count({ where: where(ids.inventoryItems) }), tx.loai_vat_tu.count({ where: where(ids.inventoryCategories) }), tx.cong_viec_ai.count({ where: { ...where(works), account_id: session.userId, loai_cong_viec: { in: [...(hasPermission(session, "ASSETS", "MANAGE") ? ["KHAU_HAO_LOAI"] : []), ...(hasPermission(session, "INVENTORY", "MANAGE") ? ["NHAP_VAT_TU"] : [])] } } }),
   ]);
   const expected = [...Object.values(ids).map(s => s.size), works.size];
   if (counts.some((n, i) => n !== expected[i])) throw Error("Nguồn hội thoại không còn hợp lệ.");
@@ -26,6 +39,9 @@ export function chatMessage(row: tin_nhan_ai): ChatMessage {
   return { id: row.id, role: row.vai_tro === "NGUOI_DUNG" ? "user" : "assistant", content: row.noi_dung,
     status: row.trang_thai, requestId: row.ma_yeu_cau, createdAt: row.created_at.toISOString(),
     ...(metadata ? { resultLists: metadata.ngu_canh.filter(trace => trace.results?.length).map(trace => ({ label: trace.tool === "search_assets" ? "Tài sản đã tra cứu" : "Danh mục đã tra cứu", items: trace.results!.map(row => row.label) })) } : {}),
+    ...(metadata ? { supportTargets: metadata.ngu_canh.flatMap(trace => trace.supportTargets ?? []) } : {}),
+    ...(metadata?.supportTaskDraft ? {supportTaskDraft:metadata.supportTaskDraft} : {}),
+    ...(metadata?.tables ? { tables: metadata.tables } : {}),
     ...(metadata?.workId ? { workId: metadata.workId } : {}), ...(metadata?.draft ? { draft: true } : {}), ...(metadata?.contextTruncated ? { contextTruncated: true } : {}) };
 }
 export function chatContext(rows: tin_nhan_ai[]) {

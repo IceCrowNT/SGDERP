@@ -1,0 +1,24 @@
+# Start with: docker compose --env-file ../../.env.office -f compose.yaml up -d
+services:
+  office:
+    image: ${OFFICE_IMAGE:-onlyoffice/documentserver:10.0.0.1}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8088:80"
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${OFFICE_JWT_SECRET:?Set OFFICE_JWT_SECRET}
+      JWT_HEADER: Authorization
+      # The local ERP is reachable through host.docker.internal (private network).
+      ALLOW_PRIVATE_IP_ADDRESS: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - office_data:/var/www/onlyoffice/Data
+      - office_logs:/var/log/onlyoffice
+      - office_cache:/var/lib/onlyoffice
+    shm_size: 256m
+volumes:
+  office_data:
+  office_logs:
+  office_cache:

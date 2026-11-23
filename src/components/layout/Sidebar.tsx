@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { canViewSystemOverview } from "@/lib/system-access"
 import { canManageAccounts } from "@/lib/account-access"
-import { SessionUser } from "@/lib/auth"
+import type { SessionUser } from "@/lib/auth"
+import { canTask } from "@/lib/support-task"
 import { canAdministerAi } from "@/lib/role-catalog"
 import {
   LayoutDashboard,
@@ -18,16 +19,18 @@ import {
   History,
   Settings,
   ChevronDown,
-  Cuboid,
+  Map,
+  GitBranch,
   MapPin,
   Package,
   type LucideIcon,
 } from "lucide-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 export interface SubMenuItem {
   label: string
+  shortLabel?: string
   href: string
   icon: LucideIcon
   badge?: string
@@ -37,6 +40,8 @@ export interface SubMenuItem {
 export interface MenuGroup {
   id: string
   title: string
+  href?: string
+  shortLabel?: string
   icon: LucideIcon
   requiredModule?: string
   defaultOpen?: boolean
@@ -45,7 +50,7 @@ export interface MenuGroup {
 
 // 1. Menu Tổng quan chính độc lập ở trên cùng
 export const mainOverviewItem: SubMenuItem = {
-  label: "Tổng quan",
+  label: "Bàn làm việc",
   href: "/",
   icon: LayoutDashboard,
 }
@@ -53,42 +58,46 @@ export const mainOverviewItem: SubMenuItem = {
 // 2. Các nhóm Sub-menu theo từng Phân hệ nghiệp vụ
 export const menuGroups: MenuGroup[] = [
   {
-    id: "assets", title: "TÀI SẢN", icon: Package, requiredModule: "ASSETS", defaultOpen: true,
-    items: [{ label: "Quản lý tài sản", href: "/assets", icon: Package }, { label: "Vật tư và phụ kiện", href: "/inventory", icon: Package, requiredModule: "INVENTORY" }],
+    id: "building", title: "Bản đồ 3D", icon: Map, requiredModule: "LOCATIONS",
+    items: [{ label: "Bản đồ 3D", href: "/office-3d", icon: Map }],
   },
   {
     id: "hr",
-    title: "QUẢN TRỊ NHÂN SỰ",
+    title: "Nhân sự",
+    href: "/hr",
     icon: Users,
     requiredModule: "HR",
     defaultOpen: true,
     items: [
+      { label: "Tổng quan nhân sự", href: "/hr", icon: LayoutDashboard },
       { label: "Hồ sơ nhân sự", href: "/employees", icon: Users },
       { label: "Cơ cấu phòng ban", href: "/departments", icon: Building2 },
-      { label: "Bản đồ 3D Tòa nhà", href: "/office-3d", icon: Cuboid, badge: "3D", requiredModule: "LOCATIONS" },
     ],
   },
   {
-    id: "workflow", title: "QUY TRÌNH", icon: FolderKanban, requiredModule: "WORKFLOW", defaultOpen: true,
-    items: [{label: "Quy trình", href: "/workflows", icon: FolderKanban, badge: "Thử"}],
+    id: "workflow", title: "Quy trình", icon: GitBranch, requiredModule: "WORKFLOW", defaultOpen: true,
+    items: [{label: "Quy trình", href: "/workflows", icon: GitBranch, badge: "Thử"}],
   },
   {
     id: "tasks",
-    title: "QUẢN LÝ CÔNG VIỆC",
+    title: "Công việc",
     icon: ListTodo,
-    requiredModule: "TASK",
+    requiredModule: "SUPPORT_TASK",
     defaultOpen: false,
     items: [
-      { label: "Công việc của tôi", href: "/tasks", icon: ListTodo, badge: "Sắp có" },
-      { label: "Việc phòng ban & DA", href: "/tasks/department", icon: FolderKanban, badge: "Sắp có" },
+      { label: "Công việc của tôi", href: "/tasks", icon: ListTodo },
+      { label: "Việc phòng ban", href: "/tasks/department", icon: FolderKanban },
     ],
   },
   {
     id: "system",
-    title: "HỆ THỐNG & CẤU HÌNH",
+    href: "/system",
+    title: "Quản trị hệ thống",
+    shortLabel: "Quản trị",
     icon: ShieldCheck,
     defaultOpen: true,
     items: [
+      { label: "Tổng quan quản trị", href: "/system", icon: LayoutDashboard },
       { label: "Tài khoản đăng nhập", href: "/accounts", icon: Users },
       { label: "Phân quyền vai trò", href: "/roles", icon: ShieldCheck, requiredModule: "ROLES" },
       { label: "Vị trí & không gian", href: "/locations", icon: MapPin, requiredModule: "LOCATIONS" },
@@ -98,234 +107,188 @@ export const menuGroups: MenuGroup[] = [
   },
 ]
 
-interface NavigationLinksProps {
-  session?: SessionUser | null
-  onNavigate?: () => void
-}
-
-export function NavigationLinks({ session, onNavigate }: NavigationLinksProps) {
-  const pathname = usePathname()
-
-  // Khởi tạo trạng thái đóng/mở của các nhóm
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {}
-    menuGroups.forEach((g) => {
-      initial[g.id] = g.defaultOpen ?? true
-    })
-    return initial
-  })
-
-  // Tự động mở nhóm nếu đường dẫn hiện tại thuộc nhóm đó
-  useEffect(() => {
-    menuGroups.forEach((group) => {
-      const hasActiveChild = group.items.some(
-        (item) => item.href !== "/" && pathname.startsWith(item.href)
-      )
-      if (hasActiveChild) {
-        setOpenGroups((prev) => ({ ...prev, [group.id]: true }))
-      }
-    })
-  }, [pathname])
-
-  const toggleGroup = (groupId: string) => {
-    setOpenGroups((prev) => ({
-      ...prev,
-      [groupId]: !prev[groupId],
-    }))
-  }
-
-  // Lọc các nhóm theo quyền session
-  const visibleGroups = menuGroups.map(group => ({ ...group, items: group.items.filter(item => {
+export function getVisibleMenuGroups(session?: SessionUser | null) {
+  return menuGroups.map(group => ({ ...group, items: group.items.filter(item => {
     if (session?.mustChangePassword) return false;
+    if (group.id === "tasks") return canTask(session?.taskActions);
+    if (item.href === "/system") return canViewSystemOverview(session);
     if (item.href === "/accounts") return canManageAccounts(session);
     if (item.href === "/settings") return canAdministerAi(session);
     const moduleCode = item.requiredModule ?? group.requiredModule;
     return !moduleCode || ["VIEW", "MANAGE"].includes(session?.permissions[moduleCode] ?? "");
   }) })).filter(group => group.items.length > 0);
+}
+
+const selectedNavigation = "bg-primary/10 text-primary font-semibold hover:bg-primary/15 hover:text-primary before:absolute before:left-0 before:top-1/2 before:h-5 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-primary";
+const railIcon = "size-6 shrink-0 stroke-[1.75]";
+
+interface NavigationLinksProps {
+  session?: SessionUser | null
+  onNavigate?: () => void
+  collapsed?: boolean
+}
+
+export function NavigationLinks({ session, onNavigate, collapsed = false }: NavigationLinksProps) {
+  const pathname = usePathname()
+  const navigationId = useId()
+  const [flyout, setFlyout] = useState<string | null>(null)
+
+  // Explicit choices are retained while navigating. Unvisited groups follow the current route.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const toggleGroup = (id: string, currentlyOpen: boolean) => {
+    setOpenGroups(prev => ({ ...prev, [id]: !currentlyOpen }))
+  }
+
+  const visibleGroups = getVisibleMenuGroups(session)
 
   const isMainActive = pathname === "/"
+  const canViewAssets = !session?.mustChangePassword && ["ASSETS", "INVENTORY"].some(module => ["VIEW", "MANAGE"].includes(session?.permissions[module] ?? ""));
+  const assetAreaActive = ["/asset-management", "/assets", "/inventory"].some(path => pathname === path || pathname.startsWith(path + "/"));
+
+  const itemLink = (item: SubMenuItem, active: boolean) => {
+    const link = (
+      <Link href={item.href} onClick={onNavigate}
+        aria-current={active ? "page" : undefined} aria-label={collapsed ? item.label : undefined}
+        className={cn("relative flex min-h-10 items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+          collapsed ? "min-h-16 flex-col justify-center gap-1 px-1" : "px-3",
+          active ? selectedNavigation : "text-foreground/85 hover:bg-muted hover:text-foreground")}>
+        <item.icon aria-hidden="true" className={cn("shrink-0", collapsed ? railIcon : "size-4")} />
+        {collapsed && <span className="w-full text-center text-[11px] leading-tight">{item.shortLabel ?? item.label}</span>}
+        {!collapsed && <span className="min-w-0 flex-1">{item.label}</span>}
+        {!collapsed && item.badge && <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">{item.badge}</span>}
+      </Link>
+    )
+    return <div key={item.href}>{link}</div>
+  }
 
   return (
-    <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
-      {/* 1. Menu Tổng quan chính độc lập */}
-      <div>
-        <Link
-          href={mainOverviewItem.href}
-          onClick={onNavigate}
-          className={cn(
-            "flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden select-none",
-            isMainActive
-              ? "text-primary bg-primary/10 shadow-xs font-semibold"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-          )}
-        >
-          {isMainActive && (
-            <span className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-primary rounded-r-full" />
-          )}
-          <mainOverviewItem.icon
-            className={cn(
-              "w-5 h-5 transition-transform duration-200 group-hover:scale-110 shrink-0",
-              isMainActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-            )}
-          />
-          <span className="truncate">{mainOverviewItem.label}</span>
-        </Link>
-      </div>
-
-      {/* 2. Danh sách các Sub-menu Phân hệ */}
-      <div className="space-y-3 pt-1">
-        {visibleGroups.map((group) => {
-          const isOpen = openGroups[group.id] ?? true
-          const hasActiveChild = group.items.some(
-            (item) => item.href !== "/" && pathname.startsWith(item.href)
-          )
-
-          return (
-            <div key={group.id} className="space-y-1">
-              {/* Tiêu đề nhóm (Group Header) có thể click để thu gọn / mở rộng */}
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.id)}
-                className={cn(
-                  "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wider uppercase transition-colors group cursor-pointer",
-                  hasActiveChild
-                    ? "text-primary/90 hover:text-primary"
-                    : "text-muted-foreground/75 hover:text-foreground"
-                )}
-              >
-                <div className="flex items-center gap-2 truncate">
-                  <group.icon className="w-3.5 h-3.5 shrink-0 opacity-70 group-hover:opacity-100" />
-                  <span className="truncate">{group.title}</span>
-                </div>
-                <ChevronDown
-                  className={cn(
-                    "w-3.5 h-3.5 transition-transform duration-200 shrink-0 opacity-60 group-hover:opacity-100",
-                    isOpen ? "rotate-0" : "-rotate-90"
-                  )}
-                />
-              </button>
-
-              {/* Danh sách các Menu con (Sub-items) */}
-              {isOpen && (
-                <div className="space-y-1 pl-2.5 ml-2 border-l border-border/50 animate-in fade-in slide-in-from-top-1 duration-200">
-                  {group.items.filter(item => item.href !== "/accounts" || canManageAccounts(session)).map((subItem) => {
-                    const isActive =
-                      pathname === subItem.href ||
-                      (subItem.href !== "/" && pathname.startsWith(subItem.href))
-
-                    return (
-                      <Link
-                        key={subItem.href}
-                        href={subItem.href}
-                        onClick={onNavigate}
-                        className={cn(
-                          "flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 group relative select-none",
-                          isActive
-                            ? "text-primary bg-primary/10 font-semibold"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                        )}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <subItem.icon
-                            className={cn(
-                              "w-4 h-4 transition-transform duration-200 group-hover:scale-110 shrink-0",
-                              isActive
-                                ? "text-primary"
-                                : "text-muted-foreground group-hover:text-foreground"
-                            )}
-                          />
-                          <span className="truncate">{subItem.label}</span>
-                        </div>
-                        {subItem.badge && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground font-normal">
-                            {subItem.badge}
-                          </span>
-                        )}
-                      </Link>
-                    )
-                  })}
-                </div>
-              )}
+    <nav aria-label="Điều hướng chính" className={cn("flex-1 space-y-1 overflow-y-auto", collapsed ? "p-2" : "p-3")}>
+      {itemLink(mainOverviewItem, isMainActive)}
+      {visibleGroups.find(group => group.id === "building")?.items.map(item => itemLink(item, matchesRoute(pathname, item.href)))}
+      {canViewAssets && itemLink({ label: "Tài sản & vật tư", shortLabel: "Tài sản", href: "/asset-management", icon: Package }, assetAreaActive)}
+      {visibleGroups.filter(group => group.id !== "building").map(group => {
+        const active = group.items.some(item => matchesRoute(pathname, item.href))
+        // Single-destination groups do not require a redundant expand/collapse step.
+        if (group.items.length === 1) return <div key={group.id}>{itemLink(group.items[0], active)}</div>
+        if (collapsed) return <RailGroup key={`${group.id}-${pathname}`} group={group} active={active} pathname={pathname}
+          open={flyout === group.id} onOpenChange={open => setFlyout(current => open ? group.id : current === group.id ? null : current)} onNavigate={onNavigate} />
+        const isOpen = openGroups[group.id] ?? (active || Boolean(group.defaultOpen))
+        return (
+          <div key={group.id}>
+            {group.href ? <div className="flex items-center rounded-lg">
+              <Link href={group.href} onClick={onNavigate} aria-current={pathname === group.href ? "page" : undefined}
+                className={cn("flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring", pathname === group.href && "bg-primary/10 text-primary")}>
+                <group.icon aria-hidden="true" className="size-4 shrink-0" /><span>{group.title}</span>
+              </Link>
+              <Button variant="ghost" size="icon" aria-label={`Mở/đóng nhóm ${group.title}`} aria-expanded={isOpen} aria-controls={`${navigationId}-${group.id}`} onClick={() => toggleGroup(group.id, isOpen)} className="size-10 shrink-0 hover:bg-muted hover:text-foreground">
+                <ChevronDown aria-hidden="true" className={cn("size-4 text-muted-foreground", !isOpen && "-rotate-90")} />
+              </Button>
+            </div> : <>
+            <Button variant="ghost" onClick={() => toggleGroup(group.id, isOpen)}
+              aria-expanded={isOpen} aria-controls={`${navigationId}-${group.id}`}
+              className="min-h-10 h-auto w-full justify-between gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted hover:text-foreground dark:hover:bg-muted">
+              <group.icon aria-hidden="true" className="size-4 shrink-0" />
+              <span className="flex-1 text-left">{group.title}</span>
+              <ChevronDown aria-hidden="true" className={cn("size-4 shrink-0 text-muted-foreground transition-transform", !isOpen && "-rotate-90")} />
+            </Button>
+            </>}
+            <div id={`${navigationId}-${group.id}`} hidden={!isOpen} className="ml-3 space-y-0.5 border-l border-border pl-2">
+              {group.items.map(item => itemLink(item, matchesRoute(pathname, item.href) && !group.items.some(other => other.href.length > item.href.length && matchesRoute(pathname, other.href))))}
             </div>
-          )
-        })}
-      </div>
+          </div>
+        )
+      })}
     </nav>
   )
 }
 
-export function Sidebar({ session }: { session?: SessionUser | null }) {
-  const initials = session?.fullName
-    ? session.fullName
-        .split(" ")
-        .filter(Boolean)
-        .slice(-2)
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-    : "AD"
-
-  const primaryRole = session?.roleCodes?.[0] || "Chưa gán vai trò"
-
+/** Keep hover menus non-modal: opening them must not steal focus from the page. */
+function RailGroup({ group, active, pathname, open, onOpenChange, onNavigate }: {
+  group: MenuGroup; active: boolean; pathname: string; open: boolean
+  onOpenChange: (open: boolean) => void; onNavigate?: () => void
+}) {
+  const opening = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closing = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hoverOnly = useRef(false)
+  const trigger = useRef<HTMLElement | null>(null)
+  const content = useRef<HTMLDivElement>(null)
+  const clearTimers = () => { if (opening.current) clearTimeout(opening.current); if (closing.current) clearTimeout(closing.current) }
+  useEffect(() => () => clearTimers(), [])
+  const leave = () => {
+    clearTimers()
+    if (hoverOnly.current) closing.current = setTimeout(() => onOpenChange(false), 300)
+  }
   return (
-    <aside className="hidden lg:flex w-64 border-r border-border/50 bg-background/80 backdrop-blur-xl h-screen sticky top-0 flex-col shrink-0 z-30 transition-all duration-300">
-      {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 border-b border-border/50">
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="h-8 w-auto flex items-center justify-center group-hover:scale-105 transition-transform">
-            <Image
-              src="/logo.png"
-              alt="Tập đoàn Sao Đỏ"
-              width={124}
-              height={75}
-              className="h-8 w-auto object-contain"
-              priority
-            />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-bold bg-gradient-to-r from-primary to-blue-900 bg-clip-text text-transparent">
-              SAO ĐỎ GROUP
-            </span>
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold -mt-1">
-              ERP System
-            </span>
-          </div>
-        </Link>
+    <Popover modal={false} open={open} onOpenChange={value => { clearTimers(); onOpenChange(value) }}>
+      <div onPointerEnter={event => {
+        if (event.pointerType !== "mouse") return
+        clearTimers()
+        if (!open) opening.current = setTimeout(() => { hoverOnly.current = true; onOpenChange(true) }, 200)
+      }} onPointerLeave={leave} onPointerDown={() => { clearTimers(); hoverOnly.current = false }}
+        onKeyDown={event => {
+          clearTimers(); hoverOnly.current = false
+          if (event.key === "ArrowDown") {
+            event.preventDefault()
+            if (!open) onOpenChange(true)
+            else content.current?.querySelector<HTMLElement>('a[href]')?.focus()
+          }
+        }}>
+        {group.href ? <PopoverAnchor asChild>
+          <Link ref={node => { trigger.current = node }} href={group.href} aria-label={group.title} aria-current={pathname === group.href ? "page" : undefined}
+            aria-haspopup="dialog" aria-expanded={open} onClick={() => { clearTimers(); onOpenChange(false); onNavigate?.() }}
+            className={cn("relative flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-sm font-medium hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring", active ? selectedNavigation : "text-foreground")}>
+            <group.icon aria-hidden="true" className={railIcon} /><span className="w-full text-center text-[11px] leading-tight">{group.shortLabel ?? group.title}</span>
+          </Link>
+        </PopoverAnchor> : <PopoverTrigger asChild>
+          <Button ref={node => { trigger.current = node }} variant="ghost" aria-label={group.title}
+            className={cn("relative h-auto min-h-16 w-full flex-col justify-center gap-1 whitespace-normal rounded-lg px-1 py-2 hover:bg-muted hover:text-foreground dark:hover:bg-muted", active ? selectedNavigation : "text-foreground")}>
+            <group.icon aria-hidden="true" className={railIcon} /><span className="w-full text-center text-[11px] leading-tight">{group.shortLabel ?? group.title}</span>
+          </Button>
+        </PopoverTrigger>}
       </div>
+      <PopoverContent ref={content} side="right" align="start" sideOffset={8} className="w-64" aria-label={group.title}
+        onPointerEnter={clearTimers} onPointerLeave={leave}
+        onKeyDown={event => {
+          clearTimers(); hoverOnly.current = false
+          if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return
+          const links = Array.from(content.current?.querySelectorAll<HTMLAnchorElement>('a[href]') ?? [])
+          if (!links.length) return
+          event.preventDefault()
+          const index = links.indexOf(document.activeElement as HTMLAnchorElement)
+          const next = event.key === "Home" ? 0 : event.key === "End" ? links.length - 1 : (index + (event.key === "ArrowDown" ? 1 : -1) + links.length) % links.length
+          links[next].focus()
+        }}
+        onOpenAutoFocus={event => { if (hoverOnly.current) event.preventDefault() }}
+        onCloseAutoFocus={event => { if (hoverOnly.current || group.href) event.preventDefault() }}
+        onEscapeKeyDown={() => { clearTimers(); hoverOnly.current = false; trigger.current?.focus() }}>
+        <p className="border-b px-3 py-2 text-sm font-semibold">{group.title}</p>
+        {group.items.map(item => {
+          const selected = matchesRoute(pathname, item.href) && !group.items.some(other => other.href.length > item.href.length && matchesRoute(pathname, other.href))
+          return <Link key={item.href} className={cn("m-1 flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:outline-2 focus-visible:outline-ring", selected && "bg-primary/10 text-primary")} href={item.href} onClick={() => { clearTimers(); onOpenChange(false); onNavigate?.() }} aria-current={selected ? "page" : undefined}>
+              <item.icon aria-hidden="true" className="size-4" /><span className="flex-1">{item.label}</span>
+              {item.badge && <span className="text-xs text-muted-foreground">{item.badge}</span>}
+            </Link>
+        })}
+      </PopoverContent>
+    </Popover>
+  )
+}
 
-      {/* Navigation List with Sub-menus */}
-      <NavigationLinks session={session} />
+/** Segment boundaries avoid selecting unrelated routes with the same prefix. */
+export function matchesRoute(pathname: string, href: string) {
+  return pathname === href || (href !== "/" && pathname.startsWith(href + "/"))
+}
 
-      {/* Logged in User Profile Footer */}
-      {session && (
-        <div className="p-3 border-t border-border/50 bg-muted/20">
-          <div className="flex items-center gap-3 p-2 rounded-xl bg-card border border-border/40 shadow-xs">
-            <Avatar className="h-9 w-9 border border-border/50 shrink-0">
-              <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold truncate text-foreground leading-tight">
-                {session.fullName}
-              </p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] text-muted-foreground font-mono">
-                  {session.employeeCode}
-                </span>
-                <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-primary/30 text-primary font-medium">
-                  {primaryRole}
-                </Badge>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+export function getPageContext(pathname: string) {
+  if (pathname === "/" || matchesRoute(pathname, "/profile")) return "Không gian cá nhân"
+  if (["/asset-management", "/assets", "/inventory"].some(path => matchesRoute(pathname, path))) return "Tài sản & vật tư"
+  return menuGroups.find(group => group.items.some(item => matchesRoute(pathname, item.href)))?.title ?? "SDG ERP"
+}
 
-      {/* App Version Info */}
-      <div className="px-4 py-2 border-t border-border/30 text-[11px] text-muted-foreground/75 text-center">
-        Sao Đỏ Group ERP • v1.0
-      </div>
+export function Sidebar({ session, collapsed }: { session?: SessionUser | null; collapsed: boolean }) {
+  return (
+    <aside id="desktop-navigation" aria-label="Menu ứng dụng" className={cn("hidden lg:flex border-r border-border/50 bg-background/80 backdrop-blur-xl h-[calc(100dvh-4rem)] sticky top-16 flex-col shrink-0 z-30", collapsed ? "w-22" : "w-64")}>
+      <NavigationLinks session={session} collapsed={collapsed} />
     </aside>
   )
 }

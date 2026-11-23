@@ -234,7 +234,7 @@ export async function saveAsset(input: unknown) {
       await audit(tx, session, "tai_san", after.id, after.ten_tai_san, before, after);
       return serializeAsset(after);
     });
-    for (const path of ["/assets", "/locations", "/departments", "/office-3d", "/office-3d/hcns"]) revalidatePath(path);
+    for (const path of ["/asset-management", "/assets", "/locations", "/departments", "/office-3d", "/office-3d/hcns"]) revalidatePath(path);
     return { success: true as const, id: saved.id, row: saved, message: "Đã lưu tài sản." };
   } catch (error) { return failure(error); }
 }
@@ -303,7 +303,7 @@ export async function assignAssetLocation(input: unknown) {
         { ...after, duong_dan_vi_tri: path(after.vi_tri_id) });
       return { success: true as const, message: v.locationId === null ? "Đã bỏ gán vị trí tài sản." : "Đã cập nhật vị trí tài sản." };
     });
-    if (result.success) for (const path of ["/assets", "/locations", "/office-3d", "/office-3d/hcns"]) revalidatePath(path);
+    if (result.success) for (const path of ["/asset-management", "/assets", "/locations", "/office-3d", "/office-3d/hcns"]) revalidatePath(path);
     return result;
   } catch (error) { return failure(error); }
 }

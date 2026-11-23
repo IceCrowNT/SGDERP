@@ -48,7 +48,7 @@ test.afterAll(async () => { await db.$disconnect(); });
 
 test("empty state, required fields, category creation and personal assignment work without HR rights", async ({ page, context }) => {
   await signAccount(context, manager); await page.goto("/assets");
-  await expect(page.getByRole("link", { name: "Quản lý tài sản", exact: true })).toBeVisible();
+  await expect(page.locator("aside").getByRole("link", { name: "Tài sản & vật tư", exact: true })).toBeVisible();
   await expect(page.getByText("Chưa có hồ sơ tài sản", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Thêm loại tài sản", exact: true }).click();
   await page.getByRole("button", { name: "Lưu loại tài sản", exact: true }).click();
@@ -129,7 +129,7 @@ test("VIEW/none, direct action payloads, tenant bounds and revocation are enforc
   expect(await page.content()).not.toContain("PRIVATE_ASSET"); expect(await page.content()).not.toContain("PRIVATE_CATEGORY");
   await signAccount(context, outsider); await page.goto("/assets");
   await expect(page.getByText("Không thể truy cập tài sản", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Quản lý tài sản", exact: true })).toHaveCount(0);
+  await expect(page.locator("aside").getByRole("link", { name: "Tài sản & vật tư", exact: true })).toHaveCount(0);
   await db.vai_tro_quyen.deleteMany({ where: { role_id: viewerRole } });
   await signAccount(context, viewer); await page.goto("/assets");
   await expect(page.getByText("Không thể truy cập tài sản", { exact: true })).toBeVisible();

@@ -12,10 +12,14 @@ export const InventoryCategorySchema = z.object({
   kind: InventoryKindSchema, description: text(2000), active: z.boolean(),
 }).strict().superRefine(version);
 export const InventoryItemSchema = z.object({
-  ...edit, name, categoryId: id, unit: text(50).min(1, "Nhập đơn vị tính"),
+  ...edit, name, categoryId: id, unit: text(50).min(1, "Nhập đơn vị tính").refine(v => !/^[\d\s.,]+$/.test(v), "Đơn vị là lọ, hộp, cái…; nhập số lượng ở ô riêng"),
+  initialQuantity: z.number().int().min(0).max(2147483647).nullable().optional(), initialRequestId: z.string().uuid().optional(),
   minimum: z.number({ invalid_type_error: "Nhập số nguyên không âm" }).int().min(0).max(2147483647).nullable(),
   departmentId: id.nullable(), notes: text(4000), active: z.boolean(),
-}).strict().superRefine(version);
+}).strict().superRefine((v, c) => {
+  version(v, c);
+  if (v.initialQuantity != null && (v.id || !v.initialRequestId)) c.addIssue({ code: "custom", path: ["initialQuantity"], message: "Số lượng ban đầu chỉ dùng khi tạo mới; tải lại form nếu thiếu mã yêu cầu." });
+});
 export const INVENTORY_OPERATIONS = ["TON_DAU", "NHAP", "CAP_PHAT", "THU_HOI", "CHUYEN_NOI_GIU", "DIEU_CHINH_TANG", "DIEU_CHINH_GIAM", "GIAM_DANG_CAP", "DAO_GIAO_DICH"] as const;
 export const InventoryTransactionSchema = z.object({
   itemId: id, operation: z.enum(INVENTORY_OPERATIONS), quantity: z.number({ invalid_type_error: "Nhập số lượng nguyên" }).int("Nhập số nguyên").min(0).max(2147483647),
@@ -31,13 +35,13 @@ export const InventoryTransactionSchema = z.object({
   for (const field of ["fromId", "toId", "employeeId", "departmentId", "issueId", "reversalId", "price"] as const) {
     if (v[field] !== null && !allowed[v.operation].includes(field)) error(field, "Trường này không áp dụng cho thao tác đã chọn");
   }
-  for (const field of allowed[v.operation].filter(f => !["employeeId", "departmentId", "price"].includes(f))) {
+  for (const field of allowed[v.operation].filter(f => !["employeeId", "departmentId", "price", "fromId", "toId"].includes(f))) {
     if (v[field as keyof typeof v] === null) error(field, "Chọn một giá trị");
   }
   if (v.operation !== "TON_DAU" && v.operation !== "DAO_GIAO_DICH" && !v.quantity) error("quantity", "Số lượng phải lớn hơn 0");
   if (v.operation === "DAO_GIAO_DICH" && v.quantity !== 0) error("quantity", "Số lượng đảo được lấy từ giao dịch gốc");
   if (v.operation === "CAP_PHAT" && Number(v.employeeId !== null) + Number(v.departmentId !== null) !== 1) error("employeeId", "Chọn đúng một người hoặc một phòng nhận");
-  if (v.operation === "CHUYEN_NOI_GIU" && v.fromId === v.toId) error("toId", "Nơi nhận phải khác nơi xuất");
+  if (v.operation === "CHUYEN_NOI_GIU" && (!v.fromId || !v.toId || v.fromId === v.toId)) error("toId", "Nơi nhận phải khác nơi xuất");
   if (["TON_DAU", "DIEU_CHINH_TANG", "DIEU_CHINH_GIAM", "GIAM_DANG_CAP", "DAO_GIAO_DICH"].includes(v.operation) && !v.reason) error("reason", "Nhập lý do");
 });
 export const InventoryQuerySchema = z.object({

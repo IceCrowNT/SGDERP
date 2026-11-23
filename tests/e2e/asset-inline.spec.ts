@@ -24,7 +24,8 @@ test.afterAll(async () => db.$disconnect());
 
 async function openGroup(page: Page) {
   await page.goto("/assets");
-  await page.getByRole("button", { name: "Mở nhóm Máy tính bàn", exact: true }).click();
+  await page.getByRole("combobox", { name: "Chọn loại tài sản", exact: true }).click();
+  await page.getByRole("option", { name: "Máy tính bàn", exact: true }).click();
   await expect(table(page).locator("tbody tr")).toHaveCount(20);
 }
 const editor = (page: Page) => page.locator("tr[data-inline-editor]");
@@ -82,12 +83,12 @@ test("network failure retries, stale versions never overwrite and drafts remain 
   await table(page).getByRole("button", { name: "Sửa nhanh PC-21", exact: true }).click();
   await expect(editor(page).getByRole("combobox", { name: "Vị trí", exact: true })).toBeEnabled();
   const block = async (route: import("@playwright/test").Route) => route.request().method() === "POST" ? route.abort() : route.continue();
-  await page.route("**/assets", block);
+  await page.route("**/assets**", block);
   await editor(page).getByLabel("Tên tài sản", { exact: true }).fill("PC sau lỗi mạng");
   await editor(page).getByLabel("Tên tài sản", { exact: true }).press("Enter");
   await expect(table(page).getByRole("alert")).toContainText("Nội dung đang sửa vẫn được giữ");
   await expect(editor(page).getByLabel("Tên tài sản", { exact: true })).toHaveValue("PC sau lỗi mạng");
-  await page.unroute("**/assets", block); await page.getByRole("button", { name: "Thử lưu lại", exact: true }).click();
+  await page.unroute("**/assets**", block); await page.getByRole("button", { name: "Thử lưu lại", exact: true }).click();
   await expect(editor(page)).toHaveCount(0);
   await table(page).getByRole("button", { name: "Sửa nhanh PC sau lỗi mạng", exact: true }).click();
   await editor(page).getByLabel("Tên tài sản", { exact: true }).fill("Không được ghi đè");
@@ -102,10 +103,10 @@ test("network failure retries, stale versions never overwrite and drafts remain 
 test("mobile location retry works and VIEW cannot edit", async ({ page, context }) => {
   await signAccount(context, manager); await page.setViewportSize({ width: 390, height: 844 }); await openGroup(page);
   const block = async (route: import("@playwright/test").Route) => route.request().method() === "POST" ? route.abort() : route.continue();
-  await page.route("**/assets", block);
+  await page.route("**/assets**", block);
   await table(page).getByRole("button", { name: "Sửa vị trí của PC-20", exact: true }).click();
   await expect(table(page).getByRole("alert")).toContainText("Không tải được danh mục");
-  await page.unroute("**/assets", block); await page.getByRole("button", { name: "Tải lại danh mục", exact: true }).click();
+  await page.unroute("**/assets**", block); await page.getByRole("button", { name: "Tải lại danh mục", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "Tìm vị trí", exact: true })).toBeFocused();
   await page.getByRole("option", { name: "Bàn số 07", exact: true }).click();
   await expect(editor(page)).toHaveCount(0);
@@ -122,7 +123,8 @@ test("changing usage automatically removes a person-group row and updates counts
   const original = await db.tai_san.findFirstOrThrow({ where: { company_id: manager.company_id, ten_tai_san: "PC-0" } });
   const count = await db.tai_san.count({ where: { company_id: manager.company_id, nguoi_su_dung_id: original.nguoi_su_dung_id } });
   await signAccount(context, manager); await page.goto("/assets");
-  await page.getByRole("button", { name: "Theo người", exact: true }).click();
+  await page.getByRole("combobox", { name: "Cách xem tài sản", exact: true }).click();
+  await page.getByRole("option", { name: "Theo người", exact: true }).click();
   await page.getByRole("button", { name: "Mở nhóm Nguyễn An", exact: true }).click();
   await table(page).getByRole("button", { name: "Sửa nhanh PC-0", exact: true }).click();
   await editor(page).getByRole("combobox", { name: "Hình thức sử dụng", exact: true }).click();
@@ -140,7 +142,7 @@ test("a pending autosave locks input and repeated submit does not duplicate the 
   await expect(editor(page).getByRole("combobox", { name: "Vị trí", exact: true })).toBeEnabled();
   let release!: () => void, writes = 0;
   const gate = new Promise<void>(resolve => { release = resolve; });
-  await page.route("**/assets", async route => {
+  await page.route("**/assets**", async route => {
     if (route.request().method() === "POST") { writes++; await gate; }
     await route.continue();
   });

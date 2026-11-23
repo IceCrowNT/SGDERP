@@ -1,6 +1,6 @@
 # Tài khoản mặc định, hồ sơ cá nhân và dashboard
 
-Cập nhật **16/11/2026 — đã kiểm chứng bỏ bắt buộc đổi mật khẩu cho tài khoản cấp mới và nút hiện/ẩn mật khẩu; bổ sung định hướng dashboard cho mẫu quy trình kéo thả và thông báo trong ứng dụng, chưa triển khai phần mở rộng**. Tài khoản cơ bản dùng được dashboard và tự sửa thông tin cá nhân; quyền nghiệp vụ cấp riêng. Migration cộng thêm cờ đổi mật khẩu và DEFAULT; giữ tài khoản/quyền nghiệp vụ hiện có.
+Cập nhật **20/11/2026 — chính sách mật khẩu tạm được chốt lại, bắt buộc đổi khi cấp mới/reset; nút hiện/ẩn mật khẩu giữ nguyên; bổ sung định hướng dashboard cho mẫu quy trình kéo thả và thông báo trong ứng dụng, chưa triển khai phần mở rộng**. Tài khoản cơ bản dùng được dashboard và tự sửa thông tin cá nhân; quyền nghiệp vụ cấp riêng. Migration cộng thêm cờ đổi mật khẩu và DEFAULT; giữ tài khoản/quyền nghiệp vụ hiện có.
 
 ## 1. Hiện trạng trước triển khai (mốc kiểm tra 05/11)
 
@@ -21,7 +21,7 @@ Giữ **một nhân sự có 0..N tài khoản**. Không tự tạo tài khoản
 2. Có lựa chọn **Tạo tài khoản đăng nhập**. Chọn sẵn khi tạo người đang làm việc và người thao tác có cả HR MANAGE + ACCOUNTS MANAGE; có thể bỏ chọn. Người chỉ có HR MANAGE vẫn tạo được hồ sơ riêng.
 3. Khi chọn: xem trước tên đăng nhập tự sinh, hiển thị **Quyền cơ bản (DEFAULT)**, không bắt chọn role. Quyền bổ sung để trong mục mở rộng hoặc cấp sau tại `/accounts`/`/roles` theo quyền người thao tác.
 4. Lưu nhân sự, tài khoản, liên kết role và audit trong một transaction. Nếu cấp tài khoản thất bại, không để lại hồ sơ dở dang; báo lỗi cụ thể và cho phép bỏ lựa chọn tạo tài khoản.
-5. Mật khẩu khởi tạo tự sinh ngẫu nhiên riêng hoặc nhập trong tùy chọn nâng cao, chỉ hiển thị một lần sau tạo thành công để bàn giao. Không dùng chung mật khẩu mặc định. Theo cập nhật 16/11/2026, tài khoản mới sử dụng ngay, không bắt đổi mật khẩu lần đầu; có thể tự đổi trong Hồ sơ của tôi. Ô nhập mật khẩu tại Nhân sự và Tài khoản có con mắt hiện/ẩn, mặc định ẩn.
+5. Mật khẩu khởi tạo tự sinh ngẫu nhiên riêng hoặc nhập trong tùy chọn nâng cao, chỉ hiển thị một lần sau tạo thành công để bàn giao. Không dùng chung mật khẩu mặc định. Theo quyết định 20/11/2026, mật khẩu được cấp là mật khẩu tạm; tài khoản mới phải đổi ở lần đăng nhập đầu trước khi sử dụng hệ thống. Cho phép nhập lại chính mật khẩu tạm làm mật khẩu mới; vẫn phải hoàn tất form xác nhận. Sau khi lưu thành công, không ép đổi lại ở mỗi lần đăng nhập. Ô nhập mật khẩu tại Nhân sự và Tài khoản có con mắt hiện/ẩn, mặc định ẩn.
 
 Trang `/accounts` áp dụng cùng mặc định khi tạo thêm tài khoản cho người đã có. Người đã nghỉ không được cấp tài khoản mở. Tài khoản hiện có giữ nguyên tên, mật khẩu, cờ bắt buộc đổi và quyền. Khi quản trị viên chủ động reset mật khẩu của tài khoản đã có, vẫn bắt người dùng đổi ở lần đăng nhập tiếp theo và hiển thị đúng lời nhắc bàn giao.
 
@@ -75,24 +75,24 @@ Truy cập từ menu người dùng ở góc phải và nút **Hồ sơ của t�
 
 ## 5. Dashboard là bàn làm việc của chính người dùng
 
-**Bố cục:** lời chào + phòng/chức vụ → đang đến lượt tôi → việc cần xử lý gần nhất → yêu cầu của tôi → thông báo → lối tắt theo quyền. Mọi số đếm lấy từ DB, không tạo số mẫu hoặc tiến độ giả.
+**Bố cục áp dụng 17/11:** Bàn làm việc tại `/`, tiêu đề gọn và liên kết profile. Tài khoản pilot có hai tab Trợ lý AI / Việc của tôi; AI mặc định, hội thoại chiếm vùng chính và bảng công việc mở theo ngữ cảnh. Việc của tôi tách danh sách Công việc AI với Quy trình. Không có AI thì mở phần workflow/cá nhân theo quyền. Chi tiết do [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#đề-xuất-dashboard-là-không-gian-làm-việc-với-agent--17112026) sở hữu.
 
-Giao diện 09/11: thẻ số liệu kèm biểu tượng; danh sách dạng bảng trên desktop, thẻ trên mobile, trạng thái có màu và chữ. Cột bên cạnh chứa biểu đồ thanh ba nhóm yêu cầu cá nhân (nháp, đang xử lý, kết quả 30 ngày) và lối tắt dạng ô. Thanh biểu đồ cùng thang đo theo nhóm lớn nhất, bấm để lọc danh sách; không phải tỷ lệ hoàn thành. Không cộng các ô thành tổng vì phạm vi có thể giao nhau. Khi không có dữ liệu dùng minh họa và hướng dẫn ngắn; tài khoản không có workflow không hiện biểu đồ nghiệp vụ. Chưa triển khai thông báo.
+Các nhóm workflow là bộ lọc có số đếm, danh sách trạng thái và phân trang; bỏ banner chào/avatar/ngày, card số liệu lớn, biểu đồ yêu cầu lặp lại và ô lối tắt trùng menu. Mọi số đếm lấy từ DB. Chuyển tab/lọc không bỏ nội dung chat đang nhập hoặc yêu cầu đang xử lý; giữ query hội thoại và workflow. Chưa triển khai thông báo.
 
 | Khối | Dữ liệu và điều kiện hiển thị |
 | --- | --- |
-| Xin chào / Hồ sơ của tôi | Mọi tài khoản hợp lệ; không cần HR VIEW |
+| Hồ sơ của tôi | Mọi tài khoản hợp lệ; không cần HR VIEW |
 | Đang đến lượt tôi | Tổng bước PENDING đang giao cho nhân sự của tôi và tài khoản hiện tại có quyền tương ứng; tách số cần duyệt và cần thực hiện |
 | Chờ tôi duyệt | Bước đang chờ được giao cho nhân sự của tôi, tài khoản hiện tại có quyền APPROVE + VIEW |
 | Việc tôi cần thực hiện | Bước đang chờ được giao cho tôi, có EXECUTE + VIEW; chưa bao gồm phân hệ công việc độc lập chưa triển khai |
 | Yêu cầu của tôi | Hồ sơ do nhân sự của tôi gửi: nháp, đang xử lý, kết quả gần đây; đọc theo quyền workflow, tạo mới cần CREATE + VIEW |
 | Thông báo | Định hướng sau: thông báo trong ứng dụng khi bước đến lượt hoặc hồ sơ đổi trạng thái; chỉ hiển thị khi có dữ liệu thông báo thật |
 | Điều phối quy trình | Chỉ WORKFLOW MANAGE: các hồ sơ cần phân công lại/tạm dừng trong công ty. Ghi rõ đây là điều phối, không gộp vào việc cá nhân |
-| Lối tắt | Profile luôn có; nhân sự/phòng ban/tài khoản/quy trình chỉ hiện theo quyền thực tế |
+| Menu hệ thống | Nhân sự/phòng ban/tài khoản/quy trình hiển thị tại menu chung theo quyền; không lặp card lối tắt |
 
 DEFAULT chưa được cấp workflow thì chỉ thấy phần cá nhân và hướng dẫn bắt đầu; không hiện những số 0 giả như đã được sử dụng quy trình. Danh sách chưa có dữ liệu có lời giải thích và thao tác phù hợp.
 
-Số đếm truy vấn riêng trên toàn bộ dữ liệu được phép xem, không đếm từ danh sách workflow đang giới hạn 200 dòng. Mỗi ô và danh sách khi bấm vào dùng cùng điều kiện lọc; danh sách phân trang 10 hồ sơ, truy vấn số đếm độc lập. Hai tài khoản của cùng nhân sự có thể xem cùng hồ sơ cá nhân nếu đủ quyền, nhưng không kế thừa quyền của nhau.
+Số đếm truy vấn riêng trên toàn bộ dữ liệu được phép xem, không đếm từ danh sách workflow đang giới hạn 200 dòng. Mỗi bộ lọc và danh sách khi bấm vào dùng cùng điều kiện lọc; danh sách phân trang 10 hồ sơ, truy vấn số đếm độc lập. Hai tài khoản của cùng nhân sự có thể xem cùng hồ sơ cá nhân nếu đủ quyền, nhưng không kế thừa quyền của nhau.
 
 Bỏ các thống kê HR toàn công ty khỏi trang chủ cá nhân, khối công nghệ, thanh tiến độ không có tiêu chí và nhãn “nhân sự tiêu biểu” không có căn cứ. Dấu thông báo chỉ đưa lại cùng dữ liệu thông báo thật; số chưa đọc không được suy từ dữ liệu mẫu hoặc dùng thay điều kiện quyền. Ô tìm kiếm chỉ đưa lại khi có chức năng thật.
 
@@ -110,7 +110,7 @@ Việc cấp quyền chỉ diễn ra khi người quản trị lưu phân quyề
 ## 7. Phạm vi DB và thứ tự thực hiện
 
 - Tái sử dụng 14 bảng hiện có; không thêm bảng profile/dashboard, không gộp nhân sự với tài khoản.
-- Dữ liệu mới: role DEFAULT cho từng công ty. Đã thêm `tai_khoan.bat_buoc_doi_mat_khau Boolean @default(false)`; từ 16/11 tạo tài khoản đặt `false`, reset mật khẩu tài khoản đã có đặt `true`. Không đổi schema hoặc cập nhật hàng loạt tài khoản cũ.
+- Dữ liệu mới: role DEFAULT cho từng công ty. Đã thêm `tai_khoan.bat_buoc_doi_mat_khau Boolean @default(false)`; theo quyết định 20/11 cấp mới và reset đặt `true`; seed chỉ bật khi tạo mới admin, không sửa nhánh cập nhật. Tự đổi mật khẩu thành công đặt `false`. Không đổi schema hoặc cập nhật hàng loạt tài khoản cũ.
 - Cơ chế DEFAULT được khóa trong quản lý role và bảo đảm khi khởi tạo công ty/cấp tài khoản; không chạy lại seed để ghi đè quyền hiện có.
 - Cấu hình nơi lưu ảnh bền vững trên server và sao lưu cùng DB; ảnh, file tạm không đưa lên Git. Mặc định `var/avatars/`, có thể đặt `AVATAR_STORAGE_DIR` đến volume bền vững; dùng sharp chuẩn hóa ảnh, xem kiến trúc.
 

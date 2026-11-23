@@ -1,3 +1,4 @@
+import { HCNS_LAYOUT } from "../../prisma/data/hcns-survey";
 import { chooseRoomPoint, openRoomLocations, refreshOfficeData } from "../helpers/office-3d";
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
@@ -5,7 +6,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import sharp from "sharp";
 import { signAccount } from "../helpers/account-fixture";
 import { Matrix4, Vector4 } from "three";
-import { HCNS_LAYOUT } from "../../src/lib/office-3d/hcns-layout";
+
 import { BUILDING_ROOMS, HCNS_BUILDING_KEY, floorElevation } from "../../src/lib/office-3d/building-layout";
 import { hcnsWorldPoint } from "../../src/lib/office-3d/building-navigation";
 const db = new PrismaClient();

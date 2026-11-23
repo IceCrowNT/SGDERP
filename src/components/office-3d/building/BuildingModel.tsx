@@ -9,17 +9,18 @@ import {
   HCNS_BUILDING_KEY,
   HCNS_PLACEMENT,
   floorElevation,
+  roomWallSegments,
   type BuildingRoom,
   type FloorSelection,
   type FloorNumber,
 } from "@/lib/office-3d/building-layout";
 import type { BuildingData } from "@/lib/office-3d/building-mapping";
-import { HcnsRoomModel } from "../hcns/HcnsRoomModel";
+import { RoomBackdrop } from "./RoomBackdrop";
+import { RoomShell } from "../hcns/RoomFurniture";
 import { Block, materials as m } from "../hcns/RoomFurniture";
 
 import {
-  architecturalFloorOutline,
-  ARCHITECTURAL_ATRIUM,
+  architecturalFloorSurface,
   type ArchitecturalFloor,
   type ArchitecturalPoint,
 } from "@/lib/office-3d/architectural-layout";
@@ -145,28 +146,30 @@ function Surface({
     </mesh>
   );
 }
-const ATRIUM_HOLE = [ARCHITECTURAL_ATRIUM];
 function FloorSlab({ floor }: { floor: ArchitecturalFloor }) {
   return (
-    <Surface outline={architecturalFloorOutline(floor)}
-      holes={floor === 2 ? ATRIUM_HOLE : NO_HOLES} y={0} color={m.floor} />
+    <Surface outline={architecturalFloorSurface(floor)} y={0} color={m.floor} />
   );
 }
 function RoomEnvelope({ room, selected }: { room: BuildingRoom; selected: boolean }) {
   const enclosed = room.kind === "room" || room.kind === "utility";
-  const outlined = enclosed || room.kind === "atrium" || selected;
+  const outlined = enclosed || room.kind === "atrium" || (selected && room.kind !== "reception");
+  const edges = useMemo(() => roomWallSegments(room), [room]);
   const edge = useMemo(() => new Float32Array(
-    room.outline.flatMap(([x, z]) => [x, enclosed ? 0.705 : 0.195, z]),
-  ), [room.outline, enclosed]);
+    edges.flatMap(pair => pair.flatMap(([x, z]) => [x, enclosed ? 0.705 : 0.195, z])),
+  ), [edges, enclosed]);
   return (
     <group>
       {room.kind !== "atrium" && (
-        <Surface outline={room.outline} y={0.04}
+        <Surface outline={room.outline} y={room.kind === "reception" ? 0.06 : 0.04}
           color={selected ? m.selected : room.kind === "utility" ? palette.mutedFloor :
             room.kind === "room" ? palette.stone : m.floor} />
       )}
-      {outlined && room.outline.map(([x, z], index) => {
-        const [nextX, nextZ] = room.outline[(index + 1) % room.outline.length];
+      {room.key === "plan_t2_thong_tang" && (
+        <Block at={[0, 0.375, room.depth / 2]} size={[room.width, 0.65, 0.08]}
+          color={m.wall} shadow={false} />
+      )}
+      {outlined && edges.map(([[x, z], [nextX, nextZ]], index) => {
         const length = Math.hypot(nextX - x, nextZ - z);
         const height = enclosed ? 0.65 : 0.14;
         return (
@@ -178,34 +181,25 @@ function RoomEnvelope({ room, selected }: { room: BuildingRoom; selected: boolea
         );
       })}
       {outlined && (
-        <lineLoop raycast={ignoreDecorativeRaycast}>
+        <lineSegments raycast={ignoreDecorativeRaycast}>
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" args={[edge, 3]} />
           </bufferGeometry>
           <lineBasicMaterial color={selected ? m.accent : m.slab} />
-        </lineLoop>
+        </lineSegments>
       )}
     </group>
   );
 }
 export function BuildingModel({
-  building,
   floor,
   selected,
   onSelect,
   detail,
-  point,
-  onPoint,
-  onFocusPoint,
-  onEquipment,
-  activeEquipment,
-  activeAsset,
   onEnter,
+  onOverview,
   hovered,
   onHover,
-  person,
-  onPerson,
-  onOverview,
 }: {
   building: BuildingData;
   floor: FloorSelection;
@@ -247,6 +241,8 @@ export function BuildingModel({
               key={room.key}
               position={[room.x, 0, room.z]}
               userData={{ objectKey: room.key }}
+              onPointerOver={!detail && floor === f.floor ? event => { event.stopPropagation(); onHover(room.key); } : undefined}
+              onPointerOut={!detail && floor === f.floor ? () => onHover(null) : undefined}
               onDoubleClick={
                 detail || (floor !== "all" && floor !== f.floor)
                   ? undefined
@@ -264,38 +260,26 @@ export function BuildingModel({
                     }
               }
             >
-              {room.key === HCNS_BUILDING_KEY && building.hcns ? (
-                <ContextLayer detail={floor !== "all" && floor !== f.floor} duration={.2}>
+              {room.key === HCNS_BUILDING_KEY ? (
+                <ContextLayer detail={(detail && selected !== room.key) || (floor !== "all" && floor !== f.floor)} duration={.2}>
                   <Surface outline={room.outline} y={0.07}
-                    color={!detail && selected === room.key ? m.selected : m.floor} />
+                    color={!detail && (selected === room.key || hovered === room.key) ? m.selected : m.floor} />
                   <group
                     position={[0, 0.28, 0]}
                     rotation={[0, HCNS_PLACEMENT.rotation, 0]}
                     scale={HCNS_PLACEMENT.scale}
                   >
-                    <HcnsRoomModel
-                      points={building.hcns.points}
-                      selected={detail ? point : null}
-                      onSelect={detail ? onPoint : undefined}
-                      onFocusPoint={detail ? onFocusPoint : undefined}
-                      onEquipment={detail ? onEquipment : undefined}
-                      activeEquipment={activeEquipment}
-                      activeAsset={activeAsset}
-                      hovered={hovered}
-                      onHover={detail ? onHover : undefined}
-                      person={person}
-                      onPerson={detail ? onPerson : undefined}
-                      canViewEmployees={building.hcns.canViewEmployees}
-                    />
+                    <RoomShell />
                   </group>
                 </ContextLayer>
               ) : (
-                <ContextLayer detail={detail || (floor !== "all" && floor !== f.floor)} duration={detail ? .65 : .2}>
-                  <RoomEnvelope room={room} selected={selected === room.key} />
+                <ContextLayer detail={(detail && selected !== room.key) || (floor !== "all" && floor !== f.floor)} duration={detail ? .65 : .2}>
+                  <RoomEnvelope room={room} selected={!detail && (selected === room.key || hovered === room.key)} />
+                  <RoomBackdrop roomKey={room.key} />
                 </ContextLayer>
               )}
               {/* Invisible pick surface covers open spaces and the atrium without inventing a floor. */}
-              <Surface outline={room.outline} y={0.08} color={m.floor} invisible />
+              {(!detail || selected === room.key) && <Surface outline={room.outline} y={room.kind === "reception" ? 0.1 : 0.08} color={m.floor} invisible />}
             </group>
           ))}
         </FloorLayer>

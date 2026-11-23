@@ -165,12 +165,6 @@ const PasswordSchema = z
         path: ["confirmation"],
         message: "Mật khẩu nhập lại chưa khớp",
       });
-    if (v.currentPassword === v.newPassword)
-      ctx.addIssue({
-        code: "custom",
-        path: ["newPassword"],
-        message: "Mật khẩu mới phải khác mật khẩu hiện tại",
-      });
   });
 export async function changeMyPassword(input: unknown) {
   const session = await getSession({ allowPasswordChange: true });

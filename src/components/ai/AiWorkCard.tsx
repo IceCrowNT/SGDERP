@@ -3,18 +3,23 @@
 import { useState, useTransition } from "react";
 import { CheckCheck, ClipboardList, Loader2 } from "lucide-react";
 import { approveAiWork, cancelAiWork, getAiWork, refreshAiWork } from "@/actions/ai-work";
-import { type AiWorkView, workStatusLabels } from "@/lib/ai-work";
+import { type AiWorkView, type CategoryWorkView, workStatusLabels } from "@/lib/ai-work";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+import { AiInventoryReceiptCard } from "./AiInventoryReceiptCard";
+
 const monthsLabel = (value: number | null) => value === null ? "Chưa đặt" : `${value} tháng${value % 12 === 0 ? ` (${value / 12} năm)` : ""}`;
-export function AiWorkCard({ work, onChange, onAdjust, canAdjust }: {
-  work: AiWorkView; onChange: (work: AiWorkView) => void; onAdjust: (text: string) => void; canAdjust: boolean;
+export function AiWorkCard(props: { work: AiWorkView; onChange: (work: AiWorkView) => void; onAdjust: (text: string) => void; canAdjust: boolean }) {
+  return props.work.kind === "NHAP_VAT_TU" ? <AiInventoryReceiptCard key={props.work.id} work={props.work} onChange={props.onChange} /> : <CategoryWorkCard {...props} work={props.work} />;
+}
+function CategoryWorkCard({ work, onChange, onAdjust, canAdjust }: {
+  work: CategoryWorkView; onChange: (work: AiWorkView) => void; onAdjust: (text: string) => void; canAdjust: boolean;
 }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
   const [uncertain, setUncertain] = useState(false);
-  const [expanded, setExpanded] = useState(work.status === "CHO_DUYET" || work.status === "CAN_LAM_MOI");
+  const [expanded, setExpanded] = useState(true);
   const [allRows, setAllRows] = useState(false);
   const editable = work.status === "CHO_DUYET" || work.status === "CAN_LAM_MOI";
   const changed = work.snapshot.rows.filter(r => r.before !== work.snapshot.months).length;
@@ -38,7 +43,7 @@ export function AiWorkCard({ work, onChange, onAdjust, canAdjust }: {
   return <article aria-label={`Công việc AI ${work.id}`} className="min-w-0 space-y-4 rounded-xl border bg-background p-3 sm:p-4" aria-busy={pending}>
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 space-y-1"><p className="flex items-center gap-2 font-semibold"><ClipboardList className="size-4 shrink-0 text-primary" />Khấu hao mặc định loại tài sản</p>
-        <p className="text-xs text-muted-foreground">Công việc #{work.id} · Phiên bản {work.version} · {new Date(work.createdAt).toLocaleString("vi-VN")}</p></div>
+        <p className="text-xs text-muted-foreground">{new Date(work.createdAt).toLocaleString("vi-VN")}</p></div>
       <span role="status" className="rounded-full bg-muted px-3 py-1 text-xs font-medium">{pending ? "Đang xử lý…" : workStatusLabels[work.status]}</span>
     </div>
     <p className="text-sm">Đặt thành <strong>{monthsLabel(work.snapshot.months)}</strong> cho tất cả {work.snapshot.rows.length} loại, gồm cả loại ngừng dùng. <strong>{changed} loại cần đổi</strong>, {work.snapshot.rows.length - changed} loại giữ nguyên. Chỉ đổi mặc định của loại; khấu hao trên các tài sản đã có giữ nguyên.</p>

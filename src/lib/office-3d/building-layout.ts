@@ -21,6 +21,8 @@ export type BuildingRoom = {
   outline: ArchitecturalPoint[];
   label: ArchitecturalPoint;
   showLabel: boolean;
+  /** Reference areas remain selectable without overlay text, even on hover. */
+  suppressLabel?: boolean;
   placed: boolean;
   sourceKey?: string;
 };
@@ -53,21 +55,47 @@ export const BUILDING_ROOMS: BuildingRoom[] = [
     showLabel:
       region.kind === "room" || region.kind === "atrium" ||
       region.kind === "stairs" || (region.kind === "hall" && region.key.endsWith("_sanh")) || region.key === "plan_t1_loi_vao",
+    suppressLabel: region.kind === "atrium" || /_wc_(nam|nu)$/.test(region.key) || region.key === "plan_t1_sanh",
     placed: true,
     sourceKey: region.key,
   })),
-  // The existing reception record remains readable. Its new physical placement
-  // has not been confirmed, so do not silently attach it to the entire lobby.
+  // Reception is an open work area in front of Khánh Tiết, not an enclosed room.
+  // Its existing floor-level location keeps its ID and business associations.
   {
     key: "t1_letan", name: "Lễ Tân", floor: 1, kind: "reception",
-    x: 0, z: 0, width: 0, depth: 0, outline: [], label: [0, 0],
-    showLabel: false, placed: false,
+    x: -1.05, z: -4.175, width: 5.8, depth: 3.6,
+    outline: [[-2.9,-1.8],[2.9,-1.8],[2.9,1.8],[-2.9,1.8]], label: [-1.05,-4.175],
+    showLabel: true, placed: true,
   },
 ];
+/** Spaces with a placement footprint; reception stays open, without artificial walls. */
+export function isManageableSpace(shape: BuildingRoom | undefined) {
+  return Boolean(shape?.placed && (shape.kind === "room" || shape.kind === "reception"));
+}
+export function isDirectWorkPoint(type: string | undefined) {
+  return type === "CHO_NGOI" || type === "DIEM_DAT_THIET_BI";
+}
 // Room-local HCNS geometry uses the same scale and axes as the floor plan.
 export const HCNS_PLACEMENT = { scale: 1, rotation: 0 };
 export function floorElevation(floor: FloorNumber) {
   // Stable world elevation in every view; camera navigation never moves floors.
   // Exploded spacing is for readability, not a building-height measurement.
   return (floor - 1) * 11;
+}
+
+/** Display aliases only; never rename records or infer department membership. */
+export function compactRoomName(name: string) {
+  const short = name.replace(/^phòng\s+/iu, "").trim();
+  if (/^kế hoạch\s*[-–]?\s*đầu tư$/iu.test(short)) return "KHĐT";
+  if (/^hành chính tổng hợp$/iu.test(short)) return "Hành chính";
+  return name.trim();
+}
+
+/** Visible walls follow the room footprint; the atrium front has its own low wall. */
+export function roomWallSegments(room: BuildingRoom): [ArchitecturalPoint, ArchitecturalPoint][] {
+  return room.outline.flatMap((start, index): [ArchitecturalPoint, ArchitecturalPoint][] => {
+    const end = room.outline[(index + 1) % room.outline.length];
+    if (room.kind === "atrium" && Math.abs(start[1] - room.depth / 2) < 1e-6 && Math.abs(end[1] - room.depth / 2) < 1e-6) return [];
+    return [[start, end]];
+  });
 }

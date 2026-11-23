@@ -1,4 +1,5 @@
 "use client";
+import { TASK_ACTIONS, TASK_LABELS, type TaskAction } from "@/lib/support-task";
 import { useState, useTransition, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -73,13 +74,16 @@ function PermissionSummary({
   levels,
   actions = [],
   ai = [],
+  tasks = [],
 }: {
   actions?: WorkflowAction[];
   ai?: AiAction[];
+  tasks?: TaskAction[];
   levels: Record<string, PermissionLevel>;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
+      {tasks.map(a => <Badge key={a} variant="secondary">Công việc: {TASK_LABELS[a]}</Badge>)}
       {ai.map(a => <Badge key={a} variant="secondary">{AI_LABELS[a]}</Badge>)}
       {actions.map((a) => (
         <Badge key={a} variant="secondary">
@@ -93,7 +97,7 @@ function PermissionSummary({
           </Badge>
         ) : null,
       )}
-      {!actions.length && !ai.length &&
+      {!tasks.length && !actions.length && !ai.length &&
         !ROLE_MODULES.some(
           (m) => levels[m.code] && levels[m.code] !== "NONE",
         ) && (
@@ -209,7 +213,7 @@ export function RoleManager({ data }: { data: Data }) {
                   <Users className="size-4" aria-hidden="true" />
                   {role.accountCount} tài khoản
                 </div>
-                <PermissionSummary levels={role.permissions} actions={role.workflowActions} ai={role.aiActions} />
+                <PermissionSummary levels={role.permissions} actions={role.workflowActions} ai={role.aiActions} tasks={role.taskActions} />
                 {role.description && (
                   <details className="mt-3 text-sm text-muted-foreground">
                     <summary className="cursor-pointer focus-visible:outline-ring">Mô tả vai trò</summary>
@@ -281,6 +285,7 @@ export function RoleManager({ data }: { data: Data }) {
                 </p>
                 <PermissionSummary
                   levels={effective(data.roles, a.roleIds)}
+                  tasks={[...new Set(data.roles.filter(r => a.roleIds.includes(r.id)).flatMap(r => r.taskActions))]}
                   ai={[...new Set(data.roles.filter(r => a.roleIds.includes(r.id)).flatMap(r => r.aiActions))]}
                   actions={[
                     ...new Set(
@@ -441,6 +446,7 @@ function RoleForm({
       description: role?.description ?? "",
       workflowActions: role?.workflowActions ?? [],
       aiActions: role?.aiActions ?? [],
+      taskActions: role?.taskActions ?? [],
       permissions: {
         ASSETS: role?.permissions.ASSETS ?? "NONE",
         INVENTORY: role?.permissions.INVENTORY ?? "NONE",
@@ -603,6 +609,16 @@ function RoleForm({
             </FormItem>
           )}
         />
+        <FormField control={form.control} name="taskActions" render={({ field }) => (
+          <FormItem className="rounded-lg border p-4">
+            <p className="font-semibold">Công việc và ticket hỗ trợ</p>
+            <p className="text-sm text-muted-foreground">Cần quyền Xem cho mọi thao tác. Điều phối chỉ áp dụng với phòng được phân công phụ trách; không được nghiệm thu thay.</p>
+            {TASK_ACTIONS.map(action => <label key={action} className="flex min-h-10 items-center gap-3 text-sm">
+              <Checkbox disabled={!canManage || pending} checked={field.value?.includes(action) ?? false} onCheckedChange={checked => field.onChange(checked ? [...(field.value ?? []), action] : field.value?.filter(a => a !== action))} />
+              {TASK_LABELS[action]}
+            </label>)}<FormMessage />
+          </FormItem>
+        )} />
         <FormField control={form.control} name="aiActions" render={({ field }) => (
           <FormItem className="rounded-lg border p-4">
             <p className="font-semibold">Cài đặt AI</p>
@@ -701,6 +717,7 @@ function AssignmentForm({
       <h3 className="font-semibold text-sm">Quyền hiệu lực sau khi lưu</h3>
       <PermissionSummary
         levels={effective(roles, ids)}
+        tasks={[...new Set(roles.filter(r => ids.includes(r.id)).flatMap(r => r.taskActions))]}
         ai={[...new Set(roles.filter(r => ids.includes(r.id)).flatMap(r => r.aiActions))]}
         actions={[
           ...new Set(

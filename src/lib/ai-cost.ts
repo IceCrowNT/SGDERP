@@ -12,5 +12,5 @@ export function aiReserve(prices: AiPrices, body: string, maxOutput: number) {
 }
 export function usageAmounts(sum: { chi_phi_uoc_tinh: Prisma.Decimal | null; du_phong: Prisma.Decimal | null }, limit: Prisma.Decimal | null, unknown = false) {
   const used = sum.chi_phi_uoc_tinh ?? new Prisma.Decimal(0), held = sum.du_phong ?? new Prisma.Decimal(0);
-  return { limit: limit?.toFixed(6) ?? null, used: used.toFixed(6), reserved: held.toFixed(6), remaining: limit && !unknown ? Prisma.Decimal.max(0, limit.sub(used).sub(held)).toFixed(6) : null, unknown };
+  return { limit: limit?.toFixed(6) ?? null, used: used.toFixed(6), reserved: held.toFixed(6), remaining: limit ? Prisma.Decimal.max(0, limit.sub(used).sub(held)).toFixed(6) : null, unknown };
 }

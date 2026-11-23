@@ -13,9 +13,9 @@ import { LocationAssets } from "@/components/locations/LocationAssets";
 import { LocationEditDialog } from "@/components/locations/LocationEditDialog";
 import type { LocationRow } from "@/lib/location-tree";
 import type { LocationEmployee } from "@/lib/work-location";
-import { assetsForEquipment, type EquipmentKind, type HcnsRoomData } from "@/lib/office-3d/hcns-layout";
+import { assetsForEquipment, type EquipmentKind, type RoomDetailData } from "@/lib/office-3d/hcns-layout";
 import { cn } from "@/lib/utils";
-export function HcnsRoomPanel({
+export function RoomPointPanel({
   room,
   selected,
   onSelect,
@@ -24,7 +24,7 @@ export function HcnsRoomPanel({
   equipmentKind,
   onAsset,
 }: {
-  room: HcnsRoomData;
+  room: RoomDetailData;
   selected: string | null;
   onSelect: (key: string) => void;
   personId?: number | null;
@@ -244,7 +244,7 @@ export function HcnsRoomPanel({
 }
 
 export function RoomPointList({ room, selected, onSelect }: {
-  room: HcnsRoomData;
+  room: RoomDetailData;
   selected: string | null;
   onSelect: (key: string) => void;
 }) {

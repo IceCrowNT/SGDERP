@@ -29,7 +29,6 @@ test.afterAll(async () => db.$disconnect());
 
 test("compact table, category icons, keyboard filtering and collapsed details/history", async ({ page, context }) => {
   await signAccount(context, manager); await page.goto("/assets");
-  await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
   await expect(table(page).getByRole("columnheader")).toHaveText(["Tài sản", "Người sử dụng", "Vị trí", "Tình trạng", "Thao tác"]);
   await expect(page.getByText("Hồ sơ theo bộ lọc", { exact: true })).toHaveCount(0);
   await expect(table(page).locator("tbody .lucide-monitor")).not.toHaveCount(0);
@@ -56,7 +55,7 @@ test("compact table, category icons, keyboard filtering and collapsed details/hi
   await expect(history.getByText(note, { exact: true })).toBeVisible();
   await detail(page).getByRole("button", { name: "Close", exact: true }).click();
   await expect(picker).toContainText("Thiết bị chuyên dụng mới");
-  await page.getByRole("button", { name: /^Bỏ lọc loại:/ }).click();
+  await page.getByRole("button", { name: "Tất cả", exact: true }).click();
   await expect(page.getByText("46 hồ sơ · Trang 1/3", { exact: true })).toBeVisible();
   await expect(page.locator("main [aria-busy]").first()).toHaveAttribute("aria-busy", "false");
   await page.screenshot({ animations: "disabled", path: "outputs/assets-compact/desktop.png" });
@@ -64,7 +63,6 @@ test("compact table, category icons, keyboard filtering and collapsed details/hi
 
 test("panel field editing keeps pagination and scroll; validation focuses the invalid field", async ({ page, context }) => {
   await signAccount(context, manager); await page.goto("/assets");
-  await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
   await page.getByRole("button", { name: "Trang sau", exact: true }).click();
   await expect(page.getByText("46 hồ sơ · Trang 2/3", { exact: true })).toBeVisible();
   const trigger = table(page).getByRole("button", { name: /^Mở tài sản/ }).nth(8);
@@ -86,7 +84,6 @@ test("panel field editing keeps pagination and scroll; validation focuses the in
 
 test("mobile table, filters and detail survive light/dark and viewport changes", async ({ page, context }) => {
   await signAccount(context, manager); await page.setViewportSize({ width: 390, height: 844 }); await page.goto("/assets");
-  await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
   const list = table(page);
   await expect(list.locator("tbody tr")).toHaveCount(20);
   await expect(table(page)).toBeVisible();

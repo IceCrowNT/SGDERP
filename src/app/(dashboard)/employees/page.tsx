@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 
 interface PageProps {
   searchParams?: Promise<{
+    status?: string;
     departmentId?: string;
     roleId?: string;
     search?: string;
@@ -34,6 +35,9 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
   const deptFilterId = resolvedParams?.departmentId
     ? parseInt(resolvedParams.departmentId, 10)
     : undefined;
+
+  const status = resolvedParams?.status;
+  const initialStatus = status === "ACTIVE" || status === "LEFT" || status === "UNKNOWN" ? status : "ALL";
 
   // Lấy danh sách nhân sự ban đầu
   const res = await getEmployees();
@@ -89,8 +93,9 @@ export default async function EmployeesPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <EmployeeManager
-        key={`${deptFilterId ?? "all"}:${resolvedParams?.search ?? ""}`}
+        key={`${deptFilterId ?? "all"}:${resolvedParams?.search ?? ""}:${initialStatus}`}
         initialEmployees={res.data || []}
+        initialStatus={initialStatus}
         initialDepartmentId={deptFilterId}
         initialSearch={resolvedParams?.search ?? ""}
         departments={departments.map((department) => {

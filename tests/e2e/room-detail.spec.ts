@@ -1,0 +1,36 @@
+import {test,expect} from "@playwright/test";
+import {PrismaClient} from "@prisma/client";
+import {signAccount} from "../helpers/account-fixture";
+const db=new PrismaClient();
+test.afterAll(()=>db.$disconnect());
+test('KHDT shares room overview, points, Escape and responsive canvas with HCNS',async({page,context})=>{
+  const account=await db.tai_khoan.findFirstOrThrow({where:{cho_phep_dang_nhap:true,bat_buoc_doi_mat_khau:false,
+    AND:['LOCATIONS','ASSETS'].map(phan_he=>({danh_sach_vai_tro:{some:{vai_tro:{danh_sach_quyen:{some:{quyen:{phan_he,hanh_dong:'MANAGE'}}}}}}}))}});
+  await signAccount(context,account);
+  const object=await db.vat_the_3d.findFirstOrThrow({where:{company_id:account.company_id,phong:{ten_vi_tri:'Phòng Kế hoạch Đầu tư'}},include:{vi_tri:true}});
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.setViewportSize({width:1440,height:900});await page.emulateMedia({reducedMotion:'reduce'});
+  await page.goto('/office-3d?floor=2&room=plan_t2_phai_truoc');
+  const canvas=page.locator('canvas[data-building-ready=true]');await expect(canvas).toBeVisible({timeout:90000});
+  const original=await canvas.elementHandle();
+  await page.getByRole('button',{name:'Vào phòng',exact:true}).click();
+  await expect(page).toHaveURL(/room=plan_t2_phai_truoc&mode=room$/);
+  await expect(page.getByRole('heading',{name:'Không gian KHĐT'})).toBeVisible();
+  await expect(page.getByRole('region',{name:'Chi tiết vị trí',exact:true})).toHaveCount(0);
+  const list=page.locator('summary').filter({hasText:'Danh sách vị trí'});await list.click();
+  await page.getByRole('button',{name:`Chọn ${object.vi_tri.ten_vi_tri}`,exact:true}).click();
+  await expect(page).toHaveURL(new RegExp(`point=object-${object.id}`));
+  await expect(page.getByRole('button',{name:'Gán tài sản',exact:true})).toBeVisible();
+  await page.getByTestId('building-workspace').focus();await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(/room=plan_t2_phai_truoc&mode=room$/);
+  await page.screenshot({path:'outputs/khdt/overview-desktop.png'});
+  await page.getByRole('button',{name:'Mặt bằng',exact:true}).click();await page.waitForTimeout(700);
+  await page.screenshot({path:'outputs/khdt/overview-top.png'});
+  await page.setViewportSize({width:390,height:844});
+  await expect(page.getByRole('button',{name:'Tổng quan phòng KHĐT',exact:true})).toBeVisible();
+  await page.screenshot({path:'outputs/khdt/overview-mobile.png'});
+  expect(await original!.evaluate(el=>el.isConnected&&el===document.querySelector('canvas'))).toBe(true);
+  await page.getByTestId('building-workspace').focus();await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(/floor=2$/);
+  expect(errors).toEqual([]);
+});

@@ -1,11 +1,11 @@
 import {
-  BUILDING_ROOMS,
+  BUILDING_ROOMS, isManageableSpace,
   HCNS_BUILDING_KEY,
   HCNS_PLACEMENT,
   floorElevation,
   type FloorSelection,
 } from "./building-layout";
-import { HCNS_LAYOUT, EQUIPMENT_KINDS, type EquipmentKind } from "./hcns-layout";
+import { EQUIPMENT_KINDS, type EquipmentKind } from "./hcns-layout";
 import { isObjectKey } from "./placement";
 
 export type BuildingNavigation = {
@@ -24,18 +24,20 @@ export type BuildingTarget =
 export function readBuildingNavigation(
   query: Pick<URLSearchParams, "get">,
 ): BuildingNavigation {
-  const room = BUILDING_ROOMS.find((r) => r.key === query.get("room"));
+  const requestedRoom = query.get("room");
+  // Older links to the rear bank area now select the unified VietinBank room.
+  const room = BUILDING_ROOMS.find((r) => r.key === (requestedRoom === "plan_t1_phai_sau" ? "plan_t1_phai_truoc" : requestedRoom));
   const floor = query.get("floor");
   const detail =
-    room?.key === HCNS_BUILDING_KEY && query.get("mode") === "room";
+    Boolean(isManageableSpace(room)) && query.get("mode") === "room";
   const view: BuildingNavigation = {
     floor:
       room?.floor ??
       (floor === "1" ? 1 : floor === "2" ? 2 : floor === "3" ? 3 : "all"),
     room: room?.key ?? null,
     detail,
-    point: room && isObjectKey(query.get("point")) ? query.get("point") : detail
-      ? (HCNS_LAYOUT.find((p) => p.key === query.get("point"))?.key ??
+    point: room && isObjectKey(query.get("point")) ? query.get("point") : detail && room?.key === HCNS_BUILDING_KEY
+      ? ((/^hcns-(?:0[1-9]|10)$/.test(query.get("point") ?? "") ? query.get("point") : null) ??
         null)
       : null,
   };
@@ -53,7 +55,7 @@ export function selectionCameraKey(view: BuildingNavigation) {
 export function parentBuildingNavigation(view: BuildingNavigation): BuildingNavigation {
   if (view.asset || view.equipment) return { floor:view.floor,room:view.room,detail:view.detail,point:view.point };
   if (view.point) return {...view,point:null};
-  // Detail HCNS -> floor overview in one step, without a duplicate room-selection step.
+  // Room detail -> floor overview without a duplicate room-selection step.
   if (view.room) return {floor:view.floor,room:null,detail:false,point:null};
   return {floor:"all",room:null,detail:false,point:null};
 }

@@ -21,7 +21,7 @@ import type { AssetRow, AssetCategory } from "./types";
 
 export type DetailField = "name" | "categoryId" | "condition" | "assignment" | "departmentId" | "locationId" | "model" | "serial" | "notes" | "finance";
 type Values = z.input<typeof SaveAssetSchema>;
-export function AssetDetailEditor({ row, target, categories, onSaved, onCancel, onUpdated, onBlockedChange }: { row: AssetRow; target: DetailField; categories: AssetCategory[]; onSaved: (row: AssetRow) => void; onCancel: () => void; onUpdated: (row: AssetRow) => void; onBlockedChange: (blocked: boolean) => void }) {
+export function AssetDetailEditor({ row, target, assignmentFocus, categories, onSaved, onCancel, onUpdated, onBlockedChange }: { row: AssetRow; target: DetailField; assignmentFocus: "usage" | "employeeId"; categories: AssetCategory[]; onSaved: (row: AssetRow) => void; onCancel: () => void; onUpdated: (row: AssetRow) => void; onBlockedChange: (blocked: boolean) => void }) {
   const [loadError, setLoadError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [options, setOptions] = useState<SearchableOption[] | null>(null);
@@ -55,35 +55,34 @@ export function AssetDetailEditor({ row, target, categories, onSaved, onCancel, 
   useEffect(() => {
     if (focused.current || (needsOptions && !options)) return;
     const frame = requestAnimationFrame(() => {
-      const first = target === "assignment" ? root.current?.querySelector<HTMLButtonElement>('[aria-label="Người sử dụng"]') : root.current?.querySelector<HTMLElement>('input,textarea,[role="combobox"]');
+      const first = target === "assignment" && assignmentFocus === "employeeId" && row.hinh_thuc_su_dung === "CA_NHAN" ? root.current?.querySelector<HTMLButtonElement>('[aria-label="Người sử dụng"]') : root.current?.querySelector<HTMLElement>('input,textarea,[role="combobox"]');
       first?.focus({ preventScroll: true });
       if (first?.getAttribute("role") === "combobox") first.click();
       focused.current = true;
     });
     return () => cancelAnimationFrame(frame);
-  }, [needsOptions, options, target]);
+  }, [needsOptions, options, target, assignmentFocus, row.hinh_thuc_su_dung]);
   function catalog(name: "categoryId" | "departmentId" | "locationId" | "employeeId", label: string, choices: SearchableOption[], required = false) {
-    return <FormField control={form.control} name={name} render={({ field }) => <FormItem><FormLabel required={required}>{label}</FormLabel><FormControl><SearchableSelect {...field} label={label} value={field.value ? String(field.value) : "none"} options={choices} disabled={pending || (needsOptions && !options)} aria-required={required} onValueChange={v => {
+    return <FormField control={form.control} name={name} render={({ field }) => <FormItem className="min-w-0"><FormLabel className={target === "assignment" ? "" : "sr-only"} required={required}>{label}</FormLabel><FormControl><SearchableSelect {...field} label={label} value={field.value ? String(field.value) : "none"} options={choices} disabled={pending || (needsOptions && !options)} aria-required={required} onValueChange={v => {
       field.onChange(v === "none" ? null : Number(v));
       if (name === "employeeId" && v !== "none") form.setValue("usage", "CA_NHAN", { shouldDirty: true });
     }} /></FormControl><FormMessage /></FormItem>} />;
   }
   function enumeration(name: "usage" | "condition", label: string, choices: Record<string, string>) {
-    return <FormField control={form.control} name={name} render={({ field }) => <FormItem><FormLabel required>{label}</FormLabel><Select value={field.value} onValueChange={v => { field.onChange(v); if (name === "usage" && v !== "CA_NHAN") form.setValue("employeeId", null, { shouldDirty: true }); }}><FormControl><SelectTrigger ref={field.ref} aria-required className="min-h-10 w-full"><SelectValue /></SelectTrigger></FormControl><SelectContent>{Object.entries(choices).map(([key, text]) => <SelectItem key={key} value={key}>{text}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>} />;
+    return <FormField control={form.control} name={name} render={({ field }) => <FormItem className="min-w-0"><FormLabel className={target === "assignment" ? "" : "sr-only"} required>{label}</FormLabel><Select value={field.value} onValueChange={v => { field.onChange(v); if (name === "usage" && v !== "CA_NHAN") form.setValue("employeeId", null, { shouldDirty: true }); }}><FormControl><SelectTrigger ref={field.ref} aria-required className="min-h-10 w-full text-base"><SelectValue /></SelectTrigger></FormControl><SelectContent>{Object.entries(choices).map(([key, text]) => <SelectItem key={key} value={key}>{text}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>} />;
   }
-  return <Form {...form}><form ref={root} noValidate aria-label="Sửa thông tin tài sản" className="space-y-3 rounded-lg border bg-muted/20 p-3" {...auto.bindings} onSubmit={event => { event.preventDefault(); auto.requestSave(); }}>
+  return <Form {...form}><form ref={root} noValidate aria-label="Sửa thông tin tài sản" className="min-w-0 space-y-2" {...auto.bindings} onSubmit={event => { event.preventDefault(); auto.requestSave(); }}>
     <fieldset disabled={pending} className="min-w-0 space-y-3">
-      {(["name", "serial", "model", "notes"] as string[]).includes(target) && <FormField control={form.control} name={target as "name" | "serial" | "model" | "notes"} render={({ field }) => <FormItem><FormLabel required={target === "name"}>{{ name: "Tên tài sản", serial: "Serial / Service tag", model: "Hãng / Model", notes: "Ghi chú" }[target as "name"]}</FormLabel><FormControl>{target === "notes" ? <Textarea {...field} value={field.value ?? ""} className="text-base" rows={4} /> : <Input {...field} value={field.value ?? ""} aria-required={target === "name"} className="text-base" />}</FormControl><FormMessage /></FormItem>} />}
+      {(["name", "serial", "model", "notes"] as string[]).includes(target) && <FormField control={form.control} name={target as "name" | "serial" | "model" | "notes"} render={({ field }) => <FormItem><FormLabel className={target === "name" ? "" : "sr-only"} required={target === "name"}>{{ name: "Tên tài sản", serial: "Serial / Service tag", model: "Hãng / Model", notes: "Ghi chú" }[target as "name"]}</FormLabel><FormControl>{target === "notes" ? <Textarea {...field} value={field.value ?? ""} className="text-base" rows={4} /> : <Input {...field} value={field.value ?? ""} aria-required={target === "name"} className="text-base" />}</FormControl><FormMessage /></FormItem>} />}
       {target === "categoryId" && catalog("categoryId", "Loại tài sản", categories.map(c => ({ value: String(c.id), label: c.ten_loai, disabled: !c.dang_su_dung })), true)}
       {target === "condition" && enumeration("condition", "Tình trạng", ASSET_CONDITIONS)}
-      {target === "assignment" && <>{enumeration("usage", "Hình thức sử dụng", ASSET_USAGES)}{catalog("employeeId", "Người sử dụng", options ?? [], usage === "CA_NHAN")}</>}
+      {target === "assignment" && <div className="grid items-start gap-3 sm:grid-cols-2">{enumeration("usage", "Hình thức sử dụng", ASSET_USAGES)}{usage === "CA_NHAN" && catalog("employeeId", "Người sử dụng", options ?? [], true)}</div>}
       {target === "departmentId" && catalog("departmentId", "Phòng quản lý", [{ value: "none", label: "Chưa xác định" }, ...(options ?? [])])}
       {target === "locationId" && catalog("locationId", "Vị trí", [{ value: "none", label: "Chưa xác định" }, ...(options ?? [])])}
       {target === "finance" && <AssetFinanceFields onApply={auto.requestSave} defaultMonths={categories.find(c => c.id === row.loai_tai_san_id)?.khau_hao_mac_dinh_thang} />}
     </fieldset>
     {needsOptions && !options && !loadError && <p role="status" className="text-sm text-muted-foreground">Đang tải lựa chọn…</p>}
     {loadError && <div role="alert"><p className="text-sm text-destructive">{loadError}</p><Button type="button" variant="outline" onClick={() => setAttempt(v => v + 1)}>Tải lại danh mục</Button></div>}
-    <AssetAutosaveStatus auto={auto} />
-    <div className="flex justify-end gap-2"><Button data-autosave-cancel type="button" variant="outline" className="min-h-10" disabled={pending} onClick={auto.cancel}>{auto.dirty || auto.error ? "Bỏ thay đổi" : "Đóng"}</Button></div>
+    <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1"><div className="min-w-0 flex-1 py-2"><AssetAutosaveStatus auto={auto} /></div><Button data-autosave-cancel type="button" variant="ghost" className="min-h-10 shrink-0 px-2" disabled={pending} onClick={auto.cancel}>{auto.dirty || auto.error ? "Bỏ thay đổi" : "Đóng"}</Button></div>
   </form></Form>;
 }

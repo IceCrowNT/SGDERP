@@ -41,8 +41,13 @@ export function layoutEquipment({ equipment, assets, width, depth, height = .85,
     const fw=w*scale, fd=d*scale;
     // Keep floor devices inside the legs, away from the modesty panel; leave
     // the central knee space free. Equipment points use their own surface.
-    const margin = below ? .19 : EDGE;
-    const maxX=(width-fw)/2-margin, maxZ=(depth-fd)/2-(below ? .08 : EDGE);
+    const spareX=(width-fw)/2, spareZ=(depth-fd)/2;
+    if (spareX < 0 || spareZ < 0) return;
+    // A tabletop margin is preferred clearance, not extra device size. Reduce
+    // it for shallow desks when the complete model still fits. Under-desk
+    // clearances remain mandatory so equipment cannot intersect the legs.
+    const maxX=spareX-(below ? .19 : Math.min(EDGE,spareX));
+    const maxZ=spareZ-(below ? .08 : Math.min(EDGE,spareZ));
     if (maxX < 0 || maxZ < 0) return;
     const front = device.kind === "pc" || device.kind === "laptop";
     const primary = front && !result.some(p=>p.part === "device" && (p.kind === "pc" || p.kind === "laptop"));

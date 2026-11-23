@@ -1,18 +1,14 @@
 "use server";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { db } from "@/lib/db";
+import { readBuildingMapping } from "@/lib/office-3d/building-mapping-server";
 import { getSession, hasPermission } from "@/lib/auth";
 import {
-  BuildingMappingSchema,
   resolveBuilding,
   relativeRoomLocation,
   type BuildingData,
 } from "@/lib/office-3d/building-mapping";
-import { HCNS_BUILDING_KEY } from "@/lib/office-3d/building-layout";
-import { RoomMappingSchema } from "@/lib/office-3d/room-mapping";
-import { getHcnsRoom } from "./office-room";
-import { objectKey } from "@/lib/office-3d/placement";
+import { isDirectWorkPoint } from "@/lib/office-3d/building-layout";
+import { objectKey, type PlacementModel } from "@/lib/office-3d/placement";
 import { equipmentForAssets } from "@/lib/office-3d/hcns-layout";
 
 export async function getOfficeBuilding() {
@@ -22,26 +18,9 @@ export async function getOfficeBuilding() {
       success: false as const,
       message: "Bạn chưa được cấp quyền xem vị trí & không gian.",
     };
-  let raw: unknown;
-  try {
-    raw = JSON.parse(
-      await readFile(
-        path.join(process.cwd(), "var/office-3d/building.json"),
-        "utf8",
-      ),
-    );
-  } catch {
-    return {
-      success: false as const,
-      message: "Chưa thiết lập mô hình tòa nhà cho công ty của bạn.",
-    };
-  }
-  const parsed = BuildingMappingSchema.safeParse(raw);
-  if (!parsed.success || parsed.data.companyId !== session.companyId)
-    return {
-      success: false as const,
-      message: "Chưa thiết lập mô hình tòa nhà cho công ty của bạn.",
-    };
+  let mapping;
+  try { mapping = await readBuildingMapping(session.companyId, db); }
+  catch { return { success: false as const, message: "Chưa tải được liên kết mô hình tòa nhà. Vui lòng thử lại hoặc kiểm tra cấu hình." }; }
   const rows = await db.vi_tri.findMany({
     where: { company_id: session.companyId },
     select: {
@@ -52,9 +31,10 @@ export async function getOfficeBuilding() {
       loai_vi_tri: true,
       dang_su_dung: true,
       mo_ta: true,
+      updated_at: true,
     },
   });
-  const resolved = resolveBuilding(parsed.data, rows);
+  const resolved = resolveBuilding(mapping, rows);
   if (!resolved)
     return {
       success: false as const,
@@ -92,43 +72,19 @@ export async function getOfficeBuilding() {
       select: { ma_loai: true, ten_loai: true }, orderBy: { ten_loai: "asc" },
     }) : Promise.resolve([]),
   ]);
-  let hcns: BuildingData["hcns"] = null;
-  const room = resolved.rooms.find((r) => r.key === HCNS_BUILDING_KEY);
-  if (room?.state === "active") {
-    try {
-      const mapping = RoomMappingSchema.parse(
-        JSON.parse(
-          await readFile(
-            path.join(process.cwd(), "var/office-3d/hcns.json"),
-            "utf8",
-          ),
-        ),
-      );
-      if (
-        mapping.companyId === session.companyId &&
-        mapping.roomId === room.row?.id
-      ) {
-        const result = await getHcnsRoom();
-        if (result.success) hcns = result.room;
-      }
-    } catch {
-      /* Missing detail model does not prevent browsing the building. */
-    }
-  }
   const objects: NonNullable<BuildingData["objects"]> = placements.flatMap(o => {
-    const r = resolved.rooms.find(r => r.row?.id === o.phong_id && r.state === "active");
+    const r = resolved.rooms.find(r => r.state === "active" && (isDirectWorkPoint(r.row?.loai_vi_tri) ? r.row?.id === o.vi_tri_id && r.row.parent_id === o.phong_id : r.row?.id === o.phong_id));
     if (!r || o.vi_tri.parent_id !== o.phong_id || !o.vi_tri.dang_su_dung ||
-      o.vi_tri.loai_vi_tri !== (o.loai_vat_the === "BAN" ? "CHO_NGOI" : "DIEM_DAT_THIET_BI")) return [];
+      !["CHO_NGOI","DIEM_DAT_THIET_BI"].includes(o.vi_tri.loai_vi_tri)) return [];
     const pointAssets = assets.filter(a => a.vi_tri_id === o.vi_tri_id).map(a => ({id:a.id,name:a.ten_tai_san,code:a.ma_tai_san,
       category:a.loai_tai_san.ten_loai,categoryCode:a.loai_tai_san.ma_loai,condition:a.tinh_trang,locationId:a.vi_tri_id,version:a.updated_at.toISOString()}));
-    return [{id:o.id,roomKey:r.key,roomId:o.phong_id,kind:o.loai_vat_the as "BAN"|"DIEM",x:o.toa_do_x,z:o.toa_do_z,angle:o.goc_xoay as 0|90|180|270,
-      version:o.updated_at.toISOString(),locationVersion:o.vi_tri.updated_at.toISOString(),
-      point:{key:objectKey(o.id),number:0,locationId:o.vi_tri_id,name:o.vi_tri.ten_vi_tri,description:o.vi_tri.mo_ta,state:"active" as const,
+    return [{id:o.id,roomKey:r.key,roomId:r.row!.id,model:o.mau_hien_thi as PlacementModel,kind:o.loai_vat_the as "BAN"|"DIEM",x:o.toa_do_x,z:o.toa_do_z,angle:o.goc_xoay as 0|90|180|270,
+      width:o.chieu_rong,depth:o.chieu_sau,version:o.updated_at.toISOString(),locationVersion:o.vi_tri.updated_at.toISOString(),
+      point:{key:o.khoa_cu ?? objectKey(o.id),number:0,locationId:o.vi_tri_id,name:o.vi_tri.ten_vi_tri,description:o.vi_tri.mo_ta,state:"active" as const,
         equipment:equipmentForAssets(pointAssets),...(canViewAssets ? {assets:pointAssets} : {}),
         ...(canViewEmployees ? {occupants:people.filter(p => p.vi_tri_lam_viec_id === o.vi_tri_id).map(p => ({id:p.id,name:p.ho_ten,position:p.chuc_vu,department:p.phong_ban?.ten_phong_ban ?? null}))} : {})}}];
   });
-  const pointForLocation = (id:number) => objects.find(o => o.point.locationId === id)?.point.key ??
-    hcns?.points.find(p => p.state === "active" && p.locationId === id)?.key ?? null;
+  const pointForLocation = (id:number) => objects.find(o => o.point.locationId === id)?.point.key ?? null;
   const building: BuildingData = {
     ...(canViewEmployees ? { searchPeople: people.map(p => {
       const location = rows.find(row => row.id === p.vi_tri_lam_viec_id);
@@ -150,6 +106,14 @@ export async function getOfficeBuilding() {
     rooms: resolved.rooms.map((r) => ({
       key: r.key,
       locationId: r.row?.id,
+      ...(hasPermission(session, "LOCATIONS", "MANAGE") && r.state === "active" ? {
+        ...(isDirectWorkPoint(r.row?.loai_vi_tri) ? { directPoint: {
+          id:r.row!.id, name:r.row!.ten_vi_tri, kind:(r.row!.loai_vi_tri === "CHO_NGOI" ? "BAN" : "DIEM") as "BAN"|"DIEM",
+          version:rows.find(row=>row.id===r.row!.id)!.updated_at.toISOString(),
+        }} : {}),
+        availablePoints: rows.filter(row=>row.parent_id===r.row?.id && row.dang_su_dung && isDirectWorkPoint(row.loai_vi_tri) && !placements.some(o=>o.vi_tri_id===row.id))
+          .map(row=>({id:row.id,name:row.ten_vi_tri,kind:(row.loai_vi_tri === "CHO_NGOI" ? "BAN" : "DIEM") as "BAN"|"DIEM",version:row.updated_at.toISOString()})),
+      } : {}),
       name: r.name,
       state: r.state,
       path: r.path,
@@ -182,7 +146,7 @@ export async function getOfficeBuilding() {
         })),
       } : {}),
     })),
-    hcns,
+    hcns:null,
     canViewEmployees,
     canViewAssets,
     canManage: hasPermission(session, "LOCATIONS", "MANAGE"),

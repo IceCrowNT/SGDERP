@@ -3,6 +3,7 @@ import { RoundedBox } from "@react-three/drei";
 import { useMemo, useState } from "react";
 import { layoutEquipment } from "@/lib/office-3d/equipment-layout";
 import type { LocationAsset } from "@/lib/asset-location";
+import type { PlacementModel } from "@/lib/office-3d/placement";
 import { Shape } from "three";
 import {
   HCNS_ROOM_OUTLINE,
@@ -264,6 +265,7 @@ export function EquipmentDisplay({ equipment, assets, layoutAssets, width, depth
   ))}</>;
 }
 export function Desk({
+  model = "MAC_DINH",
   width,
   depth,
   equipment,
@@ -278,6 +280,7 @@ export function Desk({
   depth: number;
   equipment: EquipmentKind[];
   selected: boolean;
+  model?: PlacementModel;
 } & EquipmentInteraction) {
   return (
     <group>
@@ -294,7 +297,7 @@ export function Desk({
           roughness={0.72}
         />
       </RoundedBox>
-      {[-1, 1].map((side) => (
+      {model !== "BAN_TONG_GIAM_DOC" && [-1, 1].map((side) => (
         <group key={side}>
           <Block
             at={[side * (width / 2 - 0.12), 0.4, -depth / 2 + 0.12]}
@@ -318,6 +321,25 @@ export function Desk({
         size={[width - 0.2, 0.22, 0.04]}
         color={materials.woodEdge}
       />
+      {model === "QUAY_LE_TAN" && <group>
+        {/* Customer-facing fascia (-Z); the employee and working surface stay on +Z. */}
+        <Block at={[0,.52,-depth/2+.06]} size={[width,1.04,.12]} color={selected ? materials.selected : materials.wall}/>
+        <Block at={[0,1.07,-depth/2+.08]} size={[width+.04,.06,.3]} color={materials.wood}/>
+        <Block at={[-width/2+.05,.4,0]} size={[.1,.8,depth]} color={materials.wall}/>
+        <Block at={[width/2-.05,.4,0]} size={[.1,.8,depth]} color={materials.wall}/>
+      </group>}
+      {model === "BAN_TONG_GIAM_DOC" && <group>
+        {/* Executive silhouette stays inside the saved rectangular footprint.
+            Side supports leave the equipment allocator's .19 m floor clearance free. */}
+        <Block at={[0,.73,0]} size={[width,.05,depth]} color={materials.woodEdge}/>
+        {[-1,1].map(side => <Block key={side} at={[side*(width/2-.06),.38,0]}
+          size={[.12,.72,depth]} color={materials.woodEdge}/>)}
+        <Block at={[0,.4,-depth/2+.025]} size={[width-.24,.6,.05]} color={materials.wood}/>
+        <Block at={[0,.22,-depth/2-.001]} size={[width-.3,.025,.008]} color={materials.metal}/>
+        {/* Flush side return and inset writing pad: same usable surface height. */}
+        <Block at={[width*.34,.846,0]} size={[width*.26,.002,depth-.08]} color={materials.woodEdge}/>
+        <Block at={[0,.847,depth*.15]} size={[width*.43,.003,depth*.48]} color={materials.metal}/>
+      </group>}
       <EquipmentDisplay equipment={equipment} assets={assets} layoutAssets={layoutAssets} width={width} depth={depth} height={.85} desk
         activeEquipment={activeEquipment} activeAsset={activeAsset} onEquipment={onEquipment} />
 

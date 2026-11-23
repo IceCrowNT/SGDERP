@@ -65,7 +65,7 @@ test('job routes explicit connection and model, inherited job follows default, l
   const input = { job: 'LOOKUP', version: null, connectionId: other.id, model: 'lookup-model', prices: prices('lookup-model') };
   assert((await as(manager, () => admin.saveAiJob(input))).success);
   assert.equal((await as(manager, () => admin.saveAiJob(input))).success, false);
-  transport = async (_, opts) => { const body = JSON.parse(opts.body); assert.equal(body.model, 'lookup-model'); assert(body.tools.every(t => ['lookup','search_assets','get_asset'].includes(t.name))); return answer(); };
+  transport = async (_, opts) => { const body = JSON.parse(opts.body); assert.equal(body.model, 'lookup-model'); assert(body.tools.every(t => ['lookup','search_assets','get_asset','read_ai_attachment','analyze_ai_sheet'].includes(t.name))); return answer(); };
   assert((await ask({ job: 'LOOKUP' })).success);
   let row = (await logs())[0]; assert.equal(row.ket_noi_ai_id, other.id); assert.equal(row.ma_tac_vu, 'LOOKUP');
   transport = async (_, opts) => { assert.equal(JSON.parse(opts.body).model, 'test-model'); return answer(); }; assert((await ask()).success);
@@ -107,12 +107,13 @@ test('timeout and absent usage retain reserve; manual reconciliation requires ev
   transport = async () => answer(null); assert((await ask()).success); row = (await logs())[1]; assert.equal(row.trang_thai, 'CHUA_RO'); assert(row.du_phong.gt(0));
 });
 
-test('configuration changes and permission revocation between calls stop further network calls but keep charges', async () => {
+test('connection changes stop a turn; revoking ERP grants preserves generic chat and charges', async () => {
   transport = async () => { await db.ket_noi_ai.update({ where: { id: connection.id }, data: { updated_at: new Date(connection.updated_at.getTime() + 1000) } }); return json({ status: 'completed', output: [{ type: 'function_call', name: 'lookup', arguments: '{"kind":"categories"}', call_id: 'lookup' }], usage: { input_tokens: 10, output_tokens: 2 } }); };
   assert.match((await ask()).message, /Cài đặt AI đã thay đổi/); assert.equal(calls, 1); assert.equal((await logs())[0].trang_thai, 'HOAN_TAT');
   transport = async () => { await db.vai_tro_quyen.deleteMany({ where: { role_id: role.id, permission_id: permissions.find(p => p.phan_he === 'ASSETS' && p.hanh_dong === 'MANAGE').id } }); return answer(); };
-  assert.equal((await ask()).success, false); // Charges survive revocation; the agent cannot continue.
-  const before = calls; assert.match((await ask()).message, /chưa được mở trợ lý AI|quyền đã thay đổi/); assert.equal(calls, before);
+  assert.equal((await ask()).success, true); // General chat has no ERP source and remains available.
+  const before = calls; assert.equal((await ask()).success, true); assert.equal(calls, before + 1);
+  assert((await logs()).every(row => row.trang_thai === 'HOAN_TAT'));
 });
 
 test('duplicate requests never recharge and changed job under same ID is rejected', async () => {
@@ -157,5 +158,29 @@ test('blank account/connection budgets mean unlimited; missing prices still reco
   assert((await as(manager, () => admin.saveAiAccountLimit({ accountId: manager.id, version: user.updated_at.toISOString(), limit: '100' }))).success);
   const source = await db.ket_noi_ai.findUniqueOrThrow({ where: { id: connection.id } });
   assert((await as(manager, () => admin.saveAiConnectionPolicy({ id: source.id, version: source.updated_at.toISOString(), limit: null, prices: prices('test-model') }))).success);
-  const before = calls; assert.match((await ask()).message, /chưa xác định chi phí/); assert.equal(calls, before);
+  const before = calls; assert((await ask()).success); assert.equal(calls, before + 1);
+  assert.equal((await db.nhat_ky_goi_ai.findUniqueOrThrow({ where: { id: row.id } })).chi_phi_uoc_tinh, null);
+  const limited = await as(manager, admin.getMyAiUsage); assert(limited.success); assert(limited.unknown); assert.equal(limited.remaining, '99.999880');
+});
+
+test('unknown settled costs do not consume budgets; active reserves and reconciled costs still block', async () => {
+  transport = async () => { throw Error('network'); }; assert.equal((await ask()).success, false);
+  const row = (await logs())[0];
+  await db.nhat_ky_goi_ai.update({ where: { id: row.id }, data: { du_phong: 100, created_at: new Date(Date.now() - 300000) } });
+  await db.tai_khoan.update({ where: { id: manager.id }, data: { han_muc_ai_thang: '0.1' } });
+  await db.ket_noi_ai.update({ where: { id: connection.id }, data: { han_muc_chi_phi_thang: '0.1' } });
+  let mine = await as(manager, admin.getMyAiUsage); assert(mine.success); assert.equal(mine.remaining, '0.100000'); assert.equal(mine.reserved, '0.000000'); assert(mine.unknown);
+  let report = await as(manager, () => admin.getAiUsage({ month: aiMonth() })); assert(report.success); assert.equal(report.reserved, '0.000000'); assert.equal(report.rows[0].cost, null); assert.equal(report.rows[0].reserved, '0.000000');
+  transport = async () => answer(); assert((await ask()).success);
+  assert.equal((await db.nhat_ky_goi_ai.findUniqueOrThrow({ where: { id: row.id } })).du_phong.toString(), '100');
+  await db.nhat_ky_goi_ai.update({ where: { id: row.id }, data: { trang_thai: 'DANG_GOI' } });
+  const before = calls; assert.equal((await ask()).success, false); assert.equal(calls, before);
+  await db.tai_khoan.update({ where: { id: manager.id }, data: { han_muc_ai_thang: null } });
+  assert.match((await ask()).message, /Ngân sách tháng/); assert.equal(calls, before);
+  await db.nhat_ky_goi_ai.update({ where: { id: row.id }, data: { trang_thai: 'CHUA_RO' } });
+  assert((await as(manager, () => admin.reconcileAiCall({ id: row.id, cost: '0.2', reason: 'Chi phí đối soát thử nghiệm vượt mức cấp' }))).success);
+  assert.match((await ask()).message, /Ngân sách tháng/); assert.equal(calls, before);
+  await db.tai_khoan.update({ where: { id: manager.id }, data: { han_muc_ai_thang: '0.1' } });
+  mine = await as(manager, admin.getMyAiUsage); assert(mine.success); assert.equal(mine.remaining, '0.000000'); assert.equal(mine.unknown, false);
+  assert.match((await ask()).message, /Hạn mức AI tháng/); assert.equal(calls, before);
 });

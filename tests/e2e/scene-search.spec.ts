@@ -20,7 +20,7 @@ async function search(page:Page,query:string) {
   await page.getByRole("combobox",{name:"Tìm nhân sự hoặc tài sản",exact:true}).fill(query);
 }
 async function category(page:Page,name:string) {
-  await page.getByRole("button",{name:"Lọc loại tài sản",exact:true}).click();
+  await page.getByRole("button",{name:"Tùy chọn hiển thị",exact:true}).click();
   await page.getByRole("menuitemradio",{name,exact:true}).click();
 }
 
@@ -88,7 +88,10 @@ test("separate independent layer toggles retain selection; searching reveals onl
   await expect(people).toHaveAttribute("aria-pressed","false");
   await expect(assets).toHaveAttribute("aria-pressed","false");
   await expect(page.locator('[data-person-marker="person"]')).toHaveCount(0);
-  await expect(page.getByRole("button",{name:"Lọc loại tài sản",exact:true})).toBeDisabled();
+  await page.getByRole("button",{name:"Tùy chọn hiển thị",exact:true}).click();
+  await expect(page.getByRole("menuitemcheckbox",{name:"Tên phòng",exact:true})).toBeEnabled();
+  await expect(page.getByRole("menuitemradio",{name:"Tất cả loại tài sản",exact:true})).toBeDisabled();
+  await page.keyboard.press("Escape");
   expect(page.url()).toBe(before);
   await page.waitForTimeout(900);
   await page.getByTestId("building-workspace").screenshot({path:"outputs/scene-search/context-only.png"});

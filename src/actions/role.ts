@@ -1,4 +1,5 @@
 "use server";
+import { taskActions } from "@/lib/support-task";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
@@ -55,6 +56,7 @@ export async function getRoles() {
       version: r.updated_at.toISOString(),
       accountCount: r._count.danh_sach_tai_khoan,
       permissions: permissionLevels(r.danh_sach_quyen.map((p) => p.quyen)),
+      taskActions: taskActions(r.danh_sach_quyen.map(p => p.quyen)),
       workflowActions: workflowActions(r.danh_sach_quyen.map((p) => p.quyen)),
       aiActions: aiActions(r.danh_sach_quyen.map((p) => p.quyen)),
       retainedPermissions: r.danh_sach_quyen
@@ -152,6 +154,7 @@ export async function saveRole(input: unknown) {
           isEditableGrant(p) &&
           (p.phan_he !== "ASSETS" || v.permissions.ASSETS !== undefined) &&
           (p.phan_he !== "INVENTORY" || v.permissions.INVENTORY !== undefined) &&
+          (p.phan_he !== "SUPPORT_TASK" || v.taskActions !== undefined) &&
           (p.phan_he !== "WORKFLOW" || v.workflowActions !== undefined) &&
           (p.phan_he !== "AI" || v.aiActions !== undefined) &&
           (p.phan_he !== "LOCATIONS" || v.permissions.LOCATIONS !== undefined),
@@ -166,6 +169,11 @@ export async function saveRole(input: unknown) {
             throw Error("Danh mục quyền chưa sẵn sàng. Kiểm tra migration.");
           return p.id;
         });
+      for (const action of new Set(v.taskActions ?? [])) {
+        const p = editable.find(p => p.phan_he === "SUPPORT_TASK" && p.hanh_dong === action);
+        if (!p) throw Error("Danh mục quyền công việc chưa sẵn sàng.");
+        selected.push(p.id);
+      }
       for (const action of new Set(v.workflowActions ?? [])) {
         const p = editable.find(
           (p) => p.phan_he === "WORKFLOW" && p.hanh_dong === action,
@@ -224,6 +232,7 @@ export async function saveRole(input: unknown) {
           name: v.name,
           description: v.description,
           permissions: v.permissions,
+          taskActions: v.taskActions ?? taskActions(before?.danh_sach_quyen.map(p => p.quyen) ?? []),
           aiActions: v.aiActions ?? aiActions(before?.danh_sach_quyen.map(p => p.quyen) ?? []),
           workflowActions:
             v.workflowActions ??

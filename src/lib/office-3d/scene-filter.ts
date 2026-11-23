@@ -1,3 +1,4 @@
+import { canEnterRoom } from "./room-detail";
 import { BUILDING_ROOMS, HCNS_BUILDING_KEY, type FloorSelection } from "./building-layout";
 import type { BuildingData } from "./building-mapping";
 import { equipmentForAssets, type RoomPoint } from "./hcns-layout";
@@ -54,7 +55,7 @@ export function personDestination(building: BuildingData, id: number) {
   const anchor = building.objects?.find(o => o.roomKey === room.key && o.point.state === "active" && o.point.key === person.pointKey)
     ?? (room.key === HCNS_BUILDING_KEY && building.hcns?.points.find(p => p.key === person.pointKey && p.state === "active"));
   return { person, navigation: { floor: shape.floor, room: room.key,
-    detail: room.key === HCNS_BUILDING_KEY && Boolean(building.hcns), point: anchor ? person.pointKey : null } };
+    detail: canEnterRoom(building, room.key), point: anchor ? person.pointKey : null } };
 }
 
 export function assetDestination(building: BuildingData, id: number) {
@@ -67,5 +68,5 @@ export function assetDestination(building: BuildingData, id: number) {
   const anchor = building.objects?.find(o => o.roomKey === room.key && o.point.state === "active" && o.point.key === asset.pointKey)
     ?? (room.key === HCNS_BUILDING_KEY && building.hcns?.points.find(p => p.key === asset.pointKey && p.state === "active"));
   return { asset, navigation: { floor: shape.floor, room: room.key,
-    detail: room.key === HCNS_BUILDING_KEY && Boolean(building.hcns), point: anchor ? asset.pointKey : null } };
+    detail: canEnterRoom(building, room.key), point: anchor ? asset.pointKey : null } };
 }

@@ -102,3 +102,15 @@ export const WorkflowCommandSchema = z
       });
   });
 export type WorkflowCommandInput = z.infer<typeof WorkflowCommandSchema>;
+
+export const WorkflowMaterialsSchema = z.object({
+  id: id.max(2147483647), version: z.string().datetime(),
+  lines: z.array(z.object({
+    itemId: id.max(2147483647), departmentId: id.max(2147483647),
+    quantity: z.number().int().positive().max(2147483647),
+  }).strict()).max(50),
+}).strict().superRefine((v,c) => {
+  const keys = v.lines.map(l => `${l.itemId}:${l.departmentId}`);
+  if (new Set(keys).size !== keys.length) c.addIssue({ code: "custom", path: ["lines"], message: "Gộp số lượng cùng mặt hàng và phòng thành một dòng." });
+});
+export type WorkflowMaterialsInput = z.infer<typeof WorkflowMaterialsSchema>;

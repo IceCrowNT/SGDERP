@@ -1,6 +1,6 @@
 # Kế hoạch vị trí & không gian dùng chung
 
-Cập nhật: **16/11/2026**. **Bản đầu đã triển khai; đã có cây vị trí do người phụ trách nhập, 10 vị trí HCNS theo bản phác và sửa tên/mô tả trực tiếp từ 3D.** Rule: [LOCATION-MANAGEMENT-RULES](../../.agents/rules/LOCATION-MANAGEMENT-RULES.md).
+Cập nhật: **17/11/2026**. **Bản đầu đã triển khai; đã có cây vị trí do người phụ trách nhập, 10 vị trí HCNS theo bản phác và sửa tên/mô tả trực tiếp từ 3D.** Rule: [LOCATION-MANAGEMENT-RULES](../../.agents/rules/LOCATION-MANAGEMENT-RULES.md).
 
 ## Ô chọn có tìm kiếm — 12/11/2026
 
@@ -10,7 +10,7 @@ Cập nhật: **16/11/2026**. **Bản đầu đã triển khai; đã có cây v�
 
 - [x] Tách `LocationForm` dùng chung; 3D mở `LocationEditDialog` sửa tên/mô tả tại chỗ qua action `saveLocation`, không có luồng ghi riêng. `getLocationForEdit` chỉ đọc một vị trí thuộc công ty khi có LOCATIONS MANAGE. Giữ kiểm tra version và audit; phạm vi/kiểm chứng tại [plan 3D](OFFICE-3D-CHECKLIST.md#sửa-thông-tin-vị-trí-ngay-trên-3d).
 
-- Tính năng riêng tại **Hệ thống & cấu hình → Vị trí & không gian**, đường dẫn `/locations`.
+- Tính năng riêng tại **Không gian làm việc → Vị trí & không gian**, đường dẫn `/locations`.
 - Sở hữu danh mục vật lý `vi_tri`, dùng chung cho nhân sự, tài sản và 3D. Phòng ban là cơ cấu tổ chức, không thay thế vị trí.
 - Bản đầu quản lý cây, tìm kiếm, tạo/sửa, thêm vị trí con và ngừng sử dụng. Xóa vị trí không có con có thể tự gỡ liên kết nhân sự sau xác nhận, với đủ quyền; vẫn giữ audit.
 - Danh mục không sở hữu tọa độ 3D, đặt chỗ theo lịch, sức chứa hoặc lịch sử di chuyển chuyên biệt. Bản thử [thêm vị trí trên 3D](OFFICE-3D-CHECKLIST.md#thử-nghiệm-thêm-vị-trí-trên-mô-hình) tạo `vi_tri` + bố trí riêng + audit trong một transaction, dùng cùng quyền LOCATIONS. Không tự sinh vị trí chỉ bằng mở mô hình. Khi xóa vị trí hợp lệ, hình bổ sung bị xóa theo; các ràng buộc tài sản/HR vẫn giữ.
@@ -37,6 +37,7 @@ Một bảng mới `vi_tri`; Prisma và PostgreSQL dùng cùng tên. ID tự sin
 - Chỉ chọn vị trí đang sử dụng, với toàn bộ tổ tiên đang sử dụng. Chuyển cha giữ ID của vị trí và các liên kết nhưng đổi đường dẫn của cả nhánh; hiển thị ảnh hưởng và xác nhận trước khi lưu.
 - Xóa từng vị trí không có con: preview tên/danh sách người bị ảnh hưởng và dấu kiểm tra phiên bản danh sách; khi xác nhận, kiểm tra lại trong khóa rồi đặt `nhan_su.vi_tri_lam_viec_id = null`, ghi audit HR từng người và audit xóa vị trí cùng transaction. Gồm người đã nghỉ/chưa xác nhận; giữ ID/hồ sơ/trạng thái. Không đổi FK Restrict hoặc trigger: nếu ghi trực tiếp SQL khi còn người vẫn bị chặn. Ngừng dùng/đổi loại không phù hợp vẫn chặn tham chiếu. Vị trí còn tài sản bị chặn xóa/ngừng dùng ở preview/action/DB theo [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md); không tự gỡ thiết bị.
 - Mutation khóa hàng công ty → khóa phân quyền hiện hành → kiểm tra lại quyền, version và cây → ghi dữ liệu/audit trong cùng transaction. Luồng gán vị trí ở HR/tài sản cũng khóa công ty trước kiểm tra trạng thái để không đua với ngừng dùng/xóa vị trí.
+- Phòng có thể được nối với vùng 3D qua `lien_ket_phong_3d`; xóa vị trí hợp lệ cascade cấu hình liên kết phụ, giữ các quy tắc chặn/gỡ người và tài sản hiện hành. Đổi cha/loại/ngừng dùng làm mapping không còn hợp lệ, không tự chuyển sang hình khác. Thiết kế thuộc [plan 3D](OFFICE-3D-CHECKLIST.md#quy-ước-dùng-chung-cho-các-phòng--2011).
 - Nhật ký dùng bảng sẵn có: phân hệ `LOCATIONS`, đối tượng `vi_tri:<id>`. Nhật ký chứa trước/sau và nhãn giải thích; không tạo bảng lịch sử vị trí riêng.
 
 ## Quyền và giao diện
@@ -58,7 +59,7 @@ Một bảng mới `vi_tri`; Prisma và PostgreSQL dùng cùng tên. ID tự sin
 | Bước                  | Kết quả và chủ sở hữu                                                                                                                                            |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1. Vị trí dùng chung | Plan này: bảng `vi_tri`, quyền LOCATIONS, `/locations`; chạy độc lập khi chưa có tài sản                                                                |
-| 2. Tài sản mức 1     | [Plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md): `loai_tai_san`, `tai_san`, FK `vi_tri_id`, quyền ASSETS                                                         |
+| 2. Tài sản     | [Plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md): `loai_tai_san`, `tai_san`, FK `vi_tri_id`, quyền ASSETS                                                         |
 | 3. Vị trí nhân sự   | [Plan HR](HR-CHECKLIST.md): đã có FK nullable cùng công ty/Restrict và form gán/chuyển/gỡ vị trí                                                             |
 | 4. Kết nối 3D         | [Plan 3D HCNS](OFFICE-3D-CHECKLIST.md): đã có bản thử đọc 10 vị trí qua ID ổn định; đọc người ACTIVE được gán trong HR; chưa có hồ sơ tài sản |
 
@@ -73,6 +74,7 @@ Nhân sự có một vị trí làm việc chính; một vị trí có thể ch�
 
 ## Checklist và nghiệm thu
 
+- [x] Nhập sơ đồ KHĐT: tái sử dụng hai vị trí Bàn Huy/Bàn Tuân, tạo 10 vị trí còn lại; cả 12 có bố trí DB. Quy trình bảo toàn liên kết và kết quả tại [plan 3D](OFFICE-3D-CHECKLIST.md#phòng-chi-tiết-dùng-chung-và-bố-trí-khđt).
 - [x] Tạo phòng vật lý **Phòng Kế hoạch Đầu tư** dưới Tầng 2 qua action hiện có và liên kết với mô hình. Không sửa cơ cấu phòng ban hoặc tự gán nhân sự/tài sản; quy trình và kiểm chứng tại [plan 3D](OFFICE-3D-CHECKLIST.md#liên-kết-phòng-mới-để-quản-lý).
 
 - [x] Đợt 1 tài sản: chặn xóa/ngừng dùng vị trí còn thiết bị ở preview/action/DB, kể cả thiết bị ngừng dùng; không tự gỡ liên kết. Bộ chọn nhận ASSETS MANAGE, không mở quyền sửa cây. Kiểm thử đồng thời và hồi quy tại [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md).
@@ -100,3 +102,7 @@ flowchart TB
 ### Liên kết vật tư — 17/11/2026
 
 - [x] Xóa vị trí bị chặn khi có lịch sử vật tư, kể cả tồn 0; ngừng/đổi nơi giữ có kiểm tra tồn và nhánh tại DB. Không tự gỡ liên kết hoặc cấp quyền LOCATIONS cho người quản lý vật tư. Thiết kế và kiểm chứng tại [plan vật tư](INVENTORY-MANAGEMENT-CHECKLIST.md).
+
+### Đặt hình cho vị trí có sẵn trên 3D
+
+- [x] Vị trí có sẵn được chọn khi bố trí model; giữ cây/ID và liên kết người, tài sản. Lễ Tân dưới Tầng 1 được sử dụng trực tiếp, không tạo lại phòng hoặc chỗ ngồi. Kiểu hình và ràng buộc bố trí thuộc [plan 3D](OFFICE-3D-CHECKLIST.md#quầy-lễ-tân-và-đặt-model-cho-vị-trí-có-sẵn); không thêm trường hình học vào `vi_tri`.

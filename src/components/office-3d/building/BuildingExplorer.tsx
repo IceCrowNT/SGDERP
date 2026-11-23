@@ -1,4 +1,6 @@
 "use client";
+import { RoomLinkDialog } from "./RoomLinkDialog";
+import { canEnterRoom, roomDetailData, roomShortName, roomCameraScope } from "@/lib/office-3d/room-detail";
 import type { ObjectEditTarget } from "./ObjectEditDialog";
 import { LocationEditDialog } from "@/components/locations/LocationEditDialog";
 import {
@@ -40,8 +42,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { useExpandedWorkspace, hasWorkspaceOverlay } from "./useExpandedWorkspace";
 import { cn } from "@/lib/utils";
 import {
-  BUILDING_ROOMS,
-  HCNS_BUILDING_KEY,
+  BUILDING_ROOMS, isManageableSpace,
   type FloorSelection,
 } from "@/lib/office-3d/building-layout";
 import type { BuildingData } from "@/lib/office-3d/building-mapping";
@@ -54,7 +55,7 @@ import {
   type BuildingNavigation,
   type BuildingTarget,
 } from "@/lib/office-3d/building-navigation";
-import { HcnsRoomPanel, RoomPointList } from "../hcns/HcnsRoomPanel";
+import { RoomPointPanel, RoomPointList } from "./RoomPointPanel";
 import { RoomOverviewPanel, type RoomTab } from "./RoomOverviewPanel";
 import { SceneSearch, SceneFilterResults } from "./SceneSearch";
 import { SceneLayerControls } from "./SceneLayerControls";
@@ -62,7 +63,7 @@ import { SpaceDirectory } from "./SpaceDirectory";
 import { filterScene, personDestination, assetDestination, DEFAULT_SCENE_LAYERS, type SceneLayers, type AssetSceneCategory } from "@/lib/office-3d/scene-filter";
 import { PlacementEditor } from "./PlacementEditor";
 import type { PlacementDraft } from "@/lib/office-3d/placement";
-import { assetsForEquipment, equipmentForAssets, type EquipmentKind, type HcnsRoomData } from "@/lib/office-3d/hcns-layout";
+import { assetsForEquipment, equipmentForAssets, type EquipmentKind } from "@/lib/office-3d/hcns-layout";
 const ObjectEditDialog = dynamic(() => import("./ObjectEditDialog").then(m => m.ObjectEditDialog));
 const DEFAULT_CAMERA: BuildingCamera = {
   view: "overview",
@@ -101,12 +102,12 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
   );
   const navigation = readBuildingNavigation(new URLSearchParams(query));
   const { floor, room: selected } = navigation;
-  const detail = navigation.detail && Boolean(building.hcns);
+  const detail = navigation.detail && canEnterRoom(building, selected);
   const [draft,setDraft] = useState<PlacementDraft|null>(null);
   const [placementBusy,setPlacementBusy] = useState(false);
   const objects = building.objects ?? [];
   const selectedObject = objects.find(o=>o.point.key===navigation.point && o.roomKey===selected);
-  const scope = detail ? "room:hcns" : `floor:${floor}`;
+  const scope = detail ? roomCameraScope(selected) : `floor:${floor}`;
   const [pending, start] = useTransition();
   const { expanded, setExpanded, workspaceRef, expandButtonRef } = useExpandedWorkspace();
   const desktop = useSyncExternalStore(subscribeDesktop, () => window.matchMedia(desktopQuery).matches, () => false);
@@ -164,6 +165,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     setPanelOpen(false);
     panelButtonRef.current?.focus({ preventScroll: true });
   }
+  const [showRoomLabels, setShowRoomLabels] = useState(true);
   const [layers, setLayers] = useState<SceneLayers>(DEFAULT_SCENE_LAYERS);
   const activeCategory = layers.assets && !navigation.point ? layers.category : null;
   const [searchNotice, setSearchNotice] = useState<string | null>(null);
@@ -193,21 +195,16 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
       window.history.pushState(null, "", url);
     window.dispatchEvent(new Event(NAVIGATION_EVENT));
   }
-  function enterRoom() {
-    if(draft) return;
-    if (!building.hcns) return;
+  function enterRoom(key = selected) {
+    if (draft || !canEnterRoom(building, key)) return;
+    const shape = BUILDING_ROOMS.find(r => r.key === key)!;
+    const nextScope = roomCameraScope(key);
     setSelectedPerson(null);
-
-    setCommands(old => ({ ...old, "room:hcns": {
-      view: "overview", zoom: 1, sequence: (old["room:hcns"]?.sequence ?? 0) + 1,
+    setCommands(old => ({ ...old, [nextScope]: {
+      view: "overview", zoom: 1, sequence: (old[nextScope]?.sequence ?? 0) + 1,
     } }));
     setPanelOpen(true);
-    navigate({
-      floor: 2,
-      room: HCNS_BUILDING_KEY,
-      detail: true,
-      point: null,
-    });
+    navigate({ floor: shape.floor, room: key, detail: true, point: null });
   }
   function roomOverview() {
     if (draft || !selected) return;
@@ -220,7 +217,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
   }
   function leaveRoom() {
     if(draft) return;
-    navigate({ floor: 2, room: HCNS_BUILDING_KEY, detail: false, point: null });
+    navigate({ floor, room: selected, detail: false, point: null });
   }
   function choosePoint(point: string) {
     if(draft) return;
@@ -230,29 +227,28 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     const object=objects.find(o=>o.point.key===point);
     if(object) {
       const r=BUILDING_ROOMS.find(r=>r.key===object.roomKey)!;
-      navigate({floor:r.floor,room:r.key,detail:r.key===HCNS_BUILDING_KEY&&Boolean(building.hcns),point});
+      navigate({floor:r.floor,room:r.key,detail:canEnterRoom(building,r.key),point});
     } else navigate({ ...navigation, point, asset:undefined,equipment:undefined });
   }
   function choosePerson(point: string, id: number) {
-    if(draft) return;
-    setPanelOpen(true);
+    if (draft) return;
+    choosePoint(point);
     setSelectedPerson({ point, id });
-
-    navigate({ ...navigation, point, asset:undefined,equipment:undefined });
   }
   function focusRoomRecord(point: string, id: number, kind: "person" | "asset") {
     if(draft) return;
+    const object=objects.find(o=>o.point.key===point);
+    if (!object) return;
+    const r=BUILDING_ROOMS.find(r=>r.key===object.roomKey);
+    if (!r) return;
     setPanelOpen(true);
     setSelectedPerson(kind === "person" ? { point, id } : null);
-
-    const object=objects.find(o=>o.point.key===point);
-    const r=BUILDING_ROOMS.find(r=>r.key===(object?.roomKey ?? HCNS_BUILDING_KEY))!;
-    const isHcns=r.key===HCNS_BUILDING_KEY&&Boolean(building.hcns);
-    const nextScope=isHcns ? "room:hcns" : `floor:${r.floor}`;
+    const isDetail=canEnterRoom(building,r.key);
+    const nextScope=isDetail ? roomCameraScope(r.key) : `floor:${r.floor}`;
     setCommands(old => ({ ...old, [nextScope]: {
       view: "focus", key: point, zoom: 1, sequence: (old[nextScope]?.sequence ?? 0) + 1,
     } }));
-    navigate({ floor:r.floor, room:r.key, detail:isHcns, point, ...(kind === "asset" ? {asset:id} : {}) });
+    navigate({ floor:r.floor, room:r.key, detail:isDetail, point, ...(kind === "asset" ? {asset:id} : {}) });
   }
   function filterCategory(category: AssetSceneCategory | null) {
     if (draft) return;
@@ -274,7 +270,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     else {
       setSelectedPerson(null);
 
-      const nextScope = next.detail ? "room:hcns" : `floor:${next.floor}`;
+      const nextScope = next.detail ? roomCameraScope(next.room) : `floor:${next.floor}`;
       setCommands(old => ({ ...old, [nextScope]: { view: "focus", key: next.room,
         zoom: 1, sequence: (old[nextScope]?.sequence ?? 0) + 1 } }));
       navigate(next);
@@ -298,7 +294,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     } else {
       setSelectedPerson(null);
 
-      const nextScope = next.detail ? "room:hcns" : `floor:${next.floor}`;
+      const nextScope = next.detail ? roomCameraScope(next.room) : `floor:${next.floor}`;
       setCommands(old => ({ ...old, [nextScope]: { view: "focus", key: next.room,
         zoom: 1, sequence: (old[nextScope]?.sequence ?? 0) + 1 } }));
       navigate(next);
@@ -315,7 +311,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     if (buildingUrl(next) === buildingUrl(navigation)) { if (expanded) setExpanded(false); return; }
     setSelectedPerson(null);
     setPanelOpen(next.room || modelUnavailable || activeCategory ? true : null);
-    const nextScope = next.detail ? "room:hcns" : `floor:${next.floor}`;
+    const nextScope = next.detail ? roomCameraScope(next.room) : `floor:${next.floor}`;
     setCommands(old => ({...old,[nextScope]:{view:next.point || next.room ? "focus":"overview",
       key:next.point ?? next.room ?? undefined,zoom:1,sequence:(old[nextScope]?.sequence ?? 0)+1,
       restoreKey:selectionCameraKey(next)}}));
@@ -334,7 +330,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     }
     function historyCamera() {
       const next = readBuildingNavigation(new URLSearchParams(window.location.search));
-      const nextScope = next.detail ? "room:hcns" : `floor:${next.floor}`;
+      const nextScope = next.detail ? roomCameraScope(next.room) : `floor:${next.floor}`;
       setSelectedPerson(null);
       setCommands(old => ({...old,[nextScope]:{view:next.point || next.room ? "focus":"overview",
         key:next.point ?? next.room ?? undefined,equipment:next.equipment,assetId:next.asset,zoom:1,
@@ -347,10 +343,8 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
   const room = building.rooms.find((r) => r.key === selected);
   const shape = BUILDING_ROOMS.find((r) => r.key === selected);
   const roomObjects=objects.filter(o=>o.roomKey===selected);
-  const roomData:HcnsRoomData|null = detail && building.hcns ? {...building.hcns,points:[...building.hcns.points,...roomObjects.map(o=>o.point)]}
-    : selectedObject && room ? {name:room.name,path:room.path ?? room.name,points:roomObjects.map(o=>o.point),
-      canManage:building.canManage,canViewEmployees:building.canViewEmployees,canManageEmployees:Boolean(building.canManageEmployees),
-      canViewAssets:building.canViewAssets,canManageAssets:Boolean(building.canManageAssets)} : null;
+  const roomData = detail || selectedObject ? roomDetailData(building, selected) : null;
+  const roomLabel = roomShortName(selected, room?.name);
   const detailsData = navigation.point ? roomData : null;
   const currentPoint = roomData?.points.find(p=>p.key===navigation.point);
   const activeEquipment = navigation.equipment ?? (navigation.asset && currentPoint?.assets
@@ -358,9 +352,11 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
   function focusPoint(key: string, equipment?: EquipmentKind, assetId?: number) {
     if(draft) return;
     const object=objects.find(o=>o.point.key===key);
-    const r=BUILDING_ROOMS.find(r=>r.key===(object?.roomKey ?? HCNS_BUILDING_KEY))!;
-    const isHcns=r.key===HCNS_BUILDING_KEY && Boolean(building.hcns);
-    const nextScope=isHcns ? "room:hcns" : `floor:${r.floor}`;
+    if (!object) return;
+    const r=BUILDING_ROOMS.find(r=>r.key===object.roomKey);
+    if (!r) return;
+    const isDetail=canEnterRoom(building,r.key);
+    const nextScope=isDetail ? roomCameraScope(r.key) : `floor:${r.floor}`;
     if (!equipment) choosePoint(key);
     setCommands(old=>({...old,[nextScope]:{view:"focus",key,equipment,assetId,zoom:1,sequence:(old[nextScope]?.sequence ?? 0)+1}}));
   }
@@ -370,9 +366,11 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     const matches = assetsForEquipment(p?.assets ?? [],kind).filter(a=>assetId === undefined || a.id === assetId);
     if (!matches.length) return;
     const object=objects.find(o=>o.point.key===key);
-    const r=BUILDING_ROOMS.find(r=>r.key===(object?.roomKey ?? HCNS_BUILDING_KEY))!;
+    if (!object) return;
+    const r=BUILDING_ROOMS.find(r=>r.key===object.roomKey);
+    if (!r) return;
     setSelectedPerson(null);setPanelOpen(true);
-    navigate({floor:r.floor,room:r.key,detail:r.key===HCNS_BUILDING_KEY && Boolean(building.hcns),point:key,
+    navigate({floor:r.floor,room:r.key,detail:canEnterRoom(building,r.key),point:key,
       equipment:kind,...(matches.length===1 ? {asset:matches[0].id} : {})});
     if(focus) focusPoint(key,kind,matches.length===1 ? matches[0].id : undefined);
   }
@@ -381,17 +379,19 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     navigate({...navigation,asset:id});
   }
   function beginPlacement(edit=false) {
-    if(!room?.locationId || room.state!=="active" || shape?.kind!=="room" || !building.canManage || modelUnavailable) return;
-    const object=edit ? selectedObject : undefined;
-    setDraft({roomKey:room.key,roomId:room.locationId,name:object?.point.name ?? "",kind:object?.kind ?? "BAN",
-      angle:object?.angle ?? 0,point:object ? {x:object.x,z:object.z}:null,
+    if(!room?.locationId || room.state!=="active" || !isManageableSpace(shape) || !building.canManage || modelUnavailable || pending) return;
+    const object=edit ? selectedObject : room.directPoint ? objects.find(o=>o.point.locationId===room.directPoint!.id) : undefined;
+    setDraft({roomKey:room.key,roomId:room.locationId,name:object?.point.name ?? room.directPoint?.name ?? "",kind:object?.kind ?? room.directPoint?.kind ?? "BAN",
+      model:object?.model ?? (shape?.kind === "reception" ? "QUAY_LE_TAN" : "MAC_DINH"),
+      ...(room.directPoint ? {locationId:room.directPoint.id,locationVersion:room.directPoint.version} : {}),
+      width:object?.width,depth:object?.depth,angle:object?.angle ?? (shape?.kind === "reception" ? 180 : 0),point:object ? {x:object.x,z:object.z}:null,
       ...(object ? {id:object.id,version:object.version,locationVersion:object.locationVersion}:{}),});
     setPanelOpen(true);
     setCommand(c=>({view:"top",key:room.key,zoom:1,sequence:c.sequence+1}));
   }
   function changeFloor(next: FloorSelection) {
     if(draft) return;
-    if (detail && next === 2) {
+    if (detail && next === floor) {
       leaveRoom();
       return;
     }
@@ -410,7 +410,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     if(next === "focus" && navigation.point) {focusPoint(navigation.point,activeEquipment,navigation.asset);return;}
     const targetScope = next === "top" && floor === "all" ? "floor:2" : scope;
     if (targetScope !== scope)
-      navigate({ floor: 2, room: HCNS_BUILDING_KEY, detail: false, point: null });
+      navigate({ floor: 2, room: null, detail: false, point: null });
     setCommands((old) => ({
       ...old,
       [targetScope]: {
@@ -447,16 +447,16 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
   // One set of commands for mouse, touch and keyboard; authorization remains
   // in the existing server actions and the same editor/assignment components.
   function spaceActions(background = false) {
-    const editableRoom = Boolean(building.canManage && room?.state === "active" && shape?.placed && shape.kind === "room");
+    const editableRoom = Boolean(building.canManage && room?.state === "active" && isManageableSpace(shape));
     return [
       { id: "focus", label: "Tập trung vào đối tượng", icon: Focus, show: !background && Boolean(room && shape?.placed), disabled: modelUnavailable, run: () => view("focus") },
       { id: "edit-record", label: editLabel, icon: Pencil, show: !background && Boolean(editTarget), run: () => { if (editTarget) setEditingObject(editTarget); } },
       { id: "information", label: "Xem thông tin", icon: PanelRight, show: !background && Boolean(room), run: () => setPanelOpen(true) },
       { id: "overview", label: "Tổng quan phòng", icon: Box, show: Boolean(room), run: roomOverview },
-      { id: "enter", label: "Vào phòng HCNS", icon: ArrowUpRight, show: !detail && room?.key === HCNS_BUILDING_KEY && Boolean(building.hcns), run: enterRoom },
+      { id: "enter", label: `Vào phòng ${roomLabel}`, icon: ArrowUpRight, show: !detail && canEnterRoom(building, selected), run: () => enterRoom() },
       { id: "floor", label: `Trở lại tầng ${floor}`, icon: ArrowLeft, show: Boolean(room), run: () => navigate({ floor, room: null, detail: false, point: null }) },
-      { id: "add", label: "Thêm vị trí", icon: Plus, show: editableRoom, disabled: modelUnavailable, run: () => beginPlacement() },
-      { id: "edit", label: "Chỉnh bố trí", icon: Pencil, show: !background && editableRoom && Boolean(selectedObject), disabled: modelUnavailable, run: () => beginPlacement(true) },
+      { id: "add", label: "Thêm vị trí", icon: Plus, show: editableRoom, disabled: modelUnavailable || pending, run: () => beginPlacement() },
+      { id: "edit", label: "Chỉnh bố trí", icon: Pencil, show: !background && editableRoom && Boolean(selectedObject), disabled: modelUnavailable || pending, run: () => beginPlacement(true) },
       { id: "reset", label: "Đặt lại góc nhìn", icon: RotateCcw, show: true, disabled: modelUnavailable, run: () => view("overview") },
       { id: "refresh", label: "Cập nhật dữ liệu", icon: RefreshCw, show: true, disabled: pending, run: () => start(() => router.refresh()) },
       { id: "locations", label: "Quản lý vị trí", icon: MapPin, show: building.canManage, run: () => router.push("/locations") },
@@ -472,7 +472,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
           <div className="flex items-center gap-3">
             <Building2 className="size-7 text-primary" />
             <h1 className="text-2xl font-bold tracking-tight">
-              {detail ? "Không gian HCNS" : "Bản đồ 3D tòa nhà"}
+              {detail ? `Không gian ${roomLabel}` : "Bản đồ 3D tòa nhà"}
             </h1>
           </div>
 
@@ -499,12 +499,12 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
             <div ref={toolbarRef} data-testid="scene-toolbar" className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start gap-2">
               <div role="group" aria-label="Chọn tầng" inert={Boolean(draft)} className="pointer-events-auto order-1 flex max-w-full shrink-0 items-center gap-1 rounded-lg border border-border/60 bg-card/95 p-0.5">
                 {detail ? <>
-                  <Button variant="ghost" className="min-h-10" aria-label="Trở lại tầng 2" onClick={leaveRoom}>
+                  <Button variant="ghost" className="min-h-10" aria-label={`Trở lại tầng ${floor}`} onClick={leaveRoom}>
                     <ArrowLeft className="size-4" />
-                    <span className="hidden sm:inline">Trở lại tầng 2</span>
-                    <span className="sm:hidden">Tầng 2</span>
+                    <span className="hidden sm:inline">Trở lại tầng {floor}</span>
+                    <span className="sm:hidden">Tầng {floor}</span>
                   </Button>
-                  <Button variant="ghost" className="min-h-10 border-l px-3" aria-label="Tổng quan phòng HCNS" aria-pressed={!navigation.point} onClick={roomOverview}>HCNS</Button>
+                  <Button variant="ghost" className="min-h-10 border-l px-3" aria-label={`Tổng quan phòng ${roomLabel}`} aria-pressed={!navigation.point} onClick={roomOverview}>{roomLabel}</Button>
                 </> : <>
                   <Button variant="ghost" className="min-h-10 px-2 shadow-none aria-pressed:bg-primary/10 aria-pressed:text-primary hover:bg-muted hover:text-foreground sm:px-3"
                     aria-label="Toàn tòa nhà" aria-pressed={floor === "all"} onClick={() => changeFloor("all")}>
@@ -544,6 +544,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
                   <div className="w-full min-w-0 flex-1"><SceneSearch key={`${buildingUrl(navigation)}:${personId ?? ""}:${selectedAsset?.point === navigation.point ? selectedAsset.id : ""}`} building={building} disabled={Boolean(draft)}
                     onSelect={item => item.kind === "person" ? findPerson(item.id) : findAsset(item.id)} /></div>
                   <SceneLayerControls building={building} layers={layers} disabled={Boolean(draft)}
+                    showRoomLabels={showRoomLabels} onRoomLabels={setShowRoomLabels}
                     onToggle={layer => setLayers(old => ({ ...old, [layer]: !old[layer] }))} onCategory={filterCategory} />
                 </div>
                 {layers.assets && layers.category && <p className="mt-1 w-fit max-w-full rounded-md bg-card/95 px-2 py-1 text-xs text-foreground" role="status">Tài sản: {layers.category.name}</p>}
@@ -555,7 +556,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
               showPanel && !desktop
                 ? "bottom-[calc(35%+8rem)] min-[380px]:bottom-[calc(35%+5rem)]"
                 : "bottom-32 min-[380px]:bottom-20")} data-testid="building-canvas-container">
-              <Model building={building} scene={scene} floor={floor} selected={selected} command={command}
+              <Model building={building} scene={scene} showRoomLabels={showRoomLabels} floor={floor} selected={selected} command={command}
                 onSelect={choose} onFloor={changeFloor} detail={detail}
                 point={navigation.point} onPoint={choosePoint} onEnter={enterRoom}
                 onFocusPoint={key=>focusPoint(key)} onEquipment={chooseEquipment} activeEquipment={activeEquipment} activeAsset={navigation.asset}
@@ -591,7 +592,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
                   <PopoverContent side="top" className="w-72 p-4 text-sm leading-6" aria-label="Hướng dẫn thao tác 3D">
                     <p className="font-semibold">Khám phá mô hình</p>
                     <p>Kéo chuột trái để xoay, giữ chuột giữa để dịch chuyển; cuộn để thu phóng. Trên màn hình cảm ứng, dùng một ngón để xoay, hai ngón để dịch chuyển hoặc thu phóng.</p>
-                    <p className="mt-2">Nhấp đúp HCNS để vào phòng, hoặc dùng nút trong bảng thông tin. Danh sách phòng/vị trí hỗ trợ bàn phím.</p>
+                    <p className="mt-2">Nhấp đúp phòng đã liên kết để vào phòng, hoặc dùng nút trong bảng thông tin. Danh sách phòng/vị trí hỗ trợ bàn phím.</p>
                     <p className="mt-2">Bấm bàn/người/thiết bị để xem chi tiết; nhấp đúp bàn hoặc thiết bị để tập trung gần. Bấm nền hoặc tên phòng để về tổng quan. Chuột phải hoặc nút … mở các thao tác theo lựa chọn.</p>
                     <p className="mt-2 text-muted-foreground">Esc đóng menu/hộp thoại trước, rồi lùi tài sản → vị trí → phòng → tầng → toàn nhà. Ở toàn nhà, Esc thu gọn khung mở rộng.</p>
                     <p className="mt-2 text-xs text-muted-foreground">Mặt bằng giản lược · Nội thất theo khảo sát, kích thước ước lượng.</p>
@@ -623,20 +624,24 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
           {searchNotice && <div role="status" className="rounded-xl border bg-muted/50 p-3 text-sm leading-6">{searchNotice}<Button variant="ghost" size="sm" className="mt-2" onClick={() => setSearchNotice(null)}>Đóng thông báo</Button></div>}
           {activeCategory && !draft ? <SceneFilterResults building={building} category={activeCategory} floor={floor} room={selected}
             onClear={() => filterCategory(null)} onRecord={focusRoomRecord} onRoom={choose} /> : draft ? <PlacementEditor draft={draft} roomName={building.rooms.find(r=>r.key===draft.roomKey)?.name ?? ""} objects={objects}
-            onChange={setDraft} onBusy={setPlacementBusy} onCancel={()=>setDraft(null)} onSaved={point=>{
+            availablePoints={building.rooms.find(r=>r.key===draft.roomKey)?.availablePoints ?? []}
+            directPoint={Boolean(building.rooms.find(r=>r.key===draft.roomKey)?.directPoint)}
+            onChange={setDraft} onBusy={setPlacementBusy} onCancel={()=>setDraft(null)} onSaved={point=>start(()=>{
               setDraft(null);setSelectedPerson(null);
               navigate({...navigation,room:draft.roomKey,floor:BUILDING_ROOMS.find(r=>r.key===draft.roomKey)!.floor,point});
               router.refresh();
-            }}/> : <>
+            })}/> : <>
           {detailsData && <Button variant="ghost" onClick={backOne}><ArrowLeft className="size-4"/>{navigation.asset || navigation.equipment ? "Trở lại vị trí" : "Tổng quan phòng"}</Button>}
+          {!detailsData && building.canManage && room?.state === "unlinked" && isManageableSpace(shape) &&
+            <RoomLinkDialog key={room.key} roomKey={room.key} roomName={room.name} />}
           {!detailsData && building.canManage && room?.locationId !== undefined && room.state !== "unlinked" &&
             <LocationEditDialog key={room.locationId} locationId={room.locationId} />}
-          {building.canManage && room?.state === "active" && shape?.placed && shape.kind==="room" && !modelUnavailable && <div className="flex flex-wrap gap-2">
-            {!detailsData && <Button variant="outline" className="min-h-10" onClick={()=>beginPlacement()}><Plus className="size-4"/>Thêm vị trí</Button>}
+          {building.canManage && room?.state === "active" && isManageableSpace(shape) && !modelUnavailable && <div className="flex flex-wrap gap-2">
+            {!detailsData && <Button disabled={pending} variant="outline" className="min-h-10" onClick={()=>beginPlacement()}><Plus className="size-4"/>{room.directPoint ? (roomObjects.length ? "Chỉnh bố trí" : "Đặt model") : "Thêm vị trí"}</Button>}
             {selectedObject && <Button variant="outline" className="min-h-10" onClick={()=>beginPlacement(true)}>Chỉnh bố trí</Button>}
           </div>}
           {detailsData ? (
-            <HcnsRoomPanel
+            <RoomPointPanel
               room={detailsData}
               selected={navigation.point}
               onSelect={key=>key===navigation.point && (navigation.asset || navigation.equipment) ? backOne() : choosePoint(key)}
@@ -649,7 +654,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
             <RoomOverviewPanel room={room} placed={shape.placed}
               canViewEmployees={building.canViewEmployees} canViewAssets={building.canViewAssets}
               tab={roomTabs[room.key]} onTabChange={tab => setRoomTabs(old => ({ ...old, [room.key]: tab }))}
-              onEnter={!detail && room.key === HCNS_BUILDING_KEY && building.hcns ? enterRoom : undefined}
+              onEnter={!detail && canEnterRoom(building, room.key) ? () => enterRoom(room.key) : undefined}
               onPerson={(point, id) => focusRoomRecord(point, id, "person")}
               onAsset={(point, id) => focusRoomRecord(point, id, "asset")} />
           ) : null}

@@ -263,7 +263,7 @@ test("location access does not disclose HR; no access and other company cannot l
   ).toHaveCount(0);
   expect(await page.content()).not.toContain(name);
   await expect(
-    page.getByRole("link", { name: "Bản đồ 3D Tòa nhà", exact: false }).first(),
+    page.getByRole("link", { name: "Bản đồ 3D", exact: true }).first(),
   ).toBeVisible();
   await signAccount(context, hrOnly);
   await page.goto("/office-3d");

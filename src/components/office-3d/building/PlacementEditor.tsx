@@ -4,15 +4,17 @@ import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCw, MapPin, Monitor, L
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useForm, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormRequiredHint } from "@/components/ui/form";
 import { saveOfficePlacement } from "@/actions/office-placement";
-import { PlacementSchema, placementError, type PlacementDraft, type PlacementInput } from "@/lib/office-3d/placement";
-import type { PlacedObject } from "@/lib/office-3d/building-mapping";
+import { type PlacementModel, PlacementSchema, placementError, type PlacementDraft, type PlacementInput } from "@/lib/office-3d/placement";
+import type { PlacedObject, BuildingRoomData } from "@/lib/office-3d/building-mapping";
 
-export function PlacementEditor({ draft, roomName, objects, onChange, onCancel, onSaved, onBusy }: {
+export function PlacementEditor({ draft, roomName, objects, availablePoints = [], directPoint = false, onChange, onCancel, onSaved, onBusy }: {
   draft:PlacementDraft; roomName:string; objects:PlacedObject[];
+  availablePoints?: BuildingRoomData["availablePoints"]; directPoint?:boolean;
   onChange:(value:PlacementDraft)=>void; onCancel:()=>void; onSaved:(key:string)=>void; onBusy:(busy:boolean)=>void;
 }) {
   const [pending,start] = useTransition();
@@ -39,7 +41,7 @@ export function PlacementEditor({ draft, roomName, objects, onChange, onCancel, 
           }
           return;
         }
-        toast.success(draft.id ? "Đã cập nhật bố trí" : "Đã tạo vị trí. Bạn có thể gắn tài sản ngay.");
+        toast.success(draft.id ? "Đã cập nhật bố trí" : draft.locationId ? "Đã đặt model cho vị trí" : "Đã tạo vị trí. Bạn có thể gắn tài sản ngay.");
         onSaved(result.pointKey);
       } catch {setError("Kết nối bị gián đoạn. Hãy cập nhật dữ liệu trước khi thử lại.");}
       finally {onBusy(false);}
@@ -48,15 +50,34 @@ export function PlacementEditor({ draft, roomName, objects, onChange, onCancel, 
     <div><h3 className="text-lg font-semibold">{draft.id ? "Chỉnh bố trí" : "Thêm vị trí trên 3D"}</h3><p className="mt-1 text-sm text-muted-foreground">{roomName}</p></div>
     <FormRequiredHint/>
     <fieldset disabled={pending} className="space-y-4">
+      {!draft.id && !directPoint && availablePoints.length > 0 && <div className="space-y-2">
+        <label htmlFor="placement-source" className="text-sm font-medium">Vị trí</label>
+        <Select value={draft.locationId ? String(draft.locationId) : "new"} onValueChange={value=>{
+          const option=availablePoints.find(p=>String(p.id)===value);
+          onChange({...draft,locationId:option?.id,locationVersion:option?.version,name:option?.name ?? "",kind:option?.kind ?? "BAN",model:"MAC_DINH",width:undefined,depth:undefined});
+        }}><SelectTrigger id="placement-source" className="w-full"><SelectValue/></SelectTrigger><SelectContent>
+          <SelectItem value="new">Tạo vị trí mới</SelectItem>
+          {availablePoints.map(p=><SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+        </SelectContent></Select>
+      </div>}
       <FormField control={form.control} name="name" render={({field})=><FormItem><FormLabel required>Tên vị trí</FormLabel><FormControl>
-        <Input {...field} maxLength={255} placeholder="Ví dụ: Bàn IT, Góc máy in" onChange={e=>{field.onChange(e);onChange({...draft,name:e.target.value});}}/>
+        <Input {...field} readOnly={Boolean(draft.locationId) && !draft.id} maxLength={255} placeholder="Ví dụ: Bàn IT, Góc máy in" onChange={e=>{field.onChange(e);onChange({...draft,name:e.target.value});}}/>
       </FormControl><FormMessage/></FormItem>}/>
       <FormField control={form.control} name="kind" render={()=><FormItem><FormLabel required={!draft.id}>Loại vị trí</FormLabel>
       <div role="group" aria-label="Loại vị trí" className="grid grid-cols-2 gap-2">
         {([['BAN','Bàn làm việc',Monitor],['DIEM','Điểm thiết bị',MapPin]] as const).map(([kind,label,Icon]) =>
-          <Button key={kind} type="button" disabled={Boolean(draft.id)} aria-pressed={draft.kind===kind} variant={draft.kind===kind ? "secondary":"outline"}
-            className="h-auto min-h-16 flex-col whitespace-normal px-2 text-xs" onClick={()=>onChange({...draft,kind})}><Icon className="size-5"/>{label}</Button>)}
+          <Button key={kind} type="button" disabled={Boolean(draft.id || draft.locationId)} aria-pressed={draft.kind===kind} variant={draft.kind===kind ? "secondary":"outline"}
+            className="h-auto min-h-16 flex-col whitespace-normal px-2 text-xs" onClick={()=>onChange({...draft,kind,model:"MAC_DINH",width:undefined,depth:undefined})}><Icon className="size-5"/>{label}</Button>)}
       </div><FormMessage/></FormItem>}/>
+      {draft.kind === "BAN" && <FormField control={form.control} name="model" render={()=><FormItem><FormLabel>Mẫu hiển thị</FormLabel>
+        <Select value={draft.model ?? "MAC_DINH"} onValueChange={value=>{
+          const original=objects.find(o=>o.id===draft.id && (o.model ?? "MAC_DINH")===value);
+          onChange({...draft,model:value as PlacementModel,width:original?.width,depth:original?.depth});
+        }}>
+          <FormControl><SelectTrigger className="w-full"><SelectValue/></SelectTrigger></FormControl>
+          <SelectContent><SelectItem value="MAC_DINH">Bàn làm việc</SelectItem><SelectItem value="QUAY_LE_TAN">Quầy lễ tân</SelectItem><SelectItem value="BAN_TONG_GIAM_DOC">Bàn Tổng giám đốc</SelectItem></SelectContent>
+        </Select><FormMessage/>
+      </FormItem>}/>}
       <div className="rounded-lg bg-muted p-3 text-sm"><p className="mb-1 font-medium">Điểm đặt <span className="text-destructive" aria-hidden="true">*</span></p>Bấm vào khoảng trống trên mặt bằng để đặt. Dùng các nút bên dưới để tinh chỉnh.</div>
       <div className="flex items-center justify-center gap-3">
         <div className="grid grid-cols-3 gap-1">

@@ -11,6 +11,11 @@ datasource db {
 // CORE & TENANT (Công ty thành viên / Chi nhánh trong Tập đoàn)
 // -----------------------------------------------------------------------------
 model cong_ty {
+  danh_sach_cong_viec_ho_tro_ct cong_viec_ho_tro[] @relation("cong_viec_ho_tro_ct")
+  danh_sach_lich_su_cong_viec_ct lich_su_cong_viec[] @relation("lich_su_cong_viec_ct")
+  danh_sach_tep_cong_viec_ct tep_cong_viec[] @relation("tep_cong_viec_ct")
+  danh_sach_thong_bao_cong_viec_ct thong_bao_cong_viec[] @relation("thong_bao_cong_viec_ct")
+  danh_sach_lien_ket_phong_3d lien_ket_phong_3d[]
   danh_sach_cau_hinh_tac_vu_ai cau_hinh_tac_vu_ai[]
   danh_sach_loai_vat_tu loai_vat_tu[]
   danh_sach_mat_hang_vat_tu mat_hang_vat_tu[]
@@ -116,11 +121,14 @@ model nhat_ky_goi_ai {
 // ORGANIZATION (Phòng ban / Ban QLDA / Bộ phận trực thuộc)
 // -----------------------------------------------------------------------------
 model phong_ban {
+  danh_sach_cv_phong_nguoi_yeu_cau cong_viec_ho_tro[] @relation("cv_phong_nguoi_yeu_cau")
+  danh_sach_cv_phong_ho_tro cong_viec_ho_tro[] @relation("cv_phong_ho_tro")
   danh_sach_mat_hang_vat_tu mat_hang_vat_tu[]
   danh_sach_nhan_vat_tu giao_dich_vat_tu[]
   danh_sach_tai_san tai_san[]
   danh_sach_ho_so_quy_trinh ho_so_quy_trinh[]
 
+  danh_sach_vat_tu_quy_trinh dong_vat_tu_quy_trinh[]
   id            Int     @id(map: "Department_pkey") @default(autoincrement())
   ma_phong_ban  String  @db.VarChar(50)
   ten_phong_ban String  @db.VarChar(255)
@@ -163,6 +171,17 @@ model phong_ban {
 // IDENTITY & HR PROFILE (Định danh tài khoản & Hồ sơ nhân sự)
 // -----------------------------------------------------------------------------
 model nhan_su {
+  quan_ly_truc_tiep_id Int?
+  quan_ly_truc_tiep nhan_su? @relation("QuanLyTrucTiep", fields: [quan_ly_truc_tiep_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  danh_sach_cap_duoi nhan_su[] @relation("QuanLyTrucTiep")
+  @@index([company_id, quan_ly_truc_tiep_id])
+  danh_sach_cv_nguoi_yeu_cau cong_viec_ho_tro[] @relation("cv_nguoi_yeu_cau")
+  danh_sach_cv_nguoi_duoc_yeu_cau cong_viec_ho_tro[] @relation("cv_nguoi_duoc_yeu_cau")
+  danh_sach_cv_nguoi_thuc_hien cong_viec_ho_tro[] @relation("cv_nguoi_thuc_hien")
+  danh_sach_cv_quan_ly_nguoi_yeu_cau cong_viec_ho_tro[] @relation("cv_quan_ly_nguoi_yeu_cau")
+  danh_sach_cv_quan_ly_ben_ho_tro cong_viec_ho_tro[] @relation("cv_quan_ly_ben_ho_tro")
+  danh_sach_cv_nguoi_nghiem_thu cong_viec_ho_tro[] @relation("cv_nguoi_nghiem_thu")
+  danh_sach_cv_person lich_su_cong_viec[] @relation("cv_person")
   danh_sach_nhan_vat_tu giao_dich_vat_tu[]
   danh_sach_tai_san tai_san[]
   danh_sach_buoc_chi_dinh     buoc_mau_quy_trinh[]
@@ -214,6 +233,11 @@ enum EmploymentStatus {
 }
 
 model tai_khoan {
+  danh_sach_cv_tai_khoan_tao cong_viec_ho_tro[] @relation("cv_tai_khoan_tao")
+  danh_sach_cv_actor lich_su_cong_viec[] @relation("cv_actor")
+  danh_sach_cv_uploader tep_cong_viec[] @relation("cv_uploader")
+  danh_sach_cv_recipient thong_bao_cong_viec[] @relation("cv_recipient")
+  danh_sach_tep_ai tep_dinh_kem_ai[]
   han_muc_ai_thang Decimal? @db.Decimal(18, 6)
   danh_sach_lan_goi_ai nhat_ky_goi_ai[]
   danh_sach_giao_dich_vat_tu giao_dich_vat_tu[]
@@ -426,6 +450,7 @@ model ho_so_quy_trinh {
   danh_sach_ho_so_lap_lai ho_so_quy_trinh[]      @relation("HoSoLapLai")
   danh_sach_buoc          buoc_xu_ly_quy_trinh[]
   danh_sach_lich_su       lich_su_quy_trinh[]
+  danh_sach_vat_tu dong_vat_tu_quy_trinh[]
 
   @@unique([id, company_id], map: "ho_so_quy_trinh_dinh_danh_dinh_danh_cong_ty_key")
   @@unique([company_id, ma], map: "ho_so_quy_trinh_dinh_danh_cong_ty_ma_key")
@@ -519,6 +544,7 @@ enum TrangThaiBuocQuyTrinh {
 
 // Danh mục không gian vật lý dùng chung; nhân sự có một vị trí làm việc chính.
 model vi_tri {
+  lien_ket_phong_3d lien_ket_phong_3d?
   danh_sach_xuat_vat_tu giao_dich_vat_tu[] @relation("XuatVatTu")
   danh_sach_nhap_vat_tu giao_dich_vat_tu[] @relation("NhapVatTu")
   vat_the_3d vat_the_3d? @relation("ViTriVatThe3D")
@@ -545,6 +571,20 @@ model vi_tri {
 }
 
 // Bố trí bổ sung qua UI; vị trí nghiệp vụ vẫn thuộc vi_tri.
+model lien_ket_phong_3d {
+  id Int @id @default(autoincrement())
+  company_id Int
+  cong_ty cong_ty @relation(fields: [company_id], references: [id], onDelete: Restrict)
+  khoa_phong String @db.VarChar(80)
+  vi_tri_id Int
+  vi_tri vi_tri @relation(fields: [vi_tri_id, company_id], references: [id, company_id], onDelete: Cascade, onUpdate: Restrict)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([company_id, khoa_phong])
+  @@unique([vi_tri_id, company_id])
+}
+
 model vat_the_3d {
   id Int @id @default(autoincrement())
   company_id Int
@@ -553,15 +593,20 @@ model vat_the_3d {
   vi_tri vi_tri @relation("ViTriVatThe3D", fields: [vi_tri_id, company_id], references: [id, company_id], onDelete: Cascade, onUpdate: Restrict)
   phong_id Int
   phong vi_tri @relation("PhongVatThe3D", fields: [phong_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  mau_hien_thi String @default("MAC_DINH") @db.VarChar(20)
   loai_vat_the String @db.VarChar(10)
   toa_do_x Float
   toa_do_z Float
   goc_xoay Int @default(0)
+  chieu_rong Float @default(1.6)
+  chieu_sau Float @default(0.8)
+  khoa_cu String? @db.VarChar(80)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   @@index([company_id, phong_id])
   @@unique([vi_tri_id, company_id])
+  @@unique([company_id, khoa_cu])
 }
 
 enum TinhTrangTaiSan {
@@ -653,6 +698,7 @@ model cong_viec_ai {
 }
 
 model hoi_thoai_ai {
+  danh_sach_tep tep_dinh_kem_ai[]
   id Int @id @default(autoincrement())
   company_id Int
   account_id Int
@@ -667,6 +713,7 @@ model hoi_thoai_ai {
   @@index([company_id, account_id, updated_at, id])
 }
 model tin_nhan_ai {
+  danh_sach_tep tep_dinh_kem_ai[]
   id Int @id @default(autoincrement())
   company_id Int
   hoi_thoai_id Int
@@ -684,6 +731,7 @@ model tin_nhan_ai {
   @@unique([hoi_thoai_id, ma_yeu_cau, vai_tro])
   @@unique([company_id, ma_yeu_cau, vai_tro])
   @@index([company_id, hoi_thoai_id, id])
+  @@unique([id, hoi_thoai_id, company_id])
 }
 
 
@@ -735,6 +783,7 @@ model mat_hang_vat_tu {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   danh_sach_giao_dich giao_dich_vat_tu[]
+  danh_sach_dong_quy_trinh dong_vat_tu_quy_trinh[]
   @@unique([id, company_id])
   @@unique([company_id, ma_mat_hang])
   @@index([company_id, loai_vat_tu_id])
@@ -742,6 +791,8 @@ model mat_hang_vat_tu {
 }
 model giao_dich_vat_tu {
   id Int @id @default(autoincrement())
+  dong_vat_tu_id Int? @unique
+  dong_vat_tu dong_vat_tu_quy_trinh? @relation(fields: [dong_vat_tu_id, mat_hang_vat_tu_id, company_id], references: [id, mat_hang_vat_tu_id, company_id], onDelete: Restrict, onUpdate: Restrict, map: "giao_dich_vat_tu_dong_vat_tu_id_mat_hang_vat_tu_id_company_id_f")
   company_id Int
   cong_ty cong_ty @relation(fields: [company_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
   mat_hang_vat_tu_id Int
@@ -777,4 +828,217 @@ model giao_dich_vat_tu {
   @@index([company_id, nhan_su_nhan_id])
   @@index([company_id, phong_ban_nhan_id])
   @@index([cap_phat_goc_id])
+}
+
+// Private AI attachments: nullable links until the first send claims the file.
+model tep_dinh_kem_ai {
+  id Int @id @default(autoincrement())
+  company_id Int
+  account_id Int
+  tai_khoan tai_khoan @relation(fields: [account_id, company_id], references: [id, company_id], onDelete: Restrict)
+  hoi_thoai_id Int?
+  hoi_thoai hoi_thoai_ai? @relation(fields: [hoi_thoai_id, company_id], references: [id, company_id], onDelete: Restrict)
+  tin_nhan_id Int?
+  tin_nhan tin_nhan_ai? @relation(fields: [tin_nhan_id, hoi_thoai_id, company_id], references: [id, hoi_thoai_id, company_id], onDelete: Restrict)
+  ma_tai_len String @db.Uuid
+  ten_tep String @db.VarChar(200)
+  loai_tep String @db.VarChar(20)
+  dung_luong Int
+  khoa_luu_tru String @unique @db.Uuid
+  tom_tat Json @db.JsonB
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  @@unique([company_id, account_id, ma_tai_len])
+  @@index([company_id, account_id, hoi_thoai_id])
+}
+
+model dong_vat_tu_quy_trinh {
+  id Int @id @default(autoincrement())
+  company_id Int
+  ho_so_quy_trinh_id Int
+  ho_so ho_so_quy_trinh @relation(fields: [ho_so_quy_trinh_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  mat_hang_vat_tu_id Int
+  mat_hang mat_hang_vat_tu @relation(fields: [mat_hang_vat_tu_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  phong_ban_nhan_id Int
+  phong_nhan phong_ban @relation(fields: [phong_ban_nhan_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  so_luong Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  giao_dich giao_dich_vat_tu[]
+  @@unique([id, mat_hang_vat_tu_id, company_id])
+  @@unique([ho_so_quy_trinh_id, mat_hang_vat_tu_id, phong_ban_nhan_id], map: "dong_vat_tu_quy_trinh_ho_so_quy_trinh_id_mat_hang_vat_tu_id_pho")
+}
+
+model cong_viec_ho_tro {
+  danh_sach_lich_su_cong_viec_viec lich_su_cong_viec[] @relation("lich_su_cong_viec_viec")
+  danh_sach_tep_cong_viec_viec tep_cong_viec[] @relation("tep_cong_viec_viec")
+  danh_sach_thong_bao_cong_viec_viec thong_bao_cong_viec[] @relation("thong_bao_cong_viec_viec")
+  id Int @id @default(autoincrement())
+  company_id Int
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+  tieu_de String @db.VarChar(255)
+  noi_dung String @db.Text
+  hang_muc String @db.VarChar(50)
+  tinh_chat String? @db.VarChar(50)
+  muc_do String? @db.VarChar(30)
+  trang_thai TrangThaiCongViecHoTro @default(CHO_NHAN)
+  nguoi_yeu_cau_id Int
+  tai_khoan_tao_id Int
+  phong_nguoi_yeu_cau_id Int?
+  loai_dich_nhan LoaiDichNhanCongViec
+  phong_ho_tro_id Int
+  nguoi_duoc_yeu_cau_id Int?
+  nguoi_thuc_hien_id Int?
+  quan_ly_nguoi_yeu_cau_id Int?
+  quan_ly_ben_ho_tro_id Int?
+  che_do_nghiem_thu CheDoNghiemThuCongViec
+  nghiem_thu_bat_buoc Boolean
+  nguoi_nghiem_thu_id Int?
+  bat_dau_luc DateTime @db.Timestamptz(3)
+  han_hoan_thanh DateTime? @db.Timestamptz(3)
+  nhan_luc DateTime? @db.Timestamptz(3)
+  bao_xong_luc DateTime? @db.Timestamptz(3)
+  nghiem_thu_luc DateTime? @db.Timestamptz(3)
+  dong_luc DateTime? @db.Timestamptz(3)
+  so_lan_bao_xong Int @default(0)
+  version Int @default(1)
+  request_id String @db.Uuid
+  request_hash String @db.VarChar(64)
+  updated_at DateTime @updatedAt @db.Timestamptz(3)
+  @@unique([id, company_id])
+  @@unique([company_id, tai_khoan_tao_id, request_id], map: "cv_request_key")
+  @@index([company_id, nguoi_thuc_hien_id, trang_thai, updated_at(sort: Desc), id(sort: Desc)], map: "cv_thuc_hien_idx")
+  @@index([company_id, nguoi_yeu_cau_id, created_at(sort: Desc), id(sort: Desc)], map: "cv_yeu_cau_idx")
+  @@index([company_id, quan_ly_nguoi_yeu_cau_id, updated_at(sort: Desc)], map: "cv_quan_ly_gui_idx")
+  @@index([company_id, quan_ly_ben_ho_tro_id, updated_at(sort: Desc)], map: "cv_quan_ly_nhan_idx")
+  cong_ty cong_ty @relation("cong_viec_ho_tro_ct", fields: [company_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  nguoi_yeu_cau nhan_su @relation("cv_nguoi_yeu_cau", fields: [nguoi_yeu_cau_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  tai_khoan_tao tai_khoan @relation("cv_tai_khoan_tao", fields: [tai_khoan_tao_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  phong_nguoi_yeu_cau phong_ban? @relation("cv_phong_nguoi_yeu_cau", fields: [phong_nguoi_yeu_cau_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  phong_ho_tro phong_ban @relation("cv_phong_ho_tro", fields: [phong_ho_tro_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  nguoi_duoc_yeu_cau nhan_su? @relation("cv_nguoi_duoc_yeu_cau", fields: [nguoi_duoc_yeu_cau_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  nguoi_thuc_hien nhan_su? @relation("cv_nguoi_thuc_hien", fields: [nguoi_thuc_hien_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  quan_ly_nguoi_yeu_cau nhan_su? @relation("cv_quan_ly_nguoi_yeu_cau", fields: [quan_ly_nguoi_yeu_cau_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  quan_ly_ben_ho_tro nhan_su? @relation("cv_quan_ly_ben_ho_tro", fields: [quan_ly_ben_ho_tro_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  nguoi_nghiem_thu nhan_su? @relation("cv_nguoi_nghiem_thu", fields: [nguoi_nghiem_thu_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model lich_su_cong_viec {
+  danh_sach_cv_evidence tep_cong_viec[] @relation("cv_evidence")
+  danh_sach_cv_notice_event thong_bao_cong_viec[] @relation("cv_notice_event")
+  id Int @id @default(autoincrement())
+  company_id Int
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+  cong_viec_id Int
+  version Int
+  operation_id String @db.Uuid
+  request_hash String @db.VarChar(64)
+  tai_khoan_thao_tac_id Int
+  nhan_su_thao_tac_id Int
+  hanh_dong HanhDongCongViec
+  ly_do String? @db.Text
+  lan_bao_xong Int?
+  du_lieu_truoc Json @default("{}") @db.JsonB
+  du_lieu_sau Json @default("{}") @db.JsonB
+  ket_qua Json @db.JsonB
+  @@unique([cong_viec_id, operation_id], map: "cv_operation_key")
+  @@unique([cong_viec_id, company_id, version], map: "cv_event_version_key")
+  @@unique([id, cong_viec_id, company_id], map: "cv_event_identity_key")
+  cong_ty cong_ty @relation("lich_su_cong_viec_ct", fields: [company_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  cong_viec cong_viec_ho_tro @relation("lich_su_cong_viec_viec", fields: [cong_viec_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  tai_khoan_thao_tac tai_khoan @relation("cv_actor", fields: [tai_khoan_thao_tac_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  nhan_su_thao_tac nhan_su @relation("cv_person", fields: [nhan_su_thao_tac_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model tep_cong_viec {
+  id Int @id @default(autoincrement())
+  company_id Int
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+  cong_viec_id Int
+  tai_khoan_tai_id Int
+  upload_id String @db.Uuid
+  khoa_luu_tru String @unique @db.VarChar(255)
+  ten_goc String @db.VarChar(255)
+  mime_type String @db.VarChar(100)
+  kich_thuoc_byte BigInt
+  sha256 String @db.VarChar(64)
+  loai_tep LoaiTepCongViec
+  su_kien_bao_xong_id Int?
+  updated_at DateTime @updatedAt @db.Timestamptz(3)
+  @@unique([company_id, tai_khoan_tai_id, upload_id], map: "cv_upload_key")
+  @@index([company_id, cong_viec_id, created_at, id], map: "cv_files_idx")
+  @@index([su_kien_bao_xong_id, cong_viec_id, company_id], map: "cv_file_event_idx")
+  cong_ty cong_ty @relation("tep_cong_viec_ct", fields: [company_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  cong_viec cong_viec_ho_tro @relation("tep_cong_viec_viec", fields: [cong_viec_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  tai_khoan_tai tai_khoan @relation("cv_uploader", fields: [tai_khoan_tai_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  su_kien_bao_xong lich_su_cong_viec? @relation("cv_evidence", fields: [su_kien_bao_xong_id, cong_viec_id, company_id], references: [id, cong_viec_id, company_id], onDelete: Restrict, onUpdate: Restrict)
+}
+
+model thong_bao_cong_viec {
+  id Int @id @default(autoincrement())
+  company_id Int
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+  cong_viec_id Int
+  version_su_kien Int
+  tai_khoan_nhan_id Int
+  loai LoaiThongBaoCongViec
+  da_doc_luc DateTime? @db.Timestamptz(3)
+  updated_at DateTime @updatedAt @db.Timestamptz(3)
+  @@unique([cong_viec_id, version_su_kien, tai_khoan_nhan_id], map: "cv_notification_key")
+  @@index([company_id, tai_khoan_nhan_id, created_at(sort: Desc), id(sort: Desc)], map: "cv_notification_idx")
+  cong_ty cong_ty @relation("thong_bao_cong_viec_ct", fields: [company_id], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  cong_viec cong_viec_ho_tro @relation("thong_bao_cong_viec_viec", fields: [cong_viec_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  tai_khoan_nhan tai_khoan @relation("cv_recipient", fields: [tai_khoan_nhan_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+  su_kien lich_su_cong_viec @relation("cv_notice_event", fields: [cong_viec_id, company_id, version_su_kien], references: [cong_viec_id, company_id, version], onDelete: Restrict, onUpdate: Restrict)
+}
+
+enum TrangThaiCongViecHoTro {
+  CHO_NHAN
+  DANG_THUC_HIEN
+  CHO_NGHIEM_THU
+  CAN_BO_SUNG
+  HOAN_THANH
+  TU_CHOI
+  DA_HUY
+}
+
+enum LoaiDichNhanCongViec {
+  CA_NHAN
+  PHONG_BAN
+}
+
+enum CheDoNghiemThuCongViec {
+  KHONG_CAN
+  NGUOI_YEU_CAU
+  QUAN_LY
+}
+
+enum HanhDongCongViec {
+  TAO
+  SUA
+  NHAN
+  TU_CHOI_CA_NHAN
+  TU_CHOI_YEU_CAU
+  CHUYEN_DICH
+  DOI_NGUOI_NGHIEM_THU
+  DOI_QUAN_LY
+  THEM_TEP
+  BAO_XONG
+  YEU_CAU_BO_SUNG
+  NGHIEM_THU
+  HUY
+}
+
+enum LoaiTepCongViec {
+  MO_TA
+  BANG_CHUNG
+}
+
+enum LoaiThongBaoCongViec {
+  YEU_CAU_MOI
+  CAP_NHAT
+  CAN_NGHIEM_THU
+  CAN_BO_SUNG
+  HOAN_THANH
+  DA_HUY
 }

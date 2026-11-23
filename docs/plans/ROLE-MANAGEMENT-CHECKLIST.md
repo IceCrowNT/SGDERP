@@ -289,3 +289,13 @@ Các quyền đã tích hợp gần đây được quản lý chi tiết tại [
 ### Quản trị sử dụng AI — 17/11/2026
 
 Catalog/ma trận/guard bổ sung AI MANAGE_LIMITS và VIEW_USAGE; kết nối vẫn MANAGE_CONNECTIONS. Menu cài đặt hiện theo hợp ba quyền, mỗi action kiểm tra lại quyền/công ty. Migration chỉ thêm catalog, không tự cấp grant. AI USE mở rộng nhiều tài khoản chưa triển khai, quyền pilot giữ nguyên. Thiết kế và kiểm chứng tại [plan AI](AI-ASSISTANT-CHECKLIST.md#quản-trị-api-openai-mở-rộng--17112026).
+
+
+### Quyền Công việc — 20/11/2026
+
+- [x] Danh mục `SUPPORT_TASK`: VIEW, CREATE, EXECUTE, ACCEPT, MANAGE; form role và tổng quyền tài khoản hiển thị riêng. Mọi thao tác cần VIEW; MANAGE không thay EXECUTE/ACCEPT.
+- [x] Session/query đọc grant hiện hành, server lọc phạm vi công việc; form cũ thiếu trường mới giữ nguyên grant công việc. Chi tiết phạm vi do [plan Công việc](TASK-MANAGEMENT-CHECKLIST.md#b2-cách-tính-quyền-và-người-nhận-thông-báo) sở hữu.
+- [x] E2E tạo role với VIEW/EXECUTE và đối chiếu đúng grant trên DB thử đạt; quyền thực tế không thay đổi.
+- [ ] Chọn/gán quyền tài khoản pilot; migration không tự cấp DEFAULT/admin hoặc chuyển TASK cũ.
+
+- [x] Thử Công việc trên local 20/11 theo yêu cầu: hai phòng/năm nhân sự-tài khoản/bốn role có nhãn TEST, tạo/gán qua action có audit; tài khoản thử đã khóa sau kiểm chứng. Dữ liệu thật của `namdh` giữ nguyên. Phạm vi và kết quả tại [plan Công việc B.8](TASK-MANAGEMENT-CHECKLIST.md#b8-thử-luồng-trên-web-local-bằng-tài-khoản-riêng--20112026).

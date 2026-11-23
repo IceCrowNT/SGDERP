@@ -1,3 +1,4 @@
+import { TASK_ACTIONS, type TaskAction } from "@/lib/support-task";
 import type { PermissionLevel } from "@/lib/auth";
 
 // Only functions whose server guards are implemented belong in this matrix.
@@ -115,7 +116,8 @@ export function canWorkflow(
 export function isEditableGrant(p: PermissionGrant) {
   return (
     p.pham_vi === "ALL" &&
-    ((p.phan_he === "AI" && AI_ACTIONS.includes(p.hanh_dong as AiAction)) ||
+    ((p.phan_he === "SUPPORT_TASK" && TASK_ACTIONS.includes(p.hanh_dong as TaskAction)) ||
+      (p.phan_he === "AI" && AI_ACTIONS.includes(p.hanh_dong as AiAction)) ||
       (p.phan_he === "WORKFLOW" &&
       WORKFLOW_ACTIONS.includes(p.hanh_dong as WorkflowAction)) ||
       ROLE_MODULES.some(

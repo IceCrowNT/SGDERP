@@ -23,7 +23,7 @@ Cập nhật 04/11/2026: **tên model và trường Prisma trùng tên bảng v�
 
 ## Tài sản và vị trí — 11/11/2026
 
-[Tài sản mức 1](plans/ASSET-MANAGEMENT-CHECKLIST.md) đã có `loai_tai_san`, `tai_san` và FK vị trí qua migration `20261111095809_tai_san_muc_1`. FK nullable `nhan_su.vi_tri_lam_viec_id` đã có từ migration `20261110160000_vi_tri_lam_viec_nhan_su`, cùng công ty/Restrict, không unique. Form HR và chi tiết vị trí cùng quản lý một liên kết; 3D HCNS chỉ đọc người ACTIVE theo quyền. Khi xóa vị trí qua ERP, action có đủ quyền/xác nhận tự bỏ gán nhân sự và audit nguyên tử trước khi xóa; FK Restrict vẫn giữ để chặn thao tác SQL làm mất liên kết. Vị trí còn tài sản thì chặn xóa/ngừng dùng; không tự gỡ thiết bị. Giao diện `/assets` đã có; dữ liệu thiết bị vận hành chưa nhập.
+[Tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md) đã có `loai_tai_san`, `tai_san` và FK vị trí qua migration `20261111095809_tai_san_muc_1`. FK nullable `nhan_su.vi_tri_lam_viec_id` đã có từ migration `20261110160000_vi_tri_lam_viec_nhan_su`, cùng công ty/Restrict, không unique. Form HR và chi tiết vị trí cùng quản lý một liên kết; 3D HCNS chỉ đọc người ACTIVE theo quyền. Khi xóa vị trí qua ERP, action có đủ quyền/xác nhận tự bỏ gán nhân sự và audit nguyên tử trước khi xóa; FK Restrict vẫn giữ để chặn thao tác SQL làm mất liên kết. Vị trí còn tài sản thì chặn xóa/ngừng dùng; không tự gỡ thiết bị. Giao diện `/assets` đã có; dữ liệu thiết bị vận hành chưa nhập.
 
 ## Kết nối AI — 16/11/2026
 
@@ -31,7 +31,7 @@ Catalog có `AI / MANAGE_CONNECTIONS / ALL` qua migration `20261116150000_quyen_
 
 Migration `20261116110000_ket_noi_ai` thêm một bảng metadata `ket_noi_ai`: `id`, `company_id` FK công ty, `model_mac_dinh`, `tham_chieu_bi_mat`, `hau_to_khoa`, `phien_ban_khoa`, `dang_su_dung`, `created_at`, `updated_at`. Mở rộng `20261116190000_nhieu_ket_noi_ai` thêm `ten_ket_noi` (varchar100), `la_mac_dinh` (boolean), thay unique công ty bằng index và partial unique cho mặc định; cho phép nhiều key/công ty, giữ dữ liệu cũ. Khóa thật mã hóa tại kho file server, không lưu plaintext hoặc ciphertext trong DB. Kiểu/ràng buộc và vòng đời tại [thiết kế kết nối pilot](THIET-KE-QUAN-TRI-AI.md#kết-nối-pilot--16112026). Cá nhân hóa/chat được bổ sung ở migration phía dưới; hạn mức/usage bổ sung ở đợt 17/11 dưới đây.
 
-Migration `20261116210000_cong_viec_ai` thêm bảng công việc theo tài khoản/công ty, snapshot JSONB có phiên bản, trạng thái duyệt/hủy/kết quả và unique mã yêu cầu chống trùng. FK kép bảo đảm chủ cùng công ty; CHECK trạng thái/kết quả/thời điểm duyệt. Thiết kế đầy đủ tại [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#bảng-công-việc-ai-và-duyệt-thực-hiện--16112026). Không lưu lời chat hoặc thay đổi hồ sơ nghiệp vụ khi tạo bảng chờ duyệt.
+Migration `20261116210000_cong_viec_ai` thêm bảng công việc theo tài khoản/công ty, snapshot JSONB có phiên bản, trạng thái duyệt/hủy/kết quả và unique mã yêu cầu chống trùng. FK kép bảo đảm chủ cùng công ty; CHECK trạng thái/kết quả/thời điểm duyệt. Thiết kế đầy đủ tại [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#bảng-công-việc-ai-và-duyệt-thực-hiện--16112026). Không lưu lời chat hoặc thay đổi hồ sơ nghiệp vụ khi tạo bảng chờ duyệt. CHECK loại công việc được mở rộng thêm `NHAP_VAT_TU` bằng migration `20261119110000_cong_viec_nhap_vat_tu`; hợp đồng snapshot/kết quả theo [ghi nhận hàng mua](plans/AI-ASSISTANT-CHECKLIST.md#ghi-nhận-hàng-vừa-mua--19112026), không thêm bảng/cột.
 
 Migration `20261116220000_hoi_thoai_va_ca_nhan_hoa_ai` thêm hai bảng hội thoại/tin nhắn và cột `tai_khoan.huong_dan_ai_ca_nhan` Text nullable (CHECK tối đa 2.000 ký tự). FK chủ/hội thoại cùng công ty, chủ bất biến, unique mã lượt/vai trò và partial unique một lượt xử lý/hội thoại. Thiết kế/giới hạn tại [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#lịch-sử-bối-cảnh-chat-và-cá-nhân-hóa--triển-khai-16112026); chưa thêm log usage hoặc hạn mức.
 
@@ -42,12 +42,14 @@ Migration `20261116220000_hoi_thoai_va_ca_nhan_hoa_ai` thêm hai bảng hội th
 | Công ty | `cong_ty` | Company |
 | Phòng ban | `phong_ban` | Department |
 | Vị trí & không gian dùng chung | `vi_tri` | — |
-| Bố trí vật thể bổ sung trên 3D | `vat_the_3d` | — |
-| Loại thiết bị | `loai_tai_san` | — (thiết kế mức 1 mới) |
-| Hồ sơ từng thiết bị | `tai_san` | — (thiết kế mức 1 mới) |
+| Bố trí vật thể trên 3D | `vat_the_3d` | — |
+| Liên kết phòng trên mô hình với vị trí | `lien_ket_phong_3d` | — |
+| Loại thiết bị | `loai_tai_san` | — (thiết kế tài sản hiện hành) |
+| Hồ sơ từng thiết bị | `tai_san` | — (thiết kế tài sản hiện hành) |
 | Loại vật tư/phụ kiện | `loai_vat_tu` | — |
 | Mặt hàng theo số lượng | `mat_hang_vat_tu` | — |
 | Sổ nhập/cấp/thu hồi/đảo vật tư | `giao_dich_vat_tu` | — |
+| Dòng vật tư trên hồ sơ workflow | `dong_vat_tu_quy_trinh` | — |
 | Hồ sơ nhân sự | `nhan_su` | Employee |
 | Tài khoản đăng nhập | `tai_khoan` | User |
 | Vai trò | `vai_tro` | Role |
@@ -58,16 +60,21 @@ Migration `20261116220000_hoi_thoai_va_ca_nhan_hoa_ai` thêm hai bảng hội th
 | Kết nối và model AI | `ket_noi_ai` | — |
 | Kết nối/model theo tác vụ | `cau_hinh_tac_vu_ai` | — |
 | Sổ gọi và chi phí AI | `nhat_ky_goi_ai` | — |
+| Công việc/ticket hỗ trợ | `cong_viec_ho_tro` | [Thiết kế Công việc](plans/TASK-MANAGEMENT-CHECKLIST.md#thiết-kế-db-cần-giữ) |
+| Sự kiện/lịch sử công việc chỉ ghi thêm | `lich_su_cong_viec` | — |
+| Tệp mô tả/bằng chứng công việc | `tep_cong_viec` | Byte lưu private ngoài DB |
+| Thông báo công việc theo tài khoản | `thong_bao_cong_viec` | — |
 | Công việc AI chờ duyệt và kết quả | `cong_viec_ai` | — |
 | Hội thoại riêng theo tài khoản | `hoi_thoai_ai` | — |
 | Tin nhắn, bối cảnh tham chiếu và trạng thái lượt | `tin_nhan_ai` | — |
+| Tệp nguồn/kết quả riêng, chủ sở hữu và liên kết tin nhắn/hội thoại AI | `tep_dinh_kem_ai` | [Thiết kế DB tệp AI](plans/AI-ASSISTANT-CHECKLIST.md#đính-kèm-và-phân-tích-tệp--18112026) |
 | Mẫu và phiên bản quy trình | `mau_quy_trinh` | — |
 | Bước trong mẫu | `buoc_mau_quy_trinh` | — |
 | Hồ sơ/yêu cầu chạy quy trình | `ho_so_quy_trinh` | — |
 | Bước xử lý của từng hồ sơ | `buoc_xu_ly_quy_trinh` | — |
 | Lịch sử xử lý | `lich_su_quy_trinh` | — |
 
-DB có 25 bảng nghiệp vụ, ngoài bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` đã triển khai; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
+Danh mục bảng nghiệp vụ ở trên không gồm bảng hệ thống `_prisma_migrations`. Nhân sự là người thật; tài khoản dùng để đăng nhập. Một người có 0..N tài khoản; vai trò gắn từng tài khoản. Chức vụ text không cấp quyền và không xác định người phụ trách phòng. Cột `phong_ban.nguoi_phu_trach_id` và `nhan_su.quan_ly_truc_tiep_id` là hai quan hệ riêng; workflow đã có bản thử nghiệm theo [plan workflow](plans/WORKFLOW-CHECKLIST.md).
 
 Các giá trị enum `ACTIVE / LEFT / UNKNOWN`, mã quyền `HR / VIEW / MANAGE`, constraint/index/sequence lịch sử và JSON nhật ký cũ được giữ nguyên. Đây không phải tên bảng/cột. Relation field của Prisma là liên kết, không tạo cột PostgreSQL; tên liên kết cũng dùng tiếng Việt.
 
@@ -82,7 +89,7 @@ await db.nhan_su.findMany({
 
 Form/session là hợp đồng ứng dụng riêng, có thể giữ tên như fullName/companyId; Server Action chuyển tường minh sang trường DB. Không tạo model hoặc lớp Prisma alias tiếng Anh song song. Nhãn người dùng trên ERP vẫn là tiếng Việt có dấu.
 
-## `loai_tai_san` và `tai_san` — Thiết bị mức 1
+## `loai_tai_san` và `tai_san` — Thiết bị
 
 Hai bảng có `id`, `company_id`, `created_at`, `updated_at`. Mã unique trong công ty; FK nghiệp vụ kép cùng công ty/Restrict. Enum và ràng buộc vận hành do [plan tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md#thiết-kế-db-cần-giữ) quản lý.
 
@@ -126,18 +133,32 @@ Quan hệ Prisma của thiết bị: `cong_ty`, `loai_tai_san`, `phong_quan_ly`,
 
 Quan hệ Prisma: `cong_ty`, `vi_tri_cha`, `danh_sach_vi_tri_con`, `danh_sach_nhan_su` (không phải cột). Ràng buộc và vòng đời tại [plan vị trí](plans/LOCATION-MANAGEMENT-CHECKLIST.md). Migration `20261110100000_vi_tri_khong_gian` thêm bảng và quyền LOCATIONS, không cấp grant hoặc gán chỗ ngồi.
 
-## `vat_the_3d` — Bố trí vị trí bổ sung trên mô hình
+## `lien_ket_phong_3d` — Liên kết phòng với mô hình
+
+| Cột PostgreSQL = trường Prisma | Kiểu | Ý nghĩa |
+| --- | --- | --- |
+| `id`, `company_id` | Int | Khóa tự tăng, công ty sở hữu |
+| `khoa_phong` | String(80) | Khóa vùng phòng trong hình học; không phải mã phòng ban |
+| `vi_tri_id` | Int | Phòng vật lý trong danh mục vị trí, FK kép cùng công ty |
+| `created_at`, `updated_at` | DateTime | Thời điểm tạo/cập nhật |
+
+Quan hệ Prisma: `cong_ty`, `vi_tri`; quan hệ ngược `cong_ty.danh_sach_lien_ket_phong_3d` và `vi_tri.lien_ket_phong_3d`. Unique `(company_id, khoa_phong)` và `(vi_tri_id, company_id)`. Vòng đời, nguồn cấu hình cũ và giới hạn tại [plan 3D](plans/OFFICE-3D-CHECKLIST.md#quy-ước-dùng-chung-cho-các-phòng--2011).
+
+## `vat_the_3d` — Bố trí vị trí trên mô hình
 
 Migration `20261112160000_vi_tri_bo_sung_3d` bổ sung một bảng, giữ 17 bảng cũ. Thiết kế/ràng buộc nghiệp vụ do [plan 3D](plans/OFFICE-3D-CHECKLIST.md#thử-nghiệm-thêm-vị-trí-trên-mô-hình) quản lý.
 
 | Cột | Kiểu | Ý nghĩa |
 | --- | --- | --- |
 | `id`, `company_id` | Int | Khóa kỹ thuật, công ty |
-| `vi_tri_id` | Int | FK kép cùng công ty, unique `(vi_tri_id, company_id)`; mỗi vị trí tối đa một hình bổ sung |
-| `phong_id` | Int | FK kép tới phòng gốc của hình |
+| `vi_tri_id` | Int | FK kép cùng công ty, unique `(vi_tri_id, company_id)`; mỗi vị trí tối đa một hình |
+| `phong_id` | Int | FK kép tới cha chứa hình: phòng/khu vực; có thể là tầng cho vị trí trực tiếp như Lễ tân |
 | `loai_vat_the` | String | `BAN` hoặc `DIEM` |
+| `mau_hien_thi` | String(20) | Mặc định `MAC_DINH`; `QUAY_LE_TAN` và `BAN_TONG_GIAM_DOC` chỉ cho `BAN`, CHECK tại DB |
 | `toa_do_x`, `toa_do_z` | Float | Tọa độ tương đối trong phòng, giới hạn hữu hạn |
 | `goc_xoay` | Int | Góc 0/90/180/270 độ |
+| `chieu_rong`, `chieu_sau` | Float | Kích thước hình (m), CHECK 0,1–10; mặc định bàn 1,6 × 0,8 |
+| `khoa_cu` | String? | Khóa tương thích link chọn vị trí cũ; unique cùng `company_id`, không phải mã nghiệp vụ |
 | `created_at`, `updated_at` | DateTime | Thời điểm và phiên bản bố trí |
 
 Quan hệ Prisma: `cong_ty`, `vi_tri`, `phong`. Xóa vị trí hợp lệ cascade hình phụ thuộc; FK phòng Restrict. Không đổi liên kết tài sản/nhân sự khi chỉnh bố trí. `vi_tri` có quan hệ `vat_the_3d` và `danh_sach_vat_the_3d`; không thêm cột tọa độ vào danh mục vị trí.
@@ -346,7 +367,7 @@ Quan hệ Prisma: `cong_ty`, `vi_tri`, `phong`. Xóa vị trí hợp lệ cascad
 - Phòng ban và nhân sự quản lý độc lập trong ERP sau khởi tạo. Metadata nguồn chỉ giữ lịch sử, không khóa sửa/đồng bộ 1Office. `ghi_chu` là ghi chú vận hành; `ghi_chu_nhan_su_hr` là ghi chú nguồn.
 - FK nhân sự–phòng ban và tài khoản–nhân sự dùng cặp định danh + công ty. Mọi truy vấn nghiệp vụ cần giới hạn công ty từ phiên đăng nhập.
 - `tai_khoan_vai_tro` và `vai_tro_quyen` dùng khóa chính kép; mỗi cặp chỉ xuất hiện một lần. `la_vai_tro_chinh` không thay thế phép cộng quyền từ các vai trò.
-- Schema tài sản cũ đã gỡ ngày 31/10/2026; không khôi phục bằng seed. Hai bảng mức 1 mới được triển khai độc lập ngày 11/11/2026 theo plan tài sản.
+- Schema tài sản cũ đã gỡ ngày 31/10/2026; không khôi phục bằng seed. Hai bảng tài sản mới được triển khai độc lập ngày 11/11/2026 theo plan tài sản.
 
 ## Lịch sử chuyển tên
 
@@ -364,7 +385,7 @@ Mã nguồn đã bổ sung ba bảng qua `20261117090000_vat_tu_va_phu_kien`; tr
 | `mat_hang_vat_tu` | `ma_mat_hang` tự cấp VT, tên, FK loại/phòng quản lý, `don_vi_tinh`, `muc_ton_toi_thieu`, ghi chú/trạng thái; không lưu tồn |
 | `giao_dich_vat_tu` | FK mặt hàng, loại/số lượng giao dịch, nơi xuất/nhập, người/phòng nhận, lần cấp gốc/bản đảo, giá/lý do/ghi chú, UUID `request_id`, người ghi và thời điểm; không `updated_at` |
 
-FK nghiệp vụ cùng công ty và Restrict; hai self-FK còn cùng mặt hàng. `ton_vat_tu`/`dang_cap_vat_tu` tính từ sổ; các trigger chặn sửa/xóa sổ, âm, thu hồi vượt, đảo sai, ngừng danh mục/nơi giữ còn tồn. Tồn mở đầu riêng mỗi mặt hàng/nơi giữ. Hai quyền mới chỉ được tạo trong catalog, không gán mặc định.
+FK nghiệp vụ cùng công ty và Restrict; hai self-FK còn cùng mặt hàng. `ton_vat_tu`/`dang_cap_vat_tu` tính từ sổ; các trigger chặn sửa/xóa sổ, âm, thu hồi vượt, đảo sai, ngừng danh mục/nơi giữ còn tồn. Tồn mở đầu tiêu hao chung một lần/mặt hàng; phụ kiện riêng từng nơi giữ. Hai quyền mới chỉ được tạo trong catalog, không gán mặc định.
 
 ## Quản trị sử dụng AI — 17/11/2026
 
@@ -381,3 +402,7 @@ Migration `20261117120000_quan_tri_su_dung_ai` đã áp dụng local sau backup/
 | Trạng thái của sổ gọi | `trang_thai`: DANG_GOI/HOAN_TAT/LOI/CHUA_RO/CHUA_GIA/DOI_SOAT; `ma_phan_hoi`, `http_status` nullable, `created_at`, `hoan_tat_at` nullable |
 
 Sổ gọi unique công ty/tài khoản/mã lượt/bước; index công ty/tài khoản/thời gian và công ty/kết nối/thời gian. Kỳ được xác định từ created_at UTC theo ranh giới tháng Asia/Ho_Chi_Minh, không cần reset log hoặc cột số dư. CHECK giữ giá trị không âm và điều kiện trạng thái; không chứa secret/prompt/chat. Đối chiếu thủ công giữ token chưa biết là NULL và ghi audit cùng giao dịch.
+
+### Vật tư IT và ticket — 18/11/2026
+
+`20261118090000_ton_chung_tieu_hao` thay hàm/CHECK/trigger: tiêu hao mới không gắn vị trí, tồn chung vẫn tính cả lịch sử cũ; phụ kiện giữ nơi xuất/nhập. `20261118100000_vat_tu_ticket` thêm `dong_vat_tu_quy_trinh` (FK hồ sơ/mặt hàng/phòng cùng công ty, số lượng nguyên dương, timestamps, unique hồ sơ–mặt hàng–phòng) và `giao_dich_vat_tu.dong_vat_tu_id` nullable/unique. Trigger khóa dòng sau hoàn thành/đã xuất, bảo đảm giao dịch khớp dòng và hồ sơ COMPLETED. Trạng thái triển khai và kiểm chứng tại [plan vật tư](plans/INVENTORY-MANAGEMENT-CHECKLIST.md#thiết-kế-db-cần-giữ).

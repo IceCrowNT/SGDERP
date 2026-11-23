@@ -1,0 +1,71 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- PostgreSQL and auth are real; only Office transport/request cookies are stubbed. */
+const assert=require('node:assert/strict'),{test,before,after}=require('node:test'),{randomUUID}=require('node:crypto'),{AsyncLocalStorage}=require('node:async_hooks'),Module=require('node:module'),fs=require('node:fs/promises'),path=require('node:path');
+assert.match(new URL(process.env.DATABASE_URL).pathname,/^\/sdg_tasks_test_\d+$/);
+const context=new AsyncLocalStorage(),originalLoad=Module._load;
+Module._load=function(name,...args){if(name==='next/headers')return{cookies:async()=>({get:()=>context.getStore()?{value:context.getStore()}:undefined})};return originalLoad.call(this,name,...args);};
+const {db}=require('../../src/lib/db.ts'),{createSessionToken}=require('../../src/lib/session-token.ts');
+const {openOfficeEditor,officeEditorStatus}=require('../../src/actions/office-editor.ts');
+const {GET}=require('../../src/app/api/office/source/route.ts'),{POST}=require('../../src/app/api/office/callback/route.ts');
+const {signOfficePayload,readOfficeSession,signOfficeSession}=require('../../src/lib/office-editor.ts');
+const {parseAttachment,fileSummary}=require('../../src/lib/ai-attachment-parser.ts'),{writeAttachment,readAttachmentBytes}=require('../../src/lib/ai-attachment-storage.ts');
+const {Document,Packer,Paragraph}=require('docx'),ExcelJS=require('exceljs');
+let owner,other,chat,source,original,edited,originalFetch,configuration,callbackPayload;
+const as=async(account,fn)=>context.run(account?await createSessionToken({userId:account.id,companyId:account.company_id,sessionVersion:account.phien_ban_dang_nhap}):undefined,fn);
+const ok=r=>{assert(r.success,r.message);return r;};
+const send=async(payload,url=configuration.config.editorConfig.callbackUrl,unsigned={})=>POST(new Request(url,{method:'POST',headers:{Authorization:'Bearer '+await signOfficePayload({payload})},body:JSON.stringify({...payload,...unsigned})}));
+before(async()=>{
+ process.env.OFFICE_PUBLIC_URL='http://localhost:4019';process.env.OFFICE_INTERNAL_URL='http://localhost:4019';process.env.OFFICE_APP_URL='http://localhost:4018';process.env.OFFICE_JWT_SECRET='office-test-only-secret-000000000000000000000';
+ process.env.AI_ATTACHMENT_STORAGE_DIR=path.resolve('outputs/office-20261123/files');
+ const company=await db.cong_ty.create({data:{ten_cong_ty:'Office test '+randomUUID()}});
+ const make=()=>db.tai_khoan.create({data:{company_id:company.id,ten_dang_nhap:'office-'+randomUUID(),ten_hien_thi:'Office tester',mat_khau_bam:'disabled'}});owner=await make();other=await make();
+ chat=await db.hoi_thoai_ai.create({data:{company_id:company.id,account_id:owner.id,tieu_de:'Tài liệu thử Office'}});
+ original=await Packer.toBuffer(new Document({sections:[{children:[new Paragraph('Số lượng: 20 lọ')]}]}));edited=await Packer.toBuffer(new Document({sections:[{children:[new Paragraph('Số lượng: 10 lọ')]}]}));
+ const key=randomUUID(),parsed=await parseAttachment(original,'Bao-gia.docx');await writeAttachment(key,original,parsed.data);
+ const message=await db.tin_nhan_ai.create({data:{company_id:company.id,hoi_thoai_id:chat.id,ma_yeu_cau:randomUUID(),vai_tro:'NGUOI_DUNG',trang_thai:'HOAN_TAT',noi_dung:'Mở tài liệu'}});
+ source=await db.tep_dinh_kem_ai.create({data:{company_id:company.id,account_id:owner.id,hoi_thoai_id:chat.id,tin_nhan_id:message.id,ma_tai_len:randomUUID(),ten_tep:'Bao-gia.docx',loai_tep:'docx',dung_luong:original.length,khoa_luu_tru:key,tom_tat:fileSummary(parsed.data)}});
+ originalFetch=global.fetch;global.fetch=async url=>{assert.match(String(url),/^http:\/\/localhost:4019\/cache\/files\//);return new Response(edited);};
+ assert(await as(owner,()=>require('../../src/lib/auth.ts').getSession()),'fixture session missing');
+ configuration=ok(await as(owner,()=>openOfficeEditor({fileId:source.id,chatId:chat.id,mobile:false})));
+ callbackPayload={key:configuration.config.document.key,status:6,filetype:'docx',userdata:randomUUID(),url:'http://localhost:4019/cache/files/test/output.docx'};
+ await fs.writeFile('outputs/office-20261123/fixture.json',JSON.stringify({owner,other,chatId:chat.id,fileId:source.id}));await fs.writeFile('outputs/office-20261123/edited.docx',edited);
+});
+after(async()=>{global.fetch=originalFetch;await db.$disconnect();});
+test('DEFAULT opens own file; cross-account/chat and unauthenticated actions denied',async()=>{
+ assert(configuration.editable);assert(!JSON.stringify(configuration).includes(process.env.OFFICE_JWT_SECRET));
+ assert.equal((await as(other,()=>openOfficeEditor({fileId:source.id,chatId:chat.id,mobile:false}))).success,false);
+ assert.equal((await as(null,()=>openOfficeEditor({fileId:source.id,chatId:chat.id,mobile:false}))).success,false);
+ const different=await db.hoi_thoai_ai.create({data:{company_id:owner.company_id,account_id:owner.id}});
+ assert.equal((await as(owner,()=>openOfficeEditor({fileId:source.id,chatId:different.id,mobile:false}))).success,false);
+ assert.equal((await GET(new Request(configuration.config.document.url))).status,200);
+ assert.deepEqual(Buffer.from(await (await GET(new Request(configuration.config.document.url))).arrayBuffer()),original);
+ assert.equal((await GET(new Request(configuration.config.document.url.replace('ticket=','ticket=bad')))).status,404);
+ const data=await readOfficeSession(configuration.token,'client');
+ assert.equal((await GET(new Request('http://erp/api/office/source?ticket='+await signOfficeSession(data,'callback')))).status,404);
+});
+test('signed save persists new private version, parsed data, paired messages, audit, idempotent callback',async()=>{
+ assert.deepEqual(await (await send(callbackPayload,undefined,{url:'http://169.254.169.254/secret'})).json(),{error:0});
+ assert.deepEqual(await (await send(callbackPayload)).json(),{error:0});
+ const status=ok(await as(owner,()=>officeEditorStatus({token:configuration.token,requestId:callbackPayload.userdata})));assert(status.file);
+ assert.equal(await db.tep_dinh_kem_ai.count({where:{hoi_thoai_id:chat.id}}),2);
+ const saved=await db.tep_dinh_kem_ai.findUniqueOrThrow({where:{id:status.file.id}});assert.deepEqual(await readAttachmentBytes(source.khoa_luu_tru),original);assert.deepEqual(await readAttachmentBytes(saved.khoa_luu_tru),edited);
+ assert.match(JSON.stringify((await parseAttachment(await readAttachmentBytes(saved.khoa_luu_tru),saved.ten_tep)).data),/10 lọ/);
+ assert.equal(await db.nhat_ky_hoat_dong.count({where:{doi_tuong_id:`tep_dinh_kem_ai:${saved.id}`}}),1);
+ assert.equal((await as(other,()=>officeEditorStatus({token:configuration.token}))).success,false);
+});
+test('invalid signature, mismatched key, foreign download, archived and revoked session cannot save',async()=>{
+ const response=await POST(new Request(configuration.config.editorConfig.callbackUrl,{method:'POST',body:JSON.stringify({...callbackPayload,token:'bad'})}));assert.equal((await response.json()).error,1);
+ assert.equal((await (await send({...callbackPayload,key:randomUUID()})).json()).error,1);
+ assert.equal((await (await send({...callbackPayload,url:'http://169.254.169.254/cache/files/file'})).json()).error,1);
+ await db.hoi_thoai_ai.update({where:{id:chat.id},data:{trang_thai:'LUU_TRU'}});assert.equal((await (await send(callbackPayload)).json()).error,1);
+ await db.hoi_thoai_ai.update({where:{id:chat.id},data:{trang_thai:'DANG_MO'}});
+ await db.tai_khoan.update({where:{id:owner.id},data:{phien_ban_dang_nhap:{increment:1}}});assert.equal((await GET(new Request(configuration.config.document.url))).status,404);
+ await db.tai_khoan.update({where:{id:owner.id},data:{phien_ban_dang_nhap:owner.phien_ban_dang_nhap}});
+});
+test('Excel saves same format; mobile is view-only without licensed setting',async()=>{
+ const workbook=new ExcelJS.Workbook();workbook.addWorksheet('Data').addRows([['Mặt hàng','SL'],['Mực',20]]);const bytes=Buffer.from(await workbook.xlsx.writeBuffer()),key=randomUUID(),parsed=await parseAttachment(bytes,'Ton.xlsx');await writeAttachment(key,bytes,parsed.data);
+ const row=await db.tep_dinh_kem_ai.create({data:{company_id:owner.company_id,account_id:owner.id,hoi_thoai_id:chat.id,tin_nhan_id:source.tin_nhan_id,ma_tai_len:randomUUID(),ten_tep:'Ton.xlsx',loai_tep:'xlsx',dung_luong:bytes.length,khoa_luu_tru:key,tom_tat:fileSummary(parsed.data)}});
+ const config=ok(await as(owner,()=>openOfficeEditor({fileId:row.id,chatId:chat.id,mobile:false})));assert.equal(config.config.documentType,'cell');
+ workbook.worksheets[0].getCell('B2').value=10;edited=Buffer.from(await workbook.xlsx.writeBuffer());
+ assert.equal((await(await send({key:config.config.document.key,status:6,filetype:'xlsx',userdata:randomUUID(),url:'http://localhost:4019/cache/files/test/output.xlsx'},config.config.editorConfig.callbackUrl)).json()).error,0);
+ assert.equal(ok(await as(owner,()=>openOfficeEditor({fileId:row.id,chatId:chat.id,mobile:true}))).editable,false);
+});

@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { getSession, type SessionUser } from "@/lib/auth";
 import { currentActor } from "@/lib/rbac-server";
 import { canAi, canAdministerAi, type AiAction } from "@/lib/role-catalog";
-import { canUseAiPilot } from "@/lib/ai-pilot";
+import { canUseAiChat } from "@/lib/ai-pilot";
 import { AiConnectionError } from "@/lib/validations/ai-settings";
 import { AiPricesSchema, SaveAiPolicySchema, SaveAiJobSchema, SaveAiLimitSchema, AiUsageFilterSchema, ReconcileAiCallSchema, aiMonth, aiMonthBounds } from "@/lib/validations/ai-governance";
 import { usageAmounts } from "@/lib/ai-cost";
@@ -100,11 +100,15 @@ export async function saveAiAccountLimit(input: unknown) {
 export async function getMyAiUsage() {
   try {
     const session = await getSession();
-    if (!session || !canUseAiPilot(session)) throw new AiConnectionError("Chưa có quyền xem mức sử dụng AI.");
+    if (!session || !canUseAiChat(session)) throw new AiConnectionError("Chưa có quyền xem mức sử dụng AI.");
     const month = aiMonth(), row = await db.tai_khoan.findFirstOrThrow({ where: { id: session.userId, company_id: session.companyId }, select: { han_muc_ai_thang: true } });
-    const totals = await db.nhat_ky_goi_ai.aggregate({ where: { company_id: session.companyId, account_id: session.userId, created_at: aiMonthBounds(month) }, _sum: { chi_phi_uoc_tinh: true, du_phong: true } });
-    const unknown = await db.nhat_ky_goi_ai.count({ where: { company_id: session.companyId, account_id: session.userId, created_at: aiMonthBounds(month), chi_phi_uoc_tinh: null, du_phong: null } });
-    return { success: true as const, month, canCall: canUseAiPilot(session), ...usageAmounts(totals._sum, row.han_muc_ai_thang, unknown > 0) };
+    const where = { company_id: session.companyId, account_id: session.userId, created_at: aiMonthBounds(month) };
+    const [totals, held, unknown] = await Promise.all([
+      db.nhat_ky_goi_ai.aggregate({ where, _sum: { chi_phi_uoc_tinh: true } }),
+      db.nhat_ky_goi_ai.aggregate({ where: { ...where, trang_thai: "DANG_GOI" }, _sum: { du_phong: true } }),
+      db.nhat_ky_goi_ai.count({ where: { ...where, chi_phi_uoc_tinh: null, trang_thai: { not: "DANG_GOI" } } }),
+    ]);
+    return { success: true as const, month, canCall: canUseAiChat(session), ...usageAmounts({ ...totals._sum, ...held._sum }, row.han_muc_ai_thang, unknown > 0) };
   } catch (error) { return failure(error); }
 }
 
@@ -113,20 +117,21 @@ export async function getAiUsage(input: unknown) {
     const session = await actor("VIEW_USAGE"), parsed = AiUsageFilterSchema.safeParse(input);
     if (!parsed.success) throw new AiConnectionError("Bộ lọc sử dụng AI chưa hợp lệ.");
     const v = parsed.data, where = { company_id: session.companyId, account_id: v.accountId, ket_noi_ai_id: v.connectionId, model: v.model, created_at: aiMonthBounds(v.month) };
-    const [totals, count, groups, rows, unresolved] = await Promise.all([
-      db.nhat_ky_goi_ai.aggregate({ where, _sum: { token_dau_vao: true, token_cache: true, token_dau_ra: true, chi_phi_uoc_tinh: true, du_phong: true } }),
+    const [totals, count, groups, rows, unresolved, held] = await Promise.all([
+      db.nhat_ky_goi_ai.aggregate({ where, _sum: { token_dau_vao: true, token_cache: true, token_dau_ra: true, chi_phi_uoc_tinh: true } }),
       db.nhat_ky_goi_ai.count({ where }),
       db.nhat_ky_goi_ai.groupBy({ by: ["ma_yeu_cau"], where }),
       db.nhat_ky_goi_ai.findMany({ where, take: 25, skip: (v.page - 1) * 25, orderBy: { id: "desc" }, include: { tai_khoan: { select: { ten_hien_thi: true, ten_dang_nhap: true } }, ket_noi: { select: { ten_ket_noi: true } } } }),
       db.nhat_ky_goi_ai.count({ where: { ...where, chi_phi_uoc_tinh: null } }),
+      db.nhat_ky_goi_ai.aggregate({ where: { ...where, trang_thai: "DANG_GOI" }, _sum: { du_phong: true } }),
     ]);
     const sum = totals._sum;
     return { success: true as const, month: v.month, page: v.page, total: count, requests: groups.length, unresolved,
       input: sum.token_dau_vao ?? 0, cached: sum.token_cache ?? 0, output: sum.token_dau_ra ?? 0,
-      cost: sum.chi_phi_uoc_tinh?.toFixed(6) ?? "0.000000", reserved: sum.du_phong?.toFixed(6) ?? "0.000000",
+      cost: sum.chi_phi_uoc_tinh?.toFixed(6) ?? "0.000000", reserved: held._sum.du_phong?.toFixed(6) ?? "0.000000",
       rows: rows.map(row => ({ id: row.id, account: row.tai_khoan.ten_hien_thi, username: row.tai_khoan.ten_dang_nhap, connection: row.ket_noi.ten_ket_noi, model: row.model, job: row.ma_tac_vu,
         status: row.trang_thai, input: row.token_dau_vao, cached: row.token_cache, output: row.token_dau_ra, cost: row.chi_phi_uoc_tinh?.toFixed(6) ?? null,
-        reserved: row.du_phong?.toFixed(6) ?? null, at: row.created_at.toISOString(), canReconcile: row.chi_phi_uoc_tinh === null && row.created_at.getTime() < Date.now() - 180000 })) };
+        reserved: row.trang_thai === "DANG_GOI" ? row.du_phong?.toFixed(6) ?? null : "0.000000", at: row.created_at.toISOString(), canReconcile: row.chi_phi_uoc_tinh === null && row.created_at.getTime() < Date.now() - 180000 })) };
   } catch (error) { return failure(error); }
 }
 

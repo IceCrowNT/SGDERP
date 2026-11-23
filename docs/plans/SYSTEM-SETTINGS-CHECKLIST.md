@@ -1,10 +1,13 @@
 # Cài đặt hệ thống
 
-Cập nhật: **16/11/2026**. Trạng thái: **đã triển khai theo yêu cầu “Hãy thực hiện”**. Rule: [SYSTEM-SETTINGS-RULES](../../.agents/rules/SYSTEM-SETTINGS-RULES.md).
+Cập nhật: **19/11/2026**. Trạng thái: **đã triển khai theo yêu cầu “Hãy thực hiện”**. Rule: [SYSTEM-SETTINGS-RULES](../../.agents/rules/SYSTEM-SETTINGS-RULES.md).
 
 Mục lục: [A. Phạm vi](#a-phạm-vi) · [B. Triển khai](#b-triển-khai) · [Thiết kế DB cần giữ](#thiết-kế-db-cần-giữ) · [Kiểm chứng](#kiểm-chứng).
 
 ## A. Phạm vi
+
+**Tổng quan quản trị:** `/system` là dashboard phân hệ. Bấm tên Quản trị mở tổng quan; hover menu thu gọn mở tác vụ con. Thẻ tài khoản (cho phép đăng nhập/khóa), vai trò (tùy chỉnh/hệ thống), vị trí (đang/ngừng dùng), nhật ký 7 ngày và cài đặt chỉ hiện theo quyền tương ứng. `/settings` tiếp tục là khu cấu hình.
+
 
 Thay trang chờ `/settings` bằng khu cài đặt có các mục đã hoạt động và được cấp quyền. Đợt này có **Quản trị AI → Kết nối & model**, chuyển form từ dashboard sang `/settings/ai`; chat và nghiệp vụ tài sản/vị trí giữ nguyên.
 
@@ -30,6 +33,13 @@ flowchart LR
 Quyền quản trị kết nối độc lập quyền dùng chat và tài sản/vị trí; không mở chat cho mọi người quản trị AI. Đợt chuyển tiếp giữ quyền quản trị kết nối cho đúng tài khoản pilot đã được người phụ trách yêu cầu dùng; kiểm tra role chỉ gán tài khoản đó trước khi cấp riêng, có audit. Migration/seed chỉ thêm catalog, không cấp hàng loạt.
 
 ## B. Triển khai
+
+### Dashboard quản trị — 19/11/2026
+
+- [x] Tạo `/system` và skeleton; menu dùng cùng điều kiện hợp quyền với page. ACCOUNTS cần MANAGE; ROLES/LOCATIONS/AUDIT cần VIEW hoặc MANAGE; cấu hình dùng hợp quyền quản trị AI hiện có. Không thêm quyền SYSTEM hoặc tự cấp quyền.
+- [x] Dữ liệu: chỉ group/count `tai_khoan`, `vai_tro`, `vi_tri`, `nhat_ky_hoat_dong` trong công ty và mảng được cấp quyền, một snapshot đọc. Không truy vấn khóa AI, mật khẩu hoặc payload audit; không thêm bảng/cột. Số tài khoản cho phép đăng nhập không biểu thị online hay số nhân sự.
+- [x] Card và thanh tỷ lệ dùng dữ liệu thực; thiếu quyền ẩn cả thẻ lẫn truy vấn. Zero hiện 0. Link thẻ mở chức năng đầy đủ, nhật ký 7 ngày là số tổng quan, trang nhật ký giữ bộ lọc riêng. Trang không lưu cache dữ liệu chung; mutation vị trí/3D revalidate tổng quan, tài khoản/vai trò dùng revalidate layout hiện có.
+- [x] TypeScript/lint và 8 unit điều hướng/quyền đạt. Chrome chỉ đọc DB: số tài khoản/vai trò/vị trí khớp, hover mở menu/click vào tổng quan, ArrowDown/Escape, link vị trí/Back, mobile mở menu/đóng sau chọn, không tràn ngang, sáng/tối và chưa đăng nhập chuyển login đều đạt; không lỗi JavaScript. Đã xem ảnh tại `outputs/nav-rail/system-*.png`. Không có tài khoản vận hành thiếu toàn bộ quyền phù hợp để kiểm tra browser từ chối; ca này kiểm tra chính sách bằng unit, không tự đổi quyền/tạo tài khoản thật.
 
 ### Thiết kế DB cần giữ
 

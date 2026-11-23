@@ -1,6 +1,8 @@
 "use client";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
+import { assetListKey, readAssetListQuery, setAssetListQuery } from "@/lib/asset-list-navigation";
+import { AssetCategoryFilters } from "./AssetCategoryFilters";
 import { parseAssetId } from "@/lib/asset-link";
 import { toast } from "sonner";
 import { Boxes, Plus, Search, SlidersHorizontal, ChevronLeft, ChevronRight, Pencil, X, ArrowLeft } from "lucide-react";
@@ -45,9 +47,11 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
   const searchParams = useSearchParams();
   const linkedAsset = searchParams.getAll("asset").join(",");
   const hasLinkedAsset = searchParams.has("asset");
+  const listUrlKey = assetListKey(readAssetListQuery(searchParams));
+  const loadedListKey = useRef<string | null>(null);
   const [overview, setOverview] = useState(initial);
   const [list, setList] = useState<AssetList>({ success: true, rows: [], total: 0, remaining: 0, personal: 0, byCategory: [], page: 1, pages: 1, pageSize: 20, canManage: initial.canManage });
-  const [screen, setScreen] = useState<"groups" | "assets">("groups");
+  const [screen, setScreen] = useState<"groups" | "assets">("assets");
   const [grouping, setGrouping] = useState<AssetGrouping>("byCategory");
   const [groupSearch, setGroupSearch] = useState("");
   const [group, setGroup] = useState<AssetGroup | null>(null);
@@ -117,9 +121,14 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
       onClick={e => startInlineEdit(row, target, e.currentTarget)}>{value}</Button>;
   }
   const canManage = overview.canManage;
-  const contextCategory = group?.query.categoryId ? categories.find(c => c.id === group.query.categoryId) : undefined;
+  const contextCategory = categories.find(c => c.id === query.categoryId);
   const hasActiveCategory = categories.some(c => c.dang_su_dung);
-  function load(next: AssetQuery = query, catalogs = false, scroll?: number, afterLoad?: () => void) {
+  function load(next: AssetQuery = query, catalogs = false, scroll?: number, afterLoad?: () => void, navigate = true) {
+    const key = assetListKey(next);
+    loadedListKey.current = key;
+    if (navigate && assetListKey(readAssetListQuery(new URLSearchParams(window.location.search))) !== key) {
+      window.history.pushState(null, "", setAssetListQuery(new URL(window.location.href), next));
+    }
     const ticket = ++latest.current;
     restoreLoadedView.current = null;
     setQuery(next); setError("");
@@ -147,6 +156,26 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
       } catch { if (ticket === latestCatalog.current) setError("Không tải được nhóm tài sản. Hãy thử lại."); }
     });
   }
+  const restoreUrlList = useEffectEvent(() => {
+    if (loadedListKey.current === listUrlKey) return;
+    if (locked || detailEditing.current !== null || formBlocked.current || categoryBlocked.current) {
+      window.history.replaceState(null, "", setAssetListQuery(new URL(window.location.href), query));
+      return;
+    }
+    const next = readAssetListQuery(new URLSearchParams(listUrlKey));
+    setScreen("assets"); setGroup(null); setSearch(next.search ?? "");
+    load(next, false, undefined, undefined, false);
+  });
+  useEffect(() => { restoreUrlList(); }, [listUrlKey]);
+  function chooseCategory(id?: number) {
+    setScreen("assets"); setGrouping("byCategory"); setGroup(null);
+    load({ ...query, categoryId: id, page: 1 });
+  }
+  function chooseGrouping(mode: AssetGrouping) {
+    setGrouping(mode); setGroupSearch("");
+    if (mode === "byCategory") { setGroup(null); setScreen("assets"); load({}); setSearch(""); }
+    else { setScreen("groups"); setGroup(null); }
+  }
   function enterGroup(next: AssetGroup) {
     groupScroll.current = window.scrollY; lastGroupId.current = next.id;
     const saved = groupViews.current.get(next.id);
@@ -159,11 +188,11 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
     ++latest.current; setScreen("groups"); setGroup(null); setQuery({}); setSearch(""); setError("");
     restoreGroup.current = true;
   }
-  function globalSearch(value = search.trim()) {
+  function globalSearch(value = search.trim(), all = false) {
     if (screen === "groups") groupScroll.current = window.scrollY;
     if (group) groupViews.current.set(group.id, { query, scroll: window.scrollY, advanced });
-    setGroup(null); setScreen("assets"); setAdvanced(false);
-    setList(v => ({ ...v, rows: [], total: 0 })); load({ search: value }, false, 0);
+    if (all) { setGroup(null); setGrouping("byCategory"); } setScreen("assets"); setAdvanced(false);
+    setList(v => ({ ...v, rows: [], total: 0 })); load({ ...(all ? {} : query), search: value, page: 1 }, false, 0);
   }
   function addAsset() {
     detailTrigger.current = null; detailScroll.current = { x: window.scrollX, y: window.scrollY };
@@ -226,20 +255,25 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
     { key: "departmentId", label: "Phòng", value: filters.departments.find(d => d.id === query.departmentId)?.ten_phong_ban },
     { key: "employeeId", label: "Người", value: filters.employees.find(p => p.id === query.employeeId)?.ho_ten },
     { key: "locationId", label: "Vị trí", value: query.locationId === null ? "Chưa rõ vị trí" : filters.locations.find(l => l.id === query.locationId)?.name },
-  ].filter(item => item.value && !(group && Object.hasOwn(group.query, item.key)));
+  ].filter(item => item.value && item.key !== "categoryId" && !(group && Object.hasOwn(group.query, item.key)));
   const moreFilterCount = applied.filter(item => !["search", "categoryId"].includes(item.key)).length;
   return <div className="space-y-5 [overflow-anchor:none]" aria-busy={pending}>
     <header className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><h1 className="text-2xl font-semibold tracking-tight">Tài sản</h1><span aria-label={`${overview.total} tài sản trong danh mục`} className="rounded-full bg-muted px-2.5 py-1 text-sm tabular-nums text-muted-foreground">{overview.total.toLocaleString("vi-VN")}</span></div>{canManage && <div className="flex flex-wrap gap-2"><Button className="min-h-10" variant="ghost" disabled={locked} onClick={() => setCategoryList(true)}><Boxes aria-hidden="true" className="size-4" />Loại tài sản</Button><Button className="min-h-10" onClick={addAsset} disabled={locked || !hasActiveCategory || contextCategory?.dang_su_dung === false}><Plus aria-hidden="true" className="size-4" />{contextCategory ? `Thêm ${contextCategory.ten_loai.charAt(0).toLocaleLowerCase("vi")}${contextCategory.ten_loai.slice(1)}` : "Thêm tài sản"}</Button></div>}</header>
     {canManage && !hasActiveCategory && <p className="text-sm text-muted-foreground">Tạo hoặc mở lại một loại tài sản để thêm thiết bị.</p>}
     {contextCategory?.dang_su_dung === false && <p className="text-sm text-muted-foreground">Loại này đã ngừng dùng. Mở lại loại để thêm thiết bị.</p>}
-    <form className="flex gap-2" onSubmit={e => { e.preventDefault(); if (!locked) globalSearch(); }}><Input aria-label="Tìm tài sản" disabled={locked} placeholder="Tìm trong tất cả tài sản: tên, mã, serial…" value={search} maxLength={120} onChange={e => setSearch(e.target.value)} className="text-base" /><Button className="min-h-10" type="submit" variant="outline" aria-label="Tìm kiếm tài sản" disabled={locked}><Search aria-hidden="true" className="size-4" /></Button></form>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="min-w-[min(100%,20rem)] flex-1"><AssetCategoryFilters groups={overview.byCategory} value={query.categoryId} disabled={locked || pending} onChange={chooseCategory} /></div>
+      <Select value={grouping} onValueChange={v => chooseGrouping(v as AssetGrouping)} disabled={locked || pending}><SelectTrigger aria-label="Cách xem tài sản" className="min-h-10 w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="byCategory">Theo loại</SelectItem><SelectItem value="byEmployee">Theo người</SelectItem><SelectItem value="byLocation">Theo vị trí</SelectItem></SelectContent></Select>
+    </div>
+    <form className="flex gap-2" onSubmit={e => { e.preventDefault(); if (!locked) globalSearch(); }}><Input aria-label="Tìm tài sản" disabled={locked} placeholder={contextCategory ? `Tìm trong ${contextCategory.ten_loai.toLocaleLowerCase("vi")}: tên, mã, serial…` : "Tìm tài sản: tên, mã, serial…"} value={search} maxLength={120} onChange={e => setSearch(e.target.value)} className="text-base" /><Button className="min-h-10" type="submit" variant="outline" aria-label="Tìm kiếm tài sản" disabled={locked}><Search aria-hidden="true" className="size-4" /></Button></form>
+    {query.categoryId && search.trim() && <Button variant="link" className="min-h-10 px-0" disabled={locked || pending} onClick={() => globalSearch(search.trim(), true)}>Tìm trong tất cả tài sản</Button>}
     {screen === "groups" ? <>
-      {error ? <div role="alert" className="space-y-2"><p>{error}</p><Button variant="outline" onClick={refreshOverview}>Tải lại nhóm</Button></div> : <AssetGroups overview={overview} grouping={grouping} onGrouping={mode => { setGrouping(mode); setGroupSearch(""); }} search={groupSearch} onSearch={setGroupSearch} onOpen={enterGroup} onAll={() => globalSearch("")} disabled={pending || locked} />}
+      {error ? <div role="alert" className="space-y-2"><p>{error}</p><Button variant="outline" onClick={refreshOverview}>Tải lại nhóm</Button></div> : <AssetGroups overview={overview} grouping={grouping} search={groupSearch} onSearch={setGroupSearch} onOpen={enterGroup} onAll={() => globalSearch("", true)} disabled={pending || locked} />}
       {canManage && !categories.length && <Button variant="outline" className="min-h-10" onClick={() => setCategoryEdit(null)}><Plus aria-hidden="true" className="size-4" />Thêm loại tài sản</Button>}
     </> : <>
-    <nav aria-label="Đường dẫn tài sản" className="flex items-center gap-2 text-sm"><Button variant="ghost" className="min-h-10 px-2" disabled={locked} onClick={backToGroups}><ArrowLeft aria-hidden="true" className="size-4" />Tài sản</Button><ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" /><span aria-current="page" className="min-w-0 truncate">{group?.label ?? (query.search ? "Kết quả tìm kiếm" : "Tất cả tài sản")}</span></nav>
+    {group && <nav aria-label="Đường dẫn tài sản" className="flex items-center gap-2 text-sm"><Button variant="ghost" className="min-h-10 px-2" disabled={locked} onClick={backToGroups}><ArrowLeft aria-hidden="true" className="size-4" />Tài sản</Button><ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" /><span aria-current="page" className="min-w-0 truncate">{group?.label ?? contextCategory?.ten_loai ?? (query.search ? "Kết quả tìm kiếm" : "Tất cả tài sản")}</span></nav>}
     <section aria-label="Tìm và lọc tài sản" className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="min-w-0 break-words text-lg font-semibold">{group?.label ?? (query.search ? "Kết quả tìm kiếm" : "Tất cả tài sản")} <span className="ml-1 text-sm font-normal text-muted-foreground">({list.total})</span></h2><div className="flex gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="min-w-0 break-words text-lg font-semibold">{group?.label ?? contextCategory?.ten_loai ?? (query.search ? "Kết quả tìm kiếm" : "Tất cả tài sản")} <span className="ml-1 text-sm font-normal text-muted-foreground">({list.total})</span></h2><div className="flex gap-2">
 
       <Button className="min-h-10" variant="outline" aria-expanded={advanced} aria-controls="asset-filters" disabled={locked} onClick={() => setAdvanced(v => !v)}><SlidersHorizontal aria-hidden="true" className="size-4" />Bộ lọc{moreFilterCount > 0 && <span aria-hidden="true" className="rounded bg-muted px-1.5 text-xs">{moreFilterCount}</span>}</Button></div></div>
       {applied.length > 0 && <div aria-label="Bộ lọc đang áp dụng" className="flex flex-wrap items-center gap-2">{applied.map(item => <Button key={item.key} variant="secondary" className="h-auto min-h-10 max-w-full gap-2 whitespace-normal text-left text-xs" disabled={pending || locked} aria-label={`Bỏ lọc ${item.label.toLocaleLowerCase("vi")}: ${item.value}`} onClick={() => { if (item.key === "search") setSearch(""); update({ [item.key]: undefined }); }}><span className="min-w-0 break-words">{item.label}: {item.value}</span><X aria-hidden="true" className="size-3 shrink-0" /></Button>)}<Button className="min-h-10 text-xs" variant="ghost" disabled={pending || locked} onClick={() => { setSearch(""); load(group?.query ?? {}); }}>Xóa bộ lọc</Button></div>}
@@ -266,7 +300,7 @@ export function AssetManager({ initial, initialCategories, initialFilters }: { i
           </>}
     <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground"><p role="status">{list.total.toLocaleString("vi-VN")} hồ sơ · Trang {list.page}/{list.pages}</p><div className="flex gap-2"><Button className="min-h-10" variant="outline" size="icon-lg" aria-label="Trang trước" disabled={pending || locked || list.page <= 1} onClick={() => load({ ...query, page: list.page - 1 })}><ChevronLeft className="size-4" /></Button><Button className="min-h-10" variant="outline" size="icon-lg" aria-label="Trang sau" disabled={pending || locked || list.page >= list.pages} onClick={() => load({ ...query, page: list.page + 1 })}><ChevronRight className="size-4" /></Button></div></div>
     </>}
-    <Sheet open={selected !== null && editing === undefined} onOpenChange={open => { if (!open) closeDetail(); }}><SheetContent className="w-full max-w-none overflow-y-auto sm:max-w-xl" onCloseAutoFocus={e => { e.preventDefault(); if (editing === undefined) restoreListFocus(); }}><SheetHeader className="pr-12"><Button variant="ghost" className="min-h-10 justify-self-start px-0 sm:hidden" onClick={closeDetail}><ArrowLeft aria-hidden="true" className="size-4" />Quay lại</Button><SheetTitle>Chi tiết tài sản</SheetTitle><SheetDescription>Thông tin hiện tại và lịch sử thay đổi.</SheetDescription></SheetHeader><div className="px-4 pb-6">{detail ? <AssetDetail key={detail.id} row={detail} canManage={canManage} categories={categories} onEditingChange={active => { detailEditing.current = active ? detail.id : null; }} onSaved={row => { setDetail(row); if (screen === "assets") load(query, true); else refreshOverview(); }} /> : detailError ? <div role="alert" className="space-y-2"><p>{detailError}</p>{selected !== null && selected > 0 && <Button className="min-h-10" variant="outline" onClick={() => fetchDetail(selected)}>Tải lại hồ sơ</Button>}</div> : <Skeleton className="h-72 w-full" />}</div></SheetContent></Sheet>
+    <Sheet open={selected !== null && editing === undefined} onOpenChange={open => { if (!open) closeDetail(); }}><SheetContent showCloseButton={false} className="w-full max-w-none overflow-y-auto sm:max-w-xl" onCloseAutoFocus={e => { e.preventDefault(); if (editing === undefined) restoreListFocus(); }}><SheetHeader className="gap-0 px-4 pt-4 pb-0 sm:px-6"><Button variant="ghost" className="min-h-10 self-start px-0 sm:hidden" onClick={closeDetail}><ArrowLeft aria-hidden="true" className="size-4" />Quay lại</Button><SheetTitle className="sr-only">Chi tiết tài sản</SheetTitle><SheetDescription className="sr-only">Thông tin hiện tại và lịch sử thay đổi.</SheetDescription></SheetHeader><Button variant="ghost" size="icon" className="absolute top-2 right-2 size-10" aria-label="Close" title="Đóng chi tiết tài sản" onClick={closeDetail}><X aria-hidden="true" className="size-4" /></Button><div className="px-4 pb-6 sm:px-6">{detail ? <AssetDetail key={detail.id} row={detail} canManage={canManage} categories={categories} onEditingChange={active => { detailEditing.current = active ? detail.id : null; }} onSaved={row => { setDetail(row); if (screen === "assets") load(query, true); else refreshOverview(); }} /> : detailError ? <div role="alert" className="space-y-2"><p>{detailError}</p>{selected !== null && selected > 0 && <Button className="min-h-10" variant="outline" onClick={() => fetchDetail(selected)}>Tải lại hồ sơ</Button>}</div> : <Skeleton className="h-72 w-full" />}</div></SheetContent></Sheet>
     <Dialog open={editing !== undefined} onOpenChange={open => { if (!open && !formBlocked.current) setEditing(undefined); }}><DialogContent className="w-[95vw] max-h-[85vh] overflow-y-auto sm:max-w-2xl" onCloseAutoFocus={e => { e.preventDefault(); if (selected === null) restoreListFocus(); }}><DialogHeader><DialogTitle>{editing ? "Sửa tài sản" : "Thêm tài sản"}</DialogTitle><DialogDescription>Ghi nhận thông tin đã xác minh; có thể bổ sung người và vị trí sau.</DialogDescription></DialogHeader>{editing !== undefined && <AssetForm key={editing ? `${editing.id}:${editing.updated_at.toISOString()}` : "new"} row={editing} categories={categories} onBusy={busy => { formBlocked.current = busy; }} onAutoSaved={() => { if (screen === "assets") load(query, true); else refreshOverview(); }} defaultCategoryId={contextCategory?.dang_su_dung ? contextCategory.id : undefined} initialFocus={editFocus} onCancel={() => setEditing(undefined)} onSaved={id => { setEditing(undefined); if (screen === "assets") load(query, true); else refreshOverview(); openDetail(id); }} />}</DialogContent></Dialog>
     <Dialog open={categoryList} onOpenChange={setCategoryList}><DialogContent className="w-[95vw] max-h-[85vh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>Loại tài sản</DialogTitle><DialogDescription>Ngừng dùng loại sẽ giữ nguyên các hồ sơ đang liên kết.</DialogDescription></DialogHeader><Button className="min-h-10 justify-self-start" onClick={() => { setCategoryList(false); setCategoryEdit(null); }}><Plus className="size-4" />Thêm loại tài sản</Button>{!categories.length && <EmptyPanel title="Chưa có loại tài sản" />}{categories.map(c => <div key={c.id} className="flex items-center justify-between gap-3 rounded-xl border p-3"><div className="flex min-w-0 items-center gap-3"><AssetCategoryIcon code={c.ma_loai} /><div className="min-w-0"><p className="break-words font-medium">{c.ten_loai}</p><p className="text-xs text-muted-foreground">{c.ma_loai} · {c.dang_su_dung ? "Đang dùng" : "Ngừng dùng"}</p></div></div><Button className="min-h-10" variant="outline" size="icon-lg" aria-label={`Sửa loại ${c.ten_loai}`} onClick={() => { setCategoryList(false); setCategoryEdit(c); }}><Pencil className="size-4" /></Button></div>)}</DialogContent></Dialog>
     <Dialog open={categoryEdit !== undefined} onOpenChange={open => { if (!open && !categoryBlocked.current) setCategoryEdit(undefined); }}><DialogContent className="w-[95vw] max-h-[85vh] overflow-y-auto sm:max-w-lg"><DialogHeader><DialogTitle>{categoryEdit ? "Sửa loại tài sản" : "Thêm loại tài sản"}</DialogTitle><DialogDescription>Mã loại dùng để phân biệt và giữ ổn định sau khi tạo.</DialogDescription></DialogHeader>{categoryEdit !== undefined && <AssetCategoryForm row={categoryEdit} onBusy={busy => { categoryBlocked.current = busy; }} onAutoSaved={() => { if (screen === "assets") load(query, true); else refreshOverview(); }} onCancel={() => setCategoryEdit(undefined)} onSaved={() => { setCategoryEdit(undefined); if (screen === "assets") load(query, true); else refreshOverview(); }} />}</DialogContent></Dialog>

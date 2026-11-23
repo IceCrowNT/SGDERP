@@ -48,7 +48,6 @@ test.afterAll(async () => db.$disconnect());
 
 test("URL follows panel, Back/Forward and reload; PNG decodes to stable link; copy and print", async ({ page, context }) => {
   await signAccount(context, manager); await page.goto("/assets");
-  await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
   const trigger = page.getByRole("button", { name: /^Mở tài sản Thiết bị QR/ });
   await trigger.click(); await expect(page).toHaveURL(new RegExp(`asset=${id}$`));
   await expect(detail(page).locator("summary").filter({ hasText: "Tem QR" })).toBeVisible();
@@ -141,9 +140,10 @@ test("mobile light/dark, detail network retry and clipboard fallback", async ({ 
   await signAccount(context, manager); await page.setViewportSize({ width: 390, height: 844 });
   let fail = true;
   await page.route("**/assets?asset=*", async route => {
-    if (route.request().method() === "POST" && fail) { fail = false; await route.abort(); } else await route.continue();
+    if (route.request().method() === "POST" && fail) { await route.abort(); } else await route.continue();
   });
   await page.goto(path()); await expect(detail(page).getByRole("alert")).toContainText("Không tải được hồ sơ");
+  fail = false;
   await page.getByRole("button", { name: "Tải lại hồ sơ", exact: true }).click(); await expand(page);
   await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { value: { writeText: () => Promise.reject(new Error("denied")) }, configurable: true }));
   await page.getByRole("button", { name: "Sao chép liên kết", exact: true }).click();

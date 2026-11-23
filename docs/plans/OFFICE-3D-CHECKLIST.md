@@ -1,8 +1,10 @@
-# Mô hình không gian 3D — tòa nhà và phòng HCNS
+# Mô hình không gian 3D — tòa nhà và các phòng
 
-Cập nhật: **17/11/2026**. Đã triển khai và kiểm chứng mặt bằng ba tầng theo PDF, chuyển cảnh HCNS, gán người/tài sản, khung điều khiển mở rộng, bảng phòng rút gọn và thêm/sửa thông tin vị trí trực tiếp trên mô hình; vẫn là bản thử nghiệm. Rule: [OFFICE-3D-RULES](../../.agents/rules/OFFICE-3D-RULES.md).
+Cập nhật: **19/11/2026**. Đã triển khai và kiểm chứng mặt bằng ba tầng theo PDF, chuyển cảnh HCNS, gán người/tài sản, khung điều khiển mở rộng, bảng phòng rút gọn và thêm/sửa thông tin vị trí trực tiếp trên mô hình; vẫn là bản thử nghiệm. Rule: [OFFICE-3D-RULES](../../.agents/rules/OFFICE-3D-RULES.md).
 
 ## A. Tổng quan
+
+**Mở rộng KHĐT — đã triển khai:** các phòng vật lý đã liên kết dùng chung vào phòng, camera, bảng vị trí và gán người/tài sản. KHĐT có 12 vị trí lưu DB; giữ Bàn Huy ở số 11, Bàn Tuân ở số 12 cùng toàn bộ liên kết cũ. Bàn chung và sofa chỉ là bối cảnh. Không thêm bảng DB. [Thiết kế và kiểm chứng](#phòng-chi-tiết-dùng-chung-và-bố-trí-khđt).
 
 **Bản thử thêm vị trí:** người quản lý chọn phòng đã liên kết → Thêm vị trí → chọn Bàn làm việc/Điểm đặt thiết bị → bấm mặt bằng, xoay/dịch chuyển → Lưu. Vị trí tạo được dùng ngay để gán tài sản theo quyền ASSETS. Đây là phạm vi mới đã được yêu cầu, thay quyết định trước đây chỉ dựng nội thất cố định. Không làm trình biên tập tường, kích thước hoặc kéo thả tự do.
 
@@ -33,15 +35,82 @@ flowchart LR
 | Xem/ẩn thông tin | Bảng bên phải mặc định mở trên desktop; chọn phòng/hồ sơ mở thông tin theo ngữ cảnh. Cột bên cạnh trên desktop, bảng phía dưới trên điện thoại; màn hình ngang thấp dùng cột để tránh che mô hình |
 | Chọn Nhân sự/Tài sản trong bảng phòng | Xem số lượng và vị trí ngắn gọn; chọn hồ sơ có hình để tập trung đúng điểm và xem chi tiết, giữ cùng Canvas |
 
-Mô hình người biểu thị phân công chỗ làm việc, không phải chấm công/hiện diện. Dùng dữ liệu và quyền HR–vị trí hiện có; bảng bố trí bổ sung được mô tả bên dưới. Không thêm dependency hoặc thay ba rule chung. Phòng khác HCNS chưa có nội thất xác nhận. Tìm kiếm đưa camera tới người đã được bổ sung theo mục bên dưới; kéo thả người chưa thuộc phạm vi này.
+Mô hình người biểu thị phân công chỗ làm việc, không phải chấm công/hiện diện. Dùng dữ liệu và quyền HR–vị trí hiện có; bảng bố trí bổ sung được mô tả bên dưới. Không thêm dependency hoặc thay ba rule chung. KHĐT đã có bản vẽ 12 vị trí; các phòng còn lại chờ khảo sát nội thất. Tìm kiếm đưa camera tới người đã được bổ sung theo mục bên dưới; kéo thả người chưa thuộc phạm vi này.
 
-**Mặt bằng hiện hành:** ba PDF tầng 1–3 làm nền tỷ lệ; bản tầng 2 được người phụ trách điền thêm đã xác nhận tên 6 phòng và điều chỉnh nội thất HCNS. Kinh doanh ở ô 97 m² tầng 1. Giữ 10 vị trí HCNS và dữ liệu đang gán; Lễ tân tra cứu được nhưng chưa đặt lên mặt bằng vì thiếu xác nhận. 10 bàn HCNS giữ cấu hình gốc, có thể thêm bàn/điểm thiết bị qua bản thử bên dưới; tài sản thật gán qua panel theo quyền ASSETS. Chi tiết và kiểm chứng ở mục [Khảo sát mặt bằng kiến trúc](#khảo-sát-mặt-bằng-kiến-trúc).
+**Mặt bằng hiện hành:** ba PDF tầng 1–3 làm nền tỷ lệ; bản tầng 2 được người phụ trách điền thêm đã xác nhận tên 6 phòng và điều chỉnh nội thất HCNS. Kinh doanh ở ô 97 m² tầng 1. Giữ 10 vị trí HCNS và dữ liệu đang gán; Quầy Lễ tân đã đặt ở sảnh Tầng 1, lưng người ngồi hướng về Phòng Khánh Tiết; dùng lại vị trí có sẵn. Toàn bộ bàn/điểm HCNS lưu bố trí DB, có thể thêm hoặc chỉnh qua bộ thao tác chung bên dưới; tài sản thật gán qua panel theo quyền ASSETS. Chi tiết và kiểm chứng ở mục [Khảo sát mặt bằng kiến trúc](#khảo-sát-mặt-bằng-kiến-trúc).
 
 Đọc chi tiết: [B. Triển khai](#b-chi-tiết-triển-khai), [Gán tài sản](#gán-tài-sản-tại-vị-trí-3d), [DB cần giữ](#thiết-kế-db-cần-giữ), [Nghiệm thu](#nghiệm-thu).
 
 **Giao diện 12/11 — đã triển khai và kiểm chứng:** điều khiển nằm trong vùng mô hình, có Mở rộng/Thu gọn và bảng thông tin đóng/mở. Các thao tác cục bộ không cần tìm ngoài khung; xem [thiết kế và nghiệm thu bên dưới](#đề-xuất-khung-điều-khiển-và-mở-rộng).
 
 ## B. Chi tiết triển khai
+
+### Mẫu bàn Tổng giám đốc
+
+- [x] Thêm `BAN_TONG_GIAM_DOC` vào **Mẫu hiển thị** khi thêm/chỉnh bàn: kích thước mặc định 2,4 × 1,2 m, mặt gỗ dày, yếm và chân dạng tấm, mặt phụ bên hông cùng cao độ. Đây là mẫu minh họa, chưa phải số đo bàn thực tế; không tự đổi các bàn đã có.
+- [x] Dùng chung `vat_the_3d`, thao tác xoay/di chuyển, gán nhân sự/tài sản và thuật toán bố trí thiết bị. Mẫu chỉ dành cho `BAN`; không tạo loại vị trí, bảng hay quyền mới. Hình học đơn giản, không thêm texture/thư viện.
+- [x] Migration `20261120160000_mau_ban_tong_giam_doc` mở rộng CHECK hiện có; đã sao lưu và thử trên DB phục hồi, đối chiếu toàn bộ 34 bảng không đổi dữ liệu. Unit kiểm tra kích thước/va chạm/xoay và integration lưu/đổi mẫu, đọc lại, ràng buộc DB đạt.
+- [x] Chrome đã kiểm tra chọn mẫu, lưu và tải lại đúng mẫu, không lỗi JS; đã xem ảnh phối cảnh. TypeScript, lint, 6 unit placement và integration đạt. Migration đã áp dụng DB local sau backup; đối chiếu 34 bảng giữ nguyên dữ liệu. Ảnh và bằng chứng tại `outputs/executive-desk/` (không đưa Git).
+
+### Quầy lễ tân và đặt model cho vị trí có sẵn
+
+- [x] Dùng lại “Lễ Tân” là chỗ ngồi trực thuộc Tầng 1; không tạo phòng giả, không đổi cha/ID hoặc gán lại người/tài sản. Vùng mở trước Phòng Khánh Tiết không dựng vách bao; quầy xoay để lưng người ngồi hướng về Khánh Tiết.
+- [x] `vat_the_3d.mau_hien_thi` tách kiểu hình khỏi `loai_vat_the`: quầy vẫn là `BAN`, kích thước mẫu 2,6 × 1,1 m. Một vị trí chỉ có một model. Migration `20261120113000_mau_quay_le_tan` chỉ thêm cột/CHECK, giữ mẫu mặc định cho dữ liệu cũ; đã sao lưu và kiểm tra trên bản sao trước khi áp dụng DB local.
+- [x] Thêm vị trí trong phòng: chọn tạo mới hoặc vị trí có sẵn chưa có model. Lễ tân liên kết thẳng chỗ ngồi: chỉ đặt/chỉnh model cho chính vị trí ấy, không sinh con dưới chỗ ngồi. Kiểm tra công ty, cây đang dùng, phiên bản, loại vị trí, unique và khóa giao dịch; gắn model không đổi tên/ghi chú/liên kết hồ sơ có sẵn.
+- [x] Dùng chung chọn/nhấp đúp, camera, URL/Escape, sửa bố trí và panel gán HR/ASSETS theo quyền riêng. Không có nhân sự thì không tự tạo hình người. Mẫu quầy thêm vài khối hình học, không thêm texture/dependency/vòng render hoặc truy vấn từng khung hình.
+- [x] Kiểm chứng: TypeScript/lint, 25 unit hình học/điều hướng và 6 integration trên DB riêng đạt (quyền, tạo đồng thời, giữ hồ sơ, phiên bản cũ, sai cha/loại và liên kết mất hiệu lực). Chrome đã kiểm tra tạo model cho vị trí có sẵn trên DB thử, chọn/xem/chỉnh quầy và nút gán HR/ASSETS trên bản local; desktop và viewport điện thoại 390 × 844 không lỗi JS/tràn ngang. Đây chưa phải đo hiệu năng trên điện thoại thật. Bằng chứng/ảnh/backup tại `outputs/reception/` (chỉ lưu cục bộ).
+- [ ] Người phụ trách kiểm tra vị trí quầy theo thực tế và gán nhân sự lễ tân; có thể chỉnh bố trí ngay trên 3D.
+
+### Quy ước dùng chung cho các phòng — 20/11
+
+- [x] Tất cả phòng dùng cùng nhãn ngắn, trạng thái chọn, panel tổng quan, camera và điều hướng. Phòng có liên kết vị trí đang sử dụng được vào chi tiết ngay cả khi chưa có bàn; thêm/chỉnh vị trí và gán người/tài sản dùng bộ chức năng chung theo quyền hiện có. Tên trên thanh điều hướng cũng rút gọn cho các phòng ngoài HCNS/KHĐT, tên đầy đủ giữ trong panel.
+- [x] Bỏ ba nhánh dự phòng đưa người/tài sản/điểm không tìm thấy về HCNS. Đích tương tác phải có vật thể DB và đúng khóa phòng; đối tượng mất hiệu lực không đổi lựa chọn sang phòng khác.
+- [x] 18 unit về ánh xạ, điều hướng và phòng đạt; thêm kiểm tra mọi phòng vật lý: phòng rỗng, cô lập đối tượng theo phòng, URL/Escape, tên ngắn và chặn phòng chưa liên kết/ngừng dùng. TypeScript và ESLint phạm vi đạt. Chrome chỉ đọc kiểm chứng Kinh doanh, KHĐT, HCNS: tổng quan không tự chọn bàn, có Thêm vị trí theo quyền, Escape về tầng, cùng Canvas, không lỗi JS. Ảnh/kết quả `outputs/room-labels/shared-*`; chưa chạy mutation tạo/gán trong đợt này.
+- **Dữ liệu hiện hành:** ba phòng đã đặt trên mặt bằng và liên kết là Kinh doanh, HCNS, KHĐT. Lễ tân có liên kết và mẫu quầy tại sảnh Tầng 1; Tổng Giám đốc có bản ghi vị trí nhưng chưa có ánh xạ mô hình. Các phòng còn lại không tự tạo bàn, nhân sự, tài sản hoặc suy liên kết theo tên. Các liên kết đã có được giữ nguyên; không tự gắn phòng mới.
+- [x] LOCATIONS MANAGE chọn phòng chưa liên kết → Liên kết vị trí → chọn Phòng/Khu vực đang dùng, trực thuộc đúng tầng, chưa gắn hình khác → lưu → dùng chi tiết/thêm vị trí/gán như các phòng hiện có. Không tự chọn theo tên hoặc tạo nội thất.
+- **Thiết kế DB cần giữ — liên kết phòng:** bảng `lien_ket_phong_3d` gồm `id`, `company_id`, `khoa_phong`, `vi_tri_id`, `created_at`, `updated_at`; unique công ty/khóa hình và vị trí/công ty, FK kép cùng công ty. Liên kết là dữ liệu phụ của vị trí nên xóa vị trí hợp lệ sẽ xóa liên kết; không xóa nhân sự/tài sản. Tòa nhà/tầng/liên kết cũ giữ file cấu hình, liên kết mới đọc hợp nhất từ DB và kiểm tra trùng, không ghi đè file. Đổi cha/loại/ngừng dùng làm liên kết mất hiệu lực qua bộ resolve hiện có. Chưa có thao tác đổi/gỡ liên kết từ 3D.
+- **Ghi:** khóa công ty rồi khóa cây vị trí dùng chung, kiểm tra lại phiên/quyền/công ty/tầng/trùng trước tạo và audit cùng transaction. Không tự cấp quyền HR/ASSETS. Không thêm tọa độ vào `vi_tri`.
+- [x] Migration `20261120100000_lien_ket_phong_3d` chạy trên DB khôi phục rồi local sau backup; fingerprint 29 bảng cũ giữ nguyên, bảng mới chưa có liên kết tự tạo. Kiểm thử tích hợp 7/7 đạt: quyền, đúng tầng/loại/trạng thái, công ty, chống trùng đồng thời, audit rollback, cascade phụ thuộc, phiên thu hồi và thêm bàn qua mapping DB.
+- [x] Chrome trên DB khôi phục: bắt buộc chọn phòng, không liệt kê phòng đã nối, lưu → vào phòng rỗng → Thêm vị trí, giữ cùng Canvas, reload vẫn có liên kết. Đã xem ảnh desktop 1366×768/mobile giả lập 390×844, dialog trong màn hình, không lỗi JS. 16 unit hồi quy phòng/điều hướng/bố trí, TypeScript và ESLint phạm vi đạt. Bản cổng 4000 đã khởi động lại để nạp Prisma Client mới; kiểm tra chỉ đọc thấy danh sách phòng phù hợp và HCNS hiển thị đúng, chưa gắn phòng mới trên DB vận hành. Bằng chứng/backup tại `outputs/room-links/`; chưa đo trên điện thoại thật.
+
+
+### Chuyển bố trí HCNS sang DB
+
+- Phạm vi đã duyệt: chuyển 10 bàn gốc sang `vat_the_3d`, tái sử dụng ID `vi_tri`, giữ bố cục/kích thước và liên kết người/tài sản. Các vật thể thêm sau giữ nguyên.
+- Thiết kế: bổ sung chiều rộng/sâu và khóa tương thích URL cũ vào bảng bố trí hiện có; hình học phòng/tường vẫn là bối cảnh. Render, camera và kiểm tra chồng lấn lấy bố trí DB dùng chung với KHĐT.
+- [x] Sao lưu và thử trên DB khôi phục riêng trước khi áp dụng DB vận hành. Nhập 10 bàn gốc; cùng vật thể có sẵn thành 11 bố trí HCNS trong DB. Chạy lại không tạo trùng; toàn bộ hồ sơ vị trí, liên kết người/tài sản và bố trí cũ giữ nguyên. Backup/đối chiếu cục bộ tại `outputs/hcns-db/`.
+- [x] Viewer/editor/camera dùng bố trí DB chung; bỏ `HcnsRoomModel` và danh sách bàn khỏi mã chạy ứng dụng. Giữ link `hcns-01`…`hcns-10` bằng `khoa_cu`. Dữ liệu khảo sát cũ ở `prisma/data/hcns-survey.ts` chỉ phục vụ nhập một lần và kiểm thử.
+- [x] Đã áp dụng migration và nhập DB vận hành; 24 unit đạt. Trên DB riêng, chỉnh bàn gốc hai lần liên tiếp và reload giữ kích thước/liên kết/link cũ/cùng Canvas. Sửa thời điểm mở lại editor để chờ dữ liệu mới sau lưu, tránh dùng phiên bản cũ. Đã dọn server/DB thử, giữ backup.
+- [x] Trên app cổng 4000, 3 E2E chỉ đọc đạt: nhân sự/máy in 251 qua hai vòng chuyển HCNS–KHĐT–tầng; tìm người/zoom/cùng Canvas/link cũ; tìm kiếm và nút lớp trên mobile tối. Đã sửa nhãn vị trí trùng/lấn nhãn người khi chọn nhân sự. TypeScript, lint phạm vi và diff check đạt. Đã xem ảnh Chrome, chưa đo FPS điện thoại thật hoặc chạy production build trong lượt này.
+- [x] Khởi động lại app cổng 4000 để nạp Prisma Client mới và làm mới cache Turbopack cũ; không khởi động lại PostgreSQL. Kiểm tra cuối xác nhận hồ sơ vị trí, phân công người/tài sản và bố trí cũ không đổi. Bằng chứng/backup nằm cục bộ tại `outputs/hcns-db/`, không đưa Git.
+
+**Thiết kế chuyển đổi:** migration `20261117150000_bo_tri_hcns_db` bổ sung `chieu_rong`, `chieu_sau` (0,1–10 m), `khoa_cu` nullable/unique theo công ty vào `vat_the_3d`. Không tạo bảng mới. Kích thước hiện hữu được giữ khi chỉnh bố trí; loại hình `BAN` không đổi loại nghiệp vụ `DIEM_DAT_THIET_BI` của vị trí máy in. Kiểm tra biên vẫn chừa tường 12 cm; khoảng cách chống chồng lấn giữa hình 1 cm để nhận các bàn ghép cách nhau 5 cm theo khảo sát.
+
+**Nhập dữ liệu:** `prisma/bootstrap-hcns-layout.ts` mặc định xem trước; `--apply` nhập nguyên tử cùng audit/khóa công ty và kiểm tra ánh xạ. Có dấu nhập đầy đủ thì không ghi lại; dữ liệu dở dang/xung đột thì dừng. Không tạo lại vị trí, không đổi phân công, không ép lại bố trí khi tải trang.
+
+### Phòng chi tiết dùng chung và bố trí KHĐT
+
+- [x] Khu tiếp khách KHĐT (19/11): cụm tiếp khách xoay thêm 90°, một sofa dài lưng tựa tường phía sau, một bàn tròn ở giữa và hai ghế đơn đối diện theo bản phác. Dùng hình khối nhẹ cùng phong cách; đây là nội thất bối cảnh, không tạo hồ sơ tài sản/vị trí hoặc thay bố trí 12 bàn trong DB.
+- [x] TypeScript/lint đạt ở bước dựng cụm; lần xoay 90° đã kiểm tra lại lint và ảnh Chrome mặt bằng/phối cảnh: lưng sofa sát tường phía sau, bàn tròn và hai ghế đơn đối diện, không chồng bàn làm việc; không lỗi JavaScript. Ảnh tại `outputs/room-labels/khdt-sofa-*.png`, kiểm tra chỉ đọc DB.
+
+
+- [x] `room-detail.ts` xác định phòng có hình vật lý và liên kết vị trí đang dùng; `RoomPointPanel` dùng chung cho mọi phòng đủ điều kiện. Camera lưu riêng theo khóa phòng. Tổng quan, chọn bàn/người/tài sản, nhấp đúp tập trung, Esc/Back, tìm kiếm và menu dùng cùng luồng; không tạo Canvas hoặc trang chi tiết thứ hai.
+- [x] KHĐT (`plan_t2_phai_truoc`, phòng vật lý 76) đã nhập 12 bàn từ bản vẽ: hai cụm 1–5 và 6–11, bàn riêng 12; bàn chung/sofa là hình nền giản lược, không tạo hồ sơ vị trí/tài sản.
+- [x] Giữ vị trí **78 Bàn Huy = số 11**, **79 Bàn Tuân = số 12**; chỉ đổi tọa độ/hướng của hình. Tạo 10 vị trí mới và hình tương ứng. Đã đối chiếu sau nhập: hồ sơ hai vị trí cũ và toàn bộ liên kết người/tài sản tại hai bàn giữ nguyên.
+- [x] Nhập thử trên DB khôi phục riêng; kiểm tra biên/chồng lấn và chạy lại không tạo trùng. Sao lưu DB vận hành trước khi áp dụng; đầu ra cục bộ tại `outputs/khdt/`.
+- [x] Kiểm thử gán/chuyển có xác nhận/bỏ gán, audit, phiên bản cũ, thiếu quyền và khác công ty trên DB riêng. Đã xem ảnh bố trí đủ 12 bàn ở phối cảnh, mặt bằng và màn hình 390px; cùng Canvas, không lỗi JavaScript trong ca KHĐT.
+- [x] 23 unit và 20 ca E2E khác nhau đạt: 2 nghiệm thu KHĐT + 18 hồi quy chọn thiết bị/nhấp đúp/Esc/chuyển tầng/tìm kiếm/lớp/WebGL/menu/HCNS. Một ca cũ về hai điểm Máy hủy giấy/Tủ đồ bỏ qua do thiếu đủ fixture hiện hành. Ca chuyển tầng đổi chờ thời gian cố định sang chờ camera hội tụ, giữ nguyên ngưỡng sai số; ca nhấp đúp bàn chọn góc trống để tránh trúng laptop. TypeScript, lint phạm vi và `git diff --check` đạt. Không chạy lại production build trong lượt này. Đã dừng server 4127 và xóa DB thử riêng, giữ app 4000/backup/ảnh. Đối chiếu ngay sau nhập xác nhận không đổi liên kết; kiểm tra cuối phát hiện hai thao tác HR của tài khoản admin phát sinh sau nhập (chuyển người sang Vị trí 10 và Bàn Huy), giữ nguyên thay đổi mới, không phục hồi snapshot cũ.
+
+- [x] Sửa hồi quy hình người KHĐT: chỉ chia sẻ geometry tĩnh; mỗi hình người sở hữu material riêng để hiệu ứng mờ/ẩn HCNS hoặc tầng khác không làm trong suốt nhân sự đang xem. Material được quản lý và thu hồi theo vòng đời React Three Fiber.
+- [x] Kiểm chứng hiển thị bằng Chrome: đọc opacity của mesh nhân sự và máy in, chuyển HCNS → KHĐT → tầng 1/2 → HCNS hai vòng trong cùng Canvas. Có ảnh desktop và mobile giả lập tại `outputs/3d-visibility/`; không ghi DB hoặc đổi liên kết người/tài sản. Bộ hồi quy bổ sung `room-visibility.spec.ts`; 15 unit liên quan đạt, TypeScript và lint đạt.
+
+**Thiết kế DB cần giữ:** dùng lại quan hệ ở [mục DB](#thiết-kế-db-cần-giữ). `vi_tri` lưu tên/mã tự sinh/cha; `vat_the_3d` lưu FK phòng, FK vị trí, loại hình, tọa độ và góc xoay. Toàn bộ 12 bàn KHĐT đọc bố trí từ DB; `khdt-layout.ts` chỉ là dữ liệu khởi tạo một lần, không ép tọa độ khi render hoặc mở trang. Người/tài sản vẫn nối vào `vi_tri`; chỉnh bố trí không sửa các liên kết đó. HCNS đã chuyển sang cùng nguồn bố trí DB tại mục chuyển đổi phía trên.
+
+**Công cụ nhập:** `prisma/bootstrap-khdt-layout.ts` mặc định chỉ xem trước; khi áp dụng phải truyền rõ ánh xạ bàn cũ `--reuse=11:78,12:79`. Ghi 12 audit với dấu nguồn `khdt-survey-20261117` trong cùng transaction Serializable/khóa công ty. Chạy lại trả `already-imported`, không ghi đè chỉnh sửa của người dùng; nếu dấu nguồn thiếu một phần hoặc có vị trí cũ chưa đối chiếu thì dừng. ID trên là dữ liệu môi trường local, môi trường khác phải kiểm tra lại ánh xạ, không chạy nguyên lệnh với ID phỏng đoán.
+
+**Sử dụng:** Tầng 2 → nhấp đúp phòng KHĐT (hoặc Vào phòng) → chọn bàn → Gán tài sản. ASSETS VIEW/MANAGE quyết định xem/gán; HR VIEW/MANAGE độc lập cho nhân sự; LOCATIONS MANAGE cho sửa vị trí/bố trí. Không cấp thêm quyền hoặc sinh thiết bị/người từ hình minh họa.
+
+**Giới hạn:** vị trí/kích thước nội thất ước lượng theo bản phác, cần người phụ trách xác nhận bằng mắt; không tuyên bố là bản đo thi công. Phòng mới dùng được chức năng chung khi đã liên kết và có hình bàn/điểm trong DB, nhưng bố cục nội thất vẫn cần khảo sát. Không có kéo thả riêng từng thiết bị hoặc tự suy người ngồi.
 
 ### Sửa hồ sơ từ menu đối tượng — 16/11/2026
 
@@ -80,6 +149,7 @@ Tái sử dụng form/action hiện có; hồ sơ chi tiết chỉ tải khi m�
 - [x] Bỏ giới hạn ba loại. Mỗi tài sản có hình và đích bấm riêng theo ID; thiết bị trùng loại không bị gộp. Giữ đường chọn nhóm loại cho URL cũ, không tự chọn bản ghi đầu.
 - [x] PC/laptop chính ở vùng trước mặt người ngồi; laptop tiếp theo ưu tiên bên cạnh; máy in/scan và thiết bị phụ ở vùng cạnh bàn. Thùng PC, UPS/máy chủ ở vùng dưới bàn, tránh khoảng chân trung tâm. Tất cả theo hướng xoay bàn; đây là bố trí minh họa, chưa đo kích thước thiết bị thật.
 - [x] Dùng biên chiếm chỗ gồm khay giấy/bàn phím/chuột và khoảng hở; tỷ lệ mẫu cố định, không co nhỏ theo số lượng. Tài sản thứ 5–6 được xét tiếp nếu còn chỗ. Khi hết diện tích không nhồi hình, không tự tạo bàn phụ, không báo “chưa bố trí”; panel vẫn đủ hồ sơ. Thuật toán ưu tiên đơn giản, không cam kết tối ưu mọi cách xếp.
+- [x] Khoảng chừa mép trên mặt bàn là ưu tiên và được giảm nếu toàn bộ hình vẫn nằm trong mặt bàn; khoảng cách giữa thiết bị và khoảng chừa chân bàn vẫn bắt buộc. Sửa máy in Canon 251DW tại vị trí 06 HCNS: hình sâu 64,5 cm vừa bàn sâu 70 cm, không bị loại vì cộng cứng 6 cm mép. Giữ tỷ lệ mẫu, không tràn khay/đè thiết bị; test thêm trường hợp bàn thực sự quá nhỏ. Không thay kích thước bàn hoặc dữ liệu tài sản.
 - [x] `equipment-layout.ts` tính bố trí xác định theo loại/ID trên client và memo hóa khi dữ liệu/kích thước đổi, không chạy mỗi khung hình. Bộ lọc chỉ ẩn mesh, giữ tọa độ của các hình còn lại. Render, click/chuột phải và camera dùng cùng bố trí, chọn đúng tài sản kể cả trùng loại.
 - **DB/tài nguyên:** không thêm bảng/cột/tọa độ hoặc ghi dữ liệu; dùng `tai_san.vi_tri_id`, bàn gốc và `vat_the_3d` hiện có. Chỉ tạo hình còn chỗ và đang bật lớp. Giữ một Canvas, quyền, gán dữ liệu và camera điều hướng hiện có.
 - [x] 22 unit đạt: đóng gói 4–6 thiết bị, hai máy in hết diện tích, trùng loại giữ ID riêng, vùng dưới bàn, thứ tự ổn định, bộ lọc giữ tọa độ/quyền. 18 E2E Chrome chỉ đọc đạt qua các lượt: bấm đủ 4 hồ sơ thật tại bàn Minh (PC/AP/điện thoại/scan), zoom/Esc, tầng/phòng/KHĐT, lớp/tìm kiếm và mobile; 1 ca điểm thiết bị cũ bỏ qua do thiếu fixture tương ứng. Ca Minh ban đầu bấm trúng nhãn người che bàn phím, đổi điểm kiểm tra sang đế màn hình và đã đạt. TypeScript/lint/diff check đạt; đã xem ảnh mặt bằng, phối cảnh và mobile tại `outputs/equipment-models/minh-layout-*.png`. Không ghi DB. Đã cập nhật tọa độ/đích chọn của test sửa hồ sơ `object-edit-3d`, chưa chạy lại nhóm ghi trên DB thử; trùng loại hiện kiểm tra bằng unit.
@@ -107,7 +177,7 @@ Tái sử dụng form/action hiện có; hồ sơ chi tiết chỉ tải khi m�
 | Tìm kiếm | Input trực tiếp; chỉ gợi ý khi có chữ, tối đa 6 kết quả. Tìm tên không dấu, phân biệt bằng phòng/vị trí hoặc mã thiết bị. Không di chuyển camera khi mới gõ |
 | Chọn người/tài sản | Đến điểm đã liên kết trên cùng Canvas. Thiếu điểm thì tới phòng hoặc thông báo. Tự bật lớp của đối tượng vừa chọn; giữ trạng thái lớp còn lại |
 | Nút biểu tượng Nhân sự / Tài sản | Bật/tắt độc lập, không làm đổi góc nhìn hoặc lựa chọn; có tên truy cập, chú thích và trạng thái hiển thị. Không mở bảng kết quả khi chỉ bật/tắt |
-| Nút lọc loại tài sản | Chọn loại trong menu riêng cạnh nút lớp; chỉ lọc tài sản, không tự ẩn nhân sự. Danh sách kết quả theo phạm vi phòng/tầng/toàn nhà. Chọn Tất cả loại để bỏ lọc. Nếu đang chọn điểm, giữ bảng chi tiết điểm; tổng quan mới hiển thị danh sách kết quả |
+| Tùy chọn hiển thị | Bật/tắt Tên phòng và chọn loại tài sản trong menu cạnh nút lớp; chỉ lọc tài sản, không tự ẩn nhân sự. Danh sách kết quả theo phạm vi phòng/tầng/toàn nhà. Chọn Tất cả loại để bỏ lọc. Nếu đang chọn điểm, giữ bảng chi tiết điểm; tổng quan mới hiển thị danh sách kết quả |
 | Esc / Tab / bấm ngoài | Đóng gợi ý trước; không đổi tầng/phòng. Bàn phím mũi tên/Enter chọn kết quả; xóa chữ đóng danh sách |
 
 **DB cần giữ:** không thêm bảng/cột/query. Dùng danh bạ tìm kiếm tối thiểu người ACTIVE cùng công ty theo HR VIEW và hồ sơ tài sản đã có trong dữ liệu tòa nhà theo ASSETS VIEW. Tìm tài sản chỉ bao phủ các phòng đã liên kết; không tạo hồ sơ/điểm giả. FK và ánh xạ hiện có là nguồn định vị. Bật/tắt chỉ thay lớp hình/nhãn, bảng hồ sơ vẫn là dữ liệu nghiệp vụ; lọc loại có danh sách/số đếm riêng. Trạng thái lớp/bộ lọc lưu trong phiên trang, không lưu DB.
@@ -115,6 +185,29 @@ Tái sử dụng form/action hiện có; hồ sơ chi tiết chỉ tải khi m�
 - [x] Tách tìm kiếm gợi ý và nút lớp; giữ cơ chế zoom, quyền, điểm chọn và dữ liệu camera hiện có. Tái sử dụng Input/Button/DropdownMenu và lệnh điều hướng; không sửa Select dùng ở form. Đã bổ sung nguyên tắc ưu tiên kế thừa thao tác quen thuộc vào rule 3D, không thay ba rule kỹ thuật chung.
 - [x] 4 E2E tìm kiếm/lớp + 7 E2E hồi quy đạt: rỗng/giới hạn 6 gợi ý, phím/chuột/mobile, nút lớp độc lập, giữ điểm chọn/Canvas, lọc loại theo phòng/tầng và tìm tới đối tượng đang ẩn. 18 unit đạt, gồm dữ liệu/ánh xạ, điều hướng, lớp và gợi ý. TypeScript/lint/diff check đạt; đã xem ảnh desktop/mobile, sáng/tối, context-only trong `outputs/scene-search/` ngoài Git.
 - E2E chỉ đọc tài khoản/dữ liệu hiện có, không gửi mutation vào DB vận hành. Unit kiểm tra không trả gợi ý/đích khi thiếu quyền; chưa chạy mới ma trận tài khoản thiếu quyền trên DB riêng.
+
+### Thông tầng mở ra phía trước — 18/11
+
+- [x] Tầng 2: kéo thông tầng đến mép trước (trục Z bản vẽ 24,25), bỏ hình học hành lang phía trước. Mặt sàn dùng đường bao lõm mở ra ngoài, tránh lỗ chạm mép gây lỗi dựng tam giác; viền thông tầng giữ ba cạnh bên trong; bổ sung vách thấp cao 0,65 theo tỷ lệ mô hình tại mép trước kết thúc thông tầng (20/11). Không khôi phục sàn/hành lang phía trước.
+- [x] Không hiện nhãn thông tầng, WC các tầng và sảnh chính tầng 1, kể cả khi rê/chọn. Giữ hình học các khu còn lại và quyền/chọn thông tin hiện có.
+- **DB:** chỉ thay cấu hình hình học/nhãn; không xóa vị trí hoặc thay liên kết người, tài sản, vật thể. Hành lang cũ không còn vùng hình học trên mô hình.
+- [x] 6 kiểm tra hình học đạt; TypeScript/ESLint đạt. Chrome cổng 4000 kiểm tra ba trường hợp chọn thông tầng/WC/sảnh tầng 1 không có nhãn, vào HCNS vẫn hoạt động và không lỗi JavaScript. Đã xem ảnh mặt bằng/phối cảnh tại `outputs/room-labels/atrium-*.png`; chỉ đọc DB, không thay dữ liệu vận hành.
+
+- [x] Kiểm chứng chỉnh vách/nhãn 20/11: 12 unit hình học và dàn nhãn người, TypeScript, ESLint phạm vi và diff check đạt. Chrome 1366×768: xem trực tiếp ảnh mặt bằng/phối cảnh thấy vách chặn mép trước, không thêm sàn; nhãn Hành chính giữ ngắn khi rê/chọn, tên đầy đủ ở panel, nhấp đúp vẫn vào phòng. Thông tầng/WC/sảnh không có nhãn, không lỗi JS, chỉ đọc DB. Ảnh tại `outputs/room-labels/wall-labels-*`; nhãn theo theme tối đọc được, nhưng kiểm tra ép theme tối còn thấy một số chữ/nút UI chung thiếu tương phản ngoài phạm vi này. Chưa kiểm chứng trên điện thoại thật.
+
+### Khu VietinBank tầng 1
+
+- [x] Theo xác nhận 20/11: hai khu trước/phía phải · sau cùng thuộc VietinBank, gộp thành một đường bao, một nhãn và một vùng chọn. Giữ khóa `plan_t1_phai_truoc` và vị trí DB đang liên kết; bỏ vùng tham khảo `plan_t1_phai_sau`. Link cũ đến khu sau được chuyển sang khu chung. Giữ lối vào bên hông và khối phụ trợ ngoài ngân hàng.
+- **DB:** đã kiểm tra trước sửa: khu sau chưa có liên kết DB; vị trí VietinBank không có vị trí con, vật thể 3D, nhân sự hoặc tài sản. Không sửa/xóa bản ghi hoặc tạo bảng mới. Tâm hình học đổi theo đường bao hợp nhất; chưa có bố trí cần chuyển tọa độ. Chi tiết/thêm vị trí/gán dữ liệu dùng luồng phòng chung trên toàn vùng mới.
+- [x] 20 kiểm tra hình học/điều hướng/chi tiết phòng, TypeScript và lint phạm vi đạt. Chrome 1680×1000: chỉ còn một nhãn ngân hàng, chọn tô sáng cả hai khu, vào chi tiết hiện toàn vùng và nút Thêm vị trí; không lỗi JavaScript. Đã xem ảnh tại `outputs/floor1-correction/`, không ghi dữ liệu trong kiểm thử trình duyệt.
+
+### Nhãn phòng gọn theo cấp xem — 18/11
+
+- [x] Toàn nhà chỉ hiện nhãn tầng; xem tầng dùng nhãn 12px, nền mỏng, bỏ khung/bóng lớn và nhãn số trên điện thoại. Không tự cắt tiền tố “Phòng”: Phòng Họp, Phòng Khánh Tiết và các tên người dùng đặt giữ nguyên. Chỉ giữ bí danh KHĐT/Hành chính và HCNS ở thanh điều hướng đã có; không sửa tên DB hoặc yêu cầu nhập “Phòng” hai lần.
+- [x] Rê chuột/focus/chọn giữ tên ngắn, làm nổi vùng phòng. Nhãn dùng thẻ nhỏ nền theo theme, viền mảnh và dấu tròn; chọn nhấn màu thương hiệu, không kéo dài tên phủ nội thất (20/11). Tên đầy đủ giữ ở bảng thông tin và nhãn trợ năng. Nhãn đặt lệch về phía mép sau thay vì giữa phòng; chống chồng theo cơ chế chiếu hiện có, ưu tiên phòng được chọn rồi phòng đang rê. Vào chi tiết ẩn nhãn phòng; vẫn giữ nhãn người/điểm theo quy tắc cũ.
+- [x] Khu phụ trợ không hiện tên mặc định, giữ hình học và vùng chọn; riêng thông tầng/WC/sảnh chính tầng 1 không hiện nhãn cả khi rê/chọn theo mục phía trên. Menu Tùy chọn hiển thị (thay tên Lọc loại tài sản) có mục Tên phòng; tắt chỉ ẩn nhãn thường, vẫn hiện tên phòng đang chọn/rê. Lọc tài sản vẫn theo quyền ASSETS và bị khóa khi lớp tài sản tắt; tùy chọn tên phòng không cần quyền HR/ASSETS.
+- [x] Giữ vùng bấm cả phòng, click/double-click và danh sách bên phải; nhãn có tên truy cập đầy đủ và vùng bấm tối thiểu 40px. Bật/tắt không đổi camera, URL, Canvas hoặc dữ liệu. Trạng thái trong phiên viewer, không thêm DB/dependency.
+- [x] TypeScript/ESLint đạt; 9 E2E hồi quy tìm kiếm/lớp/bố cục đạt. Kiểm tra Chrome mốc 18/11 trước chỉnh nhãn 20/11 đạt: tên ngắn → đầy đủ khi hover/chọn, bật/tắt, vào phòng ẩn nhãn phòng, giữ cùng Canvas; không có lỗi JavaScript. Đã xem ảnh desktop 1366×768 và mobile giả lập 390×844, sáng/tối tại `outputs/room-labels/` (ngoài Git). Kiểm tra chỉ đọc, không sửa DB; chưa đo trên điện thoại thật.
 
 ### Rút gọn bảng tổng quan và thanh công cụ
 
@@ -148,12 +241,12 @@ Tái sử dụng form/action hiện có; hồ sơ chi tiết chỉ tải khi m�
 - [x] Bảng bên phải theo ngữ cảnh: phòng dùng tổng quan người/tài sản; điểm dùng chi tiết và hành động gán hiện có. Có nút Tổng quan phòng ngay trên chi tiết. Danh sách đổi vị trí đặt dưới hồ sơ; ghi chú thu gọn, bỏ đoạn giải thích kỹ thuật lặp trên từng vị trí. Nhãn vật thể bổ sung chỉ tồn tại khi đang chọn, gỡ khỏi DOM khi về tổng quan để không lưu nhãn cũ. Không hiển thị thêm ID hoặc số liệu suy đoán.
 - [x] 7 E2E `seamless-3d` và 5 unit điều hướng đạt: menu trên mesh bàn thật, cùng lệnh với nút …, chuột/phím/mobile, Esc theo cấp, giữ Canvas, Back/Forward và khôi phục WebGL. KHĐT dùng menu chung, mở/hủy chỉnh bố trí và giữ bản nháp khi bấm nền/chuột phải/Esc; đối chiếu bản ghi thử đọc không đổi. Đã xem ảnh desktop/mobile/KHĐT; TypeScript, lint và diff check đạt. Không gửi mutation vào DB vận hành; ảnh tại `outputs/seamless-3d/` ngoài Git. Các bài thử gán dữ liệu/khung mở rộng trên DB riêng đã cập nhật chọn điểm rõ ràng và thứ tự Esc; chưa chạy lại nhóm có ghi DB trong đợt thay đổi giao diện này.
 
-Không thêm thư viện, schema hoặc quyền; wrapper ContextMenu dùng Radix đã cài. Bộ thao tác áp dụng cho phòng/vật thể hiện có, kể cả KHĐT; chế độ chuyển cảnh vào nội thất chi tiết vẫn riêng HCNS. Không dựng trình biên tập 3D mới và không thay ba rule kỹ thuật chung.
+Không thêm thư viện, schema hoặc quyền; wrapper ContextMenu dùng Radix đã cài. Bộ thao tác áp dụng cho phòng/vật thể hiện có, kể cả KHĐT; chế độ chuyển cảnh chi tiết đã dùng chung cho phòng liên kết theo mục KHĐT hiện hành. Không dựng trình biên tập 3D mới và không thay ba rule kỹ thuật chung.
 
 ### Tổng quan phòng và bỏ chọn vị trí
 
 - [x] HCNS trên thanh điều hướng là nút; vào phòng mặc định `point=null`. Link ghi rõ điểm vẫn mở điểm đó, link cũ `/office-3d/hcns` mở tổng quan. Back/Forward giữ đúng trạng thái tổng quan/chi tiết.
-- [x] Dùng lại `RoomOverviewPanel` để xem tổng người/tài sản và ghi chú phòng theo quyền; dùng chung `RoomPointList` cho danh sách 10 điểm gốc cùng các vị trí bổ sung. Chọn điểm mới mở `HcnsRoomPanel`, tải lựa chọn gán người khi cần.
+- [x] Dùng lại `RoomOverviewPanel` để xem tổng người/tài sản và ghi chú phòng theo quyền; dùng chung `RoomPointList` cho danh sách 10 điểm gốc cùng các vị trí bổ sung. Chọn điểm mới mở `RoomPointPanel`, tải lựa chọn gán người khi cần.
 - [x] Nút HCNS hoặc nhấp trái nền/sàn ngoài bàn/người/thiết bị bỏ chọn và căn camera toàn phòng qua cơ chế hiện có. Giữ cùng Canvas, không đổi tầng hoặc tải lại trang. Kéo xoay/nhấp phải/nút điều khiển không bỏ chọn; đang thêm/chỉnh bố trí thì giữ bản nháp.
 - [x] 5 E2E `seamless-3d` và 5 unit điều hướng đạt; gồm tổng quan mặc định, nút HCNS bằng bàn phím, bấm nền bỏ chọn, không bỏ chọn khi kéo/nhấp phải/đổi góc nhìn, giữ bản nháp, cùng Canvas, Back/Forward, mobile và khôi phục WebGL. TypeScript/lint/diff check đạt; đã xem ảnh desktop/mobile. Ca cũ dùng tên vị trí 10 được sửa để đọc tên hiện hành theo ID ánh xạ. Không ghi dữ liệu vận hành; ảnh tại `outputs/seamless-3d/` ngoài Git.
 - Không đổi schema, dữ liệu, quyền hoặc dependency. Menu chuột phải đã được bổ sung trong mục Quy ước tương tác phía trên; không tổng quát hóa toàn bộ chế độ chi tiết sang KHĐT.
@@ -167,11 +260,14 @@ Không thêm thư viện, schema hoặc quyền; wrapper ContextMenu dùng Radix
 ### Liên kết phòng mới để quản lý
 
 1. Tạo/chọn vị trí loại **Phòng** dưới đúng tầng tại `/locations`; đây là không gian vật lý, không tạo lại cơ cấu `phong_ban`.
-2. Gắn khóa hình phòng có sẵn với ID vị trí trong `var/office-3d/building.json`. Hiện bước này do người triển khai cấu hình; chưa có giao diện tự chọn hình để liên kết phòng. Kiểm tra đúng công ty, tầng, loại và trạng thái; không ánh xạ trùng.
+2. Chọn phòng trên 3D → **Liên kết vị trí** → chọn Phòng/Khu vực tại đúng tầng → **Liên kết phòng**. Cần LOCATIONS MANAGE; chỉ chọn phòng đang dùng, chưa nối với hình khác. Liên kết mới lưu DB; tòa nhà/tầng và liên kết cũ vẫn dùng cấu hình cục bộ. Nếu tầng chưa có ánh xạ, người triển khai cần thiết lập tầng trước.
+
+- [x] Liên kết tầng: cấu hình local đã có đủ Tầng 1/2/3; bổ sung Tầng 3 → vị trí 93 thuộc Tòa nhà 58 sau khi kiểm tra công ty, loại, cha và trạng thái. Nguyên nhân trước đó: có hồ sơ Tầng 3 trong DB nhưng thiếu mục tương ứng ở `var/office-3d/building.json`. Kiểm tra bằng resolver/bộ chọn thực tế: Tầng 3 active, cả 4 vùng phòng quản lý được trả về hai lựa chọn Phòng ăn và Công ty xây dựng Sao Đỏ. Giữ các liên kết khác, không ghi DB hoặc tự gán hai phòng vào hình chưa xác nhận. Bản cấu hình trước sửa và kiểm tra cục bộ ở `outputs/floor3-link/`.
+
 3. Trên 3D chọn phòng → **Thêm vị trí** → đặt bàn/điểm thiết bị → Lưu. Bố trí mới lưu trong DB; không cần sửa mã hình học cho từng bàn.
 4. Gán nhân sự/tài sản theo vị trí thực tế và quyền riêng. Không tự đưa toàn bộ nhân sự cùng phòng ban vào phòng vật lý.
 
-- [x] KHĐT: đã tạo **Phòng Kế hoạch Đầu tư** dưới Tầng 2 qua giao diện/action vị trí, ánh xạ `plan_t2_phai_truoc` → vị trí `76` theo ô phòng đã được xác nhận. Chưa tạo bàn hoặc gán người/tài sản. Chế độ vào chi tiết bằng nhấp đúp vẫn riêng HCNS; KHĐT dùng chọn phòng/tập trung và bố trí trên mặt bằng tầng.
+- [x] KHĐT: đã tạo **Phòng Kế hoạch Đầu tư** dưới Tầng 2 qua giao diện/action vị trí, ánh xạ `plan_t2_phai_truoc` → vị trí `76` theo ô phòng đã được xác nhận. Đã mở rộng chi tiết dùng chung và nhập 12 bàn theo bản khảo sát; hai bàn đã có người/tài sản giữ nguyên liên kết. Xem [phạm vi KHĐT hiện hành](#phòng-chi-tiết-dùng-chung-và-bố-trí-khđt).
 - [x] Đã sao lưu DB/cấu hình trước thay đổi; kiểm tra Chrome cổng 4000 mở/hủy form thêm vị trí, xem ảnh sau khi camera ổn định, không lỗi JavaScript. 6 kiểm thử ánh xạ đạt; fingerprint chỉ thay `vi_tri` và `nhat_ky_hoat_dong`, các bảng khác giữ nguyên. Bằng chứng cục bộ tại `outputs/link-khdt/`; cấu hình liên kết trong `var/` cần được giữ cùng bản triển khai.
 
 ### Thử nghiệm thêm vị trí trên mô hình
@@ -184,15 +280,18 @@ Không thêm thư viện, schema hoặc quyền; wrapper ContextMenu dùng Radix
 | Chỉnh bố trí đã thêm | Giữ ID vị trí và liên kết người/thiết bị, kiểm tra phiên bản trước ghi |
 | Xóa vị trí | Dùng luồng xóa danh mục vị trí hiện có; không tạo đường tắt vượt ràng buộc tài sản/HR |
 
-**Thiết kế DB cần giữ cho bố trí:** thêm `vat_the_3d`, một bản ghi cho mỗi vị trí có hình được thêm qua UI. Tọa độ tương đối trong phòng thuộc bảng bố trí; không thêm tọa độ vào `vi_tri` và không thay 10 điểm HCNS cũ.
+**Thiết kế DB cần giữ cho bố trí:** thêm `vat_the_3d`, một bản ghi cho mỗi vị trí có hình, gồm cả bàn HCNS/KHĐT nhập từ khảo sát và hình thêm qua UI. Tọa độ tương đối trong phòng thuộc bảng bố trí; không thêm tọa độ vào `vi_tri`.
 
 | Cột | Ý nghĩa |
 | --- | --- |
 | `id`, `company_id` | Khóa tự cấp, công ty theo phiên |
 | `vi_tri_id` | FK cùng công ty, duy nhất; xóa vị trí hợp lệ thì xóa hình phụ thuộc |
-| `phong_id` | FK tới phòng gốc của hình; nếu vị trí chuyển khỏi phòng thì không tự chuyển hình theo |
-| `loai_vat_the` | `BAN` hoặc `DIEM`; tương ứng `CHO_NGOI` hoặc `DIEM_DAT_THIET_BI` |
+| `phong_id` | FK tới cha chứa hình (phòng/khu vực; hoặc tầng đối với chỗ làm việc trực tiếp như Lễ tân). Giữ tên cột hiện có; đổi cha làm hình mất hiệu lực, không tự di chuyển hình |
+| `mau_hien_thi` | `MAC_DINH`, `QUAY_LE_TAN` hoặc `BAN_TONG_GIAM_DOC`; hai mẫu chuyên biệt chỉ dùng với `BAN`, có CHECK tại DB. Kiểu hình không đổi loại vị trí nghiệp vụ |
+| `loai_vat_the` | Hình `BAN` hoặc `DIEM`; khi tạo mới cấp loại vị trí tương ứng. Khi đọc/chỉnh, không suy lại loại nghiệp vụ từ hình (máy in có thể đặt trên bàn) |
 | `toa_do_x`, `toa_do_z`, `goc_xoay` | Bố trí phẳng trong phòng, số hữu hạn; góc 0/90/180/270° |
+| `chieu_rong`, `chieu_sau` | Kích thước hình (m), CHECK 0,1–10; chỉnh bố trí giữ kích thước đã lưu; đổi mẫu hình dùng kích thước mặc định của mẫu mới |
+| `khoa_cu` | Nullable, unique theo công ty; giữ link HCNS cũ sau chuyển đổi |
 | `created_at`, `updated_at` | Thời điểm và phiên bản chỉnh bố trí |
 
 - LOCATIONS MANAGE mới được tạo/chỉnh; kiểm tra lại trong transaction cùng khóa công ty/phân quyền của danh mục vị trí. HR/ASSETS giữ quyền riêng. Tạo vị trí + hình + audit nguyên tử, không ghi file JSON trong mutation.
@@ -278,14 +377,20 @@ Chi tiết lưu/khóa/nhật ký thuộc [plan tài sản](ASSET-MANAGEMENT-CHEC
 **Trạng thái:** đã triển khai và kiểm chứng mặt bằng giản lược. Giữ bố cục gốc theo bản phác từng phòng; vật thể bổ sung theo bản thử tạo vị trí ở mục trên. Gán tài sản được bổ sung tại mục trên, độc lập với đợt chỉnh hình học.
 
 - [x] Đọc trực quan toàn bộ `1-1 MB TANG 1.pdf`, `1-2 MB TANG 2.pdf`, `1-3 MB TANG 3.pdf`: mỗi file một trang, tỷ lệ ghi 1:150. PDF xuất từ AutoCAD, có đường vector; nhiều chữ/số là nét vẽ nên trích xuất văn bản không đủ để nhận diện phòng tự động. Ảnh đọc, metadata và checksum lưu cục bộ ở `outputs/architecture-review/`, ngoài Git.
-- [x] Đối chiếu trước thay đổi: khung cũ có 22 khu vực chữ nhật ước lượng, HCNS thu/xoay vào ô có sẵn. Đã thay bằng `architectural-layout.ts`: 42 vùng hình học giản lược (phòng, hành lang, sảnh, khu phụ trợ), không tạo tương ứng 42 hồ sơ DB. `building-layout.ts` giữ khóa liên kết HCNS/Kinh doanh/Lễ tân; riêng Lễ tân chỉ hiện trong danh sách đến khi xác nhận chỗ đặt.
+- [x] Đối chiếu trước thay đổi: khung cũ có 22 khu vực chữ nhật ước lượng, HCNS thu/xoay vào ô có sẵn. Đã thay bằng `architectural-layout.ts`: 42 vùng hình học giản lược (phòng, hành lang, sảnh, khu phụ trợ), không tạo tương ứng 42 hồ sơ DB. `building-layout.ts` giữ khóa liên kết HCNS/Kinh doanh/Lễ tân; Lễ tân đã có vùng chọn tại sảnh theo xác nhận bổ sung; xem mục quầy lễ tân.
 - [x] Xác nhận từ người phụ trách: HCNS → vùng nguồn `plan_t2_phai_sau` (95,4 m²), Kinh doanh → `plan_t1_trai_truoc` (97 m²). Không gắn các tên phòng ban cũ chưa có xác nhận vào vùng mới.
 
 | Nguồn | Dữ liệu đọc được | Giới hạn áp dụng |
 | --- | --- | --- |
-| Tầng 1 | Tường/cột/cửa, cụm thang/WC, sảnh chính 127 m²; cao độ sàn ±0.000 | Kinh doanh ở ô 97 m² theo xác nhận; các phòng khác và chỗ đặt Lễ tân chưa xác nhận |
+| Tầng 1 | Tường/cột/cửa, cụm thang/WC, sảnh chính 127 m²; cao độ sàn ±0.000 | Kinh doanh ở ô 97 m² theo xác nhận; quầy Lễ tân trước Phòng Khánh Tiết theo xác nhận bổ sung; các vùng chưa xác nhận giữ tên trung tính |
 | Tầng 2 | Các phòng ghi 73,6; 45; 68; 61; 95,4; 82 m², phần thông tầng, cụm thang/WC; cao độ +4.200 | Đã xác nhận tên 6 phòng theo ảnh điền hiện trạng I–VI; HCNS ở ô 95,4 m². Nội thất theo ảnh mới, kích thước bàn/cửa vẫn ước lượng |
-| Tầng 3 | Các khu 50; 61; 140; 179 m² và sảnh 83 m²; cao độ +8.400 | Khu trung tâm không ghi vườn cây như model cũ; cần đối chiếu sử dụng thực tế |
+| Tầng 3 | PDF gốc: 50; 61; 140; 179 m² và sảnh 83 m²; cao độ +8.400 | Bản khảo sát bổ sung: chia ô 140 m² thành hai phòng; ô server riêng sát cầu thang, bồn cây/bàn ở sảnh. Không dùng diện tích gốc cho từng phòng đã tách |
+
+- [x] Bản khảo sát Tầng 3 người phụ trách bổ sung đã xác nhận vách ngang chia ô trái 140 m² thành hai phòng, cửa riêng ra sảnh. Mô hình giữ phòng trái–sau 50 m², thêm vùng trái–giữa và thu vùng trái–trước; ranh chia theo tỷ lệ ảnh (trục nguồn z ≈ 14,4 m), chưa phải số đo thực tế. Không gán diện tích 140 m² cho từng phòng mới.
+- [x] Ô nhỏ bên phải khu phụ trợ sát cầu thang là **Phòng server** (`plan_t3_server`), tách khỏi phần kỹ thuật bên trái; không lấy cả cầu thang/khu phụ trợ làm server. Dùng loại hình phòng và bộ chọn/liên kết/quản lý chung. Chưa tạo vị trí server trong DB hoặc tự gán vào Phòng ăn/Công ty xây dựng; người phụ trách chọn hồ sơ vị trí đúng sau khi tạo. Không sửa dữ liệu hay liên kết phòng bên phải đang có.
+- [x] Kiểm tra hình học và điều hướng: 20 unit test đạt, lint đạt. Chrome hiển thị đủ 6 vùng phòng Tầng 3, ba phòng trái và ô server riêng; mở nút liên kết server bằng luồng chung, không ghi DB. Đã xem ảnh tại `outputs/floor3-survey/`; không có lỗi JavaScript trong lượt kiểm tra.
+- [x] Theo yêu cầu bổ sung, sảnh Tầng 3 có bồn cỏ thấp viền uốn cong ở giữa và một bàn tròn phía trước, hướng mặt tiền. Dùng bối cảnh tĩnh trong `RoomBackdrop`, giữ lối đi xung quanh; tỷ lệ ước lượng theo ảnh, không phải số đo thực tế. Bốn mesh đơn giản, không texture/hoạt ảnh/nhãn hoặc hồ sơ DB, không tham gia chọn đối tượng; dùng chung chuyển tầng và ẩn bối cảnh khi vào phòng.
+- [x] TypeScript và ESLint phạm vi đạt. Chrome cổng 4000: đã xem ảnh mặt bằng/phối cảnh, chuyển Tầng 3 → 2 → 3 giữ cùng Canvas; vào Phòng Server thì bồn/bàn ẩn cùng bối cảnh xung quanh, không lỗi JavaScript. Kiểm tra chỉ đọc, không ghi DB; ảnh tại `outputs/floor3-garden/`. Chưa đo hiệu năng trên điện thoại thật.
 
 Bảng trên là thông tin đọc từ nguồn, không phải danh sách chi tiết cần dựng. Kích thước chỉ giúp căn tỷ lệ phòng và khoảng cách hợp lý trong cấu hình hình học; không hiển thị đường đo, cao độ hoặc yêu cầu nhập số đo cho người dùng. Khoảng giãn tầng và chiều cao vách được chọn để dễ nhìn. Các phòng tầng 1/3 chưa có tên xác nhận vẫn giữ tên trung tính.
 
@@ -303,7 +408,7 @@ Hướng đọc: phía mặt tiền ở dưới bản vẽ. Ảnh điền tay tr
 | VI | Phải · phía trước, ô 82 m² | Phòng Kế hoạch Đầu tư |
 
 - [x] Đặt tên 6 vùng đã xác nhận, giữ nguyên khóa hình học/ánh xạ. Các phòng mới có tên trên mô hình chưa tự tạo hồ sơ `vi_tri` hoặc gán người từ danh sách phòng ban; liên kết HCNS hiện hữu tiếp tục đọc DB.
-- [x] Bỏ phần nhô phía mặt tiền đã gạch “Bỏ” trên tầng 2; giữ hành lang trước thông tầng và không thay lối vào tầng 1/mái tầng 3.
+- [x] Bỏ phần nhô phía mặt tiền đã gạch “Bỏ” trên tầng 2; thông tầng hiện mở tới mép trước theo mục Thông tầng mở ra phía trước; không thay lối vào tầng 1/mái tầng 3.
 - [x] Dựng lại HCNS theo ảnh mới: khu ngoài chỉ bàn 01 của Vũ Trọng Toàn; vách nối ngang mép dưới cụm cầu thang, cửa ở bên trái. Bàn 02 ở phía trong gần vách, cặp 03–04 ở giữa, cụm 05–08 ở cuối phòng bên phải, 09–10 dọc vách trái. Bỏ khối kho từng ước lượng từ bản phác cũ vì ảnh mới không thể hiện khối này. Giữ 10 khóa vị trí, hướng lưng dựa tường của bàn 01/09/10 và dữ liệu người/ghi chú.
 - [x] Kiểm chứng cập nhật ảnh điền hiện trạng: **15 unit**, TypeScript và lint đạt. Chrome cổng 4000 chọn đúng cả 10 bàn, xác nhận bàn 01 vẫn là Vũ Trọng Toàn; tên các phòng tầng 2 xuất hiện đúng. Vào/quay ra HCNS giữ Canvas và một lần tải document, không lỗi JS/tràn ngang mobile. Đã xem ảnh mặt bằng tầng 2, HCNS phối cảnh/mặt bằng/điện thoại tại `outputs/floor-2-confirmed/`. Kiểm tra trình duyệt chỉ đọc, không sửa DB/ánh xạ; không chạy lại ca mutation HR/phân quyền trong lần chỉnh hình học này.
 
@@ -321,7 +426,7 @@ Giữ viewer và liên kết `vi_tri` hiện có; bố cục gốc không cần 
 
 ### Bố cục cố định, dữ liệu vận hành cập nhật
 
-Người phụ trách đi từng phòng, phác vị trí bàn/chỗ làm việc, cửa và thiết bị chung; agent đối chiếu với mặt bằng, dựng bố cục và gắn ID vị trí có sẵn. Không làm kéo thả tự do hoặc chỉnh 10 bàn gốc qua UI. Bàn/điểm thiết bị bổ sung được tạo/chỉnh bằng bản thử, lưu riêng trong `vat_the_3d`. Tọa độ/hướng vật thể thuộc cấu hình hình học riêng từng phòng; dùng lại mẫu bàn và giữ ánh xạ ổn định theo thiết kế hiện có.
+Người phụ trách đi từng phòng, phác vị trí bàn/chỗ làm việc, cửa và thiết bị chung; agent đối chiếu với mặt bằng, dựng bố cục và gắn ID vị trí có sẵn. Không làm kéo thả tự do. Bàn/điểm thiết bị, gồm 10 bàn HCNS gốc, được tạo/chỉnh bằng bộ thao tác chung và lưu trong `vat_the_3d`; dùng lại mẫu hình và giữ liên kết vị trí ổn định.
 
 | Thay đổi thực tế | Cách xử lý |
 | --- | --- |
@@ -330,7 +435,7 @@ Người phụ trách đi từng phòng, phác vị trí bàn/chỗ làm việc,
 | Thêm, bớt hoặc di chuyển bàn | Cung cấp bản phác điều chỉnh để agent sửa cấu hình của phòng; không dựng lại các phòng khác |
 | Tạo vị trí mới trong DB | Vẫn dùng được trong danh mục; chỉ có vật thể 3D sau khi bổ sung/ghép với bố cục, không tự sinh bàn hoặc đoán tọa độ |
 
-Hiện chưa có giao diện ghép một vị trí đã tồn tại với hình cũ; luồng Thêm vị trí trên 3D tạo đồng thời vị trí mới và hình mới. Ánh xạ phòng/bàn vẫn được cấu hình bởi agent trong tệp cục bộ. Hướng có thể bổ sung: chọn vật thể có sẵn → chọn “Liên kết vị trí” → tìm vị trí đúng tầng/phòng → lưu liên kết; không cần công cụ dựng hình hoặc kéo thả bàn. Đây là đề xuất, chưa triển khai; vật thể chưa có vẫn cần bổ sung từ bản phác.
+Đã có giao diện nối **phòng vật lý** đã tồn tại với vùng phòng trên mô hình qua “Liên kết vị trí”. Với **bàn/điểm**, Thêm vị trí vẫn tạo đồng thời vị trí mới và hình mới; chưa có giao diện ghép một vị trí con đã tồn tại với hình bàn. Bố trí bàn/điểm lưu DB; nội thất nền dựng từ bản phác.
 
 “Thiết bị gắn vào bàn” là cách hiển thị tại chỗ làm việc: hồ sơ người và thiết bị tham chiếu vị trí chung, không dùng hình bàn làm khóa DB. Điểm đặt hình thiết bị gần/trên bàn thuộc cấu hình hiển thị; người chuyển chỗ không tự chuyển thiết bị. Một bàn ghép có thể chứa nhiều vị trí; AP/máy in dùng chung có thể gắn điểm riêng trong phòng/sảnh. Hình thiết bị hiện lấy từng hồ sơ đã gán và dùng mẫu theo loại; danh sách trong panel phản ánh đủ từng thiết bị, ghi chú không phải hồ sơ tài sản.
 
@@ -340,13 +445,13 @@ Lý do chọn bố cục cố định là ít thay đổi nội thất và giả
 
 - [x] Chỉnh cả ba tầng theo cùng hệ tỷ lệ, thêm khu vực/hành lang thiếu, giữ thông tầng tầng 2 và sảnh tầng 3. Nền phẳng/vách thấp/đường viền dễ đọc, không cột/trần/tượng, không hiển thị số đo CAD.
 - [x] Đặt HCNS đúng vùng chữ L quanh khu phụ trợ, cùng tỷ lệ/trục của tầng (`scale=1`, `rotation=0`). Giữ 10 khóa vị trí; bàn 1/9/10 giữ hướng lưng về tường. Cửa chính theo lối mở phía trái dưới trên PDF; vách/nội thất theo bản in đã điền tại mục hiện trạng tầng 2, kích thước vẫn ước lượng.
-- [x] Căn camera theo phạm vi mới, chọn đúng vùng đa giác thay ô chữ nhật, giảm nhãn khi chồng nhau. Duy trì một Canvas, nhấp đúp vào HCNS và thao tác HR tại vị trí. Lễ tân không có vùng chọn hoặc lệnh tập trung khi chưa xác định chỗ đặt.
+- [x] Căn camera theo phạm vi mới, chọn đúng vùng đa giác thay ô chữ nhật, giảm nhãn khi chồng nhau. Duy trì một Canvas, nhấp đúp vào HCNS và thao tác HR tại vị trí. Lễ tân dùng vùng chọn và lệnh tập trung chung sau khi xác nhận chỗ đặt.
 - [x] Sửa hướng hai khu: từ hành lang vào chỉ có bàn 01 của Vũ Trọng Toàn, qua cửa thông mới đến bàn 02–10. Hướng bàn 01 lưng về mép dưới, bàn 09/10 lưng về vách trái. Bố trí vách/bàn hiện hành theo mục ảnh điền tầng 2 ở trên; không thay liên kết vị trí/người khi chỉnh hình.
 - [x] Kiểm chứng lần sửa hướng nội thất: **14 unit**, TypeScript và lint đạt. Kiểm tra hình học đủ 10 bàn/hình người nằm trong phòng, chỉ bàn 01 thuộc khu cửa hành lang và lối thông không bị bàn chắn. Chrome cổng 4000 chọn trực tiếp đủ 10 bàn, bàn 01 vẫn hiển thị Vũ Trọng Toàn; vào/quay ra giữ cùng Canvas, chỉ một lần tải document, không lỗi JS/tràn ngang. Đã xem ảnh mặt bằng/phối cảnh/mobile tại `outputs/hcns-orientation/`. Kiểm tra trình duyệt chỉ đọc; không sửa DB hoặc ánh xạ, không chạy lại các ca mutation phân quyền/HR cho lần đổi hình học này.
 - [x] Mốc tích hợp mặt bằng trước sửa hướng nội thất: **18 unit và 17 ca E2E khác nhau đạt**: tòa nhà 4, tương tác trực tiếp 3, HCNS 3, chuyển cảnh 3, gán người 4. Sau chỉnh đường viền/nhãn, chạy lại 6/6 ca tương tác và chuyển cảnh đạt; TypeScript/lint đạt. Đã xem ảnh Chrome thực tế trên cổng 4000: ba tầng, phối cảnh/mặt bằng HCNS và điện thoại; giữ nguyên Canvas, không lỗi JS hoặc tràn ngang trong lượt kiểm tra. Nội thất vẫn là bố trí tham khảo, chưa nghiệm thu hiện trạng phòng.
 - [x] Đã dọn đúng server/DB thử riêng; fingerprint **15 bảng vận hành không đổi**, app cổng 4000 tiếp tục chạy. Ảnh, backup và bằng chứng kiểm thử lưu ngoài Git tại `outputs/architecture-3d/`; không sửa schema, dữ liệu, ánh xạ ID, dependency hoặc ba rule kỹ thuật chung.
 - [x] Tạo bộ mặt bằng giấy để khảo sát hiện trạng từ **nét vector ba PDF gốc**: giữ tường/cửa/lối đi, giản lược thông tầng và ký hiệu khu chung; loại kích thước, trục, cao độ, nét gạch và chi tiết trang trí. Để trống tên phòng, bàn/người/thiết bị cho người phụ trách điền; có cột ghi chú. Xuất PDF 3 trang A3 ngang, bản A4 và ba PNG 300 dpi tại `outputs/mat-bang-khao-sat/` (ngoài Git). Đã xem cả ba trang, kiểm tra số trang/kích thước/chữ trong khung và checksum PDF nguồn không đổi. Bản giấy không tự cập nhật model hoặc DB; không dùng đo kích thước/thi công.
-- [ ] Xác nhận tên sử dụng các phòng còn lại và chỗ đặt Lễ tân; dựng nội thất từng phòng khi nhận bản phác. Tài sản theo [plan riêng](ASSET-MANAGEMENT-CHECKLIST.md).
+- [ ] Xác nhận tên sử dụng các phòng còn lại; dựng nội thất từng phòng khi nhận bản phác. Tài sản theo [plan riêng](ASSET-MANAGEMENT-CHECKLIST.md).
 
 Tiêu chí khi triển khai: nhận biết đúng tầng/phòng/khu vực theo hiện trạng xác nhận, tỷ lệ tương đối hợp lý, các vùng chọn không chồng sai; giữ dữ liệu phân công HCNS và thao tác mượt; không thêm chữ/số đo hoặc vật thể không giúp quản lý. Kiểm chứng lại quyền, chọn bàn/người, chuyển cảnh và mobile; không lấy độ chi tiết kiến trúc làm tiêu chí hoàn thành.
 
@@ -384,6 +489,9 @@ Mô hình và bảng chi tiết dùng dữ liệu hiện có; không tự tạo 
 - [x] Dựng mô hình người cách điệu ít đa giác, đầu tròn/thân bo đơn giản, dùng chung hình học và vật liệu với phong cách hiện tại; đặt ở phía làm việc của bàn theo bố cục. Không dựng thêm ghế, không cần khuôn mặt, chuyển động đi lại hoặc hoạt ảnh liên tục.
 - [x] Chỉ dựng người ACTIVE thực sự được gán vào vị trí qua HR và trong quyền xem. Chọn hình người hoặc tên mở thông tin người tương ứng tại bảng bên; chọn bàn mở thông tin vị trí và các thao tác được phép. Gán/chuyển/bỏ gán vẫn dùng luồng hiện có, xác nhận khi chuyển người đã có chỗ và giữ camera sau lưu.
 - [x] Tên nhân sự gắn gần mô hình người khi xem gần; ưu tiên nhãn đang chọn/rê chuột/focus, tránh chồng nhãn và thu gọn khi nhìn xa. Vị trí có nhiều người phải phản ánh đủ dữ liệu bằng tối đa 3 hình người và nhãn +N mở danh sách đầy đủ, không chỉ lấy người đầu tiên hoặc tự suy thêm chỗ ngồi.
+- [x] Nhãn nhân sự trùng nhau (19/11): cùng dịch trái/phải một nửa khoảng thiếu, cách nhau 8px; nhãn gần mép nhường phần dịch cho nhãn còn lại. Giới hạn lệch ngang 80px, cụm đông chuyển lệch một hàng khi cần; nhãn chọn/rê/focus ưu tiên nếu vẫn không đủ chỗ. Đường nối mảnh xuất hiện khi lệch trên 12px. Thứ tự theo điểm neo trên màn hình, không đổi bên chỉ vì hover; số vòng giải quyết có giới hạn, chạy cùng khung hình camera hiện có, không thêm hoạt ảnh/vòng vẽ lúc nghỉ. Dùng chung mọi phòng; không sửa DB/bàn/người, nhãn phòng/tầng giữ cách bố trí cũ.
+- [x] Dàn nhãn: 6 unit đạt (dịch đôi, mép, cụm ba, tính ổn định/không sửa đầu vào, ưu tiên, vật cản); lint phạm vi sửa đạt. Chrome 1366×768 KHĐT hiện đủ 5 tên ở phối cảnh/mặt bằng, nhãn người cạnh Tuân bấm ra đúng hồ sơ; xoay/zoom không chồng các nhãn đang hiện, HCNS đủ 4 tên. Đã xem ảnh `outputs/room-labels/paired-*`, không lỗi JS ở lượt hoàn tất. Mobile giả lập 390×844 không tràn trang; góc tổng quan vẫn ẩn tên theo ngưỡng zoom cũ, chưa nghiệm thu dàn nhãn khi xem gần trên điện thoại. Thử zoom bổ sung chạm giới hạn nút hiện có, không đổi camera trong phạm vi này. TypeScript toàn repo còn lỗi ở `ai-work.ts`/`AiWorkCard.tsx` ngoài phạm vi 3D; chưa coi toàn dự án đạt. Không ghi DB khi kiểm chứng.
+
 - [x] Hình người biểu thị vị trí được phân công, không thể hiện có mặt/vắng mặt hay online/offline. Không có quyền HR thì không trả/hiện người hoặc số người, không kết luận chỗ trống. Vị trí chưa gán người giữ hình bàn; thông báo chưa gán chỉ hiển thị khi có đủ quyền và dữ liệu.
 - [x] Nghiệm thu: chọn đúng bàn/người bằng chuột, chạm và bàn phím; nhãn không che thao tác; kiểm tra 0/1/nhiều người, thiếu quyền, liên kết mất hiệu lực và cập nhật sau gán/chuyển. Giữ một Canvas, không phát sinh vòng vẽ liên tục khi nghỉ; đo lại hiệu năng khi thêm hình người.
 
@@ -426,13 +534,14 @@ Mục này ghi phạm vi thay viewer ban đầu. Bố cục 22 khu vực và ph�
 
 ## Thiết kế DB cần giữ
 
-- **Trạng thái:** đã triển khai. 3D sở hữu `vat_the_3d`; dùng lại danh mục vị trí, nhân sự, tài sản và phân quyền. Các trường bố trí được đặc tả tại [Thử nghiệm thêm vị trí](#thử-nghiệm-thêm-vị-trí-trên-mô-hình), không duy trì bảng cột thứ hai ở đây.
+- **Trạng thái:** đã triển khai. 3D sở hữu `vat_the_3d` và `lien_ket_phong_3d`; dùng lại danh mục vị trí, nhân sự, tài sản và phân quyền. Các trường bố trí được đặc tả tại [Thử nghiệm thêm vị trí](#thử-nghiệm-thêm-vị-trí-trên-mô-hình), không duy trì bảng cột thứ hai ở đây.
 
 ```mermaid
 erDiagram
     vi_tri o|--o{ vi_tri : "parent_id: cha - con"
-    vi_tri ||--o| vat_the_3d : "vi_tri_id: vi tri co hinh bo sung"
-    vi_tri ||--o{ vat_the_3d : "phong_id: phong chua hinh"
+    vi_tri ||--o| lien_ket_phong_3d : "vi_tri_id: phong lien ket moi"
+    vi_tri ||--o| vat_the_3d : "vi_tri_id: vi tri co hinh"
+    vi_tri ||--o{ vat_the_3d : "phong_id: cha chua hinh"
     vi_tri o|--o{ nhan_su : "vi_tri_lam_viec_id"
     vi_tri o|--o{ tai_san : "vi_tri_id"
     loai_tai_san ||--o{ tai_san : "loai_tai_san_id"
@@ -441,8 +550,9 @@ erDiagram
 | Bảng / liên kết | Trách nhiệm và ràng buộc hiện hành |
 | --- | --- |
 | `vi_tri.parent_id → vi_tri.id` | Cây không gian dùng chung. Cha tùy chọn; không gian vật lý độc lập với cơ cấu `phong_ban`. FK cùng công ty, Restrict. Cấu trúc đầy đủ tại [plan vị trí](LOCATION-MANAGEMENT-CHECKLIST.md#thiết-kế-db-cần-giữ). |
-| `vat_the_3d.vi_tri_id → vi_tri.id` | Bắt buộc; mỗi vị trí có tối đa một hình bổ sung. Unique `(vi_tri_id, company_id)`; khi xóa vị trí hợp lệ thì Cascade xóa hình phụ thuộc. |
-| `vat_the_3d.phong_id → vi_tri.id` | Bắt buộc; một phòng chứa nhiều hình. FK cùng công ty, Restrict. Action kiểm tra vị trí là con trực tiếp của phòng; viewer không hiển thị hình nếu liên kết không còn hợp lệ. |
+| `lien_ket_phong_3d.vi_tri_id → vi_tri.id` | Liên kết phòng chọn qua UI; FK cùng công ty, Cascade xóa cấu hình phụ khi vị trí được phép xóa. Ràng buộc/luồng ghi tại [quy ước dùng chung](#quy-ước-dùng-chung-cho-các-phòng--2011). |
+| `vat_the_3d.vi_tri_id → vi_tri.id` | Bắt buộc; mỗi vị trí có tối đa một hình. Unique `(vi_tri_id, company_id)`; khi xóa vị trí hợp lệ thì Cascade xóa hình phụ thuộc. |
+| `vat_the_3d.phong_id → vi_tri.id` | Bắt buộc; một cha không gian chứa nhiều hình. FK cùng công ty, Restrict. Action kiểm tra vị trí là con trực tiếp của cha; vùng Lễ tân liên kết thẳng chỗ ngồi dưới tầng phải khớp cả vị trí và cha; viewer không hiển thị hình nếu liên kết không còn hợp lệ. |
 | `nhan_su.vi_tri_lam_viec_id → vi_tri.id` | Tùy chọn; một người có một vị trí chính, một vị trí có nhiều người. FK Restrict; luồng xóa/gỡ theo [plan HR](HR-CHECKLIST.md) và plan vị trí. 3D chỉ đọc người ACTIVE theo quyền HR. |
 | `tai_san.vi_tri_id → vi_tri.id` | Tùy chọn; một tài sản có một vị trí, một vị trí có nhiều tài sản. FK Restrict; thiết bị không tự di chuyển theo người. |
 | `tai_san.loai_tai_san_id → loai_tai_san.id` | Bắt buộc; cung cấp loại để chọn hình thiết bị đại diện. Hồ sơ là nguồn đếm, không phải số mesh. Thiết kế thuộc [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md). |
@@ -450,11 +560,11 @@ erDiagram
 
 Các FK vị trí/người/tài sản/bố trí nêu trên dùng kèm `company_id` để bảo đảm cùng công ty. Sơ đồ lược bỏ các bảng quyền và khóa công ty để dễ đọc; không hàm ý tạo bảng mới hoặc bỏ ràng buộc.
 
-**Ngoài DB:** `building.json` nối khóa hình phòng với ID vị trí; `hcns.json` nối 10 điểm dựng sẵn với ID vị trí. Đây là tra cứu cấu hình, **không phải FK PostgreSQL**. Vỏ phòng và 10 bàn gốc còn trong mã; các bàn/điểm bổ sung mới lưu ở `vat_the_3d`. Cần sao lưu cả DB và hai file ánh xạ để khôi phục đầy đủ mô hình.
+**Cấu hình nền:** `building.json` giữ ID tòa nhà/tầng và các liên kết phòng cũ; đây không phải FK PostgreSQL. `building-mapping-server.ts` hợp nhất với `lien_ket_phong_3d` rồi kiểm tra schema; phần xem và lưu bố trí dùng cùng nguồn. Vỏ phòng/tường và nội thất nền giữ trong mã. Toàn bộ bàn/điểm quản lý ở HCNS/KHĐT lưu `vat_the_3d`. `hcns.json` chỉ còn là đầu vào nhập lịch sử; viewer không đọc file này. Sao lưu DB và `building.json` để khôi phục vận hành, giữ file nguồn cũ khi cần đối chiếu.
 
-- Không thêm tọa độ vào `vi_tri`; dùng hai bảng tài sản mức 1 đã có, không khôi phục schema tài sản cũ. Dùng FK vị trí theo [plan HR](HR-CHECKLIST.md); bảng chi tiết 3D gọi action gán vị trí chung, không thay tài khoản/quyền hoặc tự phân công người.
+- Không thêm tọa độ vào `vi_tri`; dùng hai bảng tài sản đã có, không khôi phục schema tài sản cũ. Dùng FK vị trí theo [plan HR](HR-CHECKLIST.md); bảng chi tiết 3D gọi action gán vị trí chung, không thay tài khoản/quyền hoặc tự phân công người.
 - 10 vị trí dùng FK `parent_id` về phòng có sẵn; tên Vị trí 01–10, đánh số theo sơ đồ. Vị trí 06 là điểm đặt thiết bị; các vị trí bàn còn lại là chỗ ngồi theo hình minh họa.
-- Hình học nền và 10 bàn HCNS gốc lưu trong mã; ánh xạ khóa đối tượng ổn định → ID vị trí lưu cục bộ tại `var/office-3d/hcns.json` (ngoài Git, sao lưu cùng DB). Bố trí bổ sung thuộc `vat_the_3d` như mô tả ở trên. Không dùng tên hoặc số thứ tự làm khóa DB; không công khai ánh xạ qua thư mục public.
+- Hình học nền lưu trong mã; bố trí bàn/điểm đọc DB. Không dùng tên/số thứ tự làm khóa DB hoặc công khai file ánh xạ qua public.
 - Import một lần có backup, transaction cùng audit `LOCATIONS`, khóa công ty và kiểm tra phòng/tổ tiên hoạt động. Chạy lại chỉ kiểm chứng ánh xạ, không ghi đè ghi chú hoặc tạo trùng.
 - Quyền xem bản thử: LOCATIONS VIEW/MANAGE. Server kiểm tra công ty, phòng và từng liên kết. Ghi chú là mô tả vị trí đã được cung cấp. Chỉ khi có thêm HR VIEW/MANAGE mới truy vấn và trả tên/chức vụ/phòng của người ACTIVE đang gắn vị trí; không có quyền HR thì không trả danh sách/số người. HR MANAGE dùng bảng chi tiết để gán/chuyển/bỏ gán cùng action của trang Vị trí; server vẫn kiểm tra quyền hiện hành, công ty, tình trạng, phiên bản và ghi audit. Tài sản đọc/gán riêng theo ASSETS VIEW/MANAGE tại mục tích hợp 3D ở trên. Vị trí bị xóa/chuyển/ngừng dùng hiển thị chưa liên kết hoặc ngừng dùng, không gán thay bằng tên.
 
@@ -471,4 +581,4 @@ Các FK vị trí/người/tài sản/bố trí nêu trên dùng kèm `company_i
 
 Ảnh kiểm thử, backup, kết quả nhập và script cục bộ ở `outputs/hcns-3d/` và `outputs/building-3d/`; ánh xạ ở `var/office-3d/hcns.json` và `var/office-3d/building.json`. Các tệp này ngoài Git, cần sao lưu cùng dữ liệu. Bản phác HCNS là ảnh trong hội thoại, chưa ghi nhận có bản ảnh gốc trên đĩa; ba PDF kiến trúc đã có cục bộ trong thư mục nguồn.
 
-Tiếp theo: xác nhận tên các phòng còn lại ở tầng 1/3 và chỗ đặt Lễ tân, nhận bản phác để dựng nội thất từng phòng. Tầng 2 đã có tên 6 phòng theo ảnh điền hiện trạng; phòng chưa có nội thất/ánh xạ vẫn chỉ hiển thị không gian. Tài sản triển khai theo plan riêng, không tự sinh thiết bị từ hình minh họa.
+Tiếp theo: xác nhận tên các phòng còn lại ở tầng 1/3, nhận bản phác để dựng nội thất từng phòng. Tầng 2 đã có tên 6 phòng theo ảnh điền hiện trạng; phòng chưa có nội thất/ánh xạ vẫn chỉ hiển thị không gian. Tài sản triển khai theo plan riêng, không tự sinh thiết bị từ hình minh họa.

@@ -3,7 +3,7 @@ import { AiModelSchema } from "./ai-settings";
 
 export const AI_JOBS = ["GENERAL", "LOOKUP", "DRAFT"] as const;
 export type AiJob = (typeof AI_JOBS)[number];
-export const AI_JOB_LABELS: Record<AiJob, string> = { GENERAL: "Trợ lý tổng hợp", LOOKUP: "Tra cứu tài sản / vị trí", DRAFT: "Soạn hồ sơ và công việc" };
+export const AI_JOB_LABELS: Record<AiJob, string> = { GENERAL: "Trợ lý tổng hợp", LOOKUP: "Tra cứu dữ liệu", DRAFT: "Soạn hồ sơ và công việc" };
 export const AiJobSchema = z.enum(AI_JOBS);
 export const UsdSchema = z.string().trim().regex(/^(0|[1-9]\d{0,8})(\.\d{1,6})?$/, "Nhập số USD không âm, tối đa 6 số thập phân.");
 export const AiPricesSchema = z.object({ version: z.literal(1), model: AiModelSchema, input: UsdSchema, cached: UsdSchema, output: UsdSchema }).strict()

@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ASSET-MANAGEMENT-CHECKLIST.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/*
+
+Arduino® Light Theme - Stefania Mellai <s.mellai@arduino.cc>
+
+*/
+
+.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 0.5em;
+  background: #FFFFFF;
+}
+
+.hljs,
+.hljs-subst {
+  color: #434f54;
+}
+
+.hljs-keyword,
+.hljs-attribute,
+.hljs-selector-tag,
+.hljs-doctag,
+.hljs-name {
+  color: #00979D;
+}
+
+.hljs-built_in,
+.hljs-literal,
+.hljs-bullet,
+.hljs-code,
+.hljs-addition {
+  color: #D35400;
+}
+
+.hljs-regexp,
+.hljs-symbol,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-link,
+.hljs-selector-attr,
+.hljs-selector-pseudo {
+  color: #00979D;
+}
+
+.hljs-type,
+.hljs-string,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-quote,
+.hljs-template-tag,
+.hljs-deletion {
+  color: #005C5F;
+}
+
+.hljs-title,
+.hljs-section {
+  color: #880000;
+  font-weight: bold;
+}
+
+.hljs-comment {
+  color: rgba(149,165,166,.8);
+}
+
+.hljs-meta-keyword {
+  color: #728E00;
+}
+
+.hljs-meta {
+  color: #434f54;
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
+
+.hljs-function {
+  color: #728E00;
+}
+
+.hljs-number {
+  color: #8A7B52;  
+}
+
+</style>
+
+<style>
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family:   "HelveticaNeue-Light", sans-serif, "宋体","Segoe WPC", "Segoe UI", "SFUIText-Light","Droid Sans Fallback";
+	font-size: 18px;
+	padding: 0 12px;
+	line-height: 1.6;
+	word-wrap: break-word;
+	color: #333333;
+}
+
+.content-wrapper{
+	max-width: 860px;
+    margin: 0 auto;
+    padding: 0 30px;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	color: #4080D0;
+	text-decoration: none;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom: 1px solid #eee;
+}
+
+
+h2{
+	padding-bottom: .3em;
+    font-size: 2em;
+    line-height: 1.225;
+    border-bottom: 1px solid #eee;
+}
+
+h3{
+	font-size: 1.75em;
+    line-height: 1.225;
+}
+
+h1, h2, h3 {
+	font-weight: bold;
+}
+
+h1 code,
+h2 code,
+h3 code,
+h4 code,
+h5 code,
+h6 code {
+	font-size: inherit;
+	line-height: auto;
+}
+
+a:hover {
+	color: #4080D0;
+	text-decoration: underline;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left: 5px solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 14px;
+	line-height: 19px;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+.mac code {
+	font-size: 12px;
+	line-height: 18px;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+/** Theming */
+
+.vscode-light,
+.vscode-light pre code {
+	color: rgb(30, 30, 30);
+}
+
+.vscode-dark,
+.vscode-dark pre code {
+	color: #DDD;
+}
+
+.vscode-high-contrast,
+.vscode-high-contrast pre code {
+	color: white;
+}
+
+.vscode-light code {
+	color: #A31515;
+}
+
+.vscode-dark code {
+	color: #D7BA7D;
+}
+
+.vscode-light pre:not(.hljs),
+.vscode-light code > div {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre:not(.hljs),
+.vscode-dark code > div {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre:not(.hljs),
+.vscode-high-contrast code > div {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+.vscode-light blockquote,
+.vscode-dark blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.vscode-high-contrast blockquote {
+	background: transparent;
+	border-color: #fff;
+}
+</style>
+
+<style>
+/* Obsidian syntax defaults for legacy export (PDF / HTML / DOCX) */
+
+.callout {
+	--callout-accent: #0969da;
+	margin: 12px 0;
+	border-radius: 6px;
+	border-left: 4px solid var(--callout-accent);
+	background: rgba(9, 105, 218, 0.08);
+	color: #333333;
+	overflow: hidden;
+}
+
+.callout[data-callout="note"],
+.callout[data-callout="abstract"],
+.callout[data-callout="info"],
+.callout[data-callout="todo"],
+.callout[data-subtype="note"],
+.callout[data-subtype="abstract"],
+.callout[data-subtype="info"],
+.callout[data-subtype="todo"],
+.callout[data-callout="note" i],
+.callout[data-callout="abstract" i],
+.callout[data-callout="info" i],
+.callout[data-callout="todo" i],
+.callout[data-subtype="note" i],
+.callout[data-subtype="abstract" i],
+.callout[data-subtype="info" i],
+.callout[data-subtype="todo" i] {
+	--callout-accent: #0969da;
+	border-left-color: #0969da;
+	background: rgba(9, 105, 218, 0.08);
+}
+
+.callout[data-callout="tip"],
+.callout[data-callout="hint"],
+.callout[data-subtype="tip"],
+.callout[data-subtype="hint"],
+.callout[data-callout="tip" i],
+.callout[data-callout="hint" i],
+.callout[data-subtype="tip" i],
+.callout[data-subtype="hint" i] {
+	--callout-accent: #116329;
+	border-left-color: #116329;
+	background: rgba(17, 99, 41, 0.08);
+}
+
+.callout[data-callout="important"],
+.callout[data-subtype="important"],
+.callout[data-callout="important" i],
+.callout[data-subtype="important" i] {
+	--callout-accent: #8250df;
+	border-left-color: #8250df;
+	background: rgba(130, 80, 223, 0.08);
+}
+
+.callout[data-callout="warning"],
+.callout[data-subtype="warning"],
+.callout[data-callout="warning" i],
+.callout[data-subtype="warning" i] {
+	--callout-accent: #bc4c00;
+	border-left-color: #bc4c00;
+	background: rgba(188, 76, 0, 0.08);
+}
+
+.callout[data-callout="caution"],
+.callout[data-callout="danger"],
+.callout[data-callout="error"],
+.callout[data-callout="bug"],
+.callout[data-callout="fail"],
+.callout[data-subtype="caution"],
+.callout[data-subtype="danger"],
+.callout[data-subtype="error"],
+.callout[data-subtype="bug"],
+.callout[data-subtype="fail"],
+.callout[data-callout="caution" i],
+.callout[data-callout="danger" i],
+.callout[data-callout="error" i],
+.callout[data-callout="bug" i],
+.callout[data-callout="fail" i],
+.callout[data-subtype="caution" i],
+.callout[data-subtype="danger" i],
+.callout[data-subtype="error" i],
+.callout[data-subtype="bug" i],
+.callout[data-subtype="fail" i] {
+	--callout-accent: #cf222e;
+	border-left-color: #cf222e;
+	background: rgba(207, 34, 46, 0.08);
+}
+
+.callout[data-callout="question"],
+.callout[data-callout="help"],
+.callout[data-callout="faq"],
+.callout[data-subtype="question"],
+.callout[data-subtype="help"],
+.callout[data-subtype="faq"],
+.callout[data-callout="question" i],
+.callout[data-callout="help" i],
+.callout[data-callout="faq" i],
+.callout[data-subtype="question" i],
+.callout[data-subtype="help" i],
+.callout[data-subtype="faq" i] {
+	--callout-accent: #9a6700;
+	border-left-color: #9a6700;
+	background: rgba(154, 103, 0, 0.08);
+}
+
+.callout .callout-title,
+.callout .callout-info {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 14px 0;
+	margin-bottom: 10px;
+	color: var(--callout-accent);
+}
+
+.callout .callout-title-icon,
+.callout .callout-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+	color: var(--callout-accent);
+}
+
+.callout .callout-title-icon svg {
+	width: 16px;
+	height: 16px;
+}
+
+.callout .callout-title-inner,
+.callout .callout-info > .callout-title {
+	font-weight: 700;
+	font-size: 0.95em;
+	line-height: 1.35;
+	color: var(--callout-accent);
+}
+
+.callout .callout-content {
+	padding: 6px 14px 12px;
+	color: #333333;
+}
+
+.callout .callout-content > :first-child {
+	margin-top: 0;
+}
+
+.callout .callout-content > :last-child {
+	margin-bottom: 0;
+}
+
+.obsidian-wikilink {
+	color: #7c3aed;
+	text-decoration: underline;
+}
+
+.obsidian-wikilink-embed {
+	display: inline-block;
+	padding: 2px 8px;
+	border: 1px dashed #d0d7de;
+	border-radius: 4px;
+	color: #7c3aed;
+}
+
+.obsidian-tag {
+	color: #7c3aed;
+	background: rgba(124, 58, 237, 0.12);
+	border-radius: 4px;
+	padding: 0 4px;
+}
+
+mark {
+	background: rgba(154, 103, 0, 0.35);
+	color: inherit;
+	padding: 0 2px;
+	border-radius: 2px;
+}
+
+[data-type="yaml-front-matter"] {
+	margin: 0 0 16px;
+}
+
+.vditor-properties {
+	border: 1px solid #d0d7de;
+	border-radius: 8px;
+	background: #f6f8fa;
+	overflow: hidden;
+}
+
+.vditor-properties__heading {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	border-bottom: 1px solid #d0d7de;
+	background: #f3f4f6;
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: #6b7280;
+}
+
+.vditor-properties__heading-icon::before {
+	content: "☰";
+	opacity: 0.75;
+}
+
+.vditor-properties__table {
+	display: flex;
+	flex-direction: column;
+}
+
+.vditor-properties__row {
+	display: grid;
+	grid-template-columns: minmax(120px, 34%) 1fr;
+	gap: 8px 12px;
+	align-items: start;
+	padding: 8px 12px;
+	border-top: 1px solid rgba(208, 215, 222, 0.45);
+}
+
+.vditor-properties__row:first-child {
+	border-top: none;
+}
+
+.vditor-properties__key {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	color: #6b7280;
+	font-size: 0.85rem;
+}
+
+.vditor-properties__key-icon {
+	flex-shrink: 0;
+	width: 14px;
+	height: 14px;
+	opacity: 0.72;
+	text-align: center;
+}
+
+.vditor-properties__key-icon[data-icon="tag"]::before { content: "#"; }
+.vditor-properties__key-icon[data-icon="alias"]::before { content: "⛓"; }
+.vditor-properties__key-icon[data-icon="date"]::before { content: "📅"; }
+.vditor-properties__key-icon[data-icon="toggle"]::before { content: "◉"; }
+.vditor-properties__key-icon[data-icon="number"]::before { content: "#"; }
+.vditor-properties__key-icon[data-icon="list"]::before { content: "≡"; }
+.vditor-properties__key-icon[data-icon="text"]::before { content: "T"; }
+
+.vditor-properties__key-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.vditor-properties__value {
+	min-width: 0;
+	font-size: 0.92rem;
+	color: #333333;
+	word-break: break-word;
+}
+
+.vditor-properties__value--tags,
+.vditor-properties__value--aliases {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.vditor-properties__value--aliases {
+	gap: 6px;
+}
+
+.vditor-properties__list {
+	margin: 0;
+	padding-left: 1.1rem;
+}
+
+.vditor-properties__checkbox {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	margin-right: 6px;
+	border: 1px solid #d0d7de;
+	border-radius: 3px;
+	vertical-align: -2px;
+	background: #ffffff;
+}
+
+.vditor-properties__checkbox[is-checked="true"] {
+	background: #7c3aed;
+	border-color: #7c3aed;
+	box-shadow: inset 0 0 0 2px #ffffff;
+}
+
+.vditor-properties__empty {
+	opacity: 0.45;
+}
+
+</style>
+
+<style>
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+.table-of-contents li{
+	list-style-type: initial;
+}
+
+</style>
+
+<style>
+@font-face{font-display:block;font-family:KaTeX_AMS;font-style:normal;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_AMS-Regular.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_AMS-Regular.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_AMS-Regular.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Caligraphic;font-style:normal;font-weight:700;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Caligraphic-Bold.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Caligraphic-Bold.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Caligraphic-Bold.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Caligraphic;font-style:normal;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Caligraphic-Regular.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Caligraphic-Regular.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Caligraphic-Regular.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Fraktur;font-style:normal;font-weight:700;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Fraktur-Bold.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Fraktur-Bold.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Fraktur-Bold.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Fraktur;font-style:normal;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Fraktur-Regular.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Fraktur-Regular.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Fraktur-Regular.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Main;font-style:normal;font-weight:700;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Main-Bold.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Main-Bold.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Main-Bold.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Main;font-style:italic;font-weight:700;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Main-BoldItalic.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Main-BoldItalic.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Main-BoldItalic.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Main;font-style:italic;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Main-Italic.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Main-Italic.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Main-Italic.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Main;font-style:normal;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Main-Regular.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Main-Regular.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Main-Regular.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Math;font-style:italic;font-weight:700;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Math-BoldItalic.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Math-BoldItalic.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Math-BoldItalic.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Math;font-style:italic;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Math-Italic.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Math-Italic.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Math-Italic.ttf") format("truetype")}@font-face{font-display:block;font-family:"KaTeX_SansSerif";font-style:normal;font-weight:700;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_SansSerif-Bold.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_SansSerif-Bold.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_SansSerif-Bold.ttf") format("truetype")}@font-face{font-display:block;font-family:"KaTeX_SansSerif";font-style:italic;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_SansSerif-Italic.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_SansSerif-Italic.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_SansSerif-Italic.ttf") format("truetype")}@font-face{font-display:block;font-family:"KaTeX_SansSerif";font-style:normal;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_SansSerif-Regular.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_SansSerif-Regular.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_SansSerif-Regular.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Script;font-style:normal;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Script-Regular.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Script-Regular.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Script-Regular.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Size1;font-style:normal;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Size1-Regular.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Size1-Regular.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Size1-Regular.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Size2;font-style:normal;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Size2-Regular.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Size2-Regular.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Size2-Regular.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Size3;font-style:normal;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Size3-Regular.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Size3-Regular.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Size3-Regular.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Size4;font-style:normal;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Size4-Regular.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Size4-Regular.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Size4-Regular.ttf") format("truetype")}@font-face{font-display:block;font-family:KaTeX_Typewriter;font-style:normal;font-weight:400;src:url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Typewriter-Regular.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Typewriter-Regular.woff") format("woff"),url("https://cdn.jsdelivr.net/npm/katex@0.16.2/dist/fonts/KaTeX_Typewriter-Regular.ttf") format("truetype")}.katex{font:normal 1.21em KaTeX_Main,Times New Roman,serif;line-height:1.2;position:relative;text-indent:0;text-rendering:auto}.katex *{-ms-high-contrast-adjust:none!important;border-color:currentColor}.katex .katex-version:after{content:"0.16.47"}.katex .katex-mathml{border:0;-webkit-clip-path:inset(50%);clip-path:inset(50%);height:1px;overflow:hidden;padding:0;position:absolute;width:1px}.katex .katex-html>.newline{display:block}.katex .base{position:relative;white-space:nowrap;width:-webkit-min-content;width:-moz-min-content;width:min-content}.katex .base,.katex .strut{display:inline-block}.katex .textbf{font-weight:700}.katex .textit{font-style:italic}.katex .textrm{font-family:KaTeX_Main}.katex .textsf{font-family:KaTeX_SansSerif}.katex .texttt{font-family:KaTeX_Typewriter}.katex .mathnormal{font-family:KaTeX_Math;font-style:italic}.katex .mathit{font-family:KaTeX_Main;font-style:italic}.katex .mathrm{font-style:normal}.katex .mathbf{font-family:KaTeX_Main;font-weight:700}.katex .boldsymbol{font-family:KaTeX_Math;font-style:italic;font-weight:700}.katex .amsrm,.katex .mathbb,.katex .textbb{font-family:KaTeX_AMS}.katex .mathcal{font-family:KaTeX_Caligraphic}.katex .mathfrak,.katex .textfrak{font-family:KaTeX_Fraktur}.katex .mathboldfrak,.katex .textboldfrak{font-family:KaTeX_Fraktur;font-weight:700}.katex .mathtt{font-family:KaTeX_Typewriter}.katex .mathscr,.katex .textscr{font-family:KaTeX_Script}.katex .mathsf,.katex .textsf{font-family:KaTeX_SansSerif}.katex .mathboldsf,.katex .textboldsf{font-family:KaTeX_SansSerif;font-weight:700}.katex .mathitsf,.katex .mathsfit,.katex .textitsf{font-family:KaTeX_SansSerif;font-style:italic}.katex .mainrm{font-family:KaTeX_Main;font-style:normal}.katex .vlist-t{border-collapse:collapse;display:inline-table;table-layout:fixed}.katex .vlist-r{display:table-row}.katex .vlist{display:table-cell;position:relative;vertical-align:bottom}.katex .vlist>span{display:block;height:0;position:relative}.katex .vlist>span>span{display:inline-block}.katex .vlist>span>.pstrut{overflow:hidden;width:0}.katex .vlist-t2{margin-right:-2px}.katex .vlist-s{display:table-cell;font-size:1px;min-width:2px;vertical-align:bottom;width:2px}.katex .vbox{align-items:baseline;display:inline-flex;flex-direction:column}.katex .hbox{width:100%}.katex .hbox,.katex .thinbox{display:inline-flex;flex-direction:row}.katex .thinbox{max-width:0;width:0}.katex .msupsub{text-align:left}.katex .mfrac>span>span{text-align:center}.katex .mfrac .frac-line{border-bottom-style:solid;display:inline-block;width:100%}.katex .hdashline,.katex .hline,.katex .mfrac .frac-line,.katex .overline .overline-line,.katex .rule,.katex .underline .underline-line{min-height:1px}.katex .mspace{display:inline-block}.katex .smash{display:inline;line-height:0}.katex .clap,.katex .llap,.katex .rlap{position:relative;width:0}.katex .clap>.inner,.katex .llap>.inner,.katex .rlap>.inner{position:absolute}.katex .clap>.fix,.katex .llap>.fix,.katex .rlap>.fix{display:inline-block}.katex .llap>.inner{right:0}.katex .clap>.inner,.katex .rlap>.inner{left:0}.katex .clap>.inner>span{margin-left:-50%;margin-right:50%}.katex .rule{border:0 solid;display:inline-block;position:relative}.katex .hline,.katex .overline .overline-line,.katex .underline .underline-line{border-bottom-style:solid;display:inline-block;width:100%}.katex .hdashline{border-bottom-style:dashed;display:inline-block;width:100%}.katex .sqrt>.root{margin-left:.2777777778em;margin-right:-.5555555556em}.katex .fontsize-ensurer.reset-size1.size1,.katex .sizing.reset-size1.size1{font-size:1em}.katex .fontsize-ensurer.reset-size1.size2,.katex .sizing.reset-size1.size2{font-size:1.2em}.katex .fontsize-ensurer.reset-size1.size3,.katex .sizing.reset-size1.size3{font-size:1.4em}.katex .fontsize-ensurer.reset-size1.size4,.katex .sizing.reset-size1.size4{font-size:1.6em}.katex .fontsize-ensurer.reset-size1.size5,.katex .sizing.reset-size1.size5{font-size:1.8em}.katex .fontsize-ensurer.reset-size1.size6,.katex .sizing.reset-size1.size6{font-size:2em}.katex .fontsize-ensurer.reset-size1.size7,.katex .sizing.reset-size1.size7{font-size:2.4em}.katex .fontsize-ensurer.reset-size1.size8,.katex .sizing.reset-size1.size8{font-size:2.88em}.katex .fontsize-ensurer.reset-size1.size9,.katex .sizing.reset-size1.size9{font-size:3.456em}.katex .fontsize-ensurer.reset-size1.size10,.katex .sizing.reset-size1.size10{font-size:4.148em}.katex .fontsize-ensurer.reset-size1.size11,.katex .sizing.reset-size1.size11{font-size:4.976em}.katex .fontsize-ensurer.reset-size2.size1,.katex .sizing.reset-size2.size1{font-size:.8333333333em}.katex .fontsize-ensurer.reset-size2.size2,.katex .sizing.reset-size2.size2{font-size:1em}.katex .fontsize-ensurer.reset-size2.size3,.katex .sizing.reset-size2.size3{font-size:1.1666666667em}.katex .fontsize-ensurer.reset-size2.size4,.katex .sizing.reset-size2.size4{font-size:1.3333333333em}.katex .fontsize-ensurer.reset-size2.size5,.katex .sizing.reset-size2.size5{font-size:1.5em}.katex .fontsize-ensurer.reset-size2.size6,.katex .sizing.reset-size2.size6{font-size:1.6666666667em}.katex .fontsize-ensurer.reset-size2.size7,.katex .sizing.reset-size2.size7{font-size:2em}.katex .fontsize-ensurer.reset-size2.size8,.katex .sizing.reset-size2.size8{font-size:2.4em}.katex .fontsize-ensurer.reset-size2.size9,.katex .sizing.reset-size2.size9{font-size:2.88em}.katex .fontsize-ensurer.reset-size2.size10,.katex .sizing.reset-size2.size10{font-size:3.4566666667em}.katex .fontsize-ensurer.reset-size2.size11,.katex .sizing.reset-size2.size11{font-size:4.1466666667em}.katex .fontsize-ensurer.reset-size3.size1,.katex .sizing.reset-size3.size1{font-size:.7142857143em}.katex .fontsize-ensurer.reset-size3.size2,.katex .sizing.reset-size3.size2{font-size:.8571428571em}.katex .fontsize-ensurer.reset-size3.size3,.katex .sizing.reset-size3.size3{font-size:1em}.katex .fontsize-ensurer.reset-size3.size4,.katex .sizing.reset-size3.size4{font-size:1.1428571429em}.katex .fontsize-ensurer.reset-size3.size5,.katex .sizing.reset-size3.size5{font-size:1.2857142857em}.katex .fontsize-ensurer.reset-size3.size6,.katex .sizing.reset-size3.size6{font-size:1.4285714286em}.katex .fontsize-ensurer.reset-size3.size7,.katex .sizing.reset-size3.size7{font-size:1.7142857143em}.katex .fontsize-ensurer.reset-size3.size8,.katex .sizing.reset-size3.size8{font-size:2.0571428571em}.katex .fontsize-ensurer.reset-size3.size9,.katex .sizing.reset-size3.size9{font-size:2.4685714286em}.katex .fontsize-ensurer.reset-size3.size10,.katex .sizing.reset-size3.size10{font-size:2.9628571429em}.katex .fontsize-ensurer.reset-size3.size11,.katex .sizing.reset-size3.size11{font-size:3.5542857143em}.katex .fontsize-ensurer.reset-size4.size1,.katex .sizing.reset-size4.size1{font-size:.625em}.katex .fontsize-ensurer.reset-size4.size2,.katex .sizing.reset-size4.size2{font-size:.75em}.katex .fontsize-ensurer.reset-size4.size3,.katex .sizing.reset-size4.size3{font-size:.875em}.katex .fontsize-ensurer.reset-size4.size4,.katex .sizing.reset-size4.size4{font-size:1em}.katex .fontsize-ensurer.reset-size4.size5,.katex .sizing.reset-size4.size5{font-size:1.125em}.katex .fontsize-ensurer.reset-size4.size6,.katex .sizing.reset-size4.size6{font-size:1.25em}.katex .fontsize-ensurer.reset-size4.size7,.katex .sizing.reset-size4.size7{font-size:1.5em}.katex .fontsize-ensurer.reset-size4.size8,.katex .sizing.reset-size4.size8{font-size:1.8em}.katex .fontsize-ensurer.reset-size4.size9,.katex .sizing.reset-size4.size9{font-size:2.16em}.katex .fontsize-ensurer.reset-size4.size10,.katex .sizing.reset-size4.size10{font-size:2.5925em}.katex .fontsize-ensurer.reset-size4.size11,.katex .sizing.reset-size4.size11{font-size:3.11em}.katex .fontsize-ensurer.reset-size5.size1,.katex .sizing.reset-size5.size1{font-size:.5555555556em}.katex .fontsize-ensurer.reset-size5.size2,.katex .sizing.reset-size5.size2{font-size:.6666666667em}.katex .fontsize-ensurer.reset-size5.size3,.katex .sizing.reset-size5.size3{font-size:.7777777778em}.katex .fontsize-ensurer.reset-size5.size4,.katex .sizing.reset-size5.size4{font-size:.8888888889em}.katex .fontsize-ensurer.reset-size5.size5,.katex .sizing.reset-size5.size5{font-size:1em}.katex .fontsize-ensurer.reset-size5.size6,.katex .sizing.reset-size5.size6{font-size:1.1111111111em}.katex .fontsize-ensurer.reset-size5.size7,.katex .sizing.reset-size5.size7{font-size:1.3333333333em}.katex .fontsize-ensurer.reset-size5.size8,.katex .sizing.reset-size5.size8{font-size:1.6em}.katex .fontsize-ensurer.reset-size5.size9,.katex .sizing.reset-size5.size9{font-size:1.92em}.katex .fontsize-ensurer.reset-size5.size10,.katex .sizing.reset-size5.size10{font-size:2.3044444444em}.katex .fontsize-ensurer.reset-size5.size11,.katex .sizing.reset-size5.size11{font-size:2.7644444444em}.katex .fontsize-ensurer.reset-size6.size1,.katex .sizing.reset-size6.size1{font-size:.5em}.katex .fontsize-ensurer.reset-size6.size2,.katex .sizing.reset-size6.size2{font-size:.6em}.katex .fontsize-ensurer.reset-size6.size3,.katex .sizing.reset-size6.size3{font-size:.7em}.katex .fontsize-ensurer.reset-size6.size4,.katex .sizing.reset-size6.size4{font-size:.8em}.katex .fontsize-ensurer.reset-size6.size5,.katex .sizing.reset-size6.size5{font-size:.9em}.katex .fontsize-ensurer.reset-size6.size6,.katex .sizing.reset-size6.size6{font-size:1em}.katex .fontsize-ensurer.reset-size6.size7,.katex .sizing.reset-size6.size7{font-size:1.2em}.katex .fontsize-ensurer.reset-size6.size8,.katex .sizing.reset-size6.size8{font-size:1.44em}.katex .fontsize-ensurer.reset-size6.size9,.katex .sizing.reset-size6.size9{font-size:1.728em}.katex .fontsize-ensurer.reset-size6.size10,.katex .sizing.reset-size6.size10{font-size:2.074em}.katex .fontsize-ensurer.reset-size6.size11,.katex .sizing.reset-size6.size11{font-size:2.488em}.katex .fontsize-ensurer.reset-size7.size1,.katex .sizing.reset-size7.size1{font-size:.4166666667em}.katex .fontsize-ensurer.reset-size7.size2,.katex .sizing.reset-size7.size2{font-size:.5em}.katex .fontsize-ensurer.reset-size7.size3,.katex .sizing.reset-size7.size3{font-size:.5833333333em}.katex .fontsize-ensurer.reset-size7.size4,.katex .sizing.reset-size7.size4{font-size:.6666666667em}.katex .fontsize-ensurer.reset-size7.size5,.katex .sizing.reset-size7.size5{font-size:.75em}.katex .fontsize-ensurer.reset-size7.size6,.katex .sizing.reset-size7.size6{font-size:.8333333333em}.katex .fontsize-ensurer.reset-size7.size7,.katex .sizing.reset-size7.size7{font-size:1em}.katex .fontsize-ensurer.reset-size7.size8,.katex .sizing.reset-size7.size8{font-size:1.2em}.katex .fontsize-ensurer.reset-size7.size9,.katex .sizing.reset-size7.size9{font-size:1.44em}.katex .fontsize-ensurer.reset-size7.size10,.katex .sizing.reset-size7.size10{font-size:1.7283333333em}.katex .fontsize-ensurer.reset-size7.size11,.katex .sizing.reset-size7.size11{font-size:2.0733333333em}.katex .fontsize-ensurer.reset-size8.size1,.katex .sizing.reset-size8.size1{font-size:.3472222222em}.katex .fontsize-ensurer.reset-size8.size2,.katex .sizing.reset-size8.size2{font-size:.4166666667em}.katex .fontsize-ensurer.reset-size8.size3,.katex .sizing.reset-size8.size3{font-size:.4861111111em}.katex .fontsize-ensurer.reset-size8.size4,.katex .sizing.reset-size8.size4{font-size:.5555555556em}.katex .fontsize-ensurer.reset-size8.size5,.katex .sizing.reset-size8.size5{font-size:.625em}.katex .fontsize-ensurer.reset-size8.size6,.katex .sizing.reset-size8.size6{font-size:.6944444444em}.katex .fontsize-ensurer.reset-size8.size7,.katex .sizing.reset-size8.size7{font-size:.8333333333em}.katex .fontsize-ensurer.reset-size8.size8,.katex .sizing.reset-size8.size8{font-size:1em}.katex .fontsize-ensurer.reset-size8.size9,.katex .sizing.reset-size8.size9{font-size:1.2em}.katex .fontsize-ensurer.reset-size8.size10,.katex .sizing.reset-size8.size10{font-size:1.4402777778em}.katex .fontsize-ensurer.reset-size8.size11,.katex .sizing.reset-size8.size11{font-size:1.7277777778em}.katex .fontsize-ensurer.reset-size9.size1,.katex .sizing.reset-size9.size1{font-size:.2893518519em}.katex .fontsize-ensurer.reset-size9.size2,.katex .sizing.reset-size9.size2{font-size:.3472222222em}.katex .fontsize-ensurer.reset-size9.size3,.katex .sizing.reset-size9.size3{font-size:.4050925926em}.katex .fontsize-ensurer.reset-size9.size4,.katex .sizing.reset-size9.size4{font-size:.462962963em}.katex .fontsize-ensurer.reset-size9.size5,.katex .sizing.reset-size9.size5{font-size:.5208333333em}.katex .fontsize-ensurer.reset-size9.size6,.katex .sizing.reset-size9.size6{font-size:.5787037037em}.katex .fontsize-ensurer.reset-size9.size7,.katex .sizing.reset-size9.size7{font-size:.6944444444em}.katex .fontsize-ensurer.reset-size9.size8,.katex .sizing.reset-size9.size8{font-size:.8333333333em}.katex .fontsize-ensurer.reset-size9.size9,.katex .sizing.reset-size9.size9{font-size:1em}.katex .fontsize-ensurer.reset-size9.size10,.katex .sizing.reset-size9.size10{font-size:1.2002314815em}.katex .fontsize-ensurer.reset-size9.size11,.katex .sizing.reset-size9.size11{font-size:1.4398148148em}.katex .fontsize-ensurer.reset-size10.size1,.katex .sizing.reset-size10.size1{font-size:.2410800386em}.katex .fontsize-ensurer.reset-size10.size2,.katex .sizing.reset-size10.size2{font-size:.2892960463em}.katex .fontsize-ensurer.reset-size10.size3,.katex .sizing.reset-size10.size3{font-size:.337512054em}.katex .fontsize-ensurer.reset-size10.size4,.katex .sizing.reset-size10.size4{font-size:.3857280617em}.katex .fontsize-ensurer.reset-size10.size5,.katex .sizing.reset-size10.size5{font-size:.4339440694em}.katex .fontsize-ensurer.reset-size10.size6,.katex .sizing.reset-size10.size6{font-size:.4821600771em}.katex .fontsize-ensurer.reset-size10.size7,.katex .sizing.reset-size10.size7{font-size:.5785920926em}.katex .fontsize-ensurer.reset-size10.size8,.katex .sizing.reset-size10.size8{font-size:.6943105111em}.katex .fontsize-ensurer.reset-size10.size9,.katex .sizing.reset-size10.size9{font-size:.8331726133em}.katex .fontsize-ensurer.reset-size10.size10,.katex .sizing.reset-size10.size10{font-size:1em}.katex .fontsize-ensurer.reset-size10.size11,.katex .sizing.reset-size10.size11{font-size:1.1996142719em}.katex .fontsize-ensurer.reset-size11.size1,.katex .sizing.reset-size11.size1{font-size:.2009646302em}.katex .fontsize-ensurer.reset-size11.size2,.katex .sizing.reset-size11.size2{font-size:.2411575563em}.katex .fontsize-ensurer.reset-size11.size3,.katex .sizing.reset-size11.size3{font-size:.2813504823em}.katex .fontsize-ensurer.reset-size11.size4,.katex .sizing.reset-size11.size4{font-size:.3215434084em}.katex .fontsize-ensurer.reset-size11.size5,.katex .sizing.reset-size11.size5{font-size:.3617363344em}.katex .fontsize-ensurer.reset-size11.size6,.katex .sizing.reset-size11.size6{font-size:.4019292605em}.katex .fontsize-ensurer.reset-size11.size7,.katex .sizing.reset-size11.size7{font-size:.4823151125em}.katex .fontsize-ensurer.reset-size11.size8,.katex .sizing.reset-size11.size8{font-size:.578778135em}.katex .fontsize-ensurer.reset-size11.size9,.katex .sizing.reset-size11.size9{font-size:.6945337621em}.katex .fontsize-ensurer.reset-size11.size10,.katex .sizing.reset-size11.size10{font-size:.8336012862em}.katex .fontsize-ensurer.reset-size11.size11,.katex .sizing.reset-size11.size11{font-size:1em}.katex .delimsizing.size1{font-family:KaTeX_Size1}.katex .delimsizing.size2{font-family:KaTeX_Size2}.katex .delimsizing.size3{font-family:KaTeX_Size3}.katex .delimsizing.size4{font-family:KaTeX_Size4}.katex .delimsizing.mult .delim-size1>span{font-family:KaTeX_Size1}.katex .delimsizing.mult .delim-size4>span{font-family:KaTeX_Size4}.katex .nulldelimiter{display:inline-block;width:.12em}.katex .delimcenter,.katex .op-symbol{position:relative}.katex .op-symbol.small-op{font-family:KaTeX_Size1}.katex .op-symbol.large-op{font-family:KaTeX_Size2}.katex .accent>.vlist-t,.katex .op-limits>.vlist-t{text-align:center}.katex .accent .accent-body{position:relative}.katex .accent .accent-body:not(.accent-full){width:0}.katex .overlay{display:block}.katex .mtable .vertical-separator{display:inline-block;min-width:1px}.katex .mtable .arraycolsep{display:inline-block}.katex .mtable .col-align-c>.vlist-t{text-align:center}.katex .mtable .col-align-l>.vlist-t{text-align:left}.katex .mtable .col-align-r>.vlist-t{text-align:right}.katex .svg-align{text-align:left}.katex svg{fill:currentColor;stroke:currentColor;display:block;height:inherit;position:absolute;width:100%}.katex svg path{stroke:none}.katex svg{fill-rule:nonzero;fill-opacity:1;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1}.katex img{border-style:none;max-height:none;max-width:none;min-height:0;min-width:0}.katex .stretchy{display:block;overflow:hidden;position:relative;width:100%}.katex .stretchy:after,.katex .stretchy:before{content:""}.katex .hide-tail{overflow:hidden;position:relative;width:100%}.katex .halfarrow-left{left:0;overflow:hidden;position:absolute;width:50.2%}.katex .halfarrow-right{overflow:hidden;position:absolute;right:0;width:50.2%}.katex .brace-left{left:0;overflow:hidden;position:absolute;width:25.1%}.katex .brace-center{left:25%;overflow:hidden;position:absolute;width:50%}.katex .brace-right{overflow:hidden;position:absolute;right:0;width:25.1%}.katex .x-arrow-pad{padding:0 .5em}.katex .cd-arrow-pad{padding:0 .55556em 0 .27778em}.katex .mover,.katex .munder,.katex .x-arrow{text-align:center}.katex .boxpad{padding:0 .3em}.katex .fbox,.katex .fcolorbox{border:.04em solid;box-sizing:border-box}.katex .cancel-pad{padding:0 .2em}.katex .cancel-lap{margin-left:-.2em;margin-right:-.2em}.katex .sout{border-bottom-style:solid;border-bottom-width:.08em}.katex .angl{border-right:.049em solid;border-top:.049em solid;box-sizing:border-box;margin-right:.03889em}.katex .anglpad{padding:0 .03889em}.katex .eqn-num:before{content:"(" counter(katexEqnNo) ")";counter-increment:katexEqnNo}.katex .mml-eqn-num:before{content:"(" counter(mmlEqnNo) ")";counter-increment:mmlEqnNo}.katex .mtr-glue{width:50%}.katex .cd-vert-arrow{display:inline-block;position:relative}.katex .cd-label-left{display:inline-block;position:absolute;right:calc(50% + .3em);text-align:left}.katex .cd-label-right{display:inline-block;left:calc(50% + .3em);position:absolute;text-align:right}.katex-display{display:block;margin:1em 0;text-align:center}.katex-display>.katex{display:block;text-align:center;white-space:nowrap}.katex-display>.katex>.katex-html{display:block;position:relative}.katex-display>.katex>.katex-html>.tag{position:absolute;right:0}.katex-display.leqno>.katex>.katex-html>.tag{left:0;right:auto}.katex-display.fleqn>.katex{padding-left:2em;text-align:left}body{counter-reset:katexEqnNo mmlEqnNo}
+
+</style>
+<style>
+body {
+    padding-top: 25px;
+}
+</style>
+</head>
+<body>
+    <div class="content-wrapper">
+        <h1 id="k%E1%BA%BF-ho%E1%BA%A1ch-qu%E1%BA%A3n-l%C3%BD-t%C3%A0i-s%E1%BA%A3n-%E2%80%94-m%E1%BB%A9c-1" tabindex="-1">Kế hoạch quản lý tài sản — mức 1</h1>
+<p>Cập nhật: <strong>17/11/2026</strong>. <strong>Đã triển khai giao diện mức 1</strong> cho thiết bị quản lý từng chiếc: <code>/assets</code> có danh mục loại, tìm/lọc, hồ sơ, chọn người/vị trí và lịch sử trên nền hai bảng cùng quyền ASSETS. Tài khoản <code>admin</code> đã được cấp ASSETS MANAGE theo yêu cầu. Đã nhập 89 dòng từ nguồn Excel, giữ nguyên hai hồ sơ tạo thủ công: tổng 91 hồ sơ/11 loại; ba dòng chờ đối chiếu trùng. Gán/chuyển/bỏ gán từ 3D dùng chung cho phòng đã liên kết, đã kiểm chứng HCNS và KHĐT; <a href="OFFICE-3D-CHECKLIST.md#ph%C3%B2ng-chi-ti%E1%BA%BFt-d%C3%B9ng-chung-v%C3%A0-b%E1%BB%91-tr%C3%AD-kh%C4%91t">phạm vi mở rộng phòng</a>. Thiết kế nhiều bảng cũ đã gỡ ngày 31/10 không được khôi phục; 3D nhân sự hoạt động độc lập.</p>
+<p>Rule nghiệp vụ: <a href="../../.agents/rules/ASSET-MANAGEMENT-RULES.md">ASSET-MANAGEMENT-RULES</a>.</p>
+<p>Đọc nhanh: <a href="#a-t%E1%BB%95ng-quan-%C4%91%E1%BB%83-duy%E1%BB%87t">A. Tổng quan để duyệt</a> · <a href="#b-chi-ti%E1%BA%BFt-tri%E1%BB%83n-khai">B. Chi tiết triển khai</a> · <a href="#checklist-tri%E1%BB%83n-khai">Checklist</a>.</p>
+<p><strong>Vị trí bổ sung trên 3D:</strong> bản thử <a href="OFFICE-3D-CHECKLIST.md#th%E1%BB%AD-nghi%E1%BB%87m-th%C3%AAm-v%E1%BB%8B-tr%C3%AD-tr%C3%AAn-m%C3%B4-h%C3%ACnh">thêm bàn/điểm thiết bị</a> tạo vị trí chung để gán tài sản qua action hiện có. Không tự tạo thiết bị khi thêm hình; không đổi <code>nguoi_su_dung_id</code>, phòng quản lý hoặc quyền ASSETS.</p>
+<h2 id="a.-t%E1%BB%95ng-quan-%C4%91%E1%BB%83-duy%E1%BB%87t" tabindex="-1">A. Tổng quan để duyệt</h2>
+<h3 id="ph%E1%BA%A1m-vi-hi%E1%BB%87n-t%E1%BA%A1i" tabindex="-1">Phạm vi hiện tại</h3>
+<ul>
+<li>Mỗi thiết bị có một hồ sơ, mã cố định, loại, tình trạng, người sử dụng và vị trí khi đã xác định. Số lượng tính từ hồ sơ, không có ô số lượng cho một thiết bị.</li>
+<li>Menu Tài sản &amp; vật tư → card Tài sản → bảng thiết bị với lọc loại gọn; nhóm người/vị trí vẫn là danh sách → nhấp giá trị người/vị trí/tình trạng để sửa và tự lưu ngay trên dòng hoặc mở hồ sơ bên phải (toàn chiều rộng trên điện thoại). Tìm kiếm giữ phạm vi lọc hiện tại, có nút tìm trong tất cả khi đang chọn loại; Thêm từ loại điền sẵn loại. Quay lại giữ bộ lọc, trang và cuộn trong phiên trang. Xem <a href="#b%E1%BA%A3ng-thi%E1%BA%BFt-b%E1%BB%8B-v%C3%A0-s%E1%BB%ADa-tr%E1%BB%B1c-ti%E1%BA%BFp--%C4%91%C3%A3-ki%E1%BB%83m-ch%E1%BB%A9ng-12112026">bảng và sửa trực tiếp</a>.</li>
+<li>Hồ sơ có link riêng và card <strong>Tem QR</strong> thu gọn: quét mở đúng tài sản, tải PNG/in một tem/sao chép link; giữ đích qua đăng nhập và đổi mật khẩu. Xem <a href="#li%C3%AAn-k%E1%BA%BFt-h%E1%BB%93-s%C6%A1-v%C3%A0-tem-qr--16112026">liên kết hồ sơ và tem QR</a>.</li>
+<li>Panel cho sửa trực tiếp từng giá trị theo quyền, mã tự cấp chỉ đọc. Mục <strong>Mua sắm &amp; khấu hao</strong> tùy chọn/thu gọn và thanh phần còn lại trong bảng theo <a href="#s%E1%BB%ADa-tr%E1%BB%B1c-ti%E1%BA%BFp-trong-panel-v%C3%A0-th%C3%B4ng-tin-kh%E1%BA%A5u-hao--16112026">thiết kế tại chỗ</a>.</li>
+<li>Mức 1 chỉ cập nhật hiện trạng: giao cho người khác, đổi vị trí, ghi nhận hỏng/đang sửa/ngừng sử dụng và ghi chú. Chưa có phiếu bàn giao, hồ sơ sửa chữa hay workflow duyệt riêng.</li>
+<li><strong>Ngoài phạm vi:</strong> vật tư tiêu hao và nhập–xuất–tồn; license phần mềm; bảo trì định kỳ; hạch toán và khấu hao kế toán; mã vạch và màn hình quét riêng; import/export hàng loạt. QR liên kết hồ sơ đã được duyệt triển khai ở mục dưới.</li>
+<li>Bản đầu phục vụ danh mục thiết bị IT được nhập vào ERP. Quyền có phạm vi công ty; chưa có giới hạn dữ liệu theo phòng. Phòng quản lý trên hồ sơ không phải scope phân quyền; IT không mặc định sở hữu hoặc quản lý mọi tài sản của công ty.</li>
+</ul>
+<h3 id="%C4%91i%E1%BB%81u-ch%E1%BB%89nh-giao-di%E1%BB%87n-v%C3%A0-h%C6%B0%E1%BB%9Bng-m%E1%BB%9F-r%E1%BB%99ng-%C4%91ang-xem-x%C3%A9t" tabindex="-1">Điều chỉnh giao diện và hướng mở rộng đang xem xét</h3>
+<p>Hướng bố cục mới ngày 17/11: một điểm vào <strong>Tài sản &amp; vật tư</strong>, ba card hạng mục; bên trong Tài sản thay card loại lớn bằng bộ lọc loại nhỏ giống tab. <strong>Đã triển khai và kiểm chứng kỹ thuật; chờ dùng thử.</strong> Sơ đồ, thứ tự áp dụng và tiêu chí tại <a href="INFORMATION-ARCHITECTURE-CHECKLIST.md#3-%C3%A1p-d%E1%BB%A5ng-%C4%91%E1%BA%A7u-ti%C3%AAn-cho-t%C3%A0i-s%E1%BA%A3n--v%E1%BA%ADt-t%C6%B0">plan kiến trúc thông tin</a>; các mốc card loại phía dưới là lịch sử trước điều chỉnh này.</p>
+<table>
+<thead>
+<tr>
+<th>Nội dung</th>
+<th>Hướng xử lý và trạng thái</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Icon loại tài sản</td>
+<td>Người dùng yêu cầu đặt ở khu vực phụ. Dự kiến phần <strong>Hiển thị</strong> thu gọn trong tạo/sửa <strong>Loại tài sản</strong>, tùy chọn và có icon mặc định; không thêm bước vào form tạo từng thiết bị. Đã ghi nhận, chưa triển khai trường lưu/chọn icon.</td>
+</tr>
+<tr>
+<td>Ô chọn vị trí</td>
+<td>Giữ nguyên bộ chọn hiện tại theo yêu cầu; chưa triển khai phương án duyệt theo tầng/phòng đã đề xuất.</td>
+</tr>
+<tr>
+<td>Nhiều phòng cùng quản lý tài sản</td>
+<td>Đề xuất dùng chung danh mục/hồ sơ, phân biệt phòng chịu trách nhiệm, người sử dụng, nơi đặt và tài khoản ghi nhận. Nếu mỗi phòng tự quản lý riêng, bổ sung quyền xem/quản lý <strong>kèm phạm vi phòng được giao hoặc toàn công ty</strong>; hiện chưa triển khai phạm vi này. Không suy quyền từ người tạo, tên loại, phòng của người sử dụng hoặc việc IT hỗ trợ thiết bị.</td>
+</tr>
+<tr>
+<td>Vật tư tiêu hao và phụ kiện</td>
+<td>Đã lập <a href="INVENTORY-MANAGEMENT-CHECKLIST.md">plan riêng</a> ngày 16/11 theo yêu cầu: ba hạng mục giao diện, giữ tài sản từng chiếc; thêm ba bảng số lượng, tên mặt hàng <code>mat_hang_vat_tu</code>. Đã triển khai 17/11, trang tổng quan chung theo quyền, ba card hạng mục và breadcrumb; giữ nguyên thiết bị và tự lưu. Chưa nhập tồn vật tư; bản quyền làm sau. Plan vật tư sở hữu thiết kế DB/nhập–cấp–thu hồi và quyền INVENTORY.</td>
+</tr>
+</tbody>
+</table>
+<p>Phạm vi phòng phải kiểm tra trên server cho danh sách, số đếm, chi tiết, cập nhật, lịch sử và gán từ vị trí/3D; bộ lọc giao diện không thay phân quyền. Phòng quản lý chưa xác định cần được phân loại trước khi giao phạm vi cho phòng; không tự gán toàn bộ thiết bị hiện có về IT/HCNS hoặc theo người tạo. Thiết kế cấp phạm vi dùng <a href="ROLE-MANAGEMENT-CHECKLIST.md">plan phân quyền</a>, không tự cấp thêm grant trong lượt phân tích.</p>
+<h3 id="tr%E1%BA%A1ng-th%C3%A1i-tri%E1%BB%83n-khai-%E2%80%94-12%2F11%2F2026" tabindex="-1">Trạng thái triển khai — 12/11/2026</h3>
+<p>Người phụ trách vận hành được chọn bằng tài khoản và quyền tại <code>/roles</code>. Người sử dụng từng thiết bị chọn trong form tài sản, có thể là nhân sự không có tài khoản. Hai vai trò này độc lập; không thêm cột người giữ/đầu mối vào DB. Đã cấp ASSETS MANAGE cho <code>admin</code> theo yêu cầu, qua vai trò ADMIN hiện chỉ gán cho tài khoản này. Người phụ trách nghiệp vụ cụ thể vẫn chờ lựa chọn; nguồn Excel đã nhập phần độc lập theo checklist bên dưới.</p>
+<p>Đã thực hiện theo yêu cầu: thử migration trên DB khôi phục riêng và DB cài mới, sao lưu rồi áp dụng local; dữ liệu 15 bảng cũ và grant hiện có giữ nguyên. <strong>Giao diện <code>/assets</code> đã hoàn thành và kiểm thử trên DB riêng</strong>; nguồn Excel được nhập sau thử nghiệm chống trùng và audit. Bước tiếp theo là đối chiếu ba dòng còn giữ lại, xác minh người/vị trí/tình trạng và chọn người phụ trách. Không cần chờ 3D hoặc workflow bàn giao.</p>
+<table>
+<thead>
+<tr>
+<th>Điểm cần xử lý</th>
+<th>Đánh giá và thời điểm</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chức năng mới</td>
+<td>Đã có <code>/assets</code>, danh mục loại, tạo/sửa thiết bị, bộ chọn người/phòng/vị trí, lịch sử, tìm/lọc và phân trang. Số nhóm tính toàn bộ hồ sơ cùng công ty; loại chọn bằng bộ lọc gọn, thiết bị dùng bảng có sửa tại dòng. Menu và dữ liệu kiểm tra ASSETS.</td>
+</tr>
+<tr>
+<td>Quy tắc lưu</td>
+<td>Đã có khóa chung, kiểm tra phiên bản, cấp mã, ràng buộc Cá nhân/người sử dụng, giữ liên kết cũ khi người nghỉ hoặc loại ngừng dùng, audit cùng giao dịch.</td>
+</tr>
+<tr>
+<td>Liên kết với chức năng đang có</td>
+<td>Đã chặn xóa/ngừng dùng vị trí còn tài sản, chặn xóa phòng quản lý còn tài sản; ASSETS MANAGE lấy danh mục chọn tối thiểu mà không có quyền sửa vị trí hoặc đọc toàn bộ HR.</td>
+</tr>
+<tr>
+<td>Điều kiện trước khi dùng thử</td>
+<td><code>admin</code> đã có quyền quản lý; chọn người phụ trách nghiệp vụ/tài khoản bổ sung qua <code>/roles</code> và xác minh thông tin còn thiếu của hồ sơ đã nhập. Phạm vi quyền mức 1 là toàn công ty; nếu cần giới hạn theo phòng phải điều chỉnh thiết kế trước khi cấp quyền pilot.</td>
+</tr>
+</tbody>
+</table>
+<p>Tài liệu đánh giá 3D ngày 21/10 và phân tích nguồn ngày 27/10 chỉ dùng để tra bối cảnh/nguồn: các mô tả schema nhiều bảng, seed và renderer trong đó đã cũ. Plan này, plan vị trí và plan 3D hiện hành quản lý thiết kế triển khai.</p>
+<p>Đã bổ sung bảng duyệt công việc AI để đổi khấu hao mặc định tất cả loại, giữ tài sản hiện hữu; phạm vi, DB và kiểm thử do <a href="AI-ASSISTANT-CHECKLIST.md#b%E1%BA%A3ng-c%C3%B4ng-vi%E1%BB%87c-ai-v%C3%A0-duy%E1%BB%87t-th%E1%BB%B1c-hi%E1%BB%87n--16112026">plan AI</a> quản lý.</p>
+<h2 id="b.-chi-ti%E1%BA%BFt-tri%E1%BB%83n-khai" tabindex="-1">B. Chi tiết triển khai</h2>
+<h3 id="t%E1%BB%B1-l%C6%B0u-ch%E1%BB%89nh-s%E1%BB%ADa-t%C3%A0i-s%E1%BA%A3n-%E2%80%94-16%2F11%2F2026" tabindex="-1">Tự lưu chỉnh sửa tài sản — 16/11/2026</h3>
+<p><strong>Đã triển khai và kiểm chứng:</strong> thay Lưu thủ công bằng tự lưu cho bảng, panel (dùng chung 3D), form sửa hồ sơ và sửa loại. Tạo mới hoặc bản nháp AI cần nút xác nhận tạo/lưu; không tự tạo bản ghi từ form nhập dở. Quy tắc mới thay hành vi Lưu/Hủy được kiểm chứng ở các mốc cũ bên dưới.</p>
+<table>
+<thead>
+<tr>
+<th>Tương tác</th>
+<th>Hành vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chọn danh mục/enum/checkbox</td>
+<td>Tự lưu ngay sau khi chọn; Cá nhân phải chọn đủ người, không lưu trạng thái trung gian sai ràng buộc</td>
+</tr>
+<tr>
+<td>Chữ/số/ngày</td>
+<td>Rời ô, bấm ngoài hoặc Enter để lưu; ghi chú nhiều dòng dùng Ctrl/Cmd+Enter hoặc rời ô</td>
+</tr>
+<tr>
+<td>Esc / Bỏ thay đổi</td>
+<td>Bỏ phần chưa lưu; không hoàn tác lần đã lưu thành công</td>
+</tr>
+<tr>
+<td>Lưu thành công</td>
+<td>Cập nhật phiên bản từ server, danh sách/hồ sơ/lịch sử; báo Đã lưu, không gửi lại dữ liệu không đổi</td>
+</tr>
+<tr>
+<td>Lỗi hoặc xung đột</td>
+<td>Giữ nội dung, hiện lỗi và Thử lưu lại; không tự ghi đè phiên bản mới, không rời hồ sơ khi còn dữ liệu chưa lưu</td>
+</tr>
+</tbody>
+</table>
+<p>Không đổi DB/quyền. Action lưu loại trả thêm bản ghi vừa lưu để dùng đúng phiên bản cho lần tự lưu tiếp theo. Request được chặn trùng, form khóa khi đang gửi; vẫn dùng schema và audit cùng transaction.</p>
+<ul>
+<li><input type="checkbox" id="checkbox0" checked="true"><label for="checkbox0">Hoàn thiện hook tự lưu dùng chung cho bảng, panel/3D, form sửa hồ sơ và sửa loại; action loại trả bản ghi/phiên bản mới. Tạo mới và bản nháp AI giữ xác nhận tường minh; không đổi schema hoặc quyền.</label></li>
+<li><input type="checkbox" id="checkbox1" checked="true"><label for="checkbox1">30 ca E2E tài sản đã đạt trên production/DB riêng: 7 sửa dòng, 5 panel/khấu hao/loại, 4 nhóm, 5 QR, 3 bố cục và 6 hồ sơ/quyền. Kiểm tra chọn/blur/Enter/Esc, đủ người trước khi ghi, lỗi tải/mạng/phiên bản, giữ bản nháp, chống gửi trùng, audit/no-op, VIEW và khác công ty, cập nhật liên tiếp đúng phiên bản, checkbox/mức loại không hồi tố, phần lỗi thu gọn tự mở, mobile sáng/tối và tạo mới xác nhận rõ ràng. Lượt hồi quy cuối 28 ca đạt; sau sửa vùng lỗi thu gọn đã chạy lại đủ 5 panel + 6 hồ sơ đạt, không còn ca lỗi. Đã sửa fixture đếm nhầm popover thành dialog sửa và thao tác Tab chưa rời khỏi các phần bên trong ô ngày.</label></li>
+<li><input type="checkbox" id="checkbox2" checked="true"><label for="checkbox2">1 E2E mở hồ sơ từ mesh 3D đạt: Enter tự lưu, tên/audit cập nhật, giữ Canvas/URL/camera. TypeScript/lint/build Webpack và kiểm tra diff đạt; build chạy lại sau nhắc bảo mật Next.js hiện có, không đổi dependency. Đã xem ảnh desktop/mobile/tối; kiểm tra cổng 4000 chỉ mở/đóng lựa chọn, không gửi thay đổi.</label></li>
+<li><input type="checkbox" id="checkbox3" checked="true"><label for="checkbox3">Đã dừng server và xóa DB thử; tài sản, loại và audit vận hành không đổi. Đối chiếu 20 bảng từ snapshot: 19 không đổi, </label><code>tai_khoan</code> có cập nhật đồng thời ngoài tác vụ và được giữ nguyên. DB thử đã áp migration AI có sẵn để khớp Prisma Client đang phát triển song song; không áp migration/đổi quyền trên DB vận hành trong tác vụ tự lưu. Log, ảnh, backup và đối chiếu tại <code>outputs/assets-autosave/</code>; 77 liên kết/anchor tài liệu hợp lệ.</li>
+</ul>
+<h3 id="s%E1%BB%ADa-tr%E1%BB%B1c-ti%E1%BA%BFp-trong-panel-v%C3%A0-th%C3%B4ng-tin-kh%E1%BA%A5u-hao-%E2%80%94-16%2F11%2F2026" tabindex="-1">Sửa trực tiếp trong panel và thông tin khấu hao — 16/11/2026</h3>
+<p>Panel <code>AssetDetail</code> được tái sử dụng khi chọn Sửa tài sản từ menu 3D, giữ quyền/action/lịch sử và khấu hao/QR hiện có. Luồng chọn đối tượng và kiểm chứng được quản lý tại <a href="OFFICE-3D-CHECKLIST.md#s%E1%BB%ADa-h%E1%BB%93-s%C6%A1-t%E1%BB%AB-menu-%C4%91%E1%BB%91i-t%C6%B0%E1%BB%A3ng--16112026">plan 3D</a>.</p>
+<p><strong>Đã triển khai và kiểm chứng:</strong> nhấp vào giá trị trong panel để sửa tại chỗ, không mở dialog sửa toàn bộ hồ sơ. Một mục được sửa mỗi lần, tự lưu theo mục trên; quyền MANAGE mới có thao tác, VIEW chỉ đọc. Mã tự cấp/ID/QR và giá trị tính toán không cho sửa. Lỗi hoặc phiên bản cũ giữ bản nháp; không tự bỏ bản nháp khi đóng panel/chuyển tab/quay lại.</p>
+<ul>
+<li>Sửa tên, loại, tình trạng, hình thức/người sử dụng, phòng quản lý, vị trí, hãng/model, serial và ghi chú. Hình thức/người là một nhóm để giữ ràng buộc Cá nhân; bỏ người phải chọn hình thức khác rõ ràng. Vẫn dùng <code>saveAsset</code>, kiểm tra phiên bản/tham chiếu và audit nguyên tử.</li>
+<li><strong>Mua sắm &amp; khấu hao</strong> là phần tùy chọn, mặc định thu gọn: ngày mua, giá mua (VND), thời gian khấu hao (tháng), ngày hết hạn bảo hành. Hồ sơ cũ để null, không suy từ nguồn hoặc tự điền số liệu.</li>
+<li>Cách tính bản đầu: tính đều từ ngày mua tới ngày kết thúc sau số tháng đã nhập; cuối tháng được chặn về ngày cuối tháng đích, tính theo ngày lịch tại Việt Nam. Phần còn lại = số ngày còn / số ngày toàn kỳ, giới hạn 0–100%; xanh khi &gt;50%, vàng khi &gt;20%, đỏ khi ≤20%. Thanh mỏng dưới tên từng tài sản chỉ hiện khi có ngày mua và số tháng; giá tùy chọn dùng để tính giá trị còn lại tham khảo (VND, làm tròn đồng), không phải tình trạng vật lý hoặc sổ khấu hao kế toán.</li>
+<li>Theo phản hồi bổ sung, loại có thời gian khấu hao mặc định tùy chọn; lựa chọn nhanh 3/5/7 năm hoặc nhập tháng. Không tự phân loại hay áp mức cho PC/laptop cũ. Tài sản có nút áp dụng mức của loại, vẫn sửa riêng; đổi mức loại không hồi tố hồ sơ. Không suy ngày mua, giá hoặc bảo hành.</li>
+</ul>
+<p>Thiết kế bổ sung (không thêm bảng/FK): <code>tai_san.ngay_mua</code> DATE?, <code>gia_mua</code> DECIMAL(18,0)? không âm, <code>thoi_gian_khau_hao_thang</code> INT? trong 1–1200, <code>han_bao_hanh</code> DATE? không trước ngày mua nếu cả hai có giá trị. <code>loai_tai_san.khau_hao_mac_dinh_thang</code> INT? trong 1–1200. Cột mới để null cho toàn bộ dữ liệu cũ; ngày dùng ISO date-only, tiền truyền bằng chuỗi nguyên để không mất độ chính xác. Payload cũ thiếu thông tin mới phải giữ nguyên giá trị hiện tại; null là xóa giá trị. Không lưu phần trăm/giá trị tính toán vào DB.</p>
+<ul>
+<li><input type="checkbox" id="checkbox4" checked="true"><label for="checkbox4">Hoàn thiện sửa tại chỗ, bảo vệ bản nháp, làm mới bảng/nhóm/lịch sử sau lưu mà giữ panel/URL/cuộn. Mở bộ tìm người/vị trí ngay khi nhấp giá trị; lỗi giữ bản nháp, Hủy trả focus về giá trị.</label></li>
+<li><input type="checkbox" id="checkbox5" checked="true"><label for="checkbox5">Hai migration thêm 4 cột hồ sơ và 1 cột mặc định loại, có CHECK tại DB. Thử trên bản khôi phục và chuỗi cài mới; 5 probe dữ liệu không hợp lệ bị từ chối, schema diff sạch. Backup mới rồi áp dụng local: 18/18 bảng giữ nguyên dữ liệu cũ, toàn bộ cột mới null; không tự điền giá/ngày/thời hạn cho tài sản đã nhập. Bằng chứng tại </label><code>outputs/assets-panel/</code>.</li>
+<li><input type="checkbox" id="checkbox6" checked="true"><label for="checkbox6">Hoàn thiện phần mở rộng, tính toán/thanh trạng thái, validation server/DB và nhật ký. Mặc định theo loại có lựa chọn nhanh 3/5/7 năm hoặc nhập tháng; chủ động áp dụng vào tài sản, không hồi tố. Mục thu gọn tự mở khi có lỗi nhập liệu.</label></li>
+<li><input type="checkbox" id="checkbox7" checked="true"><label for="checkbox7">27/27 E2E trên bản production và DB khôi phục riêng đạt: 5 ca panel/khấu hao và 22 ca hồi quy nhóm, bảng, hồ sơ, quyền, URL/QR. Kiểm tra nhấp giá trị, danh mục tìm kiếm, Lưu/Hủy, lỗi mạng/phiên bản cũ giữ bản nháp, chặn đóng/Back/chuyển tab khi sửa, VIEW không sửa, cập nhật lịch sử, mở lỗi trong mục thu gọn và mobile/sáng/tối. Đã sửa chờ hoàn tất lưu trong một fixture cũ trước khi đóng panel; lượt cuối toàn bộ đạt.</label></li>
+<li><input type="checkbox" id="checkbox8" checked="true"><label for="checkbox8">3 integration kiểm tra Server Actions/DB thật trên DB thử: tiền 18 chữ số/ngày chính xác, audit, payload cũ giữ dữ liệu/null xóa, phiên bản/quyền/mã cố định, mặc định loại không hồi tố. 5 unit đạt (3 khấu hao/validation, 2 liên kết tài sản). TypeScript, lint, build production Webpack, 118 liên kết/anchor tài liệu và </label><code>git diff --check</code> đạt.</li>
+<li><input type="checkbox" id="checkbox9" checked="true"><label for="checkbox9">Kiểm tra chỉ đọc trên cổng 4000: mở link, sửa/Hủy người, phần khấu hao và mobile không lỗi JavaScript; ảnh thanh khấu hao trong bảng và giao diện mobile đã kiểm tra. Dọn server/DB thử, giữ app cổng 4000. Đối chiếu cuối 18/18 bảng vận hành giữ nguyên dữ liệu cũ, 5 cột mới đều null; không tự áp thời gian/giá/ngày cho hồ sơ. Log, ảnh và backup tại </label><code>outputs/assets-panel/</code>.</li>
+</ul>
+<h3 id="li%C3%AAn-k%E1%BA%BFt-h%E1%BB%93-s%C6%A1-v%C3%A0-tem-qr-%E2%80%94-16%2F11%2F2026" tabindex="-1">Liên kết hồ sơ và tem QR — 16/11/2026</h3>
+<p><strong>Đã triển khai và kiểm chứng:</strong> mở <code>/assets?asset=&lt;id&gt;</code> hiển thị panel hiện có; tải lại, chia sẻ và Back/Forward đồng bộ hồ sơ. Trong tab Thông tin, card <strong>Tem QR</strong> thu gọn mặc định; mở để xem QR, mã/tên, tải PNG, in tem hoặc sao chép liên kết. Áp dụng cả hồ sơ cũ và mới, không cần bấm tạo mã.</p>
+<ul>
+<li>QR chứa URL theo ID bất biến, không chứa thông tin nhân sự hay quyền. Đọc hồ sơ vẫn qua <code>getAsset</code> và quyền/công ty hiện có; không thêm bảng/cột hoặc lưu ảnh QR vào DB.</li>
+<li>Tạo QR cục bộ bằng <code>qrcode</code>, không gọi dịch vụ QR ngoài. Link dùng origin đang truy cập; cảnh báo khi là localhost để tránh in tem dùng trên điện thoại. Tem vận hành cần mở ERP bằng địa chỉ ổn định điện thoại truy cập được trước khi tải/in; không tự cấu hình tên miền.</li>
+<li>Chưa đăng nhập hoặc phiên bị thu hồi: đăng nhập rồi trở về link tài sản. Nếu bắt buộc đổi mật khẩu, đi qua profile trước; chỉ cho phép đích tài sản nội bộ hợp lệ, không nhận URL ngoài.</li>
+<li>In một tem có QR/mã/tên; không thêm in hàng loạt, scanner, kiểm kê hoặc quyền mới.</li>
+<li><input type="checkbox" id="checkbox10" checked="true"><label for="checkbox10">Hoàn thiện URL/panel và quay lại sau đăng nhập/đổi mật khẩu; không nhận URL ngoài. Phiên bị thu hồi về đăng nhập, hồ sơ thiếu/sai/khác công ty hoặc người không có quyền không hiển thị QR.</label></li>
+<li><input type="checkbox" id="checkbox11" checked="true"><label for="checkbox11">Hoàn thiện card, tải PNG, in tem và sao chép có phản hồi lỗi; QR dùng ID hiện có, không có migration hoặc ghi dữ liệu khi xem/in.</label></li>
+<li><input type="checkbox" id="checkbox12" checked="true"><label for="checkbox12">22 E2E đạt trên bản production/DB khôi phục riêng: 5 ca QR và 17 ca hồi quy tài sản. PNG tải xuống được giải mã bằng </label><code>jsqr</code> đúng URL; kiểm tra Back/Forward/reload, login/đổi mật khẩu, VIEW/NONE/khác công ty, tạo/sửa/hủy, giữ link khi đổi tên, mất mạng/thử lại, clipboard lỗi và mobile/sáng/tối. Test in kiểm tra gọi print và tài liệu tem không thực thi HTML từ tên tài sản; chưa nghiệm thu máy in hoặc camera điện thoại vật lý.</li>
+<li><input type="checkbox" id="checkbox13" checked="true"><label for="checkbox13">2 unit kiểm tra ID và đích quay lại an toàn; TypeScript, lint và build production Webpack đạt. Hai fixture ban đầu được sửa để dùng username chữ thường và hành vi reload tự mở hồ sơ; lượt cuối 22/22 đạt. Đã kiểm tra chỉ đọc trên cổng 4000, QR và panel mobile/sáng/tối không có lỗi JavaScript. Đã dọn DB/server thử; fingerprint 18/18 bảng vận hành không đổi. 120 liên kết/anchor tài liệu và </label><code>git diff --check</code> đạt. Log, ảnh, bản sao DB ở <code>outputs/assets-qr/</code>; không thay schema/quyền hoặc ghi dữ liệu thật trong lượt này.</li>
+</ul>
+<h3 id="thi%E1%BA%BFt-k%E1%BA%BF-db-c%E1%BA%A7n-gi%E1%BB%AF" tabindex="-1">Thiết kế DB cần giữ</h3>
+<p><strong>Phân hệ tài sản sở hữu 2 bảng đã triển khai</strong>: <code>loai_tai_san</code>, <code>tai_san</code>; tham chiếu <code>vi_tri</code> do <a href="LOCATION-MANAGEMENT-CHECKLIST.md">phân hệ vị trí dùng chung</a> sở hữu. Migration <code>20261111095809_tai_san_muc_1</code> chỉ thêm hai bảng này, enum/sequence/ràng buộc và catalog quyền, không tạo lại vị trí hoặc chạy seed. Dùng lại nhân sự, phòng ban, tài khoản, RBAC và nhật ký hiện có. Tên Prisma/PostgreSQL giống nhau theo <a href="../../.agents/rules/DATABASE-RULES.md">rule DB</a>.</p>
+<p>Các bảng mới có <code>id</code>, <code>company_id</code>, <code>created_at</code>, <code>updated_at</code>. Mã unique trong công ty; các FK cùng công ty, Restrict khi đã có tham chiếu. Cột tùy chọn để null khi chưa xác minh, không tạo người/phòng/vị trí giả.</p>
+<h4 id="s%C6%A1-%C4%91%E1%BB%93-b%E1%BA%A3ng-v%C3%A0-li%C3%AAn-k%E1%BA%BFt" tabindex="-1">Sơ đồ bảng và liên kết</h4>
+<p><strong>Hai bảng tài sản và các liên kết dưới đây đã migration.</strong> <code>vi_tri</code> và các bảng HR dùng lại; FK <code>nhan_su.vi_tri_lam_viec_id</code> vẫn nullable và Restrict cùng công ty. Sơ đồ rút gọn các cột để tập trung vào liên kết; <code>PK</code> là khóa chính, <code>FK</code> là khóa ngoại; <code>||</code> là đúng một, <code>o|</code> là không hoặc một, <code>o{</code> là không hoặc nhiều.</p>
+<div class="mermaid">erDiagram
+    direction TB
+    loai_tai_san ||--o{ tai_san : "phân loại"
+    vi_tri o|--o{ tai_san : "nơi đặt"
+    vi_tri o|--o{ vi_tri : "vị trí cha - con"
+    phong_ban o|--o{ tai_san : "đơn vị quản lý"
+    nhan_su o|--o{ tai_san : "người sử dụng"
+    phong_ban o|--o{ nhan_su : "nơi công tác - đã có"
+    vi_tri o|--o{ nhan_su : "nơi làm việc - đã có"
+
+    loai_tai_san {
+        int id PK
+        int company_id FK
+        string ma_loai
+        string ten_loai
+        boolean dang_su_dung
+    }
+    vi_tri {
+        int id PK
+        int company_id FK
+        int parent_id FK "Tùy chọn"
+        string ma_vi_tri
+        string ten_vi_tri
+        boolean dang_su_dung
+    }
+    tai_san {
+        int id PK
+        int company_id FK
+        string ma_tai_san "Tự sinh, bất biến"
+        string ten_tai_san
+        int loai_tai_san_id FK "Bắt buộc"
+        int phong_quan_ly_id FK "Tùy chọn"
+        int nguoi_su_dung_id FK "Bắt buộc khi giao cá nhân"
+        int vi_tri_id FK "Tùy chọn"
+        enum tinh_trang
+        enum hinh_thuc_su_dung
+        string so_serial "Tùy chọn"
+        string hang_model "Tùy chọn"
+        string ghi_chu "Tùy chọn"
+    }
+    phong_ban {
+        int id PK
+        int company_id FK
+        string ten_phong_ban
+    }
+    nhan_su {
+        int id PK
+        int company_id FK
+        int department_id FK
+        int vi_tri_lam_viec_id FK "Đã có, tùy chọn"
+        string ma_nhan_su
+        string ho_ten
+    }</div><p>Để tránh nhiều đường chéo, không vẽ <code>cong_ty</code>: mỗi bảng trên thuộc đúng một công ty qua <code>company_id</code>. FK nghiệp vụ được ràng buộc cùng công ty bằng cặp <code>(id, company_id)</code>; sơ đồ hiển thị tên cột đơn để dễ đọc. Mã loại/vị trí/tài sản unique theo cặp <code>(company_id, mã)</code>, không phải mã duy nhất toàn hệ thống.</p>
+<p><strong>Nhật ký dùng lại, tách khỏi quan hệ người sử dụng:</strong></p>
+<div class="mermaid">flowchart LR
+    A["tai_khoan — đã có<br/>id, tên đăng nhập"] -->|"FK account_id"| L["nhat_ky_hoat_dong — đã có<br/>company_id, account_id<br/>phan_he, doi_tuong_id<br/>du_lieu_cu, du_lieu_moi, created_at"]
+    T["tai_san — bảng mới<br/>id, company_id"] -. "ASSETS + tai_san:id + company_id" .-> L</div><p>Đường nét đứt là liên kết tra cứu lịch sử qua định danh đối tượng, <strong>không phải FK</strong> từ nhật ký đến tài sản. <code>account_id</code> hiện nullable để giữ nhật ký khi không còn tài khoản; thao tác tài sản bình thường phải ghi tài khoản từ phiên hợp lệ. Một người có thể dùng nhiều thiết bị mà không có tài khoản đăng nhập; người thao tác cập nhật và người sử dụng thiết bị có thể khác nhau.</p>
+<h4 id="1.-loai_tai_san-%E2%80%94-danh-m%E1%BB%A5c-lo%E1%BA%A1i-thi%E1%BA%BFt-b%E1%BB%8B" tabindex="-1">1. <code>loai_tai_san</code> — danh mục loại thiết bị</h4>
+<table>
+<thead>
+<tr>
+<th>Cột nghiệp vụ</th>
+<th>Ý nghĩa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ma_loai</code></td>
+<td>Mã loại, ví dụ LAPTOP, PC, MAY_IN; giữ ổn định</td>
+</tr>
+<tr>
+<td><code>ten_loai</code></td>
+<td>Tên hiển thị, bắt buộc</td>
+</tr>
+<tr>
+<td><code>mo_ta</code></td>
+<td>Mô tả tùy chọn</td>
+</tr>
+<tr>
+<td><code>dang_su_dung</code></td>
+<td>Cho phép chọn khi thêm mới; ngừng dùng không làm mất liên kết cũ</td>
+</tr>
+</tbody>
+</table>
+<p>Chỉ chứa loại thiết bị trong giai đoạn này; không cần cột phân biệt thiết bị/vật tư. Không xây thêm bảng hãng, model hoặc cấu hình ở mức 1.</p>
+<h4 id="danh-m%E1%BB%A5c-v%E1%BB%8B-tr%C3%AD-d%C3%B9ng-l%E1%BA%A1i" tabindex="-1">Danh mục vị trí dùng lại</h4>
+<p><code>vi_tri</code> do <a href="LOCATION-MANAGEMENT-CHECKLIST.md">plan vị trí</a> quản lý thiết kế cột, cây, trạng thái và quyền LOCATIONS. Tài sản chỉ lưu <code>vi_tri_id</code> nullable, FK kép cùng công ty, Restrict; chọn vị trí đang dùng và có tổ tiên đang dùng. Trường hợp chưa xác minh để trống.</p>
+<p>ASSETS MANAGE được lấy danh mục tối thiểu để chọn, không tự có quyền sửa vị trí. Quản lý loại thiết bị vẫn thuộc tài sản. Preview/action/DB chặn xóa/ngừng dùng vị trí đang được thiết bị tham chiếu, kể cả thiết bị ngừng dùng. Luồng gán vị trí tuân thủ thứ tự khóa chung tại plan vị trí.</p>
+<h4 id="2.-tai_san-%E2%80%94-h%E1%BB%93-s%C6%A1-t%E1%BB%ABng-thi%E1%BA%BFt-b%E1%BB%8B" tabindex="-1">2. <code>tai_san</code> — hồ sơ từng thiết bị</h4>
+<table>
+<thead>
+<tr>
+<th>Cột nghiệp vụ</th>
+<th>Nhãn và yêu cầu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ma_tai_san</code></td>
+<td>Mã tài sản tự sinh, ví dụ TS-000001; bất biến, không tái sử dụng</td>
+</tr>
+<tr>
+<td><code>ten_tai_san</code></td>
+<td>Tên tài sản — bắt buộc nhập</td>
+</tr>
+<tr>
+<td><code>loai_tai_san_id</code></td>
+<td>Loại tài sản — bắt buộc chọn từ danh mục</td>
+</tr>
+<tr>
+<td><code>tinh_trang</code></td>
+<td>Chưa xác nhận / Bình thường / Hỏng / Đang sửa / Ngừng sử dụng; mặc định Chưa xác nhận</td>
+</tr>
+<tr>
+<td><code>hinh_thuc_su_dung</code></td>
+<td>Chưa xác định / Cá nhân / Dùng chung / Chưa phân bổ; mặc định Chưa xác định</td>
+</tr>
+<tr>
+<td><code>phong_quan_ly_id</code></td>
+<td>FK <code>phong_ban</code>: đơn vị quản lý thiết bị, tùy chọn</td>
+</tr>
+<tr>
+<td><code>nguoi_su_dung_id</code></td>
+<td>FK <code>nhan_su</code>: người được giao thiết bị; bắt buộc khi chọn Cá nhân, các hình thức khác để null</td>
+</tr>
+<tr>
+<td><code>vi_tri_id</code></td>
+<td>FK <code>vi_tri</code>: vị trí hiện tại, tùy chọn</td>
+</tr>
+<tr>
+<td><code>so_serial</code></td>
+<td>Serial/service tag, tùy chọn; không giả định mọi hãng có serial duy nhất toàn công ty</td>
+</tr>
+<tr>
+<td><code>hang_model</code></td>
+<td>Hãng/model dạng text, tùy chọn</td>
+</tr>
+<tr>
+<td><code>ghi_chu</code></td>
+<td>Ghi chú vận hành, tùy chọn; không lưu mật khẩu/secret</td>
+</tr>
+<tr>
+<td>Thông tin mua sắm/khấu hao</td>
+<td>4 cột tùy chọn và mặc định ở loại theo <a href="#s%E1%BB%ADa-tr%E1%BB%B1c-ti%E1%BA%BFp-trong-panel-v%C3%A0-th%C3%B4ng-tin-kh%E1%BA%A5u-hao--16112026">thiết kế bổ sung</a>; không tính khấu hao kế toán</td>
+</tr>
+</tbody>
+</table>
+<p>Quy tắc cụ thể:</p>
+<ul>
+<li>Tên và loại cần nhập/chọn; tình trạng/hình thức có giá trị mặc định nhưng vẫn là trường bắt buộc hợp lệ. Form hiển thị dấu sao đúng theo rule frontend. Nhập thêm serial, vị trí và người sau khi xác minh được.</li>
+<li>Mã cấp an toàn bằng sequence/default và ràng buộc bất biến; không dùng số lượng dòng hoặc <code>MAX + 1</code>. Đổi loại/phòng/người không đổi mã.</li>
+<li>Phân biệt <strong>đơn vị quản lý</strong>, <strong>người sử dụng</strong>, <strong>vị trí vật lý</strong>. Không tự đồng bộ vị trí hay đơn vị quản lý khi nhân sự chuyển phòng. Chọn mới người sử dụng đang làm việc và cùng công ty; người nghỉ việc đang giữ thiết bị vẫn giữ liên kết để người quản lý xử lý, không tự thu hồi.</li>
+<li>Thiết bị chưa xác định người dùng không mặc định là dùng chung. AP ngoài sảnh có thể chọn Dùng chung, vị trí Sảnh tầng 2, không gắn người.</li>
+<li>Mức 1 không có cột phòng sử dụng riêng: giao cá nhân thì liên kết người; dùng chung thì ghi vị trí và đơn vị quản lý. Không lấy phòng làm việc hiện tại của người làm bằng chứng bàn giao thiết bị cho cả phòng.</li>
+<li>Không xóa cứng hồ sơ trong mức 1. Thiết bị ngừng dùng giữ mã/lịch sử, lọc theo Ngừng sử dụng; nhập nhầm ghi rõ lý do. Ngừng sử dụng và chưa phân bổ là hai khái niệm khác nhau.</li>
+<li>Chống ghi đè bằng phiên bản <code>updated_at</code> cho cả thiết bị và loại. Mutation khóa hàng công ty → advisory phân quyền <code>(260126, companyId)</code> → kiểm tra lại phiên/quyền, phiên bản và tham chiếu → ghi dữ liệu/audit trong cùng transaction. Luồng vị trí, HR, phòng ban và tài sản dùng cùng thứ tự; trigger DB cũng khóa công ty để bảo vệ tham chiếu khi ghi trực tiếp.</li>
+<li>DB dùng enum <code>TinhTrangTaiSan</code> (<code>CHUA_XAC_NHAN</code>, <code>BINH_THUONG</code>, <code>HONG</code>, <code>DANG_SUA</code>, <code>NGUNG_SU_DUNG</code>) và <code>HinhThucSuDungTaiSan</code> (<code>CHUA_XAC_DINH</code>, <code>CA_NHAN</code>, <code>DUNG_CHUNG</code>, <code>CHUA_PHAN_BO</code>). CHECK bảo đảm Cá nhân khi và chỉ khi có người sử dụng; FK kép cùng công ty cho loại/người/phòng/vị trí. Trigger chặn đổi ID/công ty/mã và xóa cứng thiết bị.</li>
+<li>Chỉ kiểm tra trạng thái người/loại khi tạo hoặc đổi liên kết; giữ người đã nghỉ/loại ngừng dùng khi sửa trường khác. Loại được ngừng dùng dù còn hồ sơ cũ; mã loại nhập chữ hoa, số/gạch dưới, bất biến. Không áp dụng điều kiện loại vị trí làm việc của HR cho thiết bị; thiết bị được chọn mọi loại vị trí đang dùng với tổ tiên đang dùng.</li>
+</ul>
+<h4 id="l%E1%BB%8Bch-s%E1%BB%AD-v%C3%A0-b%E1%BA%A3ng-d%C3%B9ng-l%E1%BA%A1i" tabindex="-1">Lịch sử và bảng dùng lại</h4>
+<ul>
+<li><code>nhat_ky_hoat_dong</code>: lưu ai làm, lúc nào, hành động, dữ liệu trước–sau gồm ID và nhãn cần giải thích lịch sử. Phân hệ <code>ASSETS</code>, khóa đối tượng có loại kèm ID, ví dụ <code>tai_san:123</code>, <code>loai_tai_san:5</code>, tránh trùng ID giữa bảng. Thay đổi danh mục vị trí ghi ở <code>LOCATIONS</code> theo plan vị trí; đổi nơi đặt thiết bị vẫn ghi ở lịch sử thiết bị. Snapshot nhãn lịch sử không thay FK hiện hành.</li>
+<li>Ghi trực tiếp audit trong transaction; không dùng helper <code>logActivity</code> hiện có vốn nuốt lỗi ghi nhật ký. Lỗi audit phải rollback thay đổi thiết bị.</li>
+<li>Lịch sử tại hồ sơ chỉ đọc nhật ký đúng công ty/đúng thiết bị, cho người có ASSETS VIEW; không mở quyền xem toàn bộ nhật ký hệ thống và không trả dữ liệu phân hệ khác.</li>
+<li><code>nhan_su</code>, <code>phong_ban</code>: dùng ID có sẵn. <code>tai_khoan</code>: người thao tác audit, không phải người sử dụng thiết bị.</li>
+<li>Bảng <code>quyen</code>, <code>vai_tro_quyen</code>, <code>tai_khoan_vai_tro</code>: thêm quyền, giữ nguyên mô hình phân quyền; không tạo role theo loại thiết bị.</li>
+</ul>
+<h3 id="ph%C3%A2n-quy%E1%BB%81n-v%C3%A0-giao-di%E1%BB%87n" tabindex="-1">Phân quyền và giao diện</h3>
+<ul>
+<li><code>ASSETS · VIEW</code> xem danh sách/chi tiết/lịch sử; <code>ASSETS · MANAGE</code> gồm xem, tạo/sửa thiết bị và quản lý danh mục loại; không bao gồm quản lý danh mục vị trí. Server và ma trận <code>/roles</code> đã áp dụng; menu/trang <code>/assets</code> áp dụng cùng chính sách.</li>
+<li>Khai báo catalog/validation/UI phân quyền cùng với các kiểm tra server. Thêm quyền DB bằng migration, đồng bộ seed cài mới; không chạy lại seed vận hành hoặc tự cấp quyền cho ADMIN/HCNS/role tài sản đã có.</li>
+<li>Form chọn người/phòng chỉ lấy ID, tên, mã, tình trạng cần thiết trong công ty theo ASSETS MANAGE. Không buộc cấp toàn quyền HR, không mở dữ liệu liên hệ/ghi chú HR.</li>
+<li>Trang <code>/assets</code>: thẻ số lượng theo loại; trạng thái bằng chữ/nhãn; danh sách ngắn, tìm/lọc; chi tiết và lịch sử trong panel. Đếm thiết bị trên cùng bộ lọc, phân biệt tổng hồ sơ với còn sử dụng. Không dựng tiến độ/số liệu giả.</li>
+</ul>
+<p>Nền server tại <code>src/actions/asset.ts</code>: <code>getAssets</code> (phân trang và đếm trên cùng bộ lọc), <code>getAssetFilterOptions</code> (nhãn đã gắn hồ sơ), <code>getAssetCategories</code>, <code>getAsset</code>, <code>getAssetHistory</code> (50 sự kiện mới nhất của đúng thiết bị), <code>getAssetAssignmentOptions</code>, <code>saveAssetCategory</code>, <code>saveAsset</code>. Mutation dùng schema strict tại <code>src/lib/validations/asset.ts</code>; chưa có action xóa thiết bị hoặc endpoint REST. <code>getLocationOptions</code> dùng lại từ phân hệ vị trí. Payload sửa role cũ không có ASSETS giữ nguyên grant này, không vô tình thu hồi khi cập nhật tên/quyền khác.</p>
+<h3 id="checklist-tri%E1%BB%83n-khai" tabindex="-1">Checklist triển khai</h3>
+<ul>
+<li>
+<p><input type="checkbox" id="checkbox14" checked="true"><label for="checkbox14">Ô chọn loại, người, phòng và vị trí trong form/bộ lọc: đã chuyển sang tìm/chọn có hỗ trợ không dấu; kiểm thử giao diện và hồi quy đạt. Cách dùng chung và kiểm chứng tại </label><a href="README.md#%C3%B4-ch%E1%BB%8Dn-d%E1%BB%AF-li%E1%BB%87u-c%C3%B3-t%C3%ACm-ki%E1%BA%BFm--12112026">tổng quan</a>. Không đổi dữ liệu hoặc quyền.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox15" checked="true"><label for="checkbox15">Thiết kế lại mức 1 cho thiết bị; tách vật tư và các lớp bàn giao/bảo trì/3D sang giai đoạn sau. Đồng bộ rule, router và tổng quan; đây là cập nhật tài liệu, chưa đổi schema hoặc dữ liệu.</label></p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox16" checked="true"><label for="checkbox16">Bổ sung sơ đồ ER các bảng/liên kết và sơ đồ nhật ký; ghi rõ bảng mới, bảng dùng lại, quan hệ tùy chọn, phạm vi công ty và liên kết lịch sử không phải FK. Đối chiếu tên liên kết hiện có với schema.</label></p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox17" checked="true"><label for="checkbox17">Tách vị trí thành phân hệ dùng chung, quyền LOCATIONS riêng; tài sản chỉ sở hữu 2 bảng và tham chiếu vị trí. Đối chiếu 11/11 cập nhật sơ đồ với FK nhân sự đã có; không đổi schema hoặc renderer.</label></p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox18" checked="true"><label for="checkbox18">Nền </label><a href="LOCATION-MANAGEMENT-CHECKLIST.md">quản lý vị trí</a> đã triển khai độc lập; tài sản không tạo lại bảng hoặc quyền LOCATIONS.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox19" checked="true"><label for="checkbox19">Rà soát khả năng bắt đầu trước đợt 1 qua plan/rule và mã nguồn; kết luận và điều kiện pilot đã được dùng để triển khai nền dữ liệu theo yêu cầu tiếp theo.</label></p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox20" checked="true"><label for="checkbox20">Hoàn thiện và thực hiện thứ tự khóa, enum/CHECK, bảo vệ mã, giữ liên kết cũ, trạng thái danh mục và phiên bản thiết bị/loại tại mục DB.</label></p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox21" checked="true"><label for="checkbox21">Migration tạo bằng </label><code>migrate dev --create-only</code>, thử trên bản khôi phục và chuỗi migration cài mới; schema diff đều sạch. Sau backup mới, áp dụng local: 17 bảng nghiệp vụ, thêm đúng 2 quyền, 0 grant ASSETS, 0 loại/thiết bị. Fingerprint 15 bảng cũ giữ nguyên (so sánh catalog quyền cũ riêng), các sequence cũ ngoài sequence cấp ID quyền không thay đổi. Backup/bằng chứng tại <code>outputs/assets-foundation/</code>.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox22" checked="true"><label for="checkbox22">Bảo vệ tham chiếu vị trí ở preview/action/DB, chặn xóa phòng quản lý còn tài sản; bộ chọn tối thiểu theo ASSETS MANAGE. Không tự gỡ thiết bị khi xóa vị trí hoặc cấp quyền HR/LOCATIONS.</label></p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox23" checked="true"><label for="checkbox23">Server Actions, validation, mã tự sinh, audit nguyên tử và kiểm tra phiên bản; catalog/seed cài mới/validation/ma trận </label><code>/roles</code> đồng bộ. Không chạy seed trên DB vận hành hoặc tự cấp quyền.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox24" checked="true"><label for="checkbox24">10 kiểm thử tích hợp DB/Server Actions, 6 unit và 13 E2E ma trận quyền/vị trí/phân quyền đạt; kiểm tra lại bố cục hộp thoại trên mobile đạt. TypeScript/lint phần ứng dụng đạt. Kiểm tra tích hợp giả lập cookie request/cache Next, dùng JWT/phiên/RBAC/DB thật; E2E dùng Chrome và DB riêng. Đây là kiểm chứng nền trước đợt giao diện; kiểm chứng mới nằm dưới.</label></p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox25" checked="true"><label for="checkbox25">Build production Webpack trên bản app riêng đạt; khởi động lại web local cổng 4000 sau generate/migration, </label><code>/login</code> trả 200. Next.js có cảnh báo nâng phiên bản bảo mật và middleware có sẵn; đã chạy lại lệnh sau thông báo, không thay dependency trong đợt tài sản.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox26" checked="true"><label for="checkbox26">Dọn các DB thử do đợt này tạo; kiểm tra local có 18 migration, checksum migration mới khớp và 3 trigger tài sản. Lint kiểm thử tích hợp, 144 liên kết/anchor trong 11 tài liệu và </label><code>git diff --check</code> đạt; backup/script/bằng chứng được Git bỏ qua. Không sửa ba rule kỹ thuật chung.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox27" checked="true"><label for="checkbox27">Xây giao diện danh mục loại, bộ chọn vị trí, danh sách/chi tiết/tạo/sửa thiết bị, tìm/lọc và lịch sử; truy vấn danh sách/phân trang 20 hồ sơ và thống kê dùng cùng bộ lọc. Có tải lại khi lỗi, giữ nội dung form, giữ bộ lọc khi đóng hồ sơ; chọn người chỉ khi giao cá nhân.</label></p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox28" checked="true"><label for="checkbox28">11 kiểm thử tích hợp DB/Server Actions và 6 E2E </label><code>/assets</code> đạt trên DB riêng: phân trang/số đếm cùng bộ lọc, tạo loại/thiết bị, giao cá nhân → dùng chung, đổi vị trí/tình trạng, lịch sử, VIEW/MANAGE/không quyền, URL/action trực tiếp, khác công ty, thu hồi quyền, chống ghi đè và giữ liên kết ngừng dùng. Chrome desktop/mobile 390px sáng/tối đã xem ảnh; lỗi mạng có tải lại và giữ nội dung form. Bằng chứng tại <code>outputs/assets-ui/</code>.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox29" checked="true"><label for="checkbox29">Cấp ASSETS MANAGE/ALL cho </label><code>admin</code> ngày 12/11 theo yêu cầu, sau backup: thêm đúng một grant vào ADMIN (chỉ gán admin), cập nhật phiên bản role và ghi audit ROLE trong cùng transaction. Nhật ký nêu rõ tác vụ triển khai cục bộ, không giả ghi phiên đăng nhập người dùng. Quyền mọi tài khoản khác và dữ liệu 14 bảng ngoài role/grant/audit giữ nguyên; không chạy seed. Backup và fingerprint tại <code>outputs/assets-ui/</code>.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox30" checked="true"><label for="checkbox30">TypeScript, lint phần thay đổi và build production Webpack trên app riêng đạt. Build chạy lại sau cảnh báo bảo mật Next.js hiện có; còn cảnh báo middleware/Edge từ dependency dùng chung, không đổi thư viện hoặc cấu hình.</label></p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox31" checked="true"><label for="checkbox31">Kiểm tra bằng admin trên </label><code>http://localhost:4000/assets</code>: menu, trạng thái trống và form loại hoạt động, không có lỗi JavaScript; không lưu dữ liệu thử. Đã xóa DB thử riêng, giữ backup/bằng chứng. 14 bảng ngoài RBAC/audit không đổi so với trước kiểm thử; admin giữ quyền đã cấp, 0 loại/thiết bị. Sau mốc cấp quyền có thêm một cập nhật role ASSETS từ phiên admin (audit 249), được giữ nguyên, không thuộc script cấp quyền này. 141 liên kết/anchor trong 7 tài liệu và <code>git diff --check</code> đạt.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox32"><label for="checkbox32">Chọn người phụ trách nghiệp vụ và tài khoản bổ sung nếu cần; dùng thử với thiết bị được xác minh. Tài khoản admin đã sẵn sàng, chưa nghiệm thu nghiệp vụ và chưa cấp phạm vi theo từng phòng.</label></p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox33" checked="true"><label for="checkbox33">Chuẩn bị nhập nguồn theo yêu cầu ngày 12/11: tìm thấy workbook đã khảo sát 92 dòng, xác minh DB có 2 hồ sơ vận hành và 2 loại. Sao lưu và thử khôi phục đủ 17 bảng; đã dọn DB thử, đối chiếu 17 bảng local không đổi. Bằng chứng cục bộ: </label><code>outputs/asset-import-20261112/</code>.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox34" checked="true"><label for="checkbox34">Người dùng cho phép đọc Excel bằng Python; đã đọc đủ 92 dòng/11 nhóm, mã nguồn không trùng. Loại ghi chú chứa thông tin truy cập ở SRV01/LB01 trước khi xuất dữ liệu đối chiếu; không nhập cột mạng. Ghép được 42 dòng với người ACTIVE theo tên đầy đủ duy nhất; 4 tên chưa ghép để trống liên kết, giữ ghi chú nguồn. Cột phòng ban không tự gán phòng quản lý; vị trí chưa chắc chắn để trống.</label></p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox35" checked="true"><label for="checkbox35">Nhập 89 dòng độc lập vào DB local sau backup: thêm 89 hồ sơ và 9 loại, tổng hiện tại 91 hồ sơ/11 loại; giữ nguyên hai hồ sơ đã tạo và 14 bảng ngoài tài sản/loại/audit. Thêm 98 nhật ký cùng transaction, định danh tác vụ hỗ trợ hệ thống, không giả phiên admin. Mã vẫn do hệ thống cấp </label><code>TS-...</code>; tên mô tả có mã nguồn, ghi chú giữ thông tin khảo sát đã làm sạch. Mỗi nhật ký nhập có nguồn/hash/mã dòng để chống nhập lại. Không sửa schema/quyền, không triển khai giao diện import hàng loạt.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox36" checked="true"><label for="checkbox36">Kiểm chứng trên DB khôi phục riêng: lỗi audit hoàn tác toàn bộ; hai lần nhập đồng thời chỉ tạo một bộ; chạy lại không ghi thêm. Đối chiếu local: 89 nguồn → 89 hồ sơ, 9 loại mới, 98 audit; chạy lại không thay đổi dữ liệu. Tình trạng mới là Chưa xác nhận, người chỉ ghép tên đầy đủ duy nhất ACTIVE; serial/phòng quản lý/vị trí chưa xác minh để null. Bằng chứng ở </label><code>outputs/asset-import-20261112/</code>.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox37" checked="true"><label for="checkbox37">Chrome tại </label><code>/assets</code> cổng 4000 hiển thị 91 hồ sơ/5 trang; tìm SRV01, mở chi tiết ghi chú đã làm sạch và lịch sử nhập thành công, không lỗi JavaScript hoặc gửi form. Đã dọn DB thử; kiểm tra 17 bảng chỉ ba bảng loại/tài sản/audit thay đổi, 14 bảng khác giữ nguyên. <code>git diff --check</code> đạt; không đổi mã ứng dụng nên không chạy lại build toàn hệ thống.</p>
+</li>
+<li>
+<p><input type="checkbox" id="checkbox38"><label for="checkbox38">PC01/Lap01/Lap19 chờ người dùng đối chiếu với hai hồ sơ tạo thủ công; chưa nhập ba dòng này để tránh trùng hoặc ghi đè. Bốn dòng PC26/PC32/Lap12/Lap18 đã nhập hồ sơ nhưng chưa gán người: hai cách viết tên khác và hai hồ sơ nhân sự hiện LEFT; giữ nguyên thông tin nguồn để xác minh, không đổi HR hoặc giả thu hồi thiết bị.</label></p>
+</li>
+</ul>
+<h3 id="r%C3%BAt-g%E1%BB%8Dn-giao-di%E1%BB%87n-v%C3%A0-icon-lo%E1%BA%A1i-%E2%80%94-%C4%91%C3%A3-tri%E1%BB%83n-khai-12%2F11%2F2026" tabindex="-1">Rút gọn giao diện và icon loại — đã triển khai 12/11/2026</h3>
+<p>Người dùng đã yêu cầu áp dụng đề xuất bố cục và icon loại. Tác vụ chính: tìm thiết bị, xem người/vị trí/tình trạng và cập nhật tại chỗ. Trước sửa: ba khối thống kê, dải loại và thông tin lặp làm phân tán danh sách; ghi chú nhập nguồn/snapshot lịch sử mở toàn bộ làm chi tiết dài. Phần thu gọn hồ sơ, form và icon là nền dùng tiếp; bố cục tổng quan/danh sách đã chuyển sang luồng nhóm ở mục bên dưới. Quy tắc tên/mã tự sinh vẫn là đề xuất riêng.</p>
+<table>
+<thead>
+<tr>
+<th>Vùng</th>
+<th>Bố cục đã áp dụng</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Đầu trang</td>
+<td>Tiêu đề + tổng số tài sản + nút Thêm; quản lý loại là thao tác phụ. Bên dưới là tổng quan theo nhóm như mục kế tiếp.</td>
+</tr>
+<tr>
+<td>Tìm/lọc</td>
+<td>Tìm kiếm toàn cục luôn sẵn có; bộ lọc mở trong danh sách thiết bị, không lặp điều kiện nhóm đang xem. Hiển thị bộ lọc bổ sung và cách xóa, giữ phạm vi nhóm.</td>
+</tr>
+<tr>
+<td>Danh sách</td>
+<td>Bảng Tài sản / Người sử dụng / Vị trí / Tình trạng, kèm Sửa tại dòng cho người có quyền. Mobile cuộn ngang trong bảng. Tên tối đa hai dòng, mã nhỏ giúp phân biệt thiết bị cùng tên; không thay tên/mã lưu DB.</td>
+</tr>
+<tr>
+<td>Dữ liệu chưa có</td>
+<td>Ô người/vị trí dùng nhãn ngắn Chưa rõ; Dùng chung là trạng thái riêng, không suy từ null. Tình trạng Chưa xác nhận vẫn hiển thị đúng nghĩa. Cảnh báo cần bàn giao/ngừng dùng giữ ở ngữ cảnh phù hợp.</td>
+</tr>
+<tr>
+<td>Chi tiết</td>
+<td>Tab Thông tin / Lịch sử; mặc định thông tin vận hành. Ghi chú dài thu gọn có nút mở; lịch sử mỗi sự kiện có tóm tắt, mở mới xem các trường trước–sau, không lặp toàn hồ sơ mặc định. Không xóa nội dung nguồn hoặc audit.</td>
+</tr>
+<tr>
+<td>Form</td>
+<td>Thông tin chính và người/vị trí dễ tiếp cận; serial/model/ghi chú vào Thông tin bổ sung. Giữ ô tìm/chọn và validation; nếu phần thu gọn có lỗi phải tự mở và focus đúng field. Tên tự điền/mã theo loại là đề xuất riêng bên dưới.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><input type="checkbox" id="checkbox39" checked="true"><label for="checkbox39">Ghi nguyên nhân và phương án theo phản hồi người dùng; không thay ba rule chung trong lượt đề xuất.</label></li>
+<li><input type="checkbox" id="checkbox40" checked="true"><label for="checkbox40">Áp dụng bảng desktop/thẻ mobile, một bộ chọn loại có tìm kiếm, điều kiện lọc có thể gỡ, tab thông tin/lịch sử và ghi chú/sự kiện thu gọn. Form có Thông tin bổ sung, mở và focus khi có lỗi. Không thay tên/mã, quyền, dữ liệu hoặc backend.</label></li>
+<li><input type="checkbox" id="checkbox41" checked="true"><label for="checkbox41">Thêm icon Lucide theo mã loại tại danh sách, chi tiết, danh mục, bộ chọn loại và form; màu trung tính, luôn kèm tên, loại chưa có ánh xạ dùng hình hộp. Không có trường icon mới trong DB.</label></li>
+<li><input type="checkbox" id="checkbox42" checked="true"><label for="checkbox42">Bổ sung đúng nguyên văn mục 8.10 FRONTEND-RULES đã đề xuất, theo yêu cầu triển khai ở lượt tiếp theo; giữ nguyên các mục hiện có, không sửa Backend/Database rule.</label></li>
+<li><input type="checkbox" id="checkbox43" checked="true"><label for="checkbox43">3 E2E bố cục mới, 6 E2E tài sản và 3 E2E ô chọn đạt trên DB khôi phục riêng: icon mặc định/đã biết, tìm không dấu/bàn phím, gỡ bộ lọc, ghi chú/lịch sử thu gọn, tự mở/focus lỗi phần bổ sung, giữ trang/cuộn sau lưu và chuyển focus đúng khi resize, mobile/sáng/tối; hồi quy quyền, khác công ty, chống ghi đè và lỗi mạng. Phát hiện và sửa lệch cuộn sau lưu, kiểm tra lại 3 ca mới và 6 ca tài sản đạt. Bằng chứng ở </label><code>outputs/assets-compact/</code>.</li>
+<li><input type="checkbox" id="checkbox44" checked="true"><label for="checkbox44">TypeScript/lint đạt, build production Webpack trên app riêng đạt sau chạy lại nhắc bảo mật Next.js sẵn có. Kiểm tra Chrome tại cổng 4000 với 91 hồ sơ: bảng bốn cột, icon theo loại, tìm/mở ghi chú/lịch sử và mobile sáng/tối đúng, không tràn ngang hoặc lỗi JavaScript; không gửi form trên DB chính. Đã xem ảnh desktop/mobile thực tế. Ghi chú/lịch sử không mở tràn, tên giới hạn hai dòng ở danh sách; không sửa tên, mã hoặc nguồn nhập.</label></li>
+<li><input type="checkbox" id="checkbox45" checked="true"><label for="checkbox45">Đã dừng server và dọn đúng DB thử của đợt giao diện. Đối chiếu 17 bảng local: 15 bảng giữ nguyên; tài sản/audit có cập nhật vận hành đồng thời được giữ nguyên, không phục hồi đè từ backup. Kiểm tra rule so với bản chụp đầu lượt: chỉ thêm đúng đoạn 8.10 đã duyệt, không thay các mục có sẵn. </label><code>git diff --check</code> đạt.</li>
+</ul>
+<h3 id="t%E1%BB%95ng-quan-theo-nh%C3%B3m-v%C3%A0-thao-t%C3%A1c-theo-ng%E1%BB%AF-c%E1%BA%A3nh-%E2%80%94-%C4%91%C3%A3-tri%E1%BB%83n-khai-12%2F11%2F2026" tabindex="-1">Tổng quan theo nhóm và thao tác theo ngữ cảnh — đã triển khai 12/11/2026</h3>
+<p>Đã triển khai tổng quan theo loại/người/vị trí, tìm kiếm toàn cục và giữ ngữ cảnh. Theo phản hồi tiếp theo, <strong>card chỉ giữ ở nhóm loại</strong>, thiết bị dùng bảng và sửa trực tiếp như mục bên dưới; các kết quả kiểm thử giai đoạn card dưới đây là mốc trước điều chỉnh này. Không lấy 20 hồ sơ của một trang để tính số lượng nhóm.</p>
+<ul>
+<li><input type="checkbox" id="checkbox46" checked="true"><label for="checkbox46">Thêm </label><code>getAssetOverview</code> đọc thống kê theo công ty/quyền ASSETS trong transaction RepeatableRead; chỉ trả tên, mã phân biệt và số lượng. Trang đầu không tải hồ sơ thiết bị. Loại hiện cả nhóm rỗng; người/vị trí hiện nhóm có tài sản, tính cả thiết bị ngừng dùng.</li>
+<li><input type="checkbox" id="checkbox47" checked="true"><label for="checkbox47">Nhóm người không có liên kết phân biệt Dùng chung / Chưa phân bổ / Chưa rõ; nhóm vị trí null là Chưa rõ vị trí. Query </label><code>locationId: null</code> lọc đúng FK null; không suy vị trí từ người/phòng. Không thay schema/quyền hoặc dữ liệu.</li>
+<li><input type="checkbox" id="checkbox48" checked="true"><label for="checkbox48">Card nhóm có icon/tên/số lượng, ba cách nhóm, tìm nhóm người/vị trí, đường dẫn quay lại; thẻ thiết bị mặc định, bảng tùy chọn desktop. Nhớ bộ lọc/trang/chế độ xem/cuộn khi quay lại nhóm; giữ hồ sơ bên phải desktop, toàn chiều rộng và nút Quay lại trên mobile.</label></li>
+<li><input type="checkbox" id="checkbox49" checked="true"><label for="checkbox49">Thêm thiết bị từ nhóm loại điền sẵn loại hợp lệ; loại ngừng dùng không cho thêm mới. Nút Đổi cạnh người/vị trí mở form và focus đúng trường, vẫn lưu qua validation/quyền/audit hiện có. Không tự gán người/vị trí theo nhóm hoặc bỏ qua bước Lưu.</label></li>
+<li><input type="checkbox" id="checkbox50" checked="true"><label for="checkbox50">3 kiểm thử tích hợp trên DB riêng đạt: tổng các nhóm bằng tổng hồ sơ và bộ lọc tương ứng (25 hồ sơ, vượt một trang); nhóm rỗng/null; dữ liệu tối thiểu, chặn thiếu quyền/khác công ty/thu hồi quyền; số lượng sau đổi người/vị trí.</label></li>
+<li><input type="checkbox" id="checkbox51" checked="true"><label for="checkbox51">4 E2E luồng nhóm đạt: card mặc định/bảng tùy chọn, bàn phím, tìm toàn cục xuyên nhóm ngay cả khi đang tải, nhóm người/vị trí và tìm không dấu, loại rỗng/thêm điền sẵn loại/cập nhật số lượng, focus Đổi người/vị trí, mobile toàn chiều rộng/Quay lại/sáng tối, giữ bộ lọc/trang/chế độ/cuộn khi quay lại. Đã sửa việc Enter tìm kiếm bị bỏ qua khi nhóm đang tải; chạy lại ca tương ứng đạt.</label></li>
+<li><input type="checkbox" id="checkbox52" checked="true"><label for="checkbox52">12 E2E hồi quy đạt: 6 tài sản, 3 bố cục gọn và 3 ô chọn; gồm phân quyền, khác công ty, chống ghi đè, lịch sử, lỗi mạng, validation và chữ dài. Cộng 4 ca mới là 16 ca duy nhất đạt trên DB riêng. Lượt đầu gián đoạn bởi server dev khởi động lại; các ca ảnh hưởng bởi cập nhật bản thử được chạy lại khi ổn định và đạt.</label></li>
+<li><input type="checkbox" id="checkbox53" checked="true"><label for="checkbox53">TypeScript/lint và build production Webpack đạt trên app riêng; build chạy lại sau nhắc bảo mật Next.js hiện có, không đổi dependency. Kiểm tra chỉ đọc tại cổng 4000: 91 hồ sơ/11 card loại, tìm người không dấu, tìm toàn cục, hồ sơ và mobile sáng/tối đúng; không tràn ngang/lỗi JavaScript, không gửi form lên DB chính. Đã xem ảnh thực tế và làm rõ trạng thái nút chọn cách nhóm.</label></li>
+<li><input type="checkbox" id="checkbox54" checked="true"><label for="checkbox54">Đã dừng server thử và xóa đúng DB tạm. Đối chiếu 17 bảng local: 15 bảng không đổi; tài sản </label><code>TS-000050</code> và audit tương ứng có một cập nhật vận hành đồng thời, được giữ nguyên. Các lần chạy thử ghi dữ liệu chỉ vào DB riêng, kiểm tra cổng 4000 chỉ đọc. 101 liên kết/anchor và <code>git diff --check</code> đạt. Bằng chứng tại <code>outputs/assets-groups/</code>; lưu ngữ cảnh trong phiên trang, tải lại trang bắt đầu ở tổng quan theo loại.</li>
+</ul>
+<h3 id="b%E1%BA%A3ng-thi%E1%BA%BFt-b%E1%BB%8B-v%C3%A0-s%E1%BB%ADa-tr%E1%BB%B1c-ti%E1%BA%BFp-%E2%80%94-%C4%91%C3%A3-ki%E1%BB%83m-ch%E1%BB%A9ng-12%2F11%2F2026" tabindex="-1">Bảng thiết bị và sửa trực tiếp — đã kiểm chứng 12/11/2026</h3>
+<p>Điều chỉnh theo phản hồi mới: <strong>chỉ tab Theo loại dùng card</strong>. Nhóm người/vị trí chuyển sang các dòng gọn; vào nhóm hoặc tìm kiếm luôn là bảng thiết bị. Bỏ lựa chọn Thẻ/Bảng. Điện thoại dùng bảng cuộn ngang trong vùng riêng, không tràn toàn trang.</p>
+<ul>
+<li><input type="checkbox" id="checkbox55" checked="true"><label for="checkbox55">Đổi bố cục nhóm và danh sách; giữ tìm kiếm, bộ lọc, trang, cuộn và mở hồ sơ chi tiết.</label></li>
+<li><input type="checkbox" id="checkbox56" checked="true"><label for="checkbox56">Nhấp trực tiếp giá trị người sử dụng, vị trí hoặc tình trạng (kể cả Chưa rõ/Chưa xác nhận) mở dòng sửa và đúng bộ chọn; chỉ ASSETS MANAGE. Người dùng cá nhân mở tìm người, các hình thức khác mở chọn hình thức và không tự đổi dữ liệu. Tự lưu thành công hoặc Đóng/Bỏ thay đổi trả focus về ô vừa bấm; khóa dòng khác khi đang sửa.</label></li>
+<li><input type="checkbox" id="checkbox57" checked="true"><label for="checkbox57">Kiểm chứng bổ sung 16/11: 6/6 E2E sửa dòng đạt trên bản production và DB riêng, gồm 2 ca mới nhấp ô/bàn phím, mở đúng bộ chọn, Lưu/Hủy/trả focus, khóa dòng khác, mobile và thử lại khi tải lỗi; hồi quy kiểm tra VIEW, validation, xung đột, lỗi mạng, audit và trường ẩn. TypeScript/lint/build Webpack đạt (build chạy lại sau nhắc bảo mật Next.js hiện có, không đổi dependency). Kiểm tra trực tiếp cổng 4000: nhấp Chưa rõ mở tìm vị trí, Hủy trả focus, không lỗi JavaScript hoặc lưu dữ liệu. Đã xem ảnh desktop/mobile, dừng server và xóa DB thử; fingerprint 19/19 bảng vận hành không đổi. Bằng chứng ở </label><code>outputs/assets-cell-edit/</code>; <code>git diff --check</code> đạt.</li>
+<li><input type="checkbox" id="checkbox58" checked="true"><label for="checkbox58">Nút Sửa trên dòng mở các ô tên, hình thức/người sử dụng, vị trí và tình trạng; Tự lưu tại chỗ theo quy tắc mới, mỗi lần một dòng. Trường còn lại giữ nguyên và sửa qua hồ sơ đầy đủ. Tái sử dụng </label><code>saveAsset</code>/Zod, phiên bản chống ghi đè, ASSETS MANAGE, tham chiếu cùng công ty và audit; không thêm API/schema/quyền.</li>
+<li><input type="checkbox" id="checkbox59" checked="true"><label for="checkbox59">Trong lúc sửa khóa các điều hướng/lọc của danh sách; bản nháp có thay đổi chặn nhấp liên kết rời trang, cảnh báo khi tải lại. Lưu lỗi giữ ô nhập; Bỏ thay đổi chỉ bỏ phần chưa lưu. Tự lưu khi chọn hoặc rời ô/Enter theo mục tự lưu phía trên. Danh mục dài dùng tìm/chọn, người cũ đã nghỉ vẫn hiển thị để bàn giao.</label></li>
+<li><input type="checkbox" id="checkbox60" checked="true"><label for="checkbox60">17 E2E đạt trên bản production và DB khôi phục riêng: 4 ca sửa tại dòng, 4 luồng nhóm, 3 bố cục gọn và 6 tài sản. Đã kiểm tra Lưu/Hủy/Enter, tìm người không dấu, trường bắt buộc, lỗi tải/mạng/ghi đè, quyền VIEW và khác công ty, giữ trường ẩn/audit, cập nhật số lượng khi tài sản rời nhóm người, bộ lọc/trang/cuộn/focus và mobile sáng/tối. Đã sửa khôi phục cuộn sau khi bảng render, focus khi quay lại lúc đang tải và cập nhật tổng quan độc lập để không mất số đếm mới khi quay lại sớm sau lưu.</label></li>
+<li><input type="checkbox" id="checkbox61" checked="true"><label for="checkbox61">TypeScript/lint/build production Webpack đạt; build chạy lại sau nhắc bảo mật Next.js sẵn có, không đổi dependency. Kiểm thử production chạy tuần tự để tách kiểm tra lỗi mạng khỏi reload của dev server. Tại cổng 4000 chỉ đọc, mở sửa rồi Hủy: bảng 91 hồ sơ, card loại, danh sách nhóm người, ô sửa và responsive đúng; không gửi mutation lên DB chính. Bằng chứng/ảnh tại </label><code>outputs/assets-inline/</code>.</li>
+<li><input type="checkbox" id="checkbox62" checked="true"><label for="checkbox62">Đã dừng server thử và xóa đúng DB tạm; fingerprint cả 17 bảng local giữ nguyên so với đầu lượt. Không thay schema, quyền hoặc ba rule kỹ thuật chung. Liên kết/anchor trong 4 tài liệu và </label><code>git diff --check</code> đạt.</li>
+</ul>
+<h3 id="%C4%91%E1%BB%81-xu%E1%BA%A5t-t%C3%AAn-v%C3%A0-m%C3%A3-t%C3%A0i-s%E1%BA%A3n-%E2%80%94-ch%E1%BB%9D-ch%E1%BB%91t" tabindex="-1">Đề xuất tên và mã tài sản — chờ chốt</h3>
+<p>Theo câu hỏi ngày 12/11: phân biệt tên mô tả và mã nhận diện. Đề xuất mã mới theo mã loại (<code>PC-001</code>, <code>PC-002</code>, <code>LAPTOP-001</code>), bộ đếm riêng theo công ty/loại được cấp nguyên tử, không tái sử dụng mã; sau <code>999</code> tiếp tục <code>1000</code>. Mã đã cấp giữ nguyên khi đổi tên/loại; giữ mã <code>TS-...</code> của hồ sơ đã tồn tại. Đề xuất tên không bắt người dùng nhập: mặc định tên loại, cho sửa thành tên mô tả cụ thể. Chưa thay schema, bộ sinh mã hoặc validation hiện hành; tên vẫn bắt buộc theo thiết kế đã triển khai. Việc nhập nguồn được cho phép riêng, dùng cơ chế mã hiện tại.</p>
+<h3 id="ngu%E1%BB%93n-v%C3%A0-ph%E1%BA%A7n-gi%E1%BB%AF-l%E1%BA%A1i" tabindex="-1">Nguồn và phần giữ lại</h3>
+<p>Ảnh BMHC 0501 chỉ tham khảo: 11 nhóm/90 thiết bị; workbook hiện có 92 dòng/11 nhóm. Theo yêu cầu ngày 12/11 đã nhập 89 dòng độc lập, ba dòng còn chờ đối chiếu như checklist; nhập hồ sơ không đồng nghĩa xác nhận tình trạng hoặc bàn giao thực tế. File được đọc bằng Python theo chấp thuận, giữ nguyên file gốc; SHA256 <code>1d394d52d942bafe7ca6327856d4a27e7e033d994d9d4e9e9864af60b2bb0023</code>. Chi tiết bối cảnh cũ ở <a href="../strategy/PHAN-TICH-NHAP-TAI-SAN-VA-VI-TRI-DUNG-CHUNG.md">phân tích nguồn</a>; các mô tả schema cũ không áp dụng cho mức 1 hiện tại.</p>
+<p>3D nhân sự đã được chỉnh giao diện và kiểm tra desktop/mobile ngày 09/11; không phụ thuộc bảng tài sản mới. Hướng tương lai ở <a href="../strategy/DANH-GIA-TICH-HOP-TAI-SAN-VA-MO-HINH-3D.md">đánh giá 3D</a>; không suy vị trí thiết bị từ cơ cấu tổ chức.</p>
+<h3 id="li%C3%AAn-k%E1%BA%BFt-v%E1%BB%9Bi-v%E1%BB%8B-tr%C3%AD-v%C3%A0-3d" tabindex="-1">Liên kết với vị trí và 3D</h3>
+<p>Đã triển khai và kiểm chứng ngày 12/11: <a href="OFFICE-3D-CHECKLIST.md#g%C3%A1n-t%C3%A0i-s%E1%BA%A3n-t%E1%BA%A1i-v%E1%BB%8B-tr%C3%AD-3d">plan 3D</a> sở hữu giao diện tại HCNS; <a href="LOCATION-MANAGEMENT-CHECKLIST.md">plan vị trí</a> sở hữu cây <code>vi_tri</code>. Nhân sự và thiết bị có FK vị trí riêng, không chuyển thiết bị theo người.</p>
+<table>
+<thead>
+<tr>
+<th>Quyền</th>
+<th>Phạm vi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LOCATIONS VIEW/MANAGE</td>
+<td>Vào viewer và chọn vị trí; không tự xem tài sản</td>
+</tr>
+<tr>
+<td>Thêm ASSETS VIEW</td>
+<td>Đọc danh sách thiết bị và hình đại diện tại điểm liên kết hợp lệ</td>
+</tr>
+<tr>
+<td>Thêm ASSETS MANAGE</td>
+<td>Gán/chuyển/bỏ gán; không sửa cây vị trí hoặc hồ sơ HR</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><code>assignAssetLocation</code> chỉ đổi <code>tai_san.vi_tri_id</code> và <code>updated_at</code>; dùng ASSETS MANAGE, cùng khóa hàng công ty → advisory <code>(260126, company_id)</code> → kiểm tra lại phiên/quyền. Không có schema/migration mới.</li>
+<li>Payload strict gồm thiết bị, vị trí đích nullable, phiên bản đã đọc và xác nhận. Vị trí phải cùng công ty, đang dùng và mọi tổ tiên còn dùng; điểm đặt thiết bị dùng được, không giới hạn theo loại chỗ ngồi HR.</li>
+<li>Thiết bị đã có vị trí phải xác nhận khi chuyển/bỏ gán. Cùng vị trí không tạo trùng hoặc audit thừa. Phiên bản cũ bị từ chối, không tự ghi đè; thay đổi và nhật ký ASSETS <code>tai_san:id</code> cùng transaction, trước–sau có đường dẫn vị trí. Lỗi audit rollback toàn bộ.</li>
+<li>Giữ nguyên mã, người sử dụng, phòng quản lý, tình trạng và các trường còn lại. Thiết bị ngừng dùng vẫn có thể ghi nhận/chuyển nơi đặt hoặc bỏ gán, không bị mất lịch sử.</li>
+<li><code>getAssetLocationCandidates</code> chỉ trả trường chọn tối thiểu, 20 hồ sơ/trang; lấy dữ liệu theo công ty phiên, không có HR hoặc ghi chú/serial trong kết quả. <code>saveAsset</code> cũng làm mới viewer khi đổi vị trí từ <code>/assets</code>.</li>
+<li>Hình PC/máy in trong HCNS nay đại diện hồ sơ đã gán, không dựng từ ghi chú khảo sát. Giới hạn mẫu hình và tương tác thuộc plan 3D.</li>
+<li><input type="checkbox" id="checkbox63" checked="true"><label for="checkbox63">Hoàn thiện action gán riêng, validation, danh sách chọn tối thiểu, cập nhật cache và liên kết với panel 3D.</label></li>
+<li><input type="checkbox" id="checkbox64" checked="true"><label for="checkbox64">7 kiểm thử tích hợp action/quyền/đồng thời/audit và 4 E2E Chrome đạt trên DB riêng; không thay PC vận hành hoặc tự cấp quyền. Kết quả UI, kiểm tra cổng 4000 chỉ đọc và dọn môi trường thử tại </label><a href="OFFICE-3D-CHECKLIST.md#g%C3%A1n-t%C3%A0i-s%E1%BA%A3n-t%E1%BA%A1i-v%E1%BB%8B-tr%C3%AD-3d">plan 3D</a>.</li>
+</ul>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+    </body>
+</html>

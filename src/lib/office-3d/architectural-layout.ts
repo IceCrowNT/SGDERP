@@ -72,7 +72,12 @@ function serviceCore(floor: ArchitecturalFloor): ArchitecturalRegion[] {
     region(floor, "wc_nu", "WC nữ", "utility", rectangle(19.32, 0, 23.44, 3.3)),
     region(floor, "wc_nam", "WC nam", "utility", rectangle(19.32, 3.3, 23.44, 6.6)),
     region(floor, "thang", "Cầu thang", "stairs", rectangle(19.32, 6.6, 23.44, 9.4)),
-    region(floor, "ky_thuat", "Khu phụ trợ", "utility", rectangle(19.32, 9.4, 23.44, 11.7)),
+    // Annotated floor 3: server room is only the right-hand cell beside the stair.
+    // The left cell remains technical context, not a managed room.
+    ...(floor === 3 ? [
+      region(floor, "ky_thuat", "Khu phụ trợ", "utility", rectangle(19.32, 9.4, 21.6, 11.7)),
+      region(floor, "server", "Phòng server", "room", rectangle(21.6, 9.4, 23.44, 11.7)),
+    ] : [region(floor, "ky_thuat", "Khu phụ trợ", "utility", rectangle(19.32, 9.4, 23.44, 11.7))]),
   ];
 }
 
@@ -96,21 +101,34 @@ export const ARCHITECTURAL_BOUNDS = {
   depth: 31.15,
 };
 
-/** Only floor 2 has the labelled open atrium; floor 3 has a hall here. */
-export const ARCHITECTURAL_ATRIUM: ArchitecturalPoint[] = rectangle(10.36, 11.7, 17.16, 21.55)
+/** Slab boundary: the floor-2 atrium opens through the former front corridor.
+ * A notch avoids a hole touching the outer contour during triangulation.
+ * The footprint above still describes the full spatial envelope (including void).
+ */
+const FLOOR_2_SURFACE = [
+  [0, 0], [29.62, 0], [29.62, 24.25], [17.16, 24.25],
+  [17.16, 11.7], [10.36, 11.7], [10.36, 24.25], [0, 24.25],
+].map(([x, z]) => point(x, z));
+export function architecturalFloorSurface(floor: ArchitecturalFloor) {
+  return floor === 2 ? FLOOR_2_SURFACE : architecturalFloorOutline(floor);
+}
+
+/** Only floor 2 has an open atrium; floor 3 has a hall here. */
+export const ARCHITECTURAL_ATRIUM: ArchitecturalPoint[] = rectangle(10.36, 11.7, 17.16, 24.25)
   .map(([x, z]) => point(x, z));
 
 export const ARCHITECTURAL_REGIONS: ArchitecturalRegion[] = [
   // Floor 1. Room names intentionally remain neutral until the occupant is confirmed.
   region(1, "trai_sau", "Phòng phía trái · sau", "room", rectangle(0, 0, 8.2, 11.7), 90.5),
   region(1, "giua_sau", "Phòng giữa · phía sau", "room", rectangle(10.36, 0, 17.16, 9.4), 61),
-  region(1, "phai_sau", "Phòng phía phải · sau", "room", rectangle(23.44, 0, 29.62, 9.4), 54),
   region(1, "trai_truoc", "Phòng phía trái · trước", "room", rectangle(0, 11.7, 8.2, 24.25), 97),
-  region(1, "phai_truoc", "Phòng phía phải · trước", "room", [
-    [23.44, 9.4], [27.52, 9.4], [27.52, 15.45], [29.62, 15.45],
+  // Both right-hand areas belong to VietinBank. Keep the linked front key.
+  region(1, "phai_truoc", "Ngân hàng VietinBank", "room", [
+    [23.44, 0], [29.62, 0], [29.62, 9.4], [27.52, 9.4],
+    [27.52, 15.45], [29.62, 15.45],
     [29.62, 22.55], [27.52, 22.55], [27.52, 24.25], [19.32, 24.25],
     [19.32, 11.7], [23.44, 11.7],
-  ], 124, [24.4, 18.5]),
+  ], undefined, [25, 12]),
   region(1, "sanh", "Sảnh chính", "hall", rectangle(8.2, 9.4, 19.32, 21.55), 127),
   region(1, "loi_vao", "Lối vào chính", "entrance", rectangle(10.36, 21.55, 17.16, 31.15)),
   region(1, "hanh_lang_trai", "Lối đi bên trái", "hall", rectangle(8.2, 0, 10.36, 9.4)),
@@ -131,16 +149,18 @@ export const ARCHITECTURAL_REGIONS: ArchitecturalRegion[] = [
     [19.32, 15.45], [29.62, 15.45], [29.62, 22.55],
     [27.52, 22.55], [27.52, 24.25], [19.32, 24.25],
   ], 82, [24.2, 19.5]),
-  region(2, "thong_tang", "Thông tầng", "atrium", rectangle(10.36, 11.7, 17.16, 21.55)),
+  region(2, "thong_tang", "Thông tầng", "atrium", rectangle(10.36, 11.7, 17.16, 24.25)),
   region(2, "hanh_lang_trai", "Hành lang bên trái", "hall", rectangle(8.2, 0, 10.36, 24.25)),
   region(2, "hanh_lang_phai", "Hành lang bên phải", "hall", rectangle(17.16, 0, 19.32, 24.25)),
   region(2, "hanh_lang_sau", "Hành lang phía sau", "hall", rectangle(10.36, 9.4, 17.16, 11.7)),
-  region(2, "hanh_lang_truoc", "Hành lang phía trước", "hall", rectangle(10.36, 21.55, 17.16, 24.25)),
   ...serviceCore(2),
 
   // Floor 3. The source explicitly labels the central space SẢNH, not a garden.
   region(3, "trai_sau", "Phòng phía trái · sau", "room", rectangle(0, 0, 8.2, 6.6), 50),
-  region(3, "trai_truoc", "Phòng phía trái · trước", "room", rectangle(0, 6.6, 8.2, 24.25), 140),
+  // User's annotated survey divides the former 140 m² area across its width.
+  // Split position is proportional to the sketch, not a surveyed measurement.
+  region(3, "trai_giua", "Phòng phía trái · giữa", "room", rectangle(0, 6.6, 8.2, 14.4)),
+  region(3, "trai_truoc", "Phòng phía trái · trước", "room", rectangle(0, 14.4, 8.2, 24.25)),
   region(3, "giua_sau", "Phòng giữa · phía sau", "room", rectangle(10.36, 0, 17.16, 9.4), 61),
   region(3, "phai", "Khu phòng phía phải", "room", [
     [23.44, 0], [29.62, 0], [29.62, 9.4], [26.4, 9.4],

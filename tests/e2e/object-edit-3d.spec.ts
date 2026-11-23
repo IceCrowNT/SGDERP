@@ -1,3 +1,4 @@
+import { HCNS_LAYOUT } from "../../prisma/data/hcns-survey";
 import { test, expect, type Page, type Request } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { readFileSync } from "node:fs";
@@ -5,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { Matrix4, Vector4 } from "three";
 import { signAccount } from "../helpers/account-fixture";
 import {layoutEquipment} from "../../src/lib/office-3d/equipment-layout";
-import { HCNS_LAYOUT } from "../../src/lib/office-3d/hcns-layout";
+
 import { hcnsWorldPoint } from "../../src/lib/office-3d/building-navigation";
 const db = new PrismaClient(), map = JSON.parse(readFileSync("var/office-3d/hcns.json", "utf8"));
 const base = "/office-3d?floor=2&room=t2_hcns_pc&mode=room", run = randomUUID().slice(0,8);

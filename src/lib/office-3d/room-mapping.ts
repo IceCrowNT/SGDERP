@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { HCNS_LAYOUT, type RoomPoint } from "./hcns-layout";
+import type { RoomPoint } from "./hcns-layout";
+const LEGACY_POINTS = Array.from({length:10},(_,i)=>({key:`hcns-${String(i+1).padStart(2,"0")}`,number:i+1}));
 
 export const RoomMappingSchema = z
   .object({
@@ -21,7 +22,7 @@ export const RoomMappingSchema = z
       new Set(value.points.map((p) => p.locationId)).size !== 10 ||
       value.points.some(
         (p) =>
-          !HCNS_LAYOUT.some((s) => s.key === p.key) ||
+          !LEGACY_POINTS.some((s) => s.key === p.key) ||
           p.locationId === value.roomId,
       )
     ) {
@@ -44,7 +45,7 @@ export function mappedRoomPoints(
   mapping: RoomMapping,
   rows: MappedLocation[],
 ): RoomPoint[] {
-  return HCNS_LAYOUT.map((slot) => {
+  return LEGACY_POINTS.map((slot) => {
     const id = mapping.points.find((p) => p.key === slot.key)?.locationId;
     const row = rows.find(
       (r) =>

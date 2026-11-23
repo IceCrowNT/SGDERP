@@ -4,9 +4,9 @@ Cập nhật **17/11/2026**. **Đã có kết nối, định tuyến tác vụ, 
 
 ## Hiện trạng quản trị nội bộ — 17/11/2026
 
-Theo yêu cầu mới, **chưa áp hạn mức**: cột `tai_khoan.han_muc_ai_thang` nullable, NULL/ô trống là không giới hạn; 0 chặn; số dương là trần USD/tháng. Không tạo bảng hạn mức hoặc tự gán ngân sách. Kết nối áp dụng cùng quy ước. Giá chưa cấu hình vẫn cho gọi khi không có trần; token được ghi, chi phí NULL. Khi bật trần phải có đơn giá đúng model và xử lý khoản chưa xác định trong kỳ.
+Theo yêu cầu mới, **chưa áp hạn mức**: cột `tai_khoan.han_muc_ai_thang` nullable, NULL/ô trống là không giới hạn; 0 chặn; số dương là trần USD/tháng. Không tạo bảng hạn mức hoặc tự gán ngân sách. Kết nối áp dụng cùng quy ước. Giá chưa cấu hình vẫn cho gọi khi không có trần; token được ghi, chi phí NULL. Khi bật trần phải có đơn giá đúng model cho lần gọi mới. Theo yêu cầu 18/11, khoản đã kết thúc chưa xác định chi phí tạm không tính vào hạn mức, vẫn giữ NULL để đối soát; không chặn chat chỉ vì có khoản này.
 
-Trang AI có kết nối & model, theo tác vụ, hạn mức tài khoản và mức sử dụng theo quyền độc lập. Người dùng chọn tác vụ trước chat; model/key lỗi không tự chuyển nguồn chi. Quyền pilot giữ nguyên, chưa mở quyền AI USE. Không gỡ key môi trường hoặc tự cấp grant trong đợt này. Quản trị không đọc nội dung chat/cá nhân hóa.
+Trang AI có kết nối & model, theo tác vụ, hạn mức tài khoản và mức sử dụng theo quyền độc lập. Người dùng chọn tác vụ trước chat; model/key lỗi không tự chuyển nguồn chi. Từ 20/11, chat và tài liệu riêng là khả năng nền của mọi tài khoản hợp lệ, gồm DEFAULT; không thêm quyền AI USE. Không gỡ key môi trường hoặc tự cấp grant trong đợt này. Quản trị không đọc nội dung chat/cá nhân hóa.
 
 Thiết kế DB vật lý và tiến độ chuẩn tại [đợt quản trị API](plans/AI-ASSISTANT-CHECKLIST.md#quản-trị-api-openai-mở-rộng--17112026) và [từ điển DB](DATABASE-DICTIONARY.md#quản-trị-sử-dụng-ai--17112026). Thiết kế đầy đủ phía sau còn gồm lộ trình nguồn chi/project/credential đối soát, không mặc định mọi trường đã triển khai. Chưa đồng bộ Usage/Costs OpenAI; giao diện dẫn Usage/Billing chính thức và ghi chưa kết nối/chưa xác định số dư.
 
@@ -29,7 +29,7 @@ Người phụ trách đã yêu cầu triển khai phương án này. **Đã có
 
 Quản trị AI hiện có **Kết nối & model**, **Theo tác vụ**, **Hạn mức tài khoản** và **Mức sử dụng** theo đợt 17/11. Chat ở dashboard; cá nhân hóa và lịch sử riêng đã triển khai trong pilot theo plan hiện hành. Tái sử dụng `ket_noi_ai` và kho khóa, không tạo một bản cấu hình AI thứ hai trong bảng cài đặt tổng quát.
 
-Phân quyền theo từng nhóm và hành động, không dùng một quyền vào `/settings` để mở tất cả cấu hình. Trang đầu/menu hiện theo hợp các mục được phép; trang con, truy vấn và action kiểm tra quyền tương ứng, cùng công ty. `AI USE`, `AI MANAGE_CONNECTIONS`, `AI MANAGE_LIMITS`, `AI VIEW_USAGE` tiếp tục theo [ma trận quyền AI](#6-quyền-và-audit). Người quản lý kết nối không cần mặc nhiên có quyền quản lý tài sản/vị trí hoặc đọc chat của người khác. Quyền cài đặt chung không tự bao gồm quyền sửa ma trận vai trò.
+Phân quyền theo từng nhóm và hành động, không dùng một quyền vào `/settings` để mở tất cả cấu hình. Trang đầu/menu hiện theo hợp các mục được phép; trang con, truy vấn và action kiểm tra quyền tương ứng, cùng công ty. `AI MANAGE_CONNECTIONS`, `AI MANAGE_LIMITS`, `AI VIEW_USAGE` tiếp tục theo [ma trận quyền AI](#6-quyền-và-audit). Người quản lý kết nối không cần mặc nhiên có quyền quản lý tài sản/vị trí hoặc đọc chat của người khác. Quyền cài đặt chung không tự bao gồm quyền sửa ma trận vai trò.
 
 Cấp quyền vẫn qua `/roles`; có thể đặt liên kết từ khu cài đặt đến đó, không tạo ma trận thứ hai. Đã mở rộng catalog/validation/guard/menu và migration cho quyền kết nối; quyền hạn mức/usage triển khai khi có chức năng tương ứng theo [plan phân quyền](plans/ROLE-MANAGEMENT-CHECKLIST.md#khi-thêm-tính-năng-hoặc-quyền-mới). Không suy đặc quyền từ tên ADMIN. Migration/seed không cấp grant; thao tác chuyển tiếp riêng có audit giữ quyền quản trị kết nối cho đúng tài khoản pilot hiện tại, theo plan cài đặt.
 
@@ -50,7 +50,7 @@ User thường xem hạn mức và mức sử dụng của chính tài khoản t
 
 | Chỉ số | Chủ thể kiểm soát | Cách hiển thị |
 | --- | --- | --- |
-| Ngân sách được cấp trong ERP | ERP; theo tài khoản và kết nối | Được cấp, đã ghi nhận, đang giữ cho lượt đang gọi/chưa rõ, còn khả dụng, ngày bắt đầu kỳ; token là thống kê sử dụng, chưa có trần token riêng từng user |
+| Ngân sách được cấp trong ERP | ERP; theo tài khoản và kết nối | Được cấp, đã ghi nhận, đang giữ cho lượt DANG_GOI, còn khả dụng, ngày bắt đầu kỳ; token là thống kê sử dụng, chưa có trần token riêng từng user |
 | Chi phí/mức sử dụng OpenAI | Nhà cung cấp; theo organization/project/key tùy endpoint/quyền | Dữ liệu đối soát, phạm vi và thời điểm lấy; không coi là số dư trả trước |
 | Spend limit của OpenAI | Organization/project OpenAI | Phân biệt cảnh báo và hard limit; bản đầu chỉ đối chiếu nếu được phép, không tự sửa giới hạn ngoài ERP |
 | Rate limit | Nhà cung cấp và bộ giới hạn nội bộ | Số request/token theo cửa sổ thời gian, model/phạm vi và mốc reset; không gọi là số tiền còn lại |
@@ -116,7 +116,7 @@ Thiết kế tổng gồm **hai cột mới trên `tai_khoan` và năm bảng AI
 
 - Một tài khoản có một giá trị hạn mức hiện hành. Cách lưu một cột đã được người phụ trách yêu cầu; đơn vị tiền/kỳ tháng tiếp tục là phương án đã đề xuất, cần chốt mức cấp cụ thể trước pilot. Không dùng JSON hoặc một bảng chính sách chỉ để lưu con số này.
 - Chỉ quyền `AI MANAGE_LIMITS` được đổi cột này trong phạm vi công ty; user xem nhưng không tự sửa qua profile/cá nhân hóa. Dùng `updated_at` hiện có để kiểm tra xung đột, audit giá trị cũ/mới cùng transaction; không tăng phiên bản đăng nhập chỉ vì đổi hạn mức.
-- Mức 0 chặn gọi có phí. Theo yêu cầu 17/11, migration đặt NULL cho dữ liệu cũ để chưa giới hạn; quyền dùng chat giữ pilot, AI USE cho mở rộng chưa triển khai. Không tự cấp ngân sách/grant. Giới hạn kỹ thuật hiện có giữ nguyên, chưa có tùy chỉnh riêng từng user.
+- Mức 0 chặn gọi có phí. Theo yêu cầu 17/11, migration đặt NULL cho dữ liệu cũ để chưa giới hạn; chat mở cho mọi tài khoản hợp lệ theo quyết định 20/11. Không tự cấp ngân sách/grant. Giới hạn kỹ thuật hiện có giữ nguyên, chưa có tùy chỉnh riêng từng user.
 - Mức đã dùng và phần đang giữ lấy từ `nhat_ky_goi_ai` theo công ty/tài khoản/kỳ; mức còn lại tính khi đọc. Không thêm cột “đã dùng”/“còn lại” trên tài khoản hoặc reset/xóa log đầu tháng.
 - Đề xuất tháng lịch theo `Asia/Ho_Chi_Minh`; timestamp UTC, ranh giới kỳ tường minh. Đổi khóa/kết nối không cấp lại hạn mức: tổng tài khoản tính trên mọi kết nối trong cùng kỳ. Giảm hạn mức dưới mức đã dùng chặn lần gọi mới; tăng hạn mức không xóa usage cũ.
 - Không tự gộp hạn mức theo nhân sự/phòng ban. Nếu một người có nhiều tài khoản thì quản trị phân bổ chủ động; quota tổng theo nhân sự/phòng là mở rộng riêng.
@@ -155,12 +155,12 @@ Không thêm bảng tổng hợp chỉ để cộng số dùng trong pilot. Inde
 
 ## 4. Giữ hạn mức và tính phần còn lại
 
-**Còn khả dụng trong ERP = mức cấp − mức đã ghi nhận − phần giữ cho các lần gọi đang xử lý/chưa rõ**, chặn ở 0 khi hiển thị. Dùng Decimal cho tiền; nhãn là ngân sách ERP ước tính, không gọi là số dư OpenAI.
+**Còn khả dụng trong ERP = mức cấp − mức đã ghi nhận − phần giữ cho các lần gọi DANG_GOI**, chặn ở 0 khi hiển thị. Dùng Decimal cho tiền; nhãn là ngân sách ERP ước tính, không gọi là số dư OpenAI.
 
 1. Trước mỗi lần gọi, đọc quyền, `tai_khoan.han_muc_ai_thang` và kết nối mặc định hiện hành. Khóa theo cùng thứ tự của hệ thống: công ty → phân quyền → kết nối → tài khoản → hội thoại/log khi cần. Các luồng đổi hạn mức/khóa kết nối dùng cùng thứ tự; đọc và chọn mặc định trong khóa để không đổi nguồn giữa kiểm tra và nhận xử lý.
 2. Trong transaction ngắn, cộng mức đã dùng + dự phòng ở cả user và kết nối, kiểm tra model/tốc độ/đồng thời theo cấu hình chung, giữ ngân sách đủ cho giới hạn lần gọi. Tính ngân sách theo cả đầu vào, đầu ra tối đa, reasoning được tính phí và các khoản công cụ đã bật; không đủ thì không gửi request.
 3. Gọi API ngoài transaction. Mỗi bước công cụ có thể dẫn đến lần gọi mới và phải kiểm tra/giữ ngân sách mới, kể cả khi vẫn cùng một câu hỏi.
-4. Khi có usage, giải phóng phần dự phòng và ghi mức thực tế/ước tính nguyên tử. Timeout chưa rõ giữ dự phòng, đưa vào danh sách cần đối chiếu; không coi là 0, không tự cấp lại số tiền đó vì tab đã đóng.
+4. Khi có usage, giải phóng phần dự phòng và ghi mức thực tế/ước tính nguyên tử. Timeout chưa rõ giữ dữ liệu dự phòng lịch sử và đưa vào danh sách cần đối chiếu, nhưng tạm không trừ hạn mức sau khi lượt gọi chuyển khỏi DANG_GOI. Chi phí giữ NULL, không ghi thành 0. Khi đối soát xong, chi phí được tính vào kỳ phát sinh của lượt gọi. Đóng tab không tự chuyển trạng thái lượt gọi.
 5. Mỗi lần gọi ghi kỳ tại lúc nhận xử lý; sang tháng không sửa kỳ cũ. Thay khóa hoặc hạn mức giữa lượt chỉ áp cho lần gọi tiếp theo sau khi kiểm tra lại; log lần đang chạy vẫn giữ nguồn/phiên bản ban đầu. Tạm dừng không cam kết thu hồi được chi phí của request đã gửi.
 
 Giới hạn nội bộ chỉ ngăn ERP nhận thêm yêu cầu theo số liệu/giá đã biết. Không hứa hóa đơn tuyệt đối không vượt 1 đồng khi usage/giá chưa xác định, nhiều dịch vụ dùng chung project hoặc chi phí nhà cung cấp cập nhật trễ; mọi chênh lệch phải hiện để xử lý. Cảnh báo ngưỡng và chặn hết hạn mức là hai hành vi khác nhau.
@@ -171,7 +171,7 @@ Giới hạn nội bộ chỉ ngăn ERP nhận thêm yêu cầu theo số liệu
 - Không trả khóa đã lưu về trình duyệt, không cho “xem lại”, không ghi vào log/audit/chat/Git. Endpoint nhà cung cấp do ứng dụng cấu hình cố định, không cho nhập URL bất kỳ để nhận credential. Secret tham chiếu phải là định danh được server cấp/kiểm soát.
 - Thay khóa theo phiên bản: ghi secret mới, kiểm tra trong phạm vi được phép, đổi tham chiếu nguyên tử kèm audit metadata; lỗi giữ cấu hình đang hoạt động. DB và kho bí mật không có transaction chung, nên có bước xử lý secret chưa được gắn hoặc phiên bản cũ còn được request đang chạy dùng.
 - “Tạm dừng kết nối trong ERP” chỉ chặn ERP; không đồng nghĩa revoke khóa trên OpenAI. Cấp/revoke khóa bên nhà cung cấp, nạp tiền và sửa spend limit chưa thuộc chức năng tự động bản đầu; dùng trang quản trị chính thức.
-- Nút kiểm tra phải phân biệt kiểm tra xác thực với thử gọi model có thể phát sinh phí. Lần thử có phí cần `AI USE` và hạn mức còn khả dụng của người thao tác, đồng thời kiểm tra trần của kết nối đang thử; dùng cùng cơ chế giữ ngân sách/log. Quyền quản lý kết nối không tạo đường thử vô hạn miễn kiểm soát hoặc tự đổi nguồn chat mặc định.
+- Nút kiểm tra phải phân biệt kiểm tra xác thực với thử gọi model có thể phát sinh phí. Lần thử có phí cần phiên hợp lệ và hạn mức còn khả dụng của người thao tác, đồng thời kiểm tra trần của kết nối đang thử; dùng cùng cơ chế giữ ngân sách/log. Quyền quản lý kết nối không tạo đường thử vô hạn miễn kiểm soát hoặc tự đổi nguồn chat mặc định.
 - Usage/Costs đồng bộ là bước sau khi có credential quản trị phù hợp, tách khỏi khóa gọi model và khỏi ngữ cảnh AI. Chỉ thực hiện đọc; không mặc định lưu Admin key có quyền rộng cho dịch vụ chat. Dịch vụ đối soát giới hạn project của đúng công ty ngay tại server trước khi trả dữ liệu UI/cache.
 - Lấy đủ các trang/khoảng thời gian trước khi thay snapshot, ghi thời điểm lấy và phạm vi/kỳ; lỗi giữ bản thành công gần nhất kèm nhãn cũ/lỗi. Không cộng lặp snapshot theo mỗi lần đồng bộ, không gán dữ liệu tổng cả organization cho một user ERP.
 - Số liệu nhà cung cấp có thể gồm lưu lượng ngoài ERP và dùng kỳ/múi giờ khác. Hiển thị riêng với log ERP, đối chiếu trên cùng cửa sổ thời gian; không cộng hai nguồn thành tổng chi phí mới. Bản đầu không tự chia đều chênh lệch cho user hoặc sửa hạn mức dựa trên dữ liệu chưa đối chiếu.
@@ -180,12 +180,12 @@ Giới hạn nội bộ chỉ ngăn ERP nhận thêm yêu cầu theo số liệu
 
 | Quyền đề xuất | Phạm vi |
 | --- | --- |
-| `AI USE` — chưa triển khai | Dành cho mở rộng ngoài pilot; pilot hiện hành giữ quyền cũ và xem mức dùng riêng |
+| Chat và tệp riêng — khả năng nền | Mọi tài khoản hợp lệ, gồm DEFAULT; không cần grant AI USE. Công cụ ERP kiểm tra quyền phân hệ riêng. |
 | `AI VIEW_USAGE` | Xem thống kê metadata các tài khoản/kết nối trong công ty |
 | `AI MANAGE_LIMITS` | Sửa `tai_khoan.han_muc_ai_thang`; cần thêm VIEW_USAGE để mở số liệu đối chiếu, không cấp quyền sửa các trường tài khoản khác |
 | `AI MANAGE_CONNECTIONS` | Thêm/thay/tạm dừng kết nối, quản lý model/giới hạn kết nối; cần thêm VIEW_USAGE để xem số liệu |
 
-Không suy quyền từ chức danh quản lý; không tự cấp các grant trên. Các grant quản trị không mặc nhiên gồm `AI USE` hoặc quyền đọc nội dung chat. Cấp tại `/roles`; không có nút tự cấp quyền tại màn hình AI. Danh mục tài khoản chọn gán chỉ trả tối thiểu tên/username/trạng thái cùng công ty, không mở hồ sơ HR.
+Không suy quyền từ chức danh quản lý; không tự cấp các grant trên. Các grant quản trị không gồm quyền đọc nội dung chat của người khác. Cấp tại `/roles`; không có nút tự cấp quyền tại màn hình AI. Danh mục tài khoản chọn gán chỉ trả tối thiểu tên/username/trạng thái cùng công ty, không mở hồ sơ HR.
 
 Mọi thay đổi hạn mức/kết nối và audit metadata phải cùng transaction DB; có kiểm tra phiên bản để không ghi đè quản trị khác. Audit ghi trường thay đổi, hạn mức cũ/mới, actor, lý do nếu điều chỉnh ngoại lệ; thay khóa chỉ ghi phiên bản/hậu tố, không secret hoặc giá trị có thể giải mã. Không dùng log chat thay audit quản trị.
 

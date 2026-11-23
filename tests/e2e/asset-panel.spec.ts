@@ -37,13 +37,23 @@ test("click values edits within the panel; searchable person/location saves pres
   await signAccount(context, manager); await page.goto(link());
   await expect(detail(page).getByLabel("Mã tài sản tự sinh, không thể sửa")).toBeVisible();
   await expect(detail(page).getByRole("button", { name: "Sửa tài sản", exact: true })).toHaveCount(0);
-  await detail(page).getByRole("button", { name: "Sửa người sử dụng", exact: true }).click();
+  await detail(page).getByRole("button", { name: "Sửa hình thức sử dụng", exact: true }).click();
   await expect(detail(page)).toHaveCount(1);
   await expect(page.getByRole("dialog", { name: "Sửa tài sản", exact: true })).toHaveCount(0);
+  await expect(edit(page).getByRole("combobox", { name: "Người sử dụng", exact: true })).toHaveCount(0);
+  await page.getByRole("option", { name: "Cá nhân", exact: true }).click();
+  await expect(edit(page).getByRole("alert").filter({ hasText: "Chọn người sử dụng" })).toBeVisible();
+  expect((await db.tai_san.findUniqueOrThrow({ where: { id } })).nguoi_su_dung_id).toBeNull();
+  await edit(page).getByRole("combobox", { name: "Người sử dụng", exact: true }).click();
   await page.getByRole("combobox", { name: "Tìm người sử dụng", exact: true }).fill("pham loan");
   await page.getByRole("option", { name: /Phạm Thị Kim Loan/ }).click();
   await expect(edit(page)).not.toBeVisible(); await expect(detail(page).getByRole("button", { name: "Sửa người sử dụng", exact: true })).toContainText("Phạm Thị Kim Loan");
+  const department = detail(page).getByRole("button", { name: "Sửa phòng quản lý", exact: true });
+  const departmentBefore = await department.boundingBox();
   await detail(page).getByRole("button", { name: "Sửa vị trí", exact: true }).click();
+  const departmentAfter = await department.boundingBox();
+  expect(departmentAfter?.x).toBe(departmentBefore?.x);
+  expect(departmentAfter?.y).toBe(departmentBefore?.y);
   await page.getByRole("combobox", { name: "Tìm vị trí", exact: true }).fill("phong thu");
   await page.getByRole("option", { name: "Phòng thử", exact: true }).click(); await expect(edit(page)).not.toBeVisible();
   const row = await db.tai_san.findUniqueOrThrow({ where: { id } });
@@ -53,9 +63,28 @@ test("click values edits within the panel; searchable person/location saves pres
   expect(await db.nhat_ky_hoat_dong.count({ where: { company_id: manager.company_id, doi_tuong_id: `tai_san:${id}` } })).toBe(2);
 });
 
+test("shared use hides person controls; personal use requires a person before autosaving", async ({ page, context }) => {
+  await signAccount(context, manager); await page.goto(link());
+  await detail(page).getByRole("button", { name: "Sửa người sử dụng", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Tìm người sử dụng", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape"); // Close the automatically opened person search.
+  await edit(page).getByRole("combobox", { name: "Hình thức sử dụng", exact: true }).click();
+  await page.getByRole("option", { name: "Dùng chung", exact: true }).click();
+  await expect(edit(page)).not.toBeVisible();
+  await expect(detail(page).getByRole("button", { name: "Sửa người sử dụng", exact: true })).toHaveCount(0);
+  expect((await db.tai_san.findUniqueOrThrow({ where: { id } })).nguoi_su_dung_id).toBeNull();
+  await detail(page).getByRole("button", { name: "Sửa hình thức sử dụng", exact: true }).click();
+  await page.getByRole("option", { name: "Cá nhân", exact: true }).click();
+  await expect(edit(page).getByRole("alert").filter({ hasText: "Chọn người sử dụng" })).toBeVisible();
+  await edit(page).getByRole("combobox", { name: "Người sử dụng", exact: true }).click();
+  await page.getByRole("option", { name: /Phạm Thị Kim Loan/ }).click();
+  await expect(edit(page)).not.toBeVisible();
+  expect((await db.tai_san.findUniqueOrThrow({ where: { id } })).nguoi_su_dung_id).toBe(person);
+  await page.screenshot({ path: "outputs/asset-panel-layout/desktop.png" });
+});
+
 test("failed autosave protects the draft from close and Back; discard preserves saved value", async ({ page, context }) => {
   await signAccount(context, manager); await page.goto("/assets");
-  await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
   await page.getByRole("button", { name: "Mở tài sản PC panel", exact: true }).click();
   await detail(page).getByRole("button", { name: "Sửa tên tài sản", exact: true }).click();
   const block = async (route: import("@playwright/test").Route) => route.request().method() === "POST" ? route.abort() : route.continue();
@@ -98,7 +127,6 @@ test("optional finance validates, applies category months explicitly and renders
   for (const summary of await history.locator("summary").all()) await summary.click();
   await expect(history).toContainText("12.000.000 ₫");
   await detail(page).getByRole("button", { name: "Close", exact: true }).click();
-  await page.getByRole("button", { name: "Xem tất cả", exact: true }).click();
   await expect(page.getByRole("table").getByRole("meter")).toHaveAttribute("aria-valuenow", "100");
   await page.screenshot({ animations: "disabled", path: "outputs/assets-panel/table-green.png" });
 });
@@ -146,6 +174,7 @@ test("VIEW is read-only; finance stays collapsed; mobile light/dark fit with inl
     await page.evaluate(theme => localStorage.setItem("theme", theme), theme); await page.goto(link());
     await detail(page).locator("summary").filter({ hasText: "Mua sắm & khấu hao" }).click();
     await detail(page).getByRole("button", { name: "Sửa giá mua (vnd)", exact: true }).click();
+    await expect(edit(page).getByLabel("Ngày mua", { exact: true })).toBeFocused();
     await edit(page).getByLabel("Giá mua (VND)", { exact: true }).fill("0");
     await edit(page).getByRole("button", { name: "Bỏ thay đổi", exact: true }).scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

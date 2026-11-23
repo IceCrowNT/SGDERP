@@ -51,3 +51,12 @@ test("equipment points keep UPS on their surface and empty/invalid dimensions cr
   assert.deepEqual(layoutEquipment({equipment:["pc"],assets:[],width:1.6,depth:.8}),[]);
   assert.deepEqual(layoutEquipment({equipment:["pc"],width:NaN,depth:.8}),[]);
 });
+
+test("printer fits the 70cm HCNS desk without shrinking or overhanging its tray",()=>{
+  const placed=layoutEquipment({equipment:[],assets:[asset(81,"PRN")],width:1.6,depth:.7});
+  assert.equal(placed.length,1);
+  assert.equal(placed[0].assetId,81);
+  assert.equal(placed[0].scale,.75);
+  checkSurface(placed,1.6,.7);
+  assert.deepEqual(layoutEquipment({equipment:["printer"],width:1.6,depth:.64}),[]);
+});

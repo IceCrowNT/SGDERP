@@ -1,4 +1,5 @@
 "use client";
+import { DirectManagerEditor } from "./DirectManagerEditor";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
@@ -113,6 +114,7 @@ export function EmployeeManager({
   roles,
   accounts,
   initialDepartmentId,
+  initialStatus = "ALL",
   initialSearch = "",
   workLocations,
 }: {
@@ -120,11 +122,12 @@ export function EmployeeManager({
   departments: Department[];
   canManage: boolean;
   initialDepartmentId?: number;
+  initialStatus?: "ALL" | "ACTIVE" | "LEFT" | "UNKNOWN";
   initialSearch?: string;
   workLocations: { id: number; label: string; }[];
 } & AccountOptions) {
   const [search, setSearch] = useState(initialSearch);
-  const [status, setStatus] = useState("ALL");
+  const [status, setStatus] = useState<string>(initialStatus);
   const [departmentId, setDepartmentId] = useState(
     initialSearch
       ? "ALL"
@@ -1114,7 +1117,7 @@ export function EmployeeForm({
                       </p>
                       <p className="text-sm">
                         Quyền cơ bản: <strong>DEFAULT</strong> · Dashboard, hồ
-                        sơ cá nhân và đổi mật khẩu. Mật khẩu được cấp sau
+                        sơ cá nhân và đổi mật khẩu. Mật khẩu tạm được cấp sau
                         khi lưu.
                       </p>
                       <details>
@@ -1214,6 +1217,7 @@ export function EmployeeForm({
           )}
         </div>
         {onEditingChange && <Button type="button" variant="outline" disabled={pending} onClick={done} className="mr-2 min-h-10">Hủy</Button>}
+        {employee && <DirectManagerEditor id={employee.id} />}
         <Button type="submit" disabled={pending || !form.formState.isReady}>
           {pending ? "Đang lưu…" : "Lưu hồ sơ"}
         </Button>

@@ -66,12 +66,12 @@ test('accessory: receive 20, issue 2, return 1; stock 19, outstanding 1 and appe
 });
 
 test('consumables issue to department without return obligations; zero opening distinguishes unknown',async()=>{
- const item=await newItem('TIEU_HAO','Mực máy in');ok(await record(item.id,'TON_DAU',{quantity:0,toId:place.id}));
+ const item=await newItem('TIEU_HAO','Mực máy in');ok(await record(item.id,'TON_DAU',{quantity:0}));
  assert.equal((await detail(item.id)).recorded,true);assert.equal(await stock(item.id),0);
- assert.equal((await record(item.id,'TON_DAU',{quantity:10,toId:place.id})).success,false);
- ok(await record(item.id,'NHAP',{quantity:20,toId:place.id}));const issue=ok(await record(item.id,'CAP_PHAT',{quantity:2,fromId:place.id,departmentId:department.id}));
- assert.equal(await stock(item.id),18);assert.equal(await outstanding(item.id),0);assert.equal((await record(item.id,'THU_HOI',{issueId:issue.id,toId:place.id})).success,false);
- assert.equal((await record(item.id,'CAP_PHAT',{fromId:place.id,employeeId:person.id,departmentId:department.id})).success,false);
+ assert.equal((await record(item.id,'TON_DAU',{quantity:10})).success,false);
+ ok(await record(item.id,'NHAP',{quantity:20}));const issue=ok(await record(item.id,'CAP_PHAT',{quantity:2,departmentId:department.id}));
+ assert.equal(await stock(item.id),18);assert.equal(await outstanding(item.id),0);assert.equal((await record(item.id,'THU_HOI',{issueId:issue.id})).success,false);
+ assert.equal((await record(item.id,'CAP_PHAT',{employeeId:person.id,departmentId:department.id})).success,false);
 });
 
 test('transfer is atomic; adjustments require reasons; stock cannot go negative through SQL',async()=>{
@@ -125,16 +125,18 @@ test('raw concurrent SQL still cannot over-issue or over-return',async()=>{
  const returned=await Promise.allSettled([db.giao_dich_vat_tu.create({data:{...ret,request_id:randomUUID()}}),db.giao_dich_vat_tu.create({data:{...ret,request_id:randomUUID()}})]);assert.equal(returned.filter(r=>r.status==='fulfilled').length,1);assert.equal(await outstanding(item.id),1);
 });
 
-test('catalog versioning, frozen unit/kind/code, stop lifecycle and location/department history',async()=>{
+test('catalog versioning, editable unit and frozen kind/code, stop lifecycle and location/department history',async()=>{
  const item=await newItem();ok(await record(item.id,'NHAP',{quantity:1,toId:place.id}));
  const v={id:item.id,version:item.updated_at.toISOString(),name:'Updated',categoryId:item.loai_vat_tu_id,unit:item.don_vi_tinh,minimum:0,departmentId:item.phong_quan_ly_id,notes:'',active:true};
  const saved=ok(await as(manager,()=>A.saveInventoryItem(v)));assert.equal((await as(manager,()=>A.saveInventoryItem(v))).success,false);
- assert.equal((await as(manager,()=>A.saveInventoryItem({...v,version:saved.row.updated_at.toISOString(),unit:'hộp'}))).success,false);
- assert.equal((await as(manager,()=>A.saveInventoryItem({...v,version:saved.row.updated_at.toISOString(),active:false}))).success,false);
+ const renamed=ok(await as(manager,()=>A.saveInventoryItem({...v,version:saved.row.updated_at.toISOString(),unit:'chiếc'})));
+ assert.equal(renamed.row.don_vi_tinh,'chiếc');assert.equal(await stock(item.id),1);
+ v.version=renamed.row.updated_at.toISOString();v.unit='chiếc';
+ assert.equal((await as(manager,()=>A.saveInventoryItem({...v,active:false}))).success,false);
  await assert.rejects(()=>db.mat_hang_vat_tu.update({where:{id:item.id},data:{loai_vat_tu_id:consumable.id}}),/không đổi mã hoặc hạng mục/);
  await assert.rejects(()=>db.vi_tri.update({where:{id:place.id},data:{dang_su_dung:false}}),/còn tồn/);
  await assert.rejects(()=>db.vi_tri.delete({where:{id:place.id}}));await assert.rejects(()=>db.phong_ban.delete({where:{id:department.id}}));
- ok(await record(item.id,'DIEU_CHINH_GIAM',{quantity:1,fromId:place.id}));ok(await as(manager,()=>A.saveInventoryItem({...v,version:saved.row.updated_at.toISOString(),active:false})));
+ ok(await record(item.id,'DIEU_CHINH_GIAM',{quantity:1,fromId:place.id}));ok(await as(manager,()=>A.saveInventoryItem({...v,active:false})));
 });
 
 test('audit failure rolls back ledger and stock, not just log',async()=>{
@@ -145,9 +147,9 @@ test('audit failure rolls back ledger and stock, not just log',async()=>{
 });
 
 test('unaccented server search, low stock uses company total even when filtering one place',async()=>{
- const item=await newItem('TIEU_HAO','Giấy trắng đặc biệt');ok(await record(item.id,'NHAP',{quantity:10,toId:place.id}));ok(await record(item.id,'CHUYEN_NOI_GIU',{quantity:1,fromId:place.id,toId:second.id}));
- const result=ok(await as(manager,()=>A.getInventory({kind:'TIEU_HAO',search:'giay dac',locationId:second.id})));assert.equal(result.rows.length,1);assert.equal(result.rows[0].stock,1);assert.equal(result.rows[0].totalStock,10);assert.equal(result.rows[0].low,false);
- const low=ok(await as(manager,()=>A.getInventory({kind:'TIEU_HAO',search:'giay dac',locationId:second.id,low:true})));assert.equal(low.rows.length,0);
+ const item=await newItem('PHU_KIEN','Giấy trắng đặc biệt');ok(await record(item.id,'NHAP',{quantity:10,toId:place.id}));ok(await record(item.id,'CHUYEN_NOI_GIU',{quantity:1,fromId:place.id,toId:second.id}));
+ const result=ok(await as(manager,()=>A.getInventory({kind:'PHU_KIEN',search:'giay dac',locationId:second.id})));assert.equal(result.rows.length,1);assert.equal(result.rows[0].stock,1);assert.equal(result.rows[0].totalStock,10);assert.equal(result.rows[0].low,false);
+ const low=ok(await as(manager,()=>A.getInventory({kind:'PHU_KIEN',search:'giay dac',locationId:second.id,low:true})));assert.equal(low.rows.length,0);
 });
 
 test('raw CHECKs/FKs reject irrelevant fields, cross-item references and fabricated reversals',async()=>{
@@ -194,4 +196,133 @@ test('pagination and invalid IDs are scoped and bounded at the server',async()=>
  const secondPage=ok(await as(manager,()=>A.getInventory({kind:'TIEU_HAO',search:'phan trang vat tu',page:2})));
  assert.equal(first.total,21);assert.equal(first.rows.length,20);assert.equal(secondPage.rows.length,1);assert.equal(secondPage.pages,2);
  const other=ok(await as(foreign,()=>A.getInventory({kind:'TIEU_HAO',search:'phan trang vat tu'})));assert.equal(other.total,0);
+});
+
+
+test('pooled creation is atomic, idempotent and separates units from quantity', async()=>{
+ const v={name:'Mực 140g pooled',categoryId:consumable.id,unit:'lọ',minimum:2,departmentId:department.id,notes:'',active:true,initialQuantity:20,initialRequestId:randomUUID()};
+ const results=await Promise.all([as(manager,()=>A.saveInventoryItem(v)),as(manager,()=>A.saveInventoryItem(v))]);results.forEach(ok);
+ assert.equal(results[0].row.id,results[1].row.id);const id=results[0].row.id;
+ assert.equal(await stock(id),20);assert.equal(await db.giao_dich_vat_tu.count({where:{mat_hang_vat_tu_id:id}}),1);
+ assert.equal((await as(manager,()=>A.saveInventoryItem({...v,initialQuantity:21}))).success,false);
+ assert.equal((await as(manager,()=>A.saveInventoryItem({...v,unit:'20',initialRequestId:randomUUID()}))).success,false);
+ assert.equal((await as(viewer,()=>A.saveInventoryItem({...v,initialRequestId:randomUUID()}))).success,false);
+ const prior=await db.mat_hang_vat_tu.count({where:{company_id:company.id}});
+ assert.equal((await as(manager,()=>A.saveInventoryItem({...v,active:false,initialRequestId:randomUUID()}))).success,false);
+ assert.equal(await db.mat_hang_vat_tu.count({where:{company_id:company.id}}),prior);
+});
+test('pooled stock rejects positions, duplicate opening, SQL negative and competing uses',async()=>{
+ const item=await newItem('TIEU_HAO','Mực tồn chung');
+ assert.equal((await record(item.id,'NHAP',{quantity:20,toId:place.id})).success,false);
+ ok(await record(item.id,'NHAP',{quantity:20}));
+ assert.deepEqual((await detail(item.id)).stock.map(r=>[r.locationId,r.quantity]),[[null,20]]);
+ const p=await payload(item.id,'CAP_PHAT',{quantity:12,departmentId:department.id});
+ const r=await Promise.all([as(manager,()=>A.recordInventoryTransaction(p)),as(manager,()=>A.recordInventoryTransaction({...p,requestId:randomUUID()}))]);assert.equal(r.filter(x=>x.success).length,1);assert.equal(await stock(item.id),8);
+ ok(await as(manager,()=>A.recordInventoryTransaction(p)));assert.equal(await stock(item.id),8);
+ assert.equal((await record(item.id,'TON_DAU',{quantity:1})).success,false);
+ await assert.rejects(()=>db.giao_dich_vat_tu.create({data:{company_id:company.id,mat_hang_vat_tu_id:item.id,loai_giao_dich:'CAP_PHAT',so_luong:9,phong_ban_nhan_id:department.id,account_id:manager.id,request_id:randomUUID()}}),/vượt tồn/);
+ const used=r.find(x=>x.success);ok(await record(item.id,'DAO_GIAO_DICH',{quantity:0,reversalId:used.id}));assert.equal(await stock(item.id),20);
+ assert.equal((await record(item.id,'DAO_GIAO_DICH',{quantity:0,reversalId:used.id})).success,false);
+ const list=ok(await as(manager,()=>A.getInventory({kind:'TIEU_HAO',search:'Mực tồn chung',locationId:place.id})));assert.equal(list.rows[0].stock,20);
+});
+
+const W=require('../../src/actions/workflow.ts');
+let requester, ticketTemplate;
+async function ticketSetup(){
+ const wf=await db.quyen.findMany({where:{phan_he:'WORKFLOW'}});
+ await db.vai_tro_quyen.createMany({data:wf.map(p=>({role_id:role.id,permission_id:p.id})),skipDuplicates:true});
+ await db.tai_khoan.update({where:{id:manager.id},data:{employee_id:person.id}});
+ const rp=await db.nhan_su.create({data:{company_id:company.id,department_id:department.id,ho_ten:'Người yêu cầu hỗ trợ',tinh_trang_lam_viec:'ACTIVE'}});
+ const rr=await db.vai_tro.create({data:{company_id:company.id,ma_vai_tro:'TICKET_REQUESTER',ten_vai_tro:'Gửi yêu cầu',danh_sach_quyen:{create:wf.filter(p=>['VIEW','CREATE'].includes(p.hanh_dong)).map(p=>({permission_id:p.id}))}}});
+ requester=await db.tai_khoan.create({data:{company_id:company.id,employee_id:rp.id,ten_dang_nhap:`ticket-${randomUUID()}`,ten_hien_thi:'Người gửi',mat_khau_bam:'disabled',danh_sach_vai_tro:{create:{role_id:rr.id}}}});
+ const t=ok(await as(manager,()=>W.saveWorkflowTemplate({code:'SUPPORT_IT',name:'Hỗ trợ IT',description:'',steps:[{name:'IT xác nhận hoàn thành',instructions:'',kind:'TASK',assignment:'SPECIFIC_EMPLOYEE',employeeId:person.id}]})));
+ ticketTemplate=t.id;
+ const workspace=ok(await as(manager,W.getWorkflowWorkspace));const template=workspace.templates.find(t=>t.id===ticketTemplate);
+ ok(await as(manager,()=>W.changeWorkflowTemplate({id:ticketTemplate,version:template.version,command:'PUBLISH'})));
+}
+const wd=async id=>ok(await as(manager,()=>W.getWorkflowDetail(id)));
+async function ticket(){
+ const saved=ok(await as(requester,()=>W.saveWorkflowDraft({templateId:ticketTemplate,title:'Đổ mực phòng kinh doanh',content:'Kiểm tra và thay mực'})));
+ const id=saved.id;const d=await wd(id);
+ ok(await as(requester,()=>W.actOnWorkflow({id,version:d.record.version,command:'SUBMIT',reason:''})));return id;
+}
+async function lines(id,rows){return as(manager,async()=>W.saveWorkflowMaterials({id,version:(await wd(id)).record.version,lines:rows}));}
+async function finishPayload(id){const d=await wd(id);return {id,version:d.record.version,stepId:d.record.steps.find(s=>s.status==='PENDING').id,command:'COMPLETE',reason:'Đã đổ mực'};}
+
+test('ticket draft does not consume; completion atomically consumes once and links history',async()=>{
+ await ticketSetup();const item=await newItem('TIEU_HAO','Mực ticket');ok(await record(item.id,'NHAP',{quantity:20}));
+ const id=await ticket();ok(await lines(id,[{itemId:item.id,departmentId:department.id,quantity:2}]));assert.equal(await stock(item.id),20);
+ const d=await wd(id);assert.equal(d.materials.length,1);assert(d.canEditMaterials);
+ const p=await finishPayload(id);const results=await Promise.all([as(manager,()=>W.actOnWorkflow(p)),as(manager,()=>W.actOnWorkflow(p))]);assert.equal(results.filter(x=>x.success).length,1);
+ assert.equal(await stock(item.id),18);assert.equal((await wd(id)).record.status,'COMPLETED');assert.equal((await wd(id)).canEditMaterials,false);
+ const moves=(await detail(item.id)).history.filter(h=>h.dong_vat_tu);assert.equal(moves.length,1);assert.equal(moves[0].dong_vat_tu.ho_so.id,id);
+ assert.equal((await lines(id,[])).success,false);
+ await assert.rejects(()=>db.dong_vat_tu_quy_trinh.update({where:{id:d.materials[0].id},data:{so_luong:3}}),/chỉ sửa vật tư/);
+ assert.equal((await as(foreign,()=>W.getWorkflowDetail(id))).success,false);
+});
+test('ticket insufficient second line rolls back first issue, final step and history; permission is rechecked',async()=>{
+ const a=await newItem('TIEU_HAO','Mực đủ'),b=await newItem('TIEU_HAO','Cartridge thiếu');ok(await record(a.id,'NHAP',{quantity:20}));ok(await record(b.id,'NHAP',{quantity:1}));
+ const id=await ticket();const rows=[{itemId:a.id,departmentId:department.id,quantity:2},{itemId:b.id,departmentId:department.id,quantity:2}];
+ assert.equal((await as(requester,async()=>W.saveWorkflowMaterials({id,version:(await wd(id)).record.version,lines:rows}))).success,false);
+ ok(await lines(id,rows));const p=await finishPayload(id);const before=(await wd(id)).record.history.length;
+ const failed=await as(manager,()=>W.actOnWorkflow(p));assert.equal(failed.success,false);assert.match(failed.message,/vượt tồn/);
+ assert.equal(await stock(a.id),20);assert.equal(await stock(b.id),1);assert.equal((await wd(id)).record.status,'IN_PROGRESS');assert.equal((await wd(id)).record.history.length,before);
+ ok(await record(b.id,'NHAP',{quantity:1}));
+ await db.vai_tro_quyen.delete({where:{role_id_permission_id:{role_id:role.id,permission_id:grant.id}}});
+ try{assert.equal((await as(manager,()=>W.actOnWorkflow(p))).success,false);assert.equal(await db.giao_dich_vat_tu.count({where:{dong_vat_tu:{ho_so_quy_trinh_id:id}}}),0);}finally{await db.vai_tro_quyen.create({data:{role_id:role.id,permission_id:grant.id}});}
+ ok(await as(manager,()=>W.actOnWorkflow(p)));assert.equal(await stock(a.id),18);assert.equal(await stock(b.id),0);
+});
+test('cancelled tickets retain planned material lines without posting or allowing edits',async()=>{
+ const item=await newItem('TIEU_HAO','Mực hủy');ok(await record(item.id,'NHAP',{quantity:5}));const id=await ticket();ok(await lines(id,[{itemId:item.id,departmentId:department.id,quantity:2}]));
+ ok(await as(manager,async()=>W.actOnWorkflow({id,version:(await wd(id)).record.version,command:'CANCEL',reason:'Không thực hiện'})));
+ assert.equal(await stock(item.id),5);assert.equal((await wd(id)).materials.length,1);assert.equal((await lines(id,[])).success,false);
+});
+
+test('intermediate task completion leaves planned stock untouched until the final step',async()=>{
+ const t=ok(await as(manager,()=>W.saveWorkflowTemplate({code:'SUPPORT_MULTI',name:'Hỗ trợ nhiều bước',description:'',steps:[1,2].map(n=>({name:`IT bước ${n}`,instructions:'',kind:'TASK',assignment:'SPECIFIC_EMPLOYEE',employeeId:person.id}))})));
+ const info=ok(await as(manager,W.getWorkflowWorkspace)).templates.find(x=>x.id===t.id);
+ ok(await as(manager,()=>W.changeWorkflowTemplate({id:t.id,version:info.version,command:'PUBLISH'})));
+ const previous=ticketTemplate;ticketTemplate=t.id;const id=await ticket();ticketTemplate=previous;
+ const item=await newItem('TIEU_HAO','Mực nhiều bước');ok(await record(item.id,'NHAP',{quantity:20}));ok(await lines(id,[{itemId:item.id,departmentId:department.id,quantity:2}]));
+ ok(await as(manager,async()=>W.actOnWorkflow(await finishPayload(id))));assert.equal(await stock(item.id),20);assert.equal((await wd(id)).record.status,'IN_PROGRESS');
+ ok(await as(manager,async()=>W.actOnWorkflow(await finishPayload(id))));assert.equal(await stock(item.id),18);assert.equal((await wd(id)).record.status,'COMPLETED');
+});
+
+test('legacy located consumables retain rows and total after pooled function upgrade',async()=>{
+ const fs=require('node:fs');
+ const old=fs.readFileSync('prisma/migrations/20261117090000_vat_tu_va_phu_kien/migration.sql','utf8');
+ const upgraded=fs.readFileSync('prisma/migrations/20261118090000_ton_chung_tieu_hao/migration.sql','utf8');
+ const fn=(source,name)=>source.match(new RegExp('CREATE (?:OR REPLACE )?FUNCTION '+name+'[\\s\\S]*?\\$\\$;'))[0].replace('CREATE FUNCTION','CREATE OR REPLACE FUNCTION');
+ const stop=new Error('rollback fixture');
+ try{await db.$transaction(async tx=>{
+   await tx.$executeRawUnsafe(fn(old,'ton_vat_tu'));await tx.$executeRawUnsafe(fn(old,'bao_ve_giao_dich_vat_tu'));
+   const item=await tx.mat_hang_vat_tu.create({data:{company_id:company.id,loai_vat_tu_id:consumable.id,ten_mat_hang:'Legacy mực',don_vi_tinh:'lọ'}});
+   const common={company_id:company.id,mat_hang_vat_tu_id:item.id,account_id:manager.id};
+   await tx.giao_dich_vat_tu.create({data:{...common,request_id:randomUUID(),loai_giao_dich:'NHAP',so_luong:20,vi_tri_nhap_id:place.id}});
+   await tx.giao_dich_vat_tu.create({data:{...common,request_id:randomUUID(),loai_giao_dich:'CHUYEN_NOI_GIU',so_luong:5,vi_tri_xuat_id:place.id,vi_tri_nhap_id:second.id}});
+   await tx.giao_dich_vat_tu.create({data:{...common,request_id:randomUUID(),loai_giao_dich:'CAP_PHAT',so_luong:2,vi_tri_xuat_id:second.id,phong_ban_nhan_id:department.id}});
+   const before=await tx.giao_dich_vat_tu.findMany({where:{mat_hang_vat_tu_id:item.id}});
+   await tx.$executeRawUnsafe(fn(upgraded,'ton_vat_tu'));await tx.$executeRawUnsafe(fn(upgraded,'bao_ve_giao_dich_vat_tu'));
+   assert.deepEqual(await tx.$queryRaw`SELECT * FROM ton_vat_tu(${item.id}::int)`,[{vi_tri_id:null,so_luong:18n}]);
+   assert.deepEqual(await tx.giao_dich_vat_tu.findMany({where:{mat_hang_vat_tu_id:item.id}}),before);
+   await tx.giao_dich_vat_tu.create({data:{...common,request_id:randomUUID(),loai_giao_dich:'CAP_PHAT',so_luong:2,phong_ban_nhan_id:department.id}});
+   assert.deepEqual(await tx.$queryRaw`SELECT * FROM ton_vat_tu(${item.id}::int)`,[{vi_tri_id:null,so_luong:16n}]);throw stop;
+ },{timeout:20000});}catch(e){if(e!==stop)throw e;}
+});
+
+
+test('unit label correction after consumption preserves ledger, balances and audit; permissions and version remain enforced',async()=>{
+ const item=await db.mat_hang_vat_tu.create({data:{company_id:company.id,loai_vat_tu_id:consumable.id,ten_mat_hang:'Legacy numeric unit',don_vi_tinh:'20'}});
+ ok(await record(item.id,'NHAP',{quantity:20}));ok(await record(item.id,'CAP_PHAT',{quantity:2,departmentId:department.id}));
+ const ledger=await db.giao_dich_vat_tu.findMany({where:{mat_hang_vat_tu_id:item.id},orderBy:{id:'asc'}});
+ const v={id:item.id,version:item.updated_at.toISOString(),name:item.ten_mat_hang,categoryId:consumable.id,unit:'lọ',minimum:null,departmentId:null,notes:'',active:true};
+ for(const actor of [null,viewer,none,foreign]) assert.equal((await as(actor,()=>A.saveInventoryItem(v))).success,false);
+ for(const unit of ['', '   ', '20']) assert.equal((await as(manager,()=>A.saveInventoryItem({...v,unit}))).success,false);
+ const saved=ok(await as(manager,()=>A.saveInventoryItem(v)));
+ assert.equal(saved.row.don_vi_tinh,'lọ');assert.equal(await stock(item.id),18);
+ assert.deepEqual(await db.giao_dich_vat_tu.findMany({where:{mat_hang_vat_tu_id:item.id},orderBy:{id:'asc'}}),ledger);
+ const log=await db.nhat_ky_hoat_dong.findFirstOrThrow({where:{company_id:company.id,phan_he:'INVENTORY',doi_tuong_id:`mat_hang_vat_tu:${item.id}`},orderBy:{id:'desc'}});
+ assert.equal(log.du_lieu_cu.don_vi_tinh,'20');assert.equal(log.du_lieu_moi.don_vi_tinh,'lọ');
+ assert.equal((await as(manager,()=>A.saveInventoryItem({...v,unit:'chai'}))).success,false);
+ assert.equal((await detail(item.id)).row.don_vi_tinh,'lọ');
 });

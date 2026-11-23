@@ -1,9 +1,12 @@
 "use server";
+import { randomUUID } from "node:crypto";
+import { currentActor } from "@/lib/rbac-server";
+import { inventoryDbMessage } from "@/lib/inventory";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { getSession, type SessionUser } from "@/lib/auth";
+import { getSession, hasPermission, type SessionUser } from "@/lib/auth";
 import {
   workflowActor,
   workflowRecordScope,
@@ -11,6 +14,7 @@ import {
   canWorkflow,
 } from "@/lib/workflow-access";
 import {
+  WorkflowMaterialsSchema,
   WorkflowTemplateSchema,
   WorkflowTemplateCommandSchema,
   WorkflowDraftSchema,
@@ -19,6 +23,8 @@ import {
 
 type Tx = Prisma.TransactionClient;
 function failure(e: unknown) {
+  const stockMessage = inventoryDbMessage(e);
+  if (stockMessage) return { success: false as const, message: stockMessage };
   if (e instanceof Error && e.name.startsWith("PrismaClient"))
     return {
       success: false as const,
@@ -93,6 +99,7 @@ async function auditTemplate(
 }
 function refresh() {
   revalidatePath("/workflows", "layout");
+  revalidatePath("/inventory");
 }
 const templateInclude = {
   danh_sach_buoc: {
@@ -489,6 +496,10 @@ export async function getWorkflowDetail(input: unknown) {
         r.nguoi_gui_id,
       )))
     : null;
+  const canEditMaterials = r.trang_thai === "IN_PROGRESS" && active?.trang_thai === "PENDING" && active.buoc_mau.loai_buoc === "TASK" && active.nguoi_duoc_giao_id === s.employeeId && !issue && canWorkflow(s.workflowActions, "EXECUTE") && hasPermission(s, "INVENTORY", "MANAGE");
+  const materials = await db.dong_vat_tu_quy_trinh.findMany({ where: { ho_so_quy_trinh_id: r.id, company_id: s.companyId }, include: { mat_hang: { select: { ten_mat_hang: true, don_vi_tinh: true } }, phong_nhan: { select: { ten_phong_ban: true } }, giao_dich: { select: { id: true } } }, orderBy: { id: "asc" } });
+  const materialItems = canEditMaterials ? await db.mat_hang_vat_tu.findMany({ where: { company_id: s.companyId, dang_su_dung: true, loai_vat_tu: { hang_muc: "TIEU_HAO", dang_su_dung: true } }, select: { id: true, ten_mat_hang: true, ma_mat_hang: true, don_vi_tinh: true }, orderBy: { ten_mat_hang: "asc" } }) : [];
+  const materialDepartments = canEditMaterials ? await db.phong_ban.findMany({ where: { company_id: s.companyId }, select: { id: true, ten_phong_ban: true }, orderBy: { ten_phong_ban: "asc" } }) : [];
   return {
     success: true as const,
     record: {
@@ -522,6 +533,7 @@ export async function getWorkflowDetail(input: unknown) {
         details: h.chi_tiet,
       })),
     },
+    materials, canEditMaterials, materialItems, materialDepartments,
     actions: s.workflowActions ?? [],
     employeeId: s.employeeId ?? null,
   };
@@ -566,6 +578,15 @@ async function activateNext(
       where: { id: request.id },
       data: { trang_thai: "COMPLETED", thoi_diem_ket_thuc: new Date() },
     });
+    const lines = await tx.dong_vat_tu_quy_trinh.findMany({ where: { ho_so_quy_trinh_id: request.id, company_id: s.companyId }, orderBy: [{ mat_hang_vat_tu_id: "asc" }, { id: "asc" }] });
+    if (lines.length) {
+      await currentActor(tx, s, "INVENTORY");
+      for (const line of lines) {
+        const movement = await tx.giao_dich_vat_tu.create({ data: { company_id: s.companyId, mat_hang_vat_tu_id: line.mat_hang_vat_tu_id, dong_vat_tu_id: line.id, loai_giao_dich: "CAP_PHAT", so_luong: line.so_luong, phong_ban_nhan_id: line.phong_ban_nhan_id, request_id: randomUUID(), account_id: s.userId, ly_do: `Hoàn thành hồ sơ ${request.id}` } });
+        await tx.nhat_ky_hoat_dong.create({ data: { company_id: s.companyId, account_id: s.userId, ten_dang_nhap: s.username, ho_ten: s.fullName, phan_he: "INVENTORY", hanh_dong: "CREATE", doi_tuong_id: `giao_dich_vat_tu:${movement.id}`, mo_ta: `Ghi tiêu hao khi hoàn thành hồ sơ ${request.id}`, du_lieu_moi: JSON.parse(JSON.stringify(movement)) } });
+      }
+      await history(tx, s, request.id, "MATERIALS_POSTED", undefined, "Đã ghi nhận tiêu hao theo các dòng vật tư.");
+    }
     await history(tx, s, request.id, "FINISHED");
     return;
   }
@@ -826,4 +847,29 @@ export async function actOnWorkflow(input: unknown) {
   } catch (e) {
     return failure(e);
   }
+}
+
+
+export async function saveWorkflowMaterials(input: unknown) {
+  const s = await getSession(); if (!s) return failure(Error("Vui lòng đăng nhập."));
+  const parsed = WorkflowMaterialsSchema.safeParse(input); if (!parsed.success) return invalid(parsed.error);
+  const v = parsed.data;
+  try {
+    await db.$transaction(async tx => {
+      await lock(tx, s);
+      const actor = await workflowActor(tx, s, "EXECUTE");
+      await currentActor(tx, s, "INVENTORY");
+      await tx.$queryRaw`SELECT id FROM ho_so_quy_trinh WHERE id=${v.id} AND company_id=${s.companyId} FOR UPDATE`;
+      const r = await tx.ho_so_quy_trinh.findFirst({ where: { id: v.id, company_id: s.companyId }, include: recordInclude });
+      const active = r?.danh_sach_buoc.find(b => b.trang_thai === "PENDING");
+      if (!r || r.trang_thai !== "IN_PROGRESS" || !active || active.buoc_mau.loai_buoc !== "TASK" || active.nguoi_duoc_giao_id !== actor.account.employee_id || actor.account.nhan_su?.tinh_trang_lam_viec !== "ACTIVE") throw Error("Chỉ người đang được giao bước thực hiện mới sửa vật tư.");
+      version(r.updated_at, v.version);
+      const before = await tx.dong_vat_tu_quy_trinh.findMany({ where: { ho_so_quy_trinh_id: r.id, company_id: s.companyId } });
+      await tx.dong_vat_tu_quy_trinh.deleteMany({ where: { ho_so_quy_trinh_id: r.id, company_id: s.companyId } });
+      for (const line of v.lines) await tx.dong_vat_tu_quy_trinh.create({ data: { company_id: s.companyId, ho_so_quy_trinh_id: r.id, mat_hang_vat_tu_id: line.itemId, phong_ban_nhan_id: line.departmentId, so_luong: line.quantity } });
+      await tx.ho_so_quy_trinh.update({ where: { id: r.id }, data: { updated_at: new Date(Math.max(Date.now(), r.updated_at.getTime()+1)) } });
+      await history(tx, s, r.id, "MATERIALS_UPDATED", active.id, "Lưu vật tư dự kiến sử dụng; chưa trừ tồn.", { before: JSON.parse(JSON.stringify(before)), lines: v.lines });
+    });
+    refresh(); return { success: true as const };
+  } catch(e) { return failure(e); }
 }

@@ -27,101 +27,6 @@ export const HCNS_ROOM_BOUNDS = {
 export const HCNS_PARTITION_Z = 1.675;
 export const HCNS_CONNECTING_DOOR = { minX: -0.85, maxX: 0.75 };
 
-// Facing uses degrees. A shared model is translated into the building without
-// rotating or squeezing individual desks; stable keys retain location bindings.
-export const HCNS_LAYOUT = [
-  {
-    key: "hcns-01",
-    number: 1,
-    x: 0.9,
-    z: 6.5,
-    width: 2.5,
-    depth: 1.2,
-    facingDegrees: 0,
-  },
-  {
-    key: "hcns-02",
-    number: 2,
-    x: 3.2,
-    z: 0.4,
-    width: 2.3,
-    depth: 1.0,
-    facingDegrees: 0,
-  },
-  {
-    key: "hcns-03",
-    number: 3,
-    x: 4.0,
-    z: -2.3,
-    width: 1.6,
-    depth: 0.8,
-    facingDegrees: 0,
-  },
-  {
-    key: "hcns-04",
-    number: 4,
-    x: 2.3,
-    z: -2.3,
-    width: 1.6,
-    depth: 0.8,
-    facingDegrees: 0,
-  },
-  {
-    key: "hcns-05",
-    number: 5,
-    x: 4.0,
-    z: -5.25,
-    width: 1.6,
-    depth: 0.7,
-    facingDegrees: 0,
-  },
-  {
-    key: "hcns-06",
-    number: 6,
-    x: 2.3,
-    z: -5.25,
-    width: 1.6,
-    depth: 0.7,
-    facingDegrees: 0,
-  },
-  {
-    key: "hcns-07",
-    number: 7,
-    x: 4.0,
-    z: -6.0,
-    width: 1.6,
-    depth: 0.7,
-    facingDegrees: 180,
-  },
-  {
-    key: "hcns-08",
-    number: 8,
-    x: 2.3,
-    z: -6.0,
-    width: 1.6,
-    depth: 0.7,
-    facingDegrees: 180,
-  },
-  {
-    key: "hcns-09",
-    number: 9,
-    x: 0.05,
-    z: -2.3,
-    width: 1.45,
-    depth: 1,
-    facingDegrees: 270,
-  },
-  {
-    key: "hcns-10",
-    number: 10,
-    x: 0.05,
-    z: -5.65,
-    width: 1.5,
-    depth: 1.1,
-    facingDegrees: 270,
-  },
-] as const;
-
 export const EQUIPMENT_KINDS = ["pc", "laptop", "printer", "scanner", "access-point",
   "phone", "pbx", "server", "ups", "router", "switch", "generic"] as const;
 export type EquipmentKind = typeof EQUIPMENT_KINDS[number];
@@ -146,7 +51,7 @@ export type RoomPoint = {
     department: string | null;
   }[];
 };
-export type HcnsRoomData = {
+export type RoomDetailData = {
   name: string;
   path: string;
   points: RoomPoint[];
@@ -159,7 +64,7 @@ export type HcnsRoomData = {
 
 // A visual offset from the desk, not another HR/location assignment.
 export function personOffset(
-  slot: (typeof HCNS_LAYOUT)[number],
+  slot: { x: number; z: number; depth: number; facingDegrees: number },
   index: number,
   count: number,
 ): [number, number, number] {
@@ -170,7 +75,7 @@ export function personOffset(
   ];
 }
 export function personRoomPosition(
-  slot: (typeof HCNS_LAYOUT)[number],
+  slot: { x: number; z: number; depth: number; facingDegrees: number },
   index: number,
   count: number,
 ): [number, number, number] {

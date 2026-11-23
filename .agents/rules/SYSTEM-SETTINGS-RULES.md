@@ -2,6 +2,7 @@
 
 Phạm vi, DB và nghiệm thu tại [plan cài đặt](../../docs/plans/SYSTEM-SETTINGS-CHECKLIST.md). Nghiệp vụ AI tại [rule AI](AI-ASSISTANT-RULES.md); phân quyền tại [rule vai trò](ROLE-MANAGEMENT-RULES.md).
 
+- `/system` là tổng quan phân hệ quản trị; hợp quyền các mục con, thống kê chỉ theo từng quyền và cùng công ty. Bấm tên nhóm mở tổng quan, hover mở tác vụ. Không tạo quyền SYSTEM tổng hoặc trả số liệu của mảng chưa được cấp quyền. Chi tiết tại plan cài đặt.
 - `/settings` là đầu mối cấu hình; chỉ hiện mục đã triển khai và được cấp quyền. Trang con có URL riêng; không dùng một quyền SYSTEM tổng quát để mở mọi cấu hình.
 - Menu/trang đầu hiện theo hợp quyền của mục con. Mỗi page/action kiểm tra phiên và quyền hiện tại, cùng công ty; layout hoặc ẩn menu không thay guard của entry point.
 - `/settings/ai` mở theo hợp quyền `AI MANAGE_CONNECTIONS`, `AI MANAGE_LIMITS`, `AI VIEW_USAGE`; mỗi vùng/action kiểm tra quyền riêng; không suy từ tên ADMIN, quản lý tài khoản, tài sản/vị trí hoặc quyền dùng chat.

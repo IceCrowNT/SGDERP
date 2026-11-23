@@ -1,9 +1,10 @@
+import { HCNS_LAYOUT } from "../../prisma/data/hcns-survey";
 import {test, expect, type Page} from "@playwright/test";
 import {PrismaClient} from "@prisma/client";
 import {readFile, writeFile} from "node:fs/promises";
 import {Matrix4,Vector4} from "three";
 import {signAccount} from "../helpers/account-fixture";
-import {HCNS_LAYOUT, equipmentForAssets} from "../../src/lib/office-3d/hcns-layout";
+import { equipmentForAssets} from "../../src/lib/office-3d/hcns-layout";
 import {layoutEquipment} from "../../src/lib/office-3d/equipment-layout";
 import type {LocationAsset} from "../../src/lib/asset-location";
 import {hcnsWorldPoint} from "../../src/lib/office-3d/building-navigation";
@@ -192,17 +193,21 @@ test("an added KHDT desk uses the same double-click focus and restores room view
   await page.goto(`/office-3d?floor=2&room=${binding.key}`);
   const canvas=page.locator("canvas[data-building-ready=true]");
   await expect(canvas).toBeVisible({timeout:90000});
-  await page.getByRole("button",{name:"Tập trung",exact:true}).click();
+  await page.getByRole("button",{name:"Vào phòng",exact:true}).click();
   await page.waitForTimeout(700);
   const before=await projection(page), box=(await canvas.boundingBox())!;
-  const v=new Vector4(room.x+object!.toa_do_x,floorElevation(room.floor)+1.08,room.z+object!.toa_do_z,1)
+  // Pick the clear front corner, not the PC/laptop at the centre of the desk.
+  const angle=object!.goc_xoay*Math.PI/180;
+  const v=new Vector4(room.x+object!.toa_do_x+.65*Math.cos(angle)+.3*Math.sin(angle),floorElevation(room.floor)+1.08,room.z+object!.toa_do_z-.65*Math.sin(angle)+.3*Math.cos(angle),1)
     .applyMatrix4(new Matrix4().fromArray(before.view)).applyMatrix4(new Matrix4().fromArray(before.projection));
   await page.mouse.dblclick(box.x+(v.x/v.w+1)*box.width/2,box.y+(1-v.y/v.w)*box.height/2);
   await expect(page).toHaveURL(new RegExp(`point=object-${object!.id}`));
+  expect(new URL(page.url()).searchParams.has("asset")).toBe(false);
+  expect(new URL(page.url()).searchParams.has("equipment")).toBe(false);
   await page.waitForTimeout(700);
   expect((await projection(page)).projection[0]).toBeGreaterThan(before.projection[0]);
   await page.keyboard.press("Escape");
-  await expect(page).toHaveURL(new RegExp(`room=${binding.key}$`));
+  await expect(page).toHaveURL(new RegExp(`room=${binding.key}&mode=room$`));
   await page.waitForTimeout(700);
   expect((await projection(page)).projection[0]).toBeCloseTo(before.projection[0],4);
 });
@@ -238,8 +243,9 @@ test("floor navigation animates from overview and survives rapid switches on the
   for(const i of [0,1,2,4,5,6,8,9,10])expect(after.view[i]).toBeCloseTo(before.view[i],4);
   await canvas.screenshot({path:"outputs/equipment-models/floor-transition-end.png"});
   await page.getByRole("button",{name:"Toàn tòa nhà",exact:true}).click();
-  await page.waitForTimeout(2200);
-  expect((await projection(page)).projection[0]).toBeCloseTo(before.projection[0],4);
+  // Software WebGL can take longer as rooms gain desks; assert convergence,
+  // keeping the same camera tolerance instead of relying on a fixed delay.
+  await expect.poll(async()=>Math.abs((await projection(page)).projection[0]-before.projection[0]),{timeout:15000}).toBeLessThan(.00005);
   for(const floor of [1,3,2]) {
     await page.getByRole("button",{name:`Tầng ${floor}`,exact:true}).click();
     await page.waitForTimeout(100);

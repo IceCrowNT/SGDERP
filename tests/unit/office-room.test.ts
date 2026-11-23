@@ -1,3 +1,4 @@
+import { HCNS_LAYOUT } from "../../prisma/data/hcns-survey";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -6,7 +7,7 @@ import {
   type MappedLocation,
 } from "../../src/lib/office-3d/room-mapping";
 import {
-  HCNS_LAYOUT,
+
   equipmentForAssets,
 } from "../../src/lib/office-3d/hcns-layout";
 const mapping = {

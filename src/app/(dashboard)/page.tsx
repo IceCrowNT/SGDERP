@@ -1,26 +1,22 @@
+import { getSupportTaskCounts } from "@/actions/support-task";
+import { TaskCreate } from "@/components/tasks/TaskCreate";
+import { TaskNotifications } from "@/components/tasks/TaskNotifications";
+import { canTask } from "@/lib/support-task";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
-import { getSession, hasPermission } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { canWorkflow } from "@/lib/role-catalog";
 import { db } from "@/lib/db";
 import { WORKFLOW_STATUS } from "@/lib/workflow-labels";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowDown, ArrowUpRight, Building2, CalendarDays, CheckCheck, ChevronRight, ClipboardCheck, FileClock, FilePenLine, FolderKanban, Inbox, KeyRound, LayoutGrid, ListTodo, PauseCircle, ShieldCheck, UserRound, UsersRound, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, ChevronRight, FileClock, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DashboardWorkflowLink } from "@/components/ai/DashboardWorkspace";
 import { AiAssistant } from "@/components/ai/AiAssistant";
-import { canUseAiPilot } from "@/lib/ai-pilot";
+import { canUseAiChat } from "@/lib/ai-pilot";
 import { aiConnectionView } from "@/lib/ai-connection";
 
-const panelVisuals: Record<string, { icon: LucideIcon; tone: string }> = {
-  approve: { icon: ClipboardCheck, tone: "bg-primary/10 text-primary" },
-  execute: { icon: ListTodo, tone: "bg-accent/10 text-accent dark:text-blue-300" },
-  draft: { icon: FilePenLine, tone: "bg-muted text-muted-foreground" },
-  sent: { icon: FileClock, tone: "bg-accent/10 text-accent dark:text-blue-300" },
-  ended: { icon: CheckCheck, tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" },
-  blocked: { icon: PauseCircle, tone: "bg-amber-500/10 text-amber-800 dark:text-amber-300" },
-};
 const statusTones: Record<string, string> = {
   DRAFT: "bg-muted text-muted-foreground",
   IN_PROGRESS: "bg-accent/10 text-accent dark:text-blue-300",
@@ -28,18 +24,6 @@ const statusTones: Record<string, string> = {
   REJECTED: "bg-destructive/10 text-destructive",
   CANCELLED: "bg-muted text-muted-foreground",
 };
-function DeskIllustration() {
-  return (
-    <div aria-hidden="true" className="relative mx-auto flex h-40 w-56 items-center justify-center">
-      <div className="absolute size-36 rounded-full bg-accent/5 ring-8 ring-accent/5" />
-      <div className="relative w-36 -rotate-6 rounded-xl border bg-card p-4 shadow-sm">
-        <div className="mb-4 flex items-center gap-2"><span className="rounded-lg bg-primary/10 p-2 text-primary"><UserRound className="size-5" /></span><div className="space-y-2"><div className="h-2 w-12 rounded bg-muted" /><div className="h-1.5 w-8 rounded bg-muted" /></div></div>
-        <div className="space-y-2"><div className="h-2 w-full rounded bg-muted" /><div className="h-2 w-3/4 rounded bg-muted" /></div>
-      </div>
-      <span className="absolute bottom-3 right-3 rotate-6 rounded-xl border bg-card p-3 text-accent shadow-sm dark:text-blue-300"><ShieldCheck className="size-7" /></span>
-    </div>
-  );
-}
 function recentCutoff() {
   return new Date(Date.now() - 30 * 86400_000);
 }
@@ -52,7 +36,8 @@ export default async function Dashboard({
   const session = await getSession({ allowPasswordChange: true });
   if (!session) redirect("/login");
   if (session.mustChangePassword) redirect("/profile");
-  const aiSettings = canUseAiPilot(session) ? await aiConnectionView(session.companyId) : null;
+  const taskCounts = canTask(session.taskActions) ? await getSupportTaskCounts() : null;
+  const aiSettings = canUseAiChat(session) ? await aiConnectionView(session.companyId) : null;
   const { view, page } = await searchParams;
   const workflow = canWorkflow(session.workflowActions);
   const manage = canWorkflow(session.workflowActions, "MANAGE");
@@ -157,53 +142,10 @@ export default async function Dashboard({
         },
       })
     : [];
-  const shortcuts = [
-    { href: "/profile", label: "Hồ sơ của tôi", detail: "Thông tin & bảo mật", icon: UserRound, allowed: true },
-    { href: "/workflows", label: "Quy trình và yêu cầu", detail: "Gửi & theo dõi hồ sơ", icon: FolderKanban, allowed: workflow },
-    { href: "/employees", label: "Nhân sự", detail: "Tra cứu hồ sơ", icon: UsersRound, allowed: hasPermission(session, "HR") },
-    { href: "/departments", label: "Phòng ban", detail: "Cơ cấu tổ chức", icon: Building2, allowed: hasPermission(session, "HR") },
-    { href: "/accounts", label: "Tài khoản", detail: "Quản lý truy cập", icon: KeyRound, allowed: hasPermission(session, "ACCOUNTS", "MANAGE") },
-    { href: "/roles", label: "Vai trò và quyền", detail: "Cấu hình phân quyền", icon: ShieldCheck, allowed: hasPermission(session, "ROLES") },
-  ].filter((s) => s.allowed);
-  const ownPanels = panels.filter((p) => ["draft", "sent", "ended"].includes(p.key));
-  const maxOwnCount = Math.max(1, ...ownPanels.map((p) => counts[panels.indexOf(p)]));
   const dateLabel = new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Ho_Chi_Minh" });
-  return (
-    <div className="space-y-6">
-      <header className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-accent/10 via-card to-primary/5 p-5 sm:p-7">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-24 size-72 rounded-full border-[32px] border-accent/5" />
-        <div className="relative flex flex-wrap items-center gap-4">
-          <Avatar className="size-16 shrink-0 border-4 border-card shadow-sm">
-            <AvatarImage src={session.avatarUrl ?? undefined} alt={session.fullName} />
-            <AvatarFallback className="bg-accent text-accent-foreground text-xl">{session.fullName.split(" ").slice(-2).map((n) => n[0]).join("")}</AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Bàn làm việc của tôi</p>
-            <h1 className="break-words text-xl font-bold sm:text-2xl">Xin chào, {session.fullName}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{[session.position, session.departmentName].filter(Boolean).join(" · ") || "Tài khoản nội bộ"}</p>
-          </div>
-          <div className="flex w-full items-center gap-2 text-xs text-muted-foreground sm:w-auto sm:rounded-full sm:border sm:border-border/50 sm:bg-card/80 sm:px-3 sm:py-2"><CalendarDays aria-hidden="true" className="size-4" />{dateLabel.format(new Date())}</div>
-        </div>
-      </header>
-      {panels.length > 0 && (
-        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Tổng quan công việc">
-          {panels.map((p, i) => {
-            const { icon: Icon, tone } = panelVisuals[p.key];
-            return (
-              <Link key={p.key} href={`/?view=${p.key}`} aria-label={`${p.title} ${counts[i]}`} aria-current={selected?.key === p.key ? "page" : undefined}
-                className={cn("group relative flex items-center gap-4 rounded-2xl border bg-card p-5 transition-all duration-200 hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", selected?.key === p.key && "border-primary/50 ring-1 ring-primary/20")}>
-                <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl", tone)}><Icon aria-hidden="true" className="size-6" /></span>
-                <div className="min-w-0 flex-1"><h2 className="text-sm text-muted-foreground">{p.title}</h2><p className="mt-1 text-3xl font-semibold tabular-nums">{counts[i]}</p></div>
-                <ArrowUpRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground transition-all duration-200 group-hover:text-primary" />
-              </Link>
-            );
-          })}
-        </section>
-      )}
-      <div className="grid items-start gap-6 xl:grid-cols-3">
-        <div className="min-w-0 space-y-6 xl:col-span-2">
-        {aiSettings && <AiAssistant settings={{ hasKey: aiSettings.hasKey, model: aiSettings.model, enabled: aiSettings.enabled }} />}
-        <section className="min-w-0 overflow-hidden rounded-2xl border bg-card">
+  const workflowContent = <section aria-label="Quy trình" className="min-w-0 overflow-hidden rounded-xl border bg-card">
+    <div className="flex flex-wrap items-center justify-between gap-2 p-4"><h2 className="font-semibold">Quy trình</h2>{workflow && <Button asChild variant="ghost"><Link href="/workflows">Mở quy trình<ArrowUpRight aria-hidden="true" className="size-4" /></Link></Button>}</div>
+    {panels.length > 0 && <nav aria-label="Nhóm công việc quy trình" className="flex flex-wrap gap-2 border-b px-4 pb-4">{panels.map((p, i) => <Button key={p.key} asChild variant={selected?.key === p.key ? "secondary" : "outline"} className="h-auto min-h-10 whitespace-normal text-left"><DashboardWorkflowLink view={p.key} aria-label={`${p.title} ${counts[i]}`} aria-current={selected?.key === p.key ? "page" : undefined}>{p.title}<span className="ml-1 tabular-nums text-muted-foreground">{counts[i]}</span></DashboardWorkflowLink></Button>)}</nav>}
           {selected ? (
             <>
               <div className="flex items-start justify-between gap-3 border-b p-5">
@@ -225,8 +167,8 @@ export default async function Dashboard({
                   ))}
                 </div>
               ) : (
-                <div className="flex min-h-64 flex-col items-center justify-center px-6 py-10 text-center">
-                  <div aria-hidden="true" className="relative mb-5 rounded-full bg-muted/70 p-6"><Inbox className="size-10 text-muted-foreground" /><span className="absolute -right-1 bottom-0 rounded-full border-4 border-card bg-accent/10 p-2 text-accent dark:text-blue-300"><CheckCheck className="size-4" /></span></div>
+                <div className="space-y-2 px-5 py-8">
+
                   <p className="font-medium">Chưa có hồ sơ trong mục này.</p>
                   <p className="mt-2 max-w-sm text-sm text-muted-foreground">Hồ sơ sẽ hiển thị tại đây khi phát sinh công việc phù hợp.</p>
                   <Button asChild variant="outline" className="mt-5"><Link href="/workflows">Mở quy trình<ArrowUpRight aria-hidden="true" className="size-4" /></Link></Button>
@@ -235,42 +177,19 @@ export default async function Dashboard({
               {pageCount > 1 && (
                 <nav aria-label="Phân trang hồ sơ" className="flex flex-wrap items-center justify-between gap-3 border-t p-4">
                   <span className="text-xs text-muted-foreground">Trang {pageNumber} / {pageCount}</span><div className="flex gap-2">
-                    {pageNumber > 1 && <Button asChild variant="outline"><Link href={`/?view=${selected.key}&page=${pageNumber - 1}`}>Trang trước</Link></Button>}
-                    {pageNumber < pageCount && <Button asChild variant="outline"><Link href={`/?view=${selected.key}&page=${pageNumber + 1}`}>Trang sau</Link></Button>}
+                    {pageNumber > 1 && <Button asChild variant="outline"><DashboardWorkflowLink view={selected.key} page={pageNumber - 1}>Trang trước</DashboardWorkflowLink></Button>}
+                    {pageNumber < pageCount && <Button asChild variant="outline"><DashboardWorkflowLink view={selected.key} page={pageNumber + 1}>Trang sau</DashboardWorkflowLink></Button>}
                   </div>
                 </nav>
               )}
             </>
           ) : (
-            <div className="grid items-center gap-4 p-6 sm:grid-cols-[auto_1fr] sm:py-10">
-              <DeskIllustration />
-              <div className="min-w-0"><h2 className="text-xl font-semibold">Không gian cá nhân của bạn</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Cập nhật hồ sơ, thông tin liên hệ và bảo mật tài khoản tại một nơi.</p><Button asChild className="mt-5"><Link href="/profile">Mở hồ sơ cá nhân<ArrowUpRight aria-hidden="true" className="size-4" /></Link></Button></div>
-              <div className="flex flex-wrap justify-center gap-3 border-t pt-5 text-xs text-muted-foreground sm:col-span-2">{[{ icon: UserRound, label: "Hồ sơ" }, { icon: KeyRound, label: "Mật khẩu" }, { icon: ShieldCheck, label: "Bảo mật" }].map(({ icon: Icon, label }) => <span key={label} className="flex items-center gap-2 rounded-full bg-muted/70 px-3 py-2"><Icon aria-hidden="true" className="size-4" />{label}</span>)}</div>
-            </div>
+            <div className="space-y-3 p-5"><p className="text-sm text-muted-foreground">Chưa có nhóm công việc phù hợp với tài khoản của bạn.</p><Button asChild variant="outline"><Link href="/profile">Hồ sơ của tôi</Link></Button></div>
           )}
-        </section>
-        </div>
-        <aside className="min-w-0 space-y-6">
-          {ownPanels.length > 0 && (
-            <section className="rounded-2xl border bg-card p-5" aria-label="Biểu đồ yêu cầu của tôi">
-              <h2 className="font-semibold">Yêu cầu của tôi</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Số hồ sơ theo từng nhóm</p>
-              <div className="mt-5 space-y-4">
-                {ownPanels.map((p) => {
-                  const count = counts[panels.indexOf(p)];
-                  const { icon: Icon, tone } = panelVisuals[p.key];
-                  return <Link key={p.key} href={`/?view=${p.key}`} className="block rounded-lg p-1 transition-all duration-200 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><div className="mb-2 flex items-center justify-between gap-2 text-xs"><span className="flex items-center gap-2"><Icon aria-hidden="true" className="size-4 text-muted-foreground" />{p.title}</span><strong className="tabular-nums">{count}</strong></div><svg aria-hidden="true" viewBox="0 0 240 8" preserveAspectRatio="none" className={cn("h-2 w-full rounded-full", tone)}><rect width="240" height="8" rx="4" className="fill-muted" /><rect width={240 * count / maxOwnCount} height="8" rx="4" fill="currentColor" /></svg></Link>;
-                })}
-              </div>
-              <p className="mt-4 flex items-center gap-1 text-xs text-muted-foreground"><ArrowDown aria-hidden="true" className="size-3" />Chọn một nhóm để xem hồ sơ</p>
-            </section>
-          )}
-          <section className="rounded-2xl border bg-card p-5">
-            <h2 className="mb-4 flex items-center gap-2 font-semibold"><LayoutGrid aria-hidden="true" className="size-4 text-muted-foreground" />Truy cập nhanh</h2>
-            <div className="grid grid-cols-2 gap-3">{shortcuts.map(({ href, label, detail, icon: Icon }) => <Link key={href} href={href} className="group min-w-0 rounded-xl border border-border/60 bg-muted/20 p-3 transition-all duration-200 hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="mb-3 flex size-10 items-center justify-center rounded-xl border bg-card text-accent shadow-sm transition-all duration-200 group-hover:text-primary dark:text-blue-300"><Icon aria-hidden="true" className="size-5" /></span><p className="break-words text-sm font-medium">{label}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{detail}</p></Link>)}</div>
-          </section>
-        </aside>
-      </div>
-    </div>
-  );
+        </section>;
+  return <div className={cn("flex min-w-0 flex-col gap-3", aiSettings && "h-[calc(100dvh-6rem)] min-h-[34rem] sm:h-[calc(100dvh-7rem)] lg:h-[calc(100dvh-8rem)]")}>
+    {!aiSettings && <header className="flex shrink-0 items-center justify-between gap-3"><h1 className="text-xl font-semibold">Bàn làm việc</h1><Link href="/profile" className="inline-flex min-h-10 items-center text-sm text-muted-foreground underline-offset-4 hover:underline">Hồ sơ của tôi</Link></header>}
+    {canTask(session.taskActions) && <section aria-label="Công việc hỗ trợ" className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border bg-card px-4 py-2"><Button asChild variant="ghost"><Link href="/tasks">Công việc của tôi</Link></Button><div className="flex flex-wrap items-center gap-2">{taskCounts?.success && (["receive", "doing", "accept"] as const).map(key => <Button key={key} asChild variant="ghost"><Link href={`/tasks?tab=${key}`}>{{receive:"Cần nhận",doing:"Đang làm",accept:"Chờ nghiệm thu"}[key]} ({taskCounts[key]})</Link></Button>)}<TaskNotifications />{canTask(session.taskActions,"CREATE") && <TaskCreate />}</div></section>}
+    {aiSettings ? <AiAssistant settings={{ hasKey: aiSettings.hasKey, model: aiSettings.model, enabled: aiSettings.enabled }} workflow={workflowContent} /> : workflowContent}
+  </div>;
 }

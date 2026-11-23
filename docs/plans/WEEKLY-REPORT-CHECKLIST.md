@@ -2,6 +2,8 @@
 
 Cập nhật: **11/11/2026**. **Đã lập plan theo yêu cầu; chưa triển khai giao diện, schema, migration hoặc cấp quyền.** Việc duyệt lập plan không đồng nghĩa duyệt triển khai. Rule nghiệp vụ tại [WEEKLY-REPORT-RULES](../../.agents/rules/WEEKLY-REPORT-RULES.md).
 
+**Ưu tiên cập nhật 20/11/2026:** người dùng yêu cầu làm công việc trước, báo cáo chưa cần. Ticket hỗ trợ và Việc của tôi được đặc tả riêng tại [plan công việc](TASK-MANAGEMENT-CHECKLIST.md); chưa triển khai báo cáo hoặc dùng JSON báo cáo làm dữ liệu ticket.
+
 Đọc nhanh: [A. Tổng quan để duyệt](#a-tổng-quan-để-duyệt) · [Điểm cần xác nhận](#điểm-cần-xác-nhận) · [B. Chi tiết triển khai](#b-chi-tiết-triển-khai) · [DB](#thiết-kế-db-cần-giữ) · [Checklist](#checklist-triển-khai).
 
 Người phụ trách có thể đọc phần A trước; agent phải đọc cả A, B và rule phân hệ theo [chuẩn lập plan](README.md#quy-chuẩn-lập-và-cập-nhật-plan). Phần B là nơi quản lý chi tiết, A chỉ tóm tắt để duyệt.

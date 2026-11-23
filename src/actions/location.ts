@@ -270,6 +270,7 @@ export async function saveLocation(input: unknown) {
       return after.id;
     });
     revalidatePath("/locations");
+    revalidatePath("/system");
     revalidatePath("/office-3d/hcns");
     revalidatePath("/office-3d");
     return { success: true as const, id, message: "Đã lưu vị trí." };
@@ -394,7 +395,7 @@ export async function deleteLocation(input: unknown) {
         },
       });
     });
-    for (const path of ["/locations", "/employees", "/office-3d", "/office-3d/hcns"]) revalidatePath(path);
+    for (const path of ["/system", "/locations", "/employees", "/office-3d", "/office-3d/hcns"]) revalidatePath(path);
     return {
       success: true as const,
       message: "Đã xóa vị trí; nhân sự liên kết được đưa về chưa xác định vị trí. Lịch sử được giữ lại.",

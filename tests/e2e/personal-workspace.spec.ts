@@ -206,7 +206,7 @@ test("create employee with DEFAULT, collision-safe username and atomic account; 
     where: { ten_dang_nhap: base },
     include: { danh_sach_vai_tro: { include: { vai_tro: true } } },
   });
-  expect(account.bat_buoc_doi_mat_khau).toBe(false);
+  expect(account.bat_buoc_doi_mat_khau).toBe(true);
   expect(account.danh_sach_vai_tro.map((r) => r.vai_tro.ma_vai_tro)).toEqual([
     "DEFAULT",
   ]);
@@ -252,8 +252,10 @@ test("create employee with DEFAULT, collision-safe username and atomic account; 
     await manualPage.getByLabel("Tên đăng nhập", { exact: true }).fill(`${base}1`);
     await manualPage.getByLabel("Mật khẩu", { exact: true }).fill(password);
     await manualPage.getByRole("button", { name: /Đăng nhập/ }).click();
-    await expect(manualPage.getByRole("heading", { name: /Xin chào/ })).toBeVisible();
-    await expect(manualPage).toHaveURL(/\/$/);
+    await expect(manualPage).toHaveURL(/\/profile$/);
+    await expect(manualPage.getByText("Bạn đang dùng mật khẩu tạm.", { exact: false })).toBeVisible();
+    await manualPage.goto("/");
+    await expect(manualPage).toHaveURL(/\/profile$/);
   } finally {
     await manual.close();
   }
@@ -282,7 +284,7 @@ test("create employee with DEFAULT, collision-safe username and atomic account; 
   expect(logs).not.toContain(password);
   expect(logs).not.toContain(account.mat_khau_bam);
 });
-test("new account enters dashboard directly; voluntary password change revokes other sessions but not sibling accounts", async ({
+test("new account may confirm the same temporary password; failures keep the restriction and success revokes old sessions only", async ({
   page,
   context,
   browser,
@@ -291,12 +293,11 @@ test("new account enters dashboard directly; voluntary password change revokes o
   await page.getByLabel("Tên đăng nhập", { exact: true }).fill(issued.username);
   await page.getByLabel("Mật khẩu", { exact: true }).fill(issued.password);
   await page.getByRole("button", { name: /Đăng nhập/ }).click();
-  await expect(page.getByRole("heading", { name: /Xin chào/ })).toBeVisible();
-  await expect(page).toHaveURL(/\/$/);
-  await page.goto("/profile");
-  await expect(page.getByRole("tab", { name: "Thông tin cá nhân" })).toBeEnabled();
-  await expect(page.getByText("Bạn đang dùng mật khẩu tạm.", { exact: false })).toHaveCount(0);
-  await page.getByRole("tab", { name: "Tài khoản và mật khẩu" }).click();
+  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page.getByRole("tab", { name: "Thông tin cá nhân" })).toBeDisabled();
+  await expect(page.getByText("Bạn đang dùng mật khẩu tạm.", { exact: false })).toBeVisible();
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/profile$/);
   const owner = await db.tai_khoan.findUniqueOrThrow({
     where: { ten_dang_nhap: issued.username },
   });
@@ -311,25 +312,47 @@ test("new account enters dashboard directly; voluntary password change revokes o
   });
   const old = await browser.newContext();
   await old.addCookies(await context.cookies());
+  for (const invalid of [
+    { current: "Wrong-current-password", next: "New-test-Password-456", confirmation: "New-test-Password-456", error: "Mật khẩu hiện tại không đúng." },
+    { current: issued.password, next: "New-test-Password-456", confirmation: "Other-password-789", error: "Mật khẩu nhập lại chưa khớp" },
+  ]) {
+    await page.getByLabel("Mật khẩu hiện tại", { exact: true }).fill(invalid.current);
+    await page.getByLabel("Mật khẩu mới", { exact: true }).fill(invalid.next);
+    await page.getByLabel("Nhập lại mật khẩu mới", { exact: true }).fill(invalid.confirmation);
+    await page.getByRole("button", { name: "Đổi mật khẩu", exact: true }).click();
+    await expect(page.getByText(invalid.error, { exact: true }).first()).toBeVisible();
+    const unchanged = await db.tai_khoan.findUniqueOrThrow({ where: { id: owner.id } });
+    expect(unchanged.bat_buoc_doi_mat_khau).toBe(true);
+    expect(unchanged.phien_ban_dang_nhap).toBe(owner.phien_ban_dang_nhap);
+    expect(unchanged.mat_khau_bam).toBe(owner.mat_khau_bam);
+  }
   await page
     .getByLabel("Mật khẩu hiện tại", { exact: false })
     .fill(issued.password);
   await page
     .getByLabel("Mật khẩu mới", { exact: true })
-    .fill("New-test-Password-456");
+    .fill(issued.password);
   await page
     .getByLabel("Nhập lại mật khẩu mới", { exact: false })
-    .fill("New-test-Password-456");
+    .fill(issued.password);
   await page.getByRole("button", { name: "Đổi mật khẩu", exact: true }).click();
   await expect(
     page.getByText("Đã đổi mật khẩu và thu hồi các phiên cũ."),
   ).toBeVisible();
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /Xin chào/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bàn làm việc", exact: true })).toBeVisible();
   const oldPage = await old.newPage();
   await oldPage.goto("/profile");
   await expect(oldPage).toHaveURL(/\/login$/);
   await old.close();
+  expect((await db.tai_khoan.findUniqueOrThrow({ where: { id: owner.id } })).bat_buoc_doi_mat_khau).toBe(false);
+  await context.clearCookies();
+  await page.goto("/login");
+  await page.getByLabel("Tên đăng nhập", { exact: true }).fill(issued.username);
+  await page.getByLabel("Mật khẩu", { exact: true }).fill(issued.password);
+  await page.getByRole("button", { name: /Đăng nhập/ }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { name: "Bàn làm việc", exact: true })).toBeVisible();
   expect(
     (
       await db.tai_khoan.findUniqueOrThrow({
@@ -344,7 +367,7 @@ test("new account enters dashboard directly; voluntary password change revokes o
   await page.goto("/employees");
   await expect(page.getByText("Không có quyền xem nhân sự.")).toBeVisible();
 });
-test("accounts form reveals passwords without submitting; new logins work immediately and admin reset still requires change", async ({
+test("accounts form reveals passwords without submitting; every issued or reset password requires a change", async ({
   page,
   context,
   browser,
@@ -373,15 +396,15 @@ test("accounts form reveals passwords without submitting; new logins work immedi
     if (!manual) await input.fill("");
     await page.setViewportSize({ width: 390, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    if (manual) await page.screenshot({ path: "outputs/account-onboarding/account-password-mobile.png" });
+    if (manual) await page.screenshot({ path: "outputs/password-policy-20261120/account-password-mobile.png" });
     await dialog.getByRole("button", { name: "Lưu tài khoản", exact: true }).click();
     await expect(dialog.getByTestId("issued-username")).toBeVisible();
     const loginName = (await dialog.getByTestId("issued-username").textContent())!;
     const loginPassword = (await dialog.getByTestId("issued-password").textContent())!;
     if (manual) expect(loginPassword).toBe(password);
-    await expect(dialog.getByText(/Người dùng có thể đăng nhập và sử dụng ngay/)).toBeVisible();
+    await expect(dialog.getByText(/Người dùng cần đổi mật khẩu ở lần đăng nhập tiếp theo/)).toBeVisible();
     const account = await db.tai_khoan.findUniqueOrThrow({ where: { ten_dang_nhap: loginName } });
-    expect(account.bat_buoc_doi_mat_khau).toBe(false);
+    expect(account.bat_buoc_doi_mat_khau).toBe(true);
     expect(await bcrypt.compare(loginPassword, account.mat_khau_bam)).toBe(true);
     const user = await browser.newContext();
     try {
@@ -390,8 +413,18 @@ test("accounts form reveals passwords without submitting; new logins work immedi
       await userPage.getByLabel("Tên đăng nhập", { exact: true }).fill(loginName);
       await userPage.getByLabel("Mật khẩu", { exact: true }).fill(loginPassword);
       await userPage.getByRole("button", { name: /Đăng nhập/ }).click();
-      await expect(userPage.getByRole("heading", { name: /Xin chào/ })).toBeVisible();
-      await expect(userPage).toHaveURL(/\/$/);
+      await expect(userPage).toHaveURL(/\/profile$/);
+      await expect(userPage.getByText("Bạn đang dùng mật khẩu tạm.", { exact: false })).toBeVisible();
+      await userPage.goto("/");
+      await expect(userPage).toHaveURL(/\/profile$/);
+      await userPage.getByLabel("Mật khẩu hiện tại", { exact: true }).fill(loginPassword);
+      await userPage.getByLabel("Mật khẩu mới", { exact: true }).fill(`${password}-personal`);
+      await userPage.getByLabel("Nhập lại mật khẩu mới", { exact: true }).fill(`${password}-personal`);
+      await userPage.getByRole("button", { name: "Đổi mật khẩu", exact: true }).click();
+      await expect(userPage.getByText("Đã đổi mật khẩu và thu hồi các phiên cũ.", { exact: true })).toBeVisible();
+      expect((await db.tai_khoan.findUniqueOrThrow({ where: { id: account.id } })).bat_buoc_doi_mat_khau).toBe(false);
+      await userPage.goto("/");
+      await expect(userPage.getByRole("heading", { name: "Bàn làm việc", exact: true })).toBeVisible();
       await dialog.getByRole("button", { name: "Đã lưu thông tin bàn giao" }).click();
       if (manual) {
         await page.getByRole("row").filter({ has: page.getByText(loginName, { exact: true }) })
@@ -412,6 +445,13 @@ test("accounts form reveals passwords without submitting; new logins work immedi
         await expect(userPage.getByText("Bạn đang dùng mật khẩu tạm.", { exact: false })).toBeVisible();
         await userPage.goto("/");
         await expect(userPage).toHaveURL(/\/profile$/);
+        await userPage.getByLabel("Mật khẩu hiện tại", { exact: true }).fill(resetPassword);
+        await userPage.getByLabel("Mật khẩu mới", { exact: true }).fill(`${password}-after-reset`);
+        await userPage.getByLabel("Nhập lại mật khẩu mới", { exact: true }).fill(`${password}-after-reset`);
+        await userPage.getByRole("button", { name: "Đổi mật khẩu", exact: true }).click();
+        await expect(userPage.getByText("Đã đổi mật khẩu và thu hồi các phiên cũ.", { exact: true })).toBeVisible();
+        await userPage.goto("/");
+        await expect(userPage.getByRole("heading", { name: "Bàn làm việc", exact: true })).toBeVisible();
         await dialog.getByRole("button", { name: "Đã lưu thông tin bàn giao" }).click();
       }
     } finally {
@@ -572,7 +612,7 @@ test("dashboard counts all own records beyond 200; sibling without workflow sees
   await signAccount(context, plain);
   await page.goto("/?view=draft");
   await expect(
-    page.getByRole("region", { name: "Tổng quan công việc" }).getByRole("link", { name: "Bản nháp của tôi 205" }),
+    page.getByRole("navigation", { name: "Nhóm công việc quy trình" }).getByRole("link", { name: "Bản nháp của tôi 205" }),
   ).toBeVisible();
   await expect(
     page.getByText("10 hồ sơ / 205 hồ sơ phù hợp. Trang 1/21."),
@@ -591,10 +631,10 @@ test("dashboard counts all own records beyond 200; sibling without workflow sees
   await signAccount(context, sibling);
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "Không gian cá nhân của bạn" }),
+    page.getByText("Chưa có nhóm công việc phù hợp với tài khoản của bạn."),
   ).toBeVisible();
   await expect(
-    page.getByRole("region", { name: "Tổng quan công việc" }).getByRole("link", { name: "Bản nháp của tôi 205" }),
+    page.getByRole("navigation", { name: "Nhóm công việc quy trình" }).getByRole("link", { name: "Bản nháp của tôi 205" }),
   ).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(

@@ -28,7 +28,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => db.$disconnect());
 
 test("three sections, create category/item, receive 20 and issue 2 to employee", async ({ page, context }) => {
-  await signAccount(context, manager); await page.goto("/assets");
+  await signAccount(context, manager); await page.goto("/asset-management");
   const tabs = page.getByRole("navigation", { name: "Hạng mục quản lý" }); await expect(tabs.getByRole("link")).toHaveCount(3);
   await tabs.getByRole("link", { name: "Phụ kiện", exact: true }).click();
   await page.getByRole("button", { name: "Thêm loại mặt hàng", exact: true }).click();
@@ -61,15 +61,15 @@ test("network failure keeps draft; retry records exactly once; stale balances re
 });
 
 test("search without accents, keyboard picker, metadata version protection and history reversal", async ({ page, context }) => {
-  await signAccount(context, manager); await page.goto("/inventory?kind=accessory"); await page.getByRole("textbox", { name: "Tìm mặt hàng" }).fill("chuot khong"); await page.getByRole("button", { name: "Tìm kiếm", exact: true }).click(); await expect(table(page).locator("tbody tr")).toHaveCount(1); await table(page).getByRole("button", { name: "Chuột không dây" }).click();
-  await panel(page).getByText("Thông tin mặt hàng", { exact: true }).click(); await panel(page).getByRole("button", { name: "Sửa thông tin", exact: true }).click(); const edit = page.getByRole("dialog", { name: "Sửa mặt hàng", exact: true }); await expect(edit.getByLabel("Đơn vị tính", { exact: true })).toBeDisabled(); await edit.getByLabel("Ghi chú", { exact: true }).fill("Bản nháp giữ khi lỗi");
+  await signAccount(context, manager); await page.goto("/inventory?kind=accessory"); await page.getByRole("textbox", { name: "Tìm mặt hàng" }).fill("chuot khong"); await page.getByRole("button", { name: "Tìm kiếm", exact: true }).click(); await expect(table(page).locator("tbody tr")).toHaveCount(1); await table(page).getByRole("button", { name: "Mở mặt hàng Chuột không dây" }).click();
+  await panel(page).getByRole("button", { name: "Sửa thông tin", exact: true }).click(); const edit = page.getByRole("dialog", { name: "Sửa mặt hàng", exact: true }); await expect(edit.getByLabel("Đơn vị tính", { exact: true })).toBeEditable(); await edit.getByLabel("Ghi chú", { exact: true }).fill("Bản nháp giữ khi lỗi");
   await db.mat_hang_vat_tu.update({ where: { id: itemId }, data: { ghi_chu: "Thay đổi khác" } }); await edit.getByRole("button", { name: "Lưu mặt hàng" }).click(); await expect(edit.getByRole("alert")).toContainText("Thông tin đã thay đổi"); await expect(edit.getByLabel("Ghi chú", { exact: true })).toHaveValue("Bản nháp giữ khi lỗi"); page.once("dialog", d => d.accept()); await edit.getByRole("button", { name: "Hủy", exact: true }).click(); await expect(edit).toBeHidden();
   await panel(page).getByRole("tab", { name: "Lịch sử", exact: true }).click(); await panel(page).getByRole("button", { name: "Sửa sai bằng đảo giao dịch" }).first().click(); const undo = page.getByRole("dialog", { name: "Đảo giao dịch", exact: true }); await undo.getByLabel("Lý do", { exact: true }).fill("Ghi nhầm lần nhập"); await undo.getByRole("button", { name: "Cập nhật số dư", exact: true }).click(); await expect(undo.getByRole("alert")).toContainText("Đã cập nhật số dư"); await undo.getByRole("button", { name: "Xác nhận ghi nhận" }).click(); await expect(undo).toBeHidden(); await expect(panel(page).getByText("Đã đảo", { exact: true })).toBeVisible(); await stock(20);
 });
 
 test("inventory-only VIEW can read but cannot mutate or open assets; NONE gets no data", async ({ page, context }) => {
   await signAccount(context, viewer); await openItem(page); await expect(panel(page).getByRole("button", { name: "Nhập hàng", exact: true })).toHaveCount(0); await expect(page.getByRole("button", { name: "Thêm mặt hàng", exact: true })).toHaveCount(0);
-  await panel(page).getByRole("button", { name: "Close", exact: true }).click(); await expect(panel(page)).toBeHidden(); await expect(page.getByRole("navigation", { name: "Hạng mục quản lý" }).getByRole("link")).toHaveCount(2); await page.goto("/assets"); await expect(page.getByText("Không thể truy cập tài sản", { exact: true })).toBeVisible();
+  await panel(page).getByRole("button", { name: "Close", exact: true }).click(); await expect(panel(page)).toBeHidden(); await page.goto("/asset-management"); await expect(page.getByRole("navigation", { name: "Hạng mục quản lý" }).getByRole("link")).toHaveCount(2); await page.goto("/assets"); await expect(page.getByText("Không thể truy cập tài sản", { exact: true })).toBeVisible();
   await context.clearCookies(); await signAccount(context, none); await page.goto(`/inventory?kind=accessory&item=${itemId}`); await expect(page.getByText("Không thể truy cập vật tư", { exact: true })).toBeVisible(); await expect(page.getByText("Chuột không dây", { exact: true })).toHaveCount(0);
 });
 
@@ -83,7 +83,7 @@ test("mobile and dark mode keep forms/panels usable without page overflow", asyn
   await signAccount(context, manager); await page.setViewportSize({ width: 390, height: 844 }); await page.goto("/inventory?kind=accessory"); await expect(table(page)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.screenshot({ path: "outputs/inventory/mobile-light.png", fullPage: true });
-  await table(page).getByRole("button", { name: "Chuột không dây", exact: true }).click(); await panel(page).getByRole("button", { name: "Cấp phát", exact: true }).click(); await page.getByRole("combobox", { name: "Người nhận", exact: true }).click(); const search = page.getByRole("combobox", { name: "Tìm người nhận", exact: true }); await search.fill("nguyen an"); await search.press("Enter"); await expect(page.getByRole("combobox", { name: "Người nhận", exact: true })).toContainText("Nguyễn An");
+  await table(page).getByRole("button", { name: "Mở mặt hàng Chuột không dây", exact: true }).click(); await panel(page).getByRole("button", { name: "Cấp phát", exact: true }).click(); await page.getByRole("combobox", { name: "Người nhận", exact: true }).click(); const search = page.getByRole("combobox", { name: "Tìm người nhận", exact: true }); await search.fill("nguyen an"); await search.press("Enter"); await expect(page.getByRole("combobox", { name: "Người nhận", exact: true })).toContainText("Nguyễn An");
   await page.screenshot({ path: "outputs/inventory/mobile-form.png", fullPage: true });
   page.once("dialog", d => d.accept()); await page.getByRole("dialog", { name: "Cấp phát", exact: true }).getByRole("button", { name: "Hủy", exact: true }).click();
   await page.evaluate(() => localStorage.setItem("theme", "dark")); await page.reload(); await expect(page.locator("html")).toHaveClass(/dark/);
@@ -98,7 +98,47 @@ test("consumables issue to a department without accessory return obligations", a
   await page.getByRole("button", { name: "Thêm mặt hàng", exact: true }).click(); const item = page.getByRole("dialog", { name: "Thêm mặt hàng", exact: true });
   await item.getByLabel("Tên mặt hàng", { exact: true }).fill("Mực Canon 057"); await pick(page, "Loại mặt hàng", "Mực in"); await item.getByLabel("Đơn vị tính", { exact: true }).fill("hộp"); await item.getByRole("button", { name: "Lưu mặt hàng" }).click(); await expect(item).toBeHidden();
   await expect(panel(page).getByRole("tab", { name: "Đang cấp", exact: true })).toHaveCount(0);
-  await panel(page).getByRole("button", { name: "Nhập hàng", exact: true }).click(); const receipt = page.getByRole("dialog", { name: "Nhập hàng", exact: true }); await pick(page, "Nơi nhập", "Tủ vật tư HCNS"); await receipt.getByLabel("Số lượng", { exact: true }).fill("10"); await receipt.getByLabel("Đơn giá (VND)").fill("100000"); await receipt.getByLabel("Đơn giá (VND)").fill(""); await receipt.getByRole("button", { name: "Xác nhận ghi nhận" }).click(); await expect(receipt).toBeHidden();
-  await expect(panel(page).getByText("10 hộp", { exact: true })).toBeVisible(); await panel(page).getByRole("button", { name: "Cấp phát", exact: true }).click(); const issue = page.getByRole("dialog", { name: "Cấp phát", exact: true }); await pick(page, "Nơi xuất", "Tủ vật tư HCNS"); await pick(page, "Phòng nhận", "Phòng HCNS"); await issue.getByRole("button", { name: "Xác nhận ghi nhận" }).click(); await expect(issue).toBeHidden(); await expect(panel(page).getByText("9 hộp", { exact: true })).toBeVisible();
-  await panel(page).getByRole("tab", { name: "Lịch sử", exact: true }).click(); await expect(panel(page).getByText(/Tủ vật tư HCNS → Phòng HCNS/)).toBeVisible();
+  await panel(page).getByRole("button", { name: "Nhập hàng", exact: true }).click(); const receipt = page.getByRole("dialog", { name: "Nhập hàng", exact: true }); await receipt.getByLabel("Số lượng", { exact: true }).fill("10"); await receipt.getByLabel("Đơn giá (VND)").fill("100000"); await receipt.getByLabel("Đơn giá (VND)").fill(""); await receipt.getByRole("button", { name: "Xác nhận ghi nhận" }).click(); await expect(receipt).toBeHidden();
+  await expect(panel(page).getByText("10 hộp", { exact: true })).toBeVisible(); await panel(page).getByRole("button", { name: "Ghi nhận sử dụng", exact: true }).click(); const issue = page.getByRole("dialog", { name: "Ghi nhận sử dụng", exact: true }); await pick(page, "Phòng nhận", "Phòng HCNS"); await issue.getByRole("button", { name: "Xác nhận ghi nhận" }).click(); await expect(issue).toBeHidden(); await expect(panel(page).getByText("9 hộp", { exact: true })).toBeVisible();
+  await panel(page).getByRole("tab", { name: "Lịch sử", exact: true }).click(); await expect(panel(page).getByText("Phòng HCNS", { exact: true })).toBeVisible();
+});
+
+
+test("pooled initial quantity, use, low stock, detail link and mobile layout", async ({ page, context }) => {
+  await signAccount(context, manager); await page.goto("/inventory?kind=consumable");
+  await page.getByRole("button", { name: "Thêm mặt hàng", exact: true }).click();
+  const form = page.getByRole("dialog", { name: "Thêm mặt hàng", exact: true });
+  await form.getByLabel("Tên mặt hàng", { exact: true }).fill("Mực 140g");
+  await pick(page, "Loại mặt hàng", "Mực in");
+  await form.getByLabel("Đơn vị tính", { exact: true }).fill("20");
+  await form.getByLabel("Số lượng ban đầu", { exact: true }).fill("20");
+  await form.getByLabel("Mức tồn tối thiểu").fill("18");
+  await form.getByRole("button", { name: "Lưu mặt hàng" }).click();
+  await expect(form.getByText(/Đơn vị là lọ/)).toBeVisible();
+  await form.getByLabel("Đơn vị tính", { exact: true }).fill("lọ");
+  await form.getByRole("button", { name: "Lưu mặt hàng" }).click();
+  await expect(form).toBeHidden(); await expect(panel(page).getByText("20 lọ", { exact: true })).toBeVisible();
+  expect(new URL(page.url()).searchParams.get("item")).toBeTruthy();
+  await panel(page).getByRole("button", { name: "Ghi nhận sử dụng", exact: true }).click();
+  const use = page.getByRole("dialog", { name: "Ghi nhận sử dụng", exact: true });
+  await expect(use.getByRole("combobox", { name: "Nơi xuất" })).toHaveCount(0);
+  await use.getByLabel("Số lượng", { exact: true }).fill("21");
+  await pick(page, "Phòng nhận", "Phòng HCNS");
+  await use.getByRole("button", { name: "Xác nhận ghi nhận" }).click();
+  await expect(use.getByRole("alert")).toContainText("vượt tồn");
+  await expect(use.getByLabel("Số lượng", { exact: true })).toHaveValue("21");
+  await use.getByLabel("Số lượng", { exact: true }).fill("2");
+  await expect(use.getByLabel("Số lượng dự kiến")).toContainText("20 → 18");
+  await use.getByRole("button", { name: "Xác nhận ghi nhận" }).click();
+  await expect(use).toBeHidden(); await page.reload();
+  await expect(panel(page).locator("strong").filter({ hasText: /^18 lọ$/ })).toBeVisible();
+  await panel(page).getByRole("button", { name: "Close", exact: true }).click();
+  await expect(table(page).getByRole("row").filter({ hasText: "Mực 140g" })).toContainText("Sắp hết");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await table(page).getByRole("button", { name: "Mở mặt hàng Mực 140g", exact: true }).click();
+  await expect(panel(page).getByRole("button", { name: "Sửa thông tin", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ animations: "disabled", path: "outputs/it-consumables/mobile-detail.png" });
+  await page.evaluate(() => document.documentElement.classList.add("dark"));
+  await page.screenshot({ animations: "disabled", path: "outputs/it-consumables/mobile-dark.png" });
 });

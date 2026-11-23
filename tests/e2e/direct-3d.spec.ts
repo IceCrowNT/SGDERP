@@ -1,3 +1,4 @@
+import { HCNS_LAYOUT } from "../../prisma/data/hcns-survey";
 import { test, expect, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
 import { readFile } from "node:fs/promises";
@@ -10,7 +11,6 @@ import {
 } from "../helpers/account-fixture";
 import { chooseRoomPoint } from "../helpers/office-3d";
 import {
-  HCNS_LAYOUT,
   personRoomPosition,
 } from "../../src/lib/office-3d/hcns-layout";
 import { hcnsWorldPoint } from "../../src/lib/office-3d/building-navigation";

@@ -1,8 +1,10 @@
+import type { AiSupportDraft } from "./ai-support-task";
 import { z } from "zod";
 import { SaveAssetSchema } from "@/lib/validations/asset";
 import { LocationFormSchema } from "@/lib/validations/location";
 import type { AssetRow, AssetCategory } from "@/components/assets/types";
 import type { LocationRow } from "@/lib/location-tree";
+import type { AiInventoryDraft } from "@/lib/ai-inventory-tools";
 
 const id = z.number().int().positive();
 export const AssetDraftSchema = z.object({
@@ -33,7 +35,7 @@ export type AiDraft = {
 } | {
   kind: "location"; values: z.infer<typeof LocationFormSchema>; row: LocationRow | null;
   rows: LocationRow[]; changes: AiChange[];
-};
+} | AiInventoryDraft | AiSupportDraft;
 
 const string = { type: "string" }, number = { type: "integer", minimum: 1 };
 const nullableId = { type: ["integer", "null"], minimum: 1 };

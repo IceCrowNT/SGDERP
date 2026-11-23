@@ -1,349 +1,264 @@
-# Kế hoạch quản lý tài sản — mức 1
+# Kế hoạch quản lý tài sản
 
-Cập nhật: **16/11/2026**. **Đã triển khai giao diện mức 1** cho thiết bị quản lý từng chiếc: `/assets` có danh mục loại, tìm/lọc, hồ sơ, chọn người/vị trí và lịch sử trên nền hai bảng cùng quyền ASSETS. Tài khoản `admin` đã được cấp ASSETS MANAGE theo yêu cầu. Đã nhập 89 dòng từ nguồn Excel, giữ nguyên hai hồ sơ tạo thủ công: tổng 91 hồ sơ/11 loại; ba dòng chờ đối chiếu trùng. Gán/chuyển/bỏ gán từ 3D HCNS đã triển khai và kiểm chứng. Thiết kế nhiều bảng cũ đã gỡ ngày 31/10 không được khôi phục; 3D nhân sự hoạt động độc lập.
+Cập nhật: **23/11/2026**. **Chức năng hiện hành đã triển khai và có kiểm chứng kỹ thuật; chưa nghiệm thu vận hành.** Lần chuẩn hóa A/B này chỉ sửa tài liệu, không thay đổi chức năng, DB hoặc quyền.
 
-Rule nghiệp vụ: [ASSET-MANAGEMENT-RULES](../../.agents/rules/ASSET-MANAGEMENT-RULES.md).
+[Rule nghiệp vụ](../../.agents/rules/ASSET-MANAGEMENT-RULES.md) · [A. Đặc tả yêu cầu](#a-đặc-tả-yêu-cầu) · [B. Thiết kế kỹ thuật](#b-thiết-kế-kỹ-thuật) · [Chi tiết kỹ thuật](../THIET-KE-QUAN-LY-TAI-SAN.md) · [Quy chuẩn plan](README.md#quy-chuẩn-lập-và-cập-nhật-plan).
 
-Đọc nhanh: [A. Tổng quan để duyệt](#a-tổng-quan-để-duyệt) · [B. Chi tiết triển khai](#b-chi-tiết-triển-khai) · [Checklist](#checklist-triển-khai).
+## A. Đặc tả yêu cầu
 
-**Vị trí bổ sung trên 3D:** bản thử [thêm bàn/điểm thiết bị](OFFICE-3D-CHECKLIST.md#thử-nghiệm-thêm-vị-trí-trên-mô-hình) tạo vị trí chung để gán tài sản qua action hiện có. Không tự tạo thiết bị khi thêm hình; không đổi `nguoi_su_dung_id`, phòng quản lý hoặc quyền ASSETS.
+### Mục tiêu và phạm vi hiện tại
 
-## A. Tổng quan để duyệt
+Giúp người phụ trách biết **công ty có thiết bị gì, ai đang dùng, ở đâu và tình trạng ra sao**; tra lại thay đổi khi cần. Mỗi thiết bị có một hồ sơ và mã riêng. Vật tư tiêu hao/phụ kiện quản lý theo số lượng thuộc [plan vật tư](INVENTORY-MANAGEMENT-CHECKLIST.md).
 
-### Phạm vi hiện tại
+Phạm vi hiện hành là cập nhật hiện trạng và lịch sử. Chưa có phiếu bàn giao, duyệt cấp phát, hồ sơ sửa chữa/bảo trì, kiểm kê, license hoặc màn hình nhập/xuất Excel hàng loạt. Đổi người sử dụng hiện tại chưa tương đương người nhận đã xác nhận bàn giao.
 
-- Mỗi thiết bị có một hồ sơ, mã cố định, loại, tình trạng, người sử dụng và vị trí khi đã xác định. Số lượng tính từ hồ sơ, không có ô số lượng cho một thiết bị.
-- Card loại hoặc danh sách nhóm người/vị trí → bảng thiết bị → nhấp giá trị người/vị trí/tình trạng để sửa và tự lưu ngay trên dòng hoặc mở hồ sơ bên phải (toàn chiều rộng trên điện thoại). Tìm kiếm toàn cục đi thẳng tới bảng; Thêm từ nhóm loại điền sẵn loại. Quay lại giữ bộ lọc, trang và cuộn trong phiên trang. Xem [bảng và sửa trực tiếp](#bảng-thiết-bị-và-sửa-trực-tiếp--đã-kiểm-chứng-12112026).
-- Hồ sơ có link riêng và card **Tem QR** thu gọn: quét mở đúng tài sản, tải PNG/in một tem/sao chép link; giữ đích qua đăng nhập và đổi mật khẩu. Xem [liên kết hồ sơ và tem QR](#liên-kết-hồ-sơ-và-tem-qr--16112026).
-- Panel cho sửa trực tiếp từng giá trị theo quyền, mã tự cấp chỉ đọc. Mục **Mua sắm & khấu hao** tùy chọn/thu gọn và thanh phần còn lại trong bảng theo [thiết kế tại chỗ](#sửa-trực-tiếp-trong-panel-và-thông-tin-khấu-hao--16112026).
-- Mức 1 chỉ cập nhật hiện trạng: giao cho người khác, đổi vị trí, ghi nhận hỏng/đang sửa/ngừng sử dụng và ghi chú. Chưa có phiếu bàn giao, hồ sơ sửa chữa hay workflow duyệt riêng.
-- **Ngoài phạm vi:** vật tư tiêu hao và nhập–xuất–tồn; license phần mềm; bảo trì định kỳ; hạch toán và khấu hao kế toán; mã vạch và màn hình quét riêng; import/export hàng loạt. QR liên kết hồ sơ đã được duyệt triển khai ở mục dưới.
-- Bản đầu phục vụ danh mục thiết bị IT được nhập vào ERP. Quyền có phạm vi công ty; chưa có giới hạn dữ liệu theo phòng. Phòng quản lý trên hồ sơ không phải scope phân quyền; IT không mặc định sở hữu hoặc quản lý mọi tài sản của công ty.
+### Người dùng và quyền thao tác
 
-### Điều chỉnh giao diện và hướng mở rộng đang xem xét
+| Người dùng | Được làm gì? | Giới hạn |
+| --- | --- | --- |
+| Người được cấp quyền Xem tài sản | Xem tổng quan, tìm/lọc, mở hồ sơ/lịch sử, xem/tải/in QR | Xem thiết bị trong công ty; không sửa |
+| Người được cấp quyền Quản lý tài sản | Toàn bộ quyền xem; thêm/sửa thiết bị và loại; chọn người, phòng quản lý, vị trí | Chỉ chọn dữ liệu có sẵn; không tự có quyền sửa hồ sơ nhân sự hoặc cây vị trí |
+| Người sử dụng thiết bị | Được ghi nhận là người giữ/dùng thiết bị | Không tự có quyền vào phân hệ, không bắt buộc có tài khoản |
 
-| Nội dung | Hướng xử lý và trạng thái |
-| --- | --- |
-| Icon loại tài sản | Người dùng yêu cầu đặt ở khu vực phụ. Dự kiến phần **Hiển thị** thu gọn trong tạo/sửa **Loại tài sản**, tùy chọn và có icon mặc định; không thêm bước vào form tạo từng thiết bị. Đã ghi nhận, chưa triển khai trường lưu/chọn icon. |
-| Ô chọn vị trí | Giữ nguyên bộ chọn hiện tại theo yêu cầu; chưa triển khai phương án duyệt theo tầng/phòng đã đề xuất. |
-| Nhiều phòng cùng quản lý tài sản | Đề xuất dùng chung danh mục/hồ sơ, phân biệt phòng chịu trách nhiệm, người sử dụng, nơi đặt và tài khoản ghi nhận. Nếu mỗi phòng tự quản lý riêng, bổ sung quyền xem/quản lý **kèm phạm vi phòng được giao hoặc toàn công ty**; hiện chưa triển khai phạm vi này. Không suy quyền từ người tạo, tên loại, phòng của người sử dụng hoặc việc IT hỗ trợ thiết bị. |
-| Vật tư tiêu hao và phụ kiện | Đã lập [plan riêng](INVENTORY-MANAGEMENT-CHECKLIST.md) ngày 16/11 theo yêu cầu: ba hạng mục giao diện, giữ tài sản từng chiếc; thêm ba bảng số lượng, tên mặt hàng `mat_hang_vat_tu`. Đã triển khai 17/11, ba tab chung theo quyền; giữ nguyên thiết bị và tự lưu. Chưa nhập tồn vật tư; bản quyền làm sau. Plan vật tư sở hữu thiết kế DB/nhập–cấp–thu hồi và quyền INVENTORY. |
+Quyền hiện hành áp dụng toàn công ty, chưa giới hạn theo phòng. Trường Phòng quản lý mô tả trách nhiệm, không tự giới hạn người xem. Người phụ trách tự cấp quyền bổ sung; tài khoản `admin` đã được cấp quyền quản lý theo yêu cầu ngày 12/11.
 
-Phạm vi phòng phải kiểm tra trên server cho danh sách, số đếm, chi tiết, cập nhật, lịch sử và gán từ vị trí/3D; bộ lọc giao diện không thay phân quyền. Phòng quản lý chưa xác định cần được phân loại trước khi giao phạm vi cho phòng; không tự gán toàn bộ thiết bị hiện có về IT/HCNS hoặc theo người tạo. Thiết kế cấp phạm vi dùng [plan phân quyền](ROLE-MANAGEMENT-CHECKLIST.md), không tự cấp thêm grant trong lượt phân tích.
+### Màn hình và yêu cầu sử dụng
 
-### Trạng thái triển khai — 12/11/2026
+| Mã | Nơi thao tác | Yêu cầu và hành vi quan sát được |
+| --- | --- | --- |
+| TS-01 | Tổng quan Tài sản & vật tư | Ba card hạng mục theo quyền; phân bố loại, thiết bị cần rà soát và vừa cập nhật. Bấm số liệu mở đúng danh sách/hồ sơ. |
+| TS-02 | Danh sách tài sản | Bảng và bộ lọc loại nhỏ, tìm tên/mã/serial/model, xem nhóm người/vị trí. Giữ tìm/lọc và trang khi mở rồi đóng hồ sơ. |
+| TS-03 | Thêm hồ sơ, quản lý loại | Nhập tên, chọn loại; mã thiết bị tự sinh và không sửa. Cá nhân phải chọn người; Dùng chung/Chưa phân bổ/Chưa xác định không gắn người. Ngừng dùng giữ hồ sơ và lịch sử. |
+| TS-04 | Sửa trong bảng/panel | Người có quyền bấm trực tiếp giá trị, kể cả Chưa rõ. Chọn để tự lưu; chữ/số/ngày lưu khi rời ô hoặc Enter. Lỗi giữ nội dung và cho thử lại, không âm thầm mất thay đổi. Tạo mới vẫn bấm xác nhận. |
+| TS-05 | Hồ sơ và lịch sử | Có liên kết riêng mở đúng panel; xem ai sửa, thời điểm và trước–sau. Người, phòng quản lý và vị trí là ba thông tin độc lập; đổi người không tự chuyển vị trí. |
+| TS-06 | Mua sắm & khấu hao | Ngày mua, giá, thời gian khấu hao, hạn bảo hành tùy chọn và mặc định thu gọn. Đủ ngày mua/thời gian mới hiện thanh phần còn lại xanh–vàng–đỏ; không thay tình trạng thiết bị. |
+| TS-07 | Tem QR | Mỗi hồ sơ có QR dẫn tới liên kết của nó; xem, tải ảnh, in một tem. Người quét vẫn đăng nhập và cần quyền xem. |
+| TS-08 | Bản đồ 3D | Tại phòng đã liên kết, xem/gán/chuyển/bỏ gán tài sản theo quyền; giữ mã, người và các thông tin khác khi đổi nơi đặt. |
 
-Người phụ trách vận hành được chọn bằng tài khoản và quyền tại `/roles`. Người sử dụng từng thiết bị chọn trong form tài sản, có thể là nhân sự không có tài khoản. Hai vai trò này độc lập; không thêm cột người giữ/đầu mối vào DB. Đã cấp ASSETS MANAGE cho `admin` theo yêu cầu, qua vai trò ADMIN hiện chỉ gán cho tài khoản này. Người phụ trách nghiệp vụ cụ thể vẫn chờ lựa chọn; nguồn Excel đã nhập phần độc lập theo checklist bên dưới.
-
-Đã thực hiện theo yêu cầu: thử migration trên DB khôi phục riêng và DB cài mới, sao lưu rồi áp dụng local; dữ liệu 15 bảng cũ và grant hiện có giữ nguyên. **Giao diện `/assets` đã hoàn thành và kiểm thử trên DB riêng**; nguồn Excel được nhập sau thử nghiệm chống trùng và audit. Bước tiếp theo là đối chiếu ba dòng còn giữ lại, xác minh người/vị trí/tình trạng và chọn người phụ trách. Không cần chờ 3D hoặc workflow bàn giao.
-
-| Điểm cần xử lý | Đánh giá và thời điểm |
-| --- | --- |
-| Chức năng mới | Đã có `/assets`, danh mục loại, tạo/sửa thiết bị, bộ chọn người/phòng/vị trí, lịch sử, tìm/lọc và phân trang. Số nhóm tính toàn bộ hồ sơ cùng công ty; card chỉ ở nhóm loại, thiết bị dùng bảng có sửa tại dòng. Menu và dữ liệu kiểm tra ASSETS. |
-| Quy tắc lưu | Đã có khóa chung, kiểm tra phiên bản, cấp mã, ràng buộc Cá nhân/người sử dụng, giữ liên kết cũ khi người nghỉ hoặc loại ngừng dùng, audit cùng giao dịch. |
-| Liên kết với chức năng đang có | Đã chặn xóa/ngừng dùng vị trí còn tài sản, chặn xóa phòng quản lý còn tài sản; ASSETS MANAGE lấy danh mục chọn tối thiểu mà không có quyền sửa vị trí hoặc đọc toàn bộ HR. |
-| Điều kiện trước khi dùng thử | `admin` đã có quyền quản lý; chọn người phụ trách nghiệp vụ/tài khoản bổ sung qua `/roles` và xác minh thông tin còn thiếu của hồ sơ đã nhập. Phạm vi quyền mức 1 là toàn công ty; nếu cần giới hạn theo phòng phải điều chỉnh thiết kế trước khi cấp quyền pilot. |
-
-Tài liệu đánh giá 3D ngày 21/10 và phân tích nguồn ngày 27/10 chỉ dùng để tra bối cảnh/nguồn: các mô tả schema nhiều bảng, seed và renderer trong đó đã cũ. Plan này, plan vị trí và plan 3D hiện hành quản lý thiết kế triển khai.
-
-Đã bổ sung bảng duyệt công việc AI để đổi khấu hao mặc định tất cả loại, giữ tài sản hiện hữu; phạm vi, DB và kiểm thử do [plan AI](AI-ASSISTANT-CHECKLIST.md#bảng-công-việc-ai-và-duyệt-thực-hiện--16112026) quản lý.
-
-## B. Chi tiết triển khai
-
-### Tự lưu chỉnh sửa tài sản — 16/11/2026
-
-**Đã triển khai và kiểm chứng:** thay Lưu thủ công bằng tự lưu cho bảng, panel (dùng chung 3D), form sửa hồ sơ và sửa loại. Tạo mới hoặc bản nháp AI cần nút xác nhận tạo/lưu; không tự tạo bản ghi từ form nhập dở. Quy tắc mới thay hành vi Lưu/Hủy được kiểm chứng ở các mốc cũ bên dưới.
-
-| Tương tác | Hành vi |
-| --- | --- |
-| Chọn danh mục/enum/checkbox | Tự lưu ngay sau khi chọn; Cá nhân phải chọn đủ người, không lưu trạng thái trung gian sai ràng buộc |
-| Chữ/số/ngày | Rời ô, bấm ngoài hoặc Enter để lưu; ghi chú nhiều dòng dùng Ctrl/Cmd+Enter hoặc rời ô |
-| Esc / Bỏ thay đổi | Bỏ phần chưa lưu; không hoàn tác lần đã lưu thành công |
-| Lưu thành công | Cập nhật phiên bản từ server, danh sách/hồ sơ/lịch sử; báo Đã lưu, không gửi lại dữ liệu không đổi |
-| Lỗi hoặc xung đột | Giữ nội dung, hiện lỗi và Thử lưu lại; không tự ghi đè phiên bản mới, không rời hồ sơ khi còn dữ liệu chưa lưu |
-
-Không đổi DB/quyền. Action lưu loại trả thêm bản ghi vừa lưu để dùng đúng phiên bản cho lần tự lưu tiếp theo. Request được chặn trùng, form khóa khi đang gửi; vẫn dùng schema và audit cùng transaction.
-
-- [x] Hoàn thiện hook tự lưu dùng chung cho bảng, panel/3D, form sửa hồ sơ và sửa loại; action loại trả bản ghi/phiên bản mới. Tạo mới và bản nháp AI giữ xác nhận tường minh; không đổi schema hoặc quyền.
-- [x] 30 ca E2E tài sản đã đạt trên production/DB riêng: 7 sửa dòng, 5 panel/khấu hao/loại, 4 nhóm, 5 QR, 3 bố cục và 6 hồ sơ/quyền. Kiểm tra chọn/blur/Enter/Esc, đủ người trước khi ghi, lỗi tải/mạng/phiên bản, giữ bản nháp, chống gửi trùng, audit/no-op, VIEW và khác công ty, cập nhật liên tiếp đúng phiên bản, checkbox/mức loại không hồi tố, phần lỗi thu gọn tự mở, mobile sáng/tối và tạo mới xác nhận rõ ràng. Lượt hồi quy cuối 28 ca đạt; sau sửa vùng lỗi thu gọn đã chạy lại đủ 5 panel + 6 hồ sơ đạt, không còn ca lỗi. Đã sửa fixture đếm nhầm popover thành dialog sửa và thao tác Tab chưa rời khỏi các phần bên trong ô ngày.
-- [x] 1 E2E mở hồ sơ từ mesh 3D đạt: Enter tự lưu, tên/audit cập nhật, giữ Canvas/URL/camera. TypeScript/lint/build Webpack và kiểm tra diff đạt; build chạy lại sau nhắc bảo mật Next.js hiện có, không đổi dependency. Đã xem ảnh desktop/mobile/tối; kiểm tra cổng 4000 chỉ mở/đóng lựa chọn, không gửi thay đổi.
-- [x] Đã dừng server và xóa DB thử; tài sản, loại và audit vận hành không đổi. Đối chiếu 20 bảng từ snapshot: 19 không đổi, `tai_khoan` có cập nhật đồng thời ngoài tác vụ và được giữ nguyên. DB thử đã áp migration AI có sẵn để khớp Prisma Client đang phát triển song song; không áp migration/đổi quyền trên DB vận hành trong tác vụ tự lưu. Log, ảnh, backup và đối chiếu tại `outputs/assets-autosave/`; 77 liên kết/anchor tài liệu hợp lệ.
-
-### Sửa trực tiếp trong panel và thông tin khấu hao — 16/11/2026
-
-Panel `AssetDetail` được tái sử dụng khi chọn Sửa tài sản từ menu 3D, giữ quyền/action/lịch sử và khấu hao/QR hiện có. Luồng chọn đối tượng và kiểm chứng được quản lý tại [plan 3D](OFFICE-3D-CHECKLIST.md#sửa-hồ-sơ-từ-menu-đối-tượng--16112026).
-
-**Đã triển khai và kiểm chứng:** nhấp vào giá trị trong panel để sửa tại chỗ, không mở dialog sửa toàn bộ hồ sơ. Một mục được sửa mỗi lần, tự lưu theo mục trên; quyền MANAGE mới có thao tác, VIEW chỉ đọc. Mã tự cấp/ID/QR và giá trị tính toán không cho sửa. Lỗi hoặc phiên bản cũ giữ bản nháp; không tự bỏ bản nháp khi đóng panel/chuyển tab/quay lại.
-
-- Sửa tên, loại, tình trạng, hình thức/người sử dụng, phòng quản lý, vị trí, hãng/model, serial và ghi chú. Hình thức/người là một nhóm để giữ ràng buộc Cá nhân; bỏ người phải chọn hình thức khác rõ ràng. Vẫn dùng `saveAsset`, kiểm tra phiên bản/tham chiếu và audit nguyên tử.
-- **Mua sắm & khấu hao** là phần tùy chọn, mặc định thu gọn: ngày mua, giá mua (VND), thời gian khấu hao (tháng), ngày hết hạn bảo hành. Hồ sơ cũ để null, không suy từ nguồn hoặc tự điền số liệu.
-- Cách tính bản đầu: tính đều từ ngày mua tới ngày kết thúc sau số tháng đã nhập; cuối tháng được chặn về ngày cuối tháng đích, tính theo ngày lịch tại Việt Nam. Phần còn lại = số ngày còn / số ngày toàn kỳ, giới hạn 0–100%; xanh khi >50%, vàng khi >20%, đỏ khi ≤20%. Thanh mỏng dưới tên từng tài sản chỉ hiện khi có ngày mua và số tháng; giá tùy chọn dùng để tính giá trị còn lại tham khảo (VND, làm tròn đồng), không phải tình trạng vật lý hoặc sổ khấu hao kế toán.
-- Theo phản hồi bổ sung, loại có thời gian khấu hao mặc định tùy chọn; lựa chọn nhanh 3/5/7 năm hoặc nhập tháng. Không tự phân loại hay áp mức cho PC/laptop cũ. Tài sản có nút áp dụng mức của loại, vẫn sửa riêng; đổi mức loại không hồi tố hồ sơ. Không suy ngày mua, giá hoặc bảo hành.
-
-Thiết kế bổ sung (không thêm bảng/FK): `tai_san.ngay_mua` DATE?, `gia_mua` DECIMAL(18,0)? không âm, `thoi_gian_khau_hao_thang` INT? trong 1–1200, `han_bao_hanh` DATE? không trước ngày mua nếu cả hai có giá trị. `loai_tai_san.khau_hao_mac_dinh_thang` INT? trong 1–1200. Cột mới để null cho toàn bộ dữ liệu cũ; ngày dùng ISO date-only, tiền truyền bằng chuỗi nguyên để không mất độ chính xác. Payload cũ thiếu thông tin mới phải giữ nguyên giá trị hiện tại; null là xóa giá trị. Không lưu phần trăm/giá trị tính toán vào DB.
-- [x] Hoàn thiện sửa tại chỗ, bảo vệ bản nháp, làm mới bảng/nhóm/lịch sử sau lưu mà giữ panel/URL/cuộn. Mở bộ tìm người/vị trí ngay khi nhấp giá trị; lỗi giữ bản nháp, Hủy trả focus về giá trị.
-- [x] Hai migration thêm 4 cột hồ sơ và 1 cột mặc định loại, có CHECK tại DB. Thử trên bản khôi phục và chuỗi cài mới; 5 probe dữ liệu không hợp lệ bị từ chối, schema diff sạch. Backup mới rồi áp dụng local: 18/18 bảng giữ nguyên dữ liệu cũ, toàn bộ cột mới null; không tự điền giá/ngày/thời hạn cho tài sản đã nhập. Bằng chứng tại `outputs/assets-panel/`.
-- [x] Hoàn thiện phần mở rộng, tính toán/thanh trạng thái, validation server/DB và nhật ký. Mặc định theo loại có lựa chọn nhanh 3/5/7 năm hoặc nhập tháng; chủ động áp dụng vào tài sản, không hồi tố. Mục thu gọn tự mở khi có lỗi nhập liệu.
-- [x] 27/27 E2E trên bản production và DB khôi phục riêng đạt: 5 ca panel/khấu hao và 22 ca hồi quy nhóm, bảng, hồ sơ, quyền, URL/QR. Kiểm tra nhấp giá trị, danh mục tìm kiếm, Lưu/Hủy, lỗi mạng/phiên bản cũ giữ bản nháp, chặn đóng/Back/chuyển tab khi sửa, VIEW không sửa, cập nhật lịch sử, mở lỗi trong mục thu gọn và mobile/sáng/tối. Đã sửa chờ hoàn tất lưu trong một fixture cũ trước khi đóng panel; lượt cuối toàn bộ đạt.
-- [x] 3 integration kiểm tra Server Actions/DB thật trên DB thử: tiền 18 chữ số/ngày chính xác, audit, payload cũ giữ dữ liệu/null xóa, phiên bản/quyền/mã cố định, mặc định loại không hồi tố. 5 unit đạt (3 khấu hao/validation, 2 liên kết tài sản). TypeScript, lint, build production Webpack, 118 liên kết/anchor tài liệu và `git diff --check` đạt.
-- [x] Kiểm tra chỉ đọc trên cổng 4000: mở link, sửa/Hủy người, phần khấu hao và mobile không lỗi JavaScript; ảnh thanh khấu hao trong bảng và giao diện mobile đã kiểm tra. Dọn server/DB thử, giữ app cổng 4000. Đối chiếu cuối 18/18 bảng vận hành giữ nguyên dữ liệu cũ, 5 cột mới đều null; không tự áp thời gian/giá/ngày cho hồ sơ. Log, ảnh và backup tại `outputs/assets-panel/`.
-
-### Liên kết hồ sơ và tem QR — 16/11/2026
-
-**Đã triển khai và kiểm chứng:** mở `/assets?asset=<id>` hiển thị panel hiện có; tải lại, chia sẻ và Back/Forward đồng bộ hồ sơ. Trong tab Thông tin, card **Tem QR** thu gọn mặc định; mở để xem QR, mã/tên, tải PNG, in tem hoặc sao chép liên kết. Áp dụng cả hồ sơ cũ và mới, không cần bấm tạo mã.
-
-- QR chứa URL theo ID bất biến, không chứa thông tin nhân sự hay quyền. Đọc hồ sơ vẫn qua `getAsset` và quyền/công ty hiện có; không thêm bảng/cột hoặc lưu ảnh QR vào DB.
-- Tạo QR cục bộ bằng `qrcode`, không gọi dịch vụ QR ngoài. Link dùng origin đang truy cập; cảnh báo khi là localhost để tránh in tem dùng trên điện thoại. Tem vận hành cần mở ERP bằng địa chỉ ổn định điện thoại truy cập được trước khi tải/in; không tự cấu hình tên miền.
-- Chưa đăng nhập hoặc phiên bị thu hồi: đăng nhập rồi trở về link tài sản. Nếu bắt buộc đổi mật khẩu, đi qua profile trước; chỉ cho phép đích tài sản nội bộ hợp lệ, không nhận URL ngoài.
-- In một tem có QR/mã/tên; không thêm in hàng loạt, scanner, kiểm kê hoặc quyền mới.
-- [x] Hoàn thiện URL/panel và quay lại sau đăng nhập/đổi mật khẩu; không nhận URL ngoài. Phiên bị thu hồi về đăng nhập, hồ sơ thiếu/sai/khác công ty hoặc người không có quyền không hiển thị QR.
-- [x] Hoàn thiện card, tải PNG, in tem và sao chép có phản hồi lỗi; QR dùng ID hiện có, không có migration hoặc ghi dữ liệu khi xem/in.
-- [x] 22 E2E đạt trên bản production/DB khôi phục riêng: 5 ca QR và 17 ca hồi quy tài sản. PNG tải xuống được giải mã bằng `jsqr` đúng URL; kiểm tra Back/Forward/reload, login/đổi mật khẩu, VIEW/NONE/khác công ty, tạo/sửa/hủy, giữ link khi đổi tên, mất mạng/thử lại, clipboard lỗi và mobile/sáng/tối. Test in kiểm tra gọi print và tài liệu tem không thực thi HTML từ tên tài sản; chưa nghiệm thu máy in hoặc camera điện thoại vật lý.
-- [x] 2 unit kiểm tra ID và đích quay lại an toàn; TypeScript, lint và build production Webpack đạt. Hai fixture ban đầu được sửa để dùng username chữ thường và hành vi reload tự mở hồ sơ; lượt cuối 22/22 đạt. Đã kiểm tra chỉ đọc trên cổng 4000, QR và panel mobile/sáng/tối không có lỗi JavaScript. Đã dọn DB/server thử; fingerprint 18/18 bảng vận hành không đổi. 120 liên kết/anchor tài liệu và `git diff --check` đạt. Log, ảnh, bản sao DB ở `outputs/assets-qr/`; không thay schema/quyền hoặc ghi dữ liệu thật trong lượt này.
-
-### Thiết kế DB cần giữ
-
-**Phân hệ tài sản sở hữu 2 bảng đã triển khai**: `loai_tai_san`, `tai_san`; tham chiếu `vi_tri` do [phân hệ vị trí dùng chung](LOCATION-MANAGEMENT-CHECKLIST.md) sở hữu. Migration `20261111095809_tai_san_muc_1` chỉ thêm hai bảng này, enum/sequence/ràng buộc và catalog quyền, không tạo lại vị trí hoặc chạy seed. Dùng lại nhân sự, phòng ban, tài khoản, RBAC và nhật ký hiện có. Tên Prisma/PostgreSQL giống nhau theo [rule DB](../../.agents/rules/DATABASE-RULES.md).
-
-Các bảng mới có `id`, `company_id`, `created_at`, `updated_at`. Mã unique trong công ty; các FK cùng công ty, Restrict khi đã có tham chiếu. Cột tùy chọn để null khi chưa xác minh, không tạo người/phòng/vị trí giả.
-
-#### Sơ đồ bảng và liên kết
-
-**Hai bảng tài sản và các liên kết dưới đây đã migration.** `vi_tri` và các bảng HR dùng lại; FK `nhan_su.vi_tri_lam_viec_id` vẫn nullable và Restrict cùng công ty. Sơ đồ rút gọn các cột để tập trung vào liên kết; `PK` là khóa chính, `FK` là khóa ngoại; `||` là đúng một, `o|` là không hoặc một, `o{` là không hoặc nhiều.
-
-```mermaid
-erDiagram
-    direction TB
-    loai_tai_san ||--o{ tai_san : "phân loại"
-    vi_tri o|--o{ tai_san : "nơi đặt"
-    vi_tri o|--o{ vi_tri : "vị trí cha - con"
-    phong_ban o|--o{ tai_san : "đơn vị quản lý"
-    nhan_su o|--o{ tai_san : "người sử dụng"
-    phong_ban o|--o{ nhan_su : "nơi công tác - đã có"
-    vi_tri o|--o{ nhan_su : "nơi làm việc - đã có"
-
-    loai_tai_san {
-        int id PK
-        int company_id FK
-        string ma_loai
-        string ten_loai
-        boolean dang_su_dung
-    }
-    vi_tri {
-        int id PK
-        int company_id FK
-        int parent_id FK "Tùy chọn"
-        string ma_vi_tri
-        string ten_vi_tri
-        boolean dang_su_dung
-    }
-    tai_san {
-        int id PK
-        int company_id FK
-        string ma_tai_san "Tự sinh, bất biến"
-        string ten_tai_san
-        int loai_tai_san_id FK "Bắt buộc"
-        int phong_quan_ly_id FK "Tùy chọn"
-        int nguoi_su_dung_id FK "Bắt buộc khi giao cá nhân"
-        int vi_tri_id FK "Tùy chọn"
-        enum tinh_trang
-        enum hinh_thuc_su_dung
-        string so_serial "Tùy chọn"
-        string hang_model "Tùy chọn"
-        string ghi_chu "Tùy chọn"
-    }
-    phong_ban {
-        int id PK
-        int company_id FK
-        string ten_phong_ban
-    }
-    nhan_su {
-        int id PK
-        int company_id FK
-        int department_id FK
-        int vi_tri_lam_viec_id FK "Đã có, tùy chọn"
-        string ma_nhan_su
-        string ho_ten
-    }
-```
-
-Để tránh nhiều đường chéo, không vẽ `cong_ty`: mỗi bảng trên thuộc đúng một công ty qua `company_id`. FK nghiệp vụ được ràng buộc cùng công ty bằng cặp `(id, company_id)`; sơ đồ hiển thị tên cột đơn để dễ đọc. Mã loại/vị trí/tài sản unique theo cặp `(company_id, mã)`, không phải mã duy nhất toàn hệ thống.
-
-**Nhật ký dùng lại, tách khỏi quan hệ người sử dụng:**
+Luồng chính:
 
 ```mermaid
 flowchart LR
-    A["tai_khoan — đã có<br/>id, tên đăng nhập"] -->|"FK account_id"| L["nhat_ky_hoat_dong — đã có<br/>company_id, account_id<br/>phan_he, doi_tuong_id<br/>du_lieu_cu, du_lieu_moi, created_at"]
-    T["tai_san — bảng mới<br/>id, company_id"] -. "ASSETS + tai_san:id + company_id" .-> L
+  A["Tổng quan Tài sản & vật tư"] --> B["Tài sản: tìm / lọc / chọn dòng"]
+  B --> C["Panel hồ sơ và lịch sử"]
+  B --> D["Có quyền: sửa giá trị → tự lưu"]
+  C --> D
+  C --> E["Xem / tải / in tem QR"]
+  F["Quét QR → đăng nhập nếu cần"] --> C
 ```
 
-Đường nét đứt là liên kết tra cứu lịch sử qua định danh đối tượng, **không phải FK** từ nhật ký đến tài sản. `account_id` hiện nullable để giữ nhật ký khi không còn tài khoản; thao tác tài sản bình thường phải ghi tài khoản từ phiên hợp lệ. Một người có thể dùng nhiều thiết bị mà không có tài khoản đăng nhập; người thao tác cập nhật và người sử dụng thiết bị có thể khác nhau.
+Giữ giao diện gọn: card ở tổng quan, loại là bộ lọc nhỏ; thông tin phụ trong phần mở rộng. Danh mục dài có tìm kiếm. Bố cục thích ứng điện thoại, dùng được bàn phím và chế độ sáng/tối. Quy chuẩn liên phân hệ do [plan kiến trúc thông tin](INFORMATION-ARCHITECTURE-CHECKLIST.md#3-áp-dụng-đầu-tiên-cho-tài-sản--vật-tư) quản lý.
 
-#### 1. `loai_tai_san` — danh mục loại thiết bị
+### Tiêu chí nghiệm thu
 
-| Cột nghiệp vụ | Ý nghĩa                                                                    |
-| ---------------- | ---------------------------------------------------------------------------- |
-| `ma_loai`      | Mã loại, ví dụ LAPTOP, PC, MAY_IN; giữ ổn định                       |
-| `ten_loai`     | Tên hiển thị, bắt buộc                                                  |
-| `mo_ta`        | Mô tả tùy chọn                                                           |
-| `dang_su_dung` | Cho phép chọn khi thêm mới; ngừng dùng không làm mất liên kết cũ |
+| Mã | Người dùng cần kiểm tra được | Yêu cầu liên quan |
+| --- | --- | --- |
+| NT-01 | Tổng quan chỉ hiện hạng mục có quyền; bấm số đếm mở đúng lọc; tìm trong loại/toàn bộ đúng phạm vi và quay lại giữ ngữ cảnh | TS-01,02 |
+| NT-02 | Tạo thiết bị có mã riêng; không sửa mã; Cá nhân phải có người; không xóa mất hồ sơ khi ngừng dùng | TS-03 |
+| NT-03 | Sửa trực tiếp tự lưu đúng; báo trạng thái; mất mạng/dữ liệu sai/xung đột giữ bản nháp, không báo lưu thành công sai hoặc mất dữ liệu khi đóng | TS-04 |
+| NT-04 | Người chỉ xem không sửa được; biết link không vượt quyền/công ty; lịch sử đúng thiết bị và đúng người thao tác | TS-05 và mọi màn hình |
+| NT-05 | Phần khấu hao tùy chọn; thanh chỉ hiện khi đủ dữ liệu, mức loại không tự ghi đè thiết bị cũ; mã/kết quả tính không sửa được | TS-06 |
+| NT-06 | Link mở đúng hồ sơ qua đăng nhập/đổi mật khẩu; ảnh QR giải mã đúng; điện thoại và máy in thực tế dùng được địa chỉ ERP | TS-07 |
+| NT-07 | Gán/chuyển/bỏ gán trên 3D đúng thiết bị, đúng quyền; đổi vị trí không đổi người hoặc mã, lịch sử ghi nhận đúng | TS-08 |
+| NT-08 | Trên điện thoại/desktop, bàn phím, sáng/tối: không tràn trang; đọc được lỗi, thao tác sửa/tìm/mở hồ sơ không mất ngữ cảnh | TS-01–08 |
 
-Chỉ chứa loại thiết bị trong giai đoạn này; không cần cột phân biệt thiết bị/vật tư. Không xây thêm bảng hãng, model hoặc cấu hình ở mức 1.
+Trạng thái kiểm thử của từng tiêu chí được đối chiếu tại [phần B](#đối-chiếu-tiêu-chí-nghiệm-thu-và-kiểm-thử). Kiểm chứng kỹ thuật chưa thay nghiệm thu với người dùng.
 
-#### Danh mục vị trí dùng lại
+### Tiến độ và quyết định còn lại
 
-`vi_tri` do [plan vị trí](LOCATION-MANAGEMENT-CHECKLIST.md) quản lý thiết kế cột, cây, trạng thái và quyền LOCATIONS. Tài sản chỉ lưu `vi_tri_id` nullable, FK kép cùng công ty, Restrict; chọn vị trí đang dùng và có tổ tiên đang dùng. Trường hợp chưa xác minh để trống.
+Chức năng hiện hành ở bảng yêu cầu đã có. Việc gần nhất là đối chiếu hồ sơ nguồn, bổ sung thông tin thực tế, chọn người phụ trách dùng thử và nghiệm thu QR bằng điện thoại/máy in. Danh sách chi tiết nằm tại [Việc còn lại](#việc-còn-lại) để không lặp checklist ở hai phần.
 
-ASSETS MANAGE được lấy danh mục tối thiểu để chọn, không tự có quyền sửa vị trí. Quản lý loại thiết bị vẫn thuộc tài sản. Preview/action/DB chặn xóa/ngừng dùng vị trí đang được thiết bị tham chiếu, kể cả thiết bị ngừng dùng. Luồng gán vị trí tuân thủ thứ tự khóa chung tại plan vị trí.
+Đã chốt cập nhật ngày mua, tình trạng, hãng điện thoại và thời gian khấu hao cho hồ sơ hiện có theo yêu cầu ngày 20/11; đây là cập nhật một đợt, không phải quy tắc tự điền cho thiết bị mới. Các đề xuất dưới đây chưa được coi là đã duyệt triển khai.
 
-#### 2. `tai_san` — hồ sơ từng thiết bị
+### Đề xuất chưa triển khai
 
-| Cột nghiệp vụ      | Nhãn và yêu cầu                                                                                               |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `ma_tai_san`        | Mã tài sản tự sinh, ví dụ TS-000001; bất biến, không tái sử dụng                                      |
-| `ten_tai_san`       | Tên tài sản — bắt buộc nhập                                                                                |
-| `loai_tai_san_id`   | Loại tài sản — bắt buộc chọn từ danh mục                                                                 |
-| `tinh_trang`        | Chưa xác nhận / Bình thường / Hỏng / Đang sửa / Ngừng sử dụng; mặc định Chưa xác nhận           |
-| `hinh_thuc_su_dung` | Chưa xác định / Cá nhân / Dùng chung / Chưa phân bổ; mặc định Chưa xác định                      |
-| `phong_quan_ly_id`  | FK `phong_ban`: đơn vị quản lý thiết bị, tùy chọn                                                      |
-| `nguoi_su_dung_id`  | FK `nhan_su`: người được giao thiết bị; bắt buộc khi chọn Cá nhân, các hình thức khác để null |
-| `vi_tri_id`         | FK `vi_tri`: vị trí hiện tại, tùy chọn                                                            |
-| `so_serial`         | Serial/service tag, tùy chọn; không giả định mọi hãng có serial duy nhất toàn công ty                 |
-| `hang_model`        | Hãng/model dạng text, tùy chọn                                                                                |
-| `ghi_chu`           | Ghi chú vận hành, tùy chọn; không lưu mật khẩu/secret                                                    |
-| Thông tin mua sắm/khấu hao | 4 cột tùy chọn và mặc định ở loại theo [thiết kế bổ sung](#sửa-trực-tiếp-trong-panel-và-thông-tin-khấu-hao--16112026); không tính khấu hao kế toán |
-
-Quy tắc cụ thể:
-
-- Tên và loại cần nhập/chọn; tình trạng/hình thức có giá trị mặc định nhưng vẫn là trường bắt buộc hợp lệ. Form hiển thị dấu sao đúng theo rule frontend. Nhập thêm serial, vị trí và người sau khi xác minh được.
-- Mã cấp an toàn bằng sequence/default và ràng buộc bất biến; không dùng số lượng dòng hoặc `MAX + 1`. Đổi loại/phòng/người không đổi mã.
-- Phân biệt **đơn vị quản lý**, **người sử dụng**, **vị trí vật lý**. Không tự đồng bộ vị trí hay đơn vị quản lý khi nhân sự chuyển phòng. Chọn mới người sử dụng đang làm việc và cùng công ty; người nghỉ việc đang giữ thiết bị vẫn giữ liên kết để người quản lý xử lý, không tự thu hồi.
-- Thiết bị chưa xác định người dùng không mặc định là dùng chung. AP ngoài sảnh có thể chọn Dùng chung, vị trí Sảnh tầng 2, không gắn người.
-- Mức 1 không có cột phòng sử dụng riêng: giao cá nhân thì liên kết người; dùng chung thì ghi vị trí và đơn vị quản lý. Không lấy phòng làm việc hiện tại của người làm bằng chứng bàn giao thiết bị cho cả phòng.
-- Không xóa cứng hồ sơ trong mức 1. Thiết bị ngừng dùng giữ mã/lịch sử, lọc theo Ngừng sử dụng; nhập nhầm ghi rõ lý do. Ngừng sử dụng và chưa phân bổ là hai khái niệm khác nhau.
-- Chống ghi đè bằng phiên bản `updated_at` cho cả thiết bị và loại. Mutation khóa hàng công ty → advisory phân quyền `(260126, companyId)` → kiểm tra lại phiên/quyền, phiên bản và tham chiếu → ghi dữ liệu/audit trong cùng transaction. Luồng vị trí, HR, phòng ban và tài sản dùng cùng thứ tự; trigger DB cũng khóa công ty để bảo vệ tham chiếu khi ghi trực tiếp.
-- DB dùng enum `TinhTrangTaiSan` (`CHUA_XAC_NHAN`, `BINH_THUONG`, `HONG`, `DANG_SUA`, `NGUNG_SU_DUNG`) và `HinhThucSuDungTaiSan` (`CHUA_XAC_DINH`, `CA_NHAN`, `DUNG_CHUNG`, `CHUA_PHAN_BO`). CHECK bảo đảm Cá nhân khi và chỉ khi có người sử dụng; FK kép cùng công ty cho loại/người/phòng/vị trí. Trigger chặn đổi ID/công ty/mã và xóa cứng thiết bị.
-- Chỉ kiểm tra trạng thái người/loại khi tạo hoặc đổi liên kết; giữ người đã nghỉ/loại ngừng dùng khi sửa trường khác. Loại được ngừng dùng dù còn hồ sơ cũ; mã loại nhập chữ hoa, số/gạch dưới, bất biến. Không áp dụng điều kiện loại vị trí làm việc của HR cho thiết bị; thiết bị được chọn mọi loại vị trí đang dùng với tổ tiên đang dùng.
-
-#### Lịch sử và bảng dùng lại
-
-- `nhat_ky_hoat_dong`: lưu ai làm, lúc nào, hành động, dữ liệu trước–sau gồm ID và nhãn cần giải thích lịch sử. Phân hệ `ASSETS`, khóa đối tượng có loại kèm ID, ví dụ `tai_san:123`, `loai_tai_san:5`, tránh trùng ID giữa bảng. Thay đổi danh mục vị trí ghi ở `LOCATIONS` theo plan vị trí; đổi nơi đặt thiết bị vẫn ghi ở lịch sử thiết bị. Snapshot nhãn lịch sử không thay FK hiện hành.
-- Ghi trực tiếp audit trong transaction; không dùng helper `logActivity` hiện có vốn nuốt lỗi ghi nhật ký. Lỗi audit phải rollback thay đổi thiết bị.
-- Lịch sử tại hồ sơ chỉ đọc nhật ký đúng công ty/đúng thiết bị, cho người có ASSETS VIEW; không mở quyền xem toàn bộ nhật ký hệ thống và không trả dữ liệu phân hệ khác.
-- `nhan_su`, `phong_ban`: dùng ID có sẵn. `tai_khoan`: người thao tác audit, không phải người sử dụng thiết bị.
-- Bảng `quyen`, `vai_tro_quyen`, `tai_khoan_vai_tro`: thêm quyền, giữ nguyên mô hình phân quyền; không tạo role theo loại thiết bị.
-
-### Phân quyền và giao diện
-
-- `ASSETS · VIEW` xem danh sách/chi tiết/lịch sử; `ASSETS · MANAGE` gồm xem, tạo/sửa thiết bị và quản lý danh mục loại; không bao gồm quản lý danh mục vị trí. Server và ma trận `/roles` đã áp dụng; menu/trang `/assets` áp dụng cùng chính sách.
-- Khai báo catalog/validation/UI phân quyền cùng với các kiểm tra server. Thêm quyền DB bằng migration, đồng bộ seed cài mới; không chạy lại seed vận hành hoặc tự cấp quyền cho ADMIN/HCNS/role tài sản đã có.
-- Form chọn người/phòng chỉ lấy ID, tên, mã, tình trạng cần thiết trong công ty theo ASSETS MANAGE. Không buộc cấp toàn quyền HR, không mở dữ liệu liên hệ/ghi chú HR.
-- Trang `/assets`: thẻ số lượng theo loại; trạng thái bằng chữ/nhãn; danh sách ngắn, tìm/lọc; chi tiết và lịch sử trong panel. Đếm thiết bị trên cùng bộ lọc, phân biệt tổng hồ sơ với còn sử dụng. Không dựng tiến độ/số liệu giả.
-
-Nền server tại `src/actions/asset.ts`: `getAssets` (phân trang và đếm trên cùng bộ lọc), `getAssetFilterOptions` (nhãn đã gắn hồ sơ), `getAssetCategories`, `getAsset`, `getAssetHistory` (50 sự kiện mới nhất của đúng thiết bị), `getAssetAssignmentOptions`, `saveAssetCategory`, `saveAsset`. Mutation dùng schema strict tại `src/lib/validations/asset.ts`; chưa có action xóa thiết bị hoặc endpoint REST. `getLocationOptions` dùng lại từ phân hệ vị trí. Payload sửa role cũ không có ASSETS giữ nguyên grant này, không vô tình thu hồi khi cập nhật tên/quyền khác.
-
-### Checklist triển khai
-
-- [x] Ô chọn loại, người, phòng và vị trí trong form/bộ lọc: đã chuyển sang tìm/chọn có hỗ trợ không dấu; kiểm thử giao diện và hồi quy đạt. Cách dùng chung và kiểm chứng tại [tổng quan](README.md#ô-chọn-dữ-liệu-có-tìm-kiếm--12112026). Không đổi dữ liệu hoặc quyền.
-
-- [X] Thiết kế lại mức 1 cho thiết bị; tách vật tư và các lớp bàn giao/bảo trì/3D sang giai đoạn sau. Đồng bộ rule, router và tổng quan; đây là cập nhật tài liệu, chưa đổi schema hoặc dữ liệu.
-- [X] Bổ sung sơ đồ ER các bảng/liên kết và sơ đồ nhật ký; ghi rõ bảng mới, bảng dùng lại, quan hệ tùy chọn, phạm vi công ty và liên kết lịch sử không phải FK. Đối chiếu tên liên kết hiện có với schema.
-- [x] Tách vị trí thành phân hệ dùng chung, quyền LOCATIONS riêng; tài sản chỉ sở hữu 2 bảng và tham chiếu vị trí. Đối chiếu 11/11 cập nhật sơ đồ với FK nhân sự đã có; không đổi schema hoặc renderer.
-- [x] Nền [quản lý vị trí](LOCATION-MANAGEMENT-CHECKLIST.md) đã triển khai độc lập; tài sản không tạo lại bảng hoặc quyền LOCATIONS.
-- [x] Rà soát khả năng bắt đầu trước đợt 1 qua plan/rule và mã nguồn; kết luận và điều kiện pilot đã được dùng để triển khai nền dữ liệu theo yêu cầu tiếp theo.
-- [x] Hoàn thiện và thực hiện thứ tự khóa, enum/CHECK, bảo vệ mã, giữ liên kết cũ, trạng thái danh mục và phiên bản thiết bị/loại tại mục DB.
-- [x] Migration tạo bằng `migrate dev --create-only`, thử trên bản khôi phục và chuỗi migration cài mới; schema diff đều sạch. Sau backup mới, áp dụng local: 17 bảng nghiệp vụ, thêm đúng 2 quyền, 0 grant ASSETS, 0 loại/thiết bị. Fingerprint 15 bảng cũ giữ nguyên (so sánh catalog quyền cũ riêng), các sequence cũ ngoài sequence cấp ID quyền không thay đổi. Backup/bằng chứng tại `outputs/assets-foundation/`.
-- [x] Bảo vệ tham chiếu vị trí ở preview/action/DB, chặn xóa phòng quản lý còn tài sản; bộ chọn tối thiểu theo ASSETS MANAGE. Không tự gỡ thiết bị khi xóa vị trí hoặc cấp quyền HR/LOCATIONS.
-- [x] Server Actions, validation, mã tự sinh, audit nguyên tử và kiểm tra phiên bản; catalog/seed cài mới/validation/ma trận `/roles` đồng bộ. Không chạy seed trên DB vận hành hoặc tự cấp quyền.
-- [x] 10 kiểm thử tích hợp DB/Server Actions, 6 unit và 13 E2E ma trận quyền/vị trí/phân quyền đạt; kiểm tra lại bố cục hộp thoại trên mobile đạt. TypeScript/lint phần ứng dụng đạt. Kiểm tra tích hợp giả lập cookie request/cache Next, dùng JWT/phiên/RBAC/DB thật; E2E dùng Chrome và DB riêng. Đây là kiểm chứng nền trước đợt giao diện; kiểm chứng mới nằm dưới.
-- [x] Build production Webpack trên bản app riêng đạt; khởi động lại web local cổng 4000 sau generate/migration, `/login` trả 200. Next.js có cảnh báo nâng phiên bản bảo mật và middleware có sẵn; đã chạy lại lệnh sau thông báo, không thay dependency trong đợt tài sản.
-- [x] Dọn các DB thử do đợt này tạo; kiểm tra local có 18 migration, checksum migration mới khớp và 3 trigger tài sản. Lint kiểm thử tích hợp, 144 liên kết/anchor trong 11 tài liệu và `git diff --check` đạt; backup/script/bằng chứng được Git bỏ qua. Không sửa ba rule kỹ thuật chung.
-- [x] Xây giao diện danh mục loại, bộ chọn vị trí, danh sách/chi tiết/tạo/sửa thiết bị, tìm/lọc và lịch sử; truy vấn danh sách/phân trang 20 hồ sơ và thống kê dùng cùng bộ lọc. Có tải lại khi lỗi, giữ nội dung form, giữ bộ lọc khi đóng hồ sơ; chọn người chỉ khi giao cá nhân.
-- [x] 11 kiểm thử tích hợp DB/Server Actions và 6 E2E `/assets` đạt trên DB riêng: phân trang/số đếm cùng bộ lọc, tạo loại/thiết bị, giao cá nhân → dùng chung, đổi vị trí/tình trạng, lịch sử, VIEW/MANAGE/không quyền, URL/action trực tiếp, khác công ty, thu hồi quyền, chống ghi đè và giữ liên kết ngừng dùng. Chrome desktop/mobile 390px sáng/tối đã xem ảnh; lỗi mạng có tải lại và giữ nội dung form. Bằng chứng tại `outputs/assets-ui/`.
-- [x] Cấp ASSETS MANAGE/ALL cho `admin` ngày 12/11 theo yêu cầu, sau backup: thêm đúng một grant vào ADMIN (chỉ gán admin), cập nhật phiên bản role và ghi audit ROLE trong cùng transaction. Nhật ký nêu rõ tác vụ triển khai cục bộ, không giả ghi phiên đăng nhập người dùng. Quyền mọi tài khoản khác và dữ liệu 14 bảng ngoài role/grant/audit giữ nguyên; không chạy seed. Backup và fingerprint tại `outputs/assets-ui/`.
-- [x] TypeScript, lint phần thay đổi và build production Webpack trên app riêng đạt. Build chạy lại sau cảnh báo bảo mật Next.js hiện có; còn cảnh báo middleware/Edge từ dependency dùng chung, không đổi thư viện hoặc cấu hình.
-- [x] Kiểm tra bằng admin trên `http://localhost:4000/assets`: menu, trạng thái trống và form loại hoạt động, không có lỗi JavaScript; không lưu dữ liệu thử. Đã xóa DB thử riêng, giữ backup/bằng chứng. 14 bảng ngoài RBAC/audit không đổi so với trước kiểm thử; admin giữ quyền đã cấp, 0 loại/thiết bị. Sau mốc cấp quyền có thêm một cập nhật role ASSETS từ phiên admin (audit 249), được giữ nguyên, không thuộc script cấp quyền này. 141 liên kết/anchor trong 7 tài liệu và `git diff --check` đạt.
-- [ ] Chọn người phụ trách nghiệp vụ và tài khoản bổ sung nếu cần; dùng thử với thiết bị được xác minh. Tài khoản admin đã sẵn sàng, chưa nghiệm thu nghiệp vụ và chưa cấp phạm vi theo từng phòng.
-- [x] Chuẩn bị nhập nguồn theo yêu cầu ngày 12/11: tìm thấy workbook đã khảo sát 92 dòng, xác minh DB có 2 hồ sơ vận hành và 2 loại. Sao lưu và thử khôi phục đủ 17 bảng; đã dọn DB thử, đối chiếu 17 bảng local không đổi. Bằng chứng cục bộ: `outputs/asset-import-20261112/`.
-- [x] Người dùng cho phép đọc Excel bằng Python; đã đọc đủ 92 dòng/11 nhóm, mã nguồn không trùng. Loại ghi chú chứa thông tin truy cập ở SRV01/LB01 trước khi xuất dữ liệu đối chiếu; không nhập cột mạng. Ghép được 42 dòng với người ACTIVE theo tên đầy đủ duy nhất; 4 tên chưa ghép để trống liên kết, giữ ghi chú nguồn. Cột phòng ban không tự gán phòng quản lý; vị trí chưa chắc chắn để trống.
-- [x] Nhập 89 dòng độc lập vào DB local sau backup: thêm 89 hồ sơ và 9 loại, tổng hiện tại 91 hồ sơ/11 loại; giữ nguyên hai hồ sơ đã tạo và 14 bảng ngoài tài sản/loại/audit. Thêm 98 nhật ký cùng transaction, định danh tác vụ hỗ trợ hệ thống, không giả phiên admin. Mã vẫn do hệ thống cấp `TS-...`; tên mô tả có mã nguồn, ghi chú giữ thông tin khảo sát đã làm sạch. Mỗi nhật ký nhập có nguồn/hash/mã dòng để chống nhập lại. Không sửa schema/quyền, không triển khai giao diện import hàng loạt.
-- [x] Kiểm chứng trên DB khôi phục riêng: lỗi audit hoàn tác toàn bộ; hai lần nhập đồng thời chỉ tạo một bộ; chạy lại không ghi thêm. Đối chiếu local: 89 nguồn → 89 hồ sơ, 9 loại mới, 98 audit; chạy lại không thay đổi dữ liệu. Tình trạng mới là Chưa xác nhận, người chỉ ghép tên đầy đủ duy nhất ACTIVE; serial/phòng quản lý/vị trí chưa xác minh để null. Bằng chứng ở `outputs/asset-import-20261112/`.
-- [x] Chrome tại `/assets` cổng 4000 hiển thị 91 hồ sơ/5 trang; tìm SRV01, mở chi tiết ghi chú đã làm sạch và lịch sử nhập thành công, không lỗi JavaScript hoặc gửi form. Đã dọn DB thử; kiểm tra 17 bảng chỉ ba bảng loại/tài sản/audit thay đổi, 14 bảng khác giữ nguyên. `git diff --check` đạt; không đổi mã ứng dụng nên không chạy lại build toàn hệ thống.
-- [ ] PC01/Lap01/Lap19 chờ người dùng đối chiếu với hai hồ sơ tạo thủ công; chưa nhập ba dòng này để tránh trùng hoặc ghi đè. Bốn dòng PC26/PC32/Lap12/Lap18 đã nhập hồ sơ nhưng chưa gán người: hai cách viết tên khác và hai hồ sơ nhân sự hiện LEFT; giữ nguyên thông tin nguồn để xác minh, không đổi HR hoặc giả thu hồi thiết bị.
-
-### Rút gọn giao diện và icon loại — đã triển khai 12/11/2026
-
-Người dùng đã yêu cầu áp dụng đề xuất bố cục và icon loại. Tác vụ chính: tìm thiết bị, xem người/vị trí/tình trạng và cập nhật tại chỗ. Trước sửa: ba khối thống kê, dải loại và thông tin lặp làm phân tán danh sách; ghi chú nhập nguồn/snapshot lịch sử mở toàn bộ làm chi tiết dài. Phần thu gọn hồ sơ, form và icon là nền dùng tiếp; bố cục tổng quan/danh sách đã chuyển sang luồng nhóm ở mục bên dưới. Quy tắc tên/mã tự sinh vẫn là đề xuất riêng.
-
-| Vùng | Bố cục đã áp dụng |
+| Nội dung | Quyết định còn lại |
 | --- | --- |
-| Đầu trang | Tiêu đề + tổng số tài sản + nút Thêm; quản lý loại là thao tác phụ. Bên dưới là tổng quan theo nhóm như mục kế tiếp. |
-| Tìm/lọc | Tìm kiếm toàn cục luôn sẵn có; bộ lọc mở trong danh sách thiết bị, không lặp điều kiện nhóm đang xem. Hiển thị bộ lọc bổ sung và cách xóa, giữ phạm vi nhóm. |
-| Danh sách | Bảng Tài sản / Người sử dụng / Vị trí / Tình trạng, kèm Sửa tại dòng cho người có quyền. Mobile cuộn ngang trong bảng. Tên tối đa hai dòng, mã nhỏ giúp phân biệt thiết bị cùng tên; không thay tên/mã lưu DB. |
-| Dữ liệu chưa có | Ô người/vị trí dùng nhãn ngắn Chưa rõ; Dùng chung là trạng thái riêng, không suy từ null. Tình trạng Chưa xác nhận vẫn hiển thị đúng nghĩa. Cảnh báo cần bàn giao/ngừng dùng giữ ở ngữ cảnh phù hợp. |
-| Chi tiết | Tab Thông tin / Lịch sử; mặc định thông tin vận hành. Ghi chú dài thu gọn có nút mở; lịch sử mỗi sự kiện có tóm tắt, mở mới xem các trường trước–sau, không lặp toàn hồ sơ mặc định. Không xóa nội dung nguồn hoặc audit. |
-| Form | Thông tin chính và người/vị trí dễ tiếp cận; serial/model/ghi chú vào Thông tin bổ sung. Giữ ô tìm/chọn và validation; nếu phần thu gọn có lỗi phải tự mở và focus đúng field. Tên tự điền/mã theo loại là đề xuất riêng bên dưới. |
+| Card Tài liệu | Đã rút gọn [đặc tả và kỹ thuật MVP](DOCUMENT-MANAGEMENT-CHECKLIST.md), chưa triển khai. Thư viện ba khu vực, quyền độc lập ASSETS; liên kết hồ sơ tài sản để sau. Quyền đề xuất tại A.3 của plan Tài liệu. |
+| Tên và mã theo loại | Mã mới như `PC-001`, bộ đếm nguyên tử theo công ty/loại, không tái sử dụng; vượt 999 tiếp tục 1000. Giữ mã cũ và mã đã cấp khi đổi loại; tên mặc định từ loại, cho sửa. **Chưa chốt**; hiện tên vẫn bắt buộc, mã tự sinh `TS-...`. |
+| Chọn icon loại | Tùy chọn trong phần Hiển thị thu gọn của loại; chưa có trường lưu/bộ chọn. Hiện icon Lucide ánh xạ theo mã loại, có icon mặc định. |
+| Phạm vi phòng | Thiết kế tại [plan phân quyền](ROLE-MANAGEMENT-CHECKLIST.md); không suy từ tên loại, người tạo, người sử dụng hoặc IT hỗ trợ. Phải bảo vệ cả đọc/đếm/lịch sử/ghi/3D tại server. |
 
-- [x] Ghi nguyên nhân và phương án theo phản hồi người dùng; không thay ba rule chung trong lượt đề xuất.
-- [x] Áp dụng bảng desktop/thẻ mobile, một bộ chọn loại có tìm kiếm, điều kiện lọc có thể gỡ, tab thông tin/lịch sử và ghi chú/sự kiện thu gọn. Form có Thông tin bổ sung, mở và focus khi có lỗi. Không thay tên/mã, quyền, dữ liệu hoặc backend.
-- [x] Thêm icon Lucide theo mã loại tại danh sách, chi tiết, danh mục, bộ chọn loại và form; màu trung tính, luôn kèm tên, loại chưa có ánh xạ dùng hình hộp. Không có trường icon mới trong DB.
-- [x] Bổ sung đúng nguyên văn mục 8.10 FRONTEND-RULES đã đề xuất, theo yêu cầu triển khai ở lượt tiếp theo; giữ nguyên các mục hiện có, không sửa Backend/Database rule.
-- [x] 3 E2E bố cục mới, 6 E2E tài sản và 3 E2E ô chọn đạt trên DB khôi phục riêng: icon mặc định/đã biết, tìm không dấu/bàn phím, gỡ bộ lọc, ghi chú/lịch sử thu gọn, tự mở/focus lỗi phần bổ sung, giữ trang/cuộn sau lưu và chuyển focus đúng khi resize, mobile/sáng/tối; hồi quy quyền, khác công ty, chống ghi đè và lỗi mạng. Phát hiện và sửa lệch cuộn sau lưu, kiểm tra lại 3 ca mới và 6 ca tài sản đạt. Bằng chứng ở `outputs/assets-compact/`.
-- [x] TypeScript/lint đạt, build production Webpack trên app riêng đạt sau chạy lại nhắc bảo mật Next.js sẵn có. Kiểm tra Chrome tại cổng 4000 với 91 hồ sơ: bảng bốn cột, icon theo loại, tìm/mở ghi chú/lịch sử và mobile sáng/tối đúng, không tràn ngang hoặc lỗi JavaScript; không gửi form trên DB chính. Đã xem ảnh desktop/mobile thực tế. Ghi chú/lịch sử không mở tràn, tên giới hạn hai dòng ở danh sách; không sửa tên, mã hoặc nguồn nhập.
-- [x] Đã dừng server và dọn đúng DB thử của đợt giao diện. Đối chiếu 17 bảng local: 15 bảng giữ nguyên; tài sản/audit có cập nhật vận hành đồng thời được giữ nguyên, không phục hồi đè từ backup. Kiểm tra rule so với bản chụp đầu lượt: chỉ thêm đúng đoạn 8.10 đã duyệt, không thay các mục có sẵn. `git diff --check` đạt.
+Ô chọn vị trí giữ nguyên theo yêu cầu; chưa áp dụng phương án duyệt theo tầng/phòng. Các hướng mở rộng không được coi là đã duyệt triển khai.
 
-### Tổng quan theo nhóm và thao tác theo ngữ cảnh — đã triển khai 12/11/2026
+### Mức 2 — đề xuất mở rộng, chưa triển khai
 
-Đã triển khai tổng quan theo loại/người/vị trí, tìm kiếm toàn cục và giữ ngữ cảnh. Theo phản hồi tiếp theo, **card chỉ giữ ở nhóm loại**, thiết bị dùng bảng và sửa trực tiếp như mục bên dưới; các kết quả kiểm thử giai đoạn card dưới đây là mốc trước điều chỉnh này. Không lấy 20 hồ sơ của một trang để tính số lượng nhóm.
+Theo quyết định 19/11/2026, giữ chức năng và giao diện hiện tại; không gọi hiện trạng là “mức 1”. “Mức 2” chỉ là tên đề xuất quản lý quá trình sử dụng tài sản, không phải cấp độ chứng nhận hoặc phạm vi đã được duyệt thực hiện. Ngày 20/11, người phụ trách duyệt riêng chỉnh thẩm mỹ panel; việc này không mở rộng nghiệp vụ mức 2.
 
-- [x] Thêm `getAssetOverview` đọc thống kê theo công ty/quyền ASSETS trong transaction RepeatableRead; chỉ trả tên, mã phân biệt và số lượng. Trang đầu không tải hồ sơ thiết bị. Loại hiện cả nhóm rỗng; người/vị trí hiện nhóm có tài sản, tính cả thiết bị ngừng dùng.
-- [x] Nhóm người không có liên kết phân biệt Dùng chung / Chưa phân bổ / Chưa rõ; nhóm vị trí null là Chưa rõ vị trí. Query `locationId: null` lọc đúng FK null; không suy vị trí từ người/phòng. Không thay schema/quyền hoặc dữ liệu.
-- [x] Card nhóm có icon/tên/số lượng, ba cách nhóm, tìm nhóm người/vị trí, đường dẫn quay lại; thẻ thiết bị mặc định, bảng tùy chọn desktop. Nhớ bộ lọc/trang/chế độ xem/cuộn khi quay lại nhóm; giữ hồ sơ bên phải desktop, toàn chiều rộng và nút Quay lại trên mobile.
-- [x] Thêm thiết bị từ nhóm loại điền sẵn loại hợp lệ; loại ngừng dùng không cho thêm mới. Nút Đổi cạnh người/vị trí mở form và focus đúng trường, vẫn lưu qua validation/quyền/audit hiện có. Không tự gán người/vị trí theo nhóm hoặc bỏ qua bước Lưu.
-- [x] 3 kiểm thử tích hợp trên DB riêng đạt: tổng các nhóm bằng tổng hồ sơ và bộ lọc tương ứng (25 hồ sơ, vượt một trang); nhóm rỗng/null; dữ liệu tối thiểu, chặn thiếu quyền/khác công ty/thu hồi quyền; số lượng sau đổi người/vị trí.
-- [x] 4 E2E luồng nhóm đạt: card mặc định/bảng tùy chọn, bàn phím, tìm toàn cục xuyên nhóm ngay cả khi đang tải, nhóm người/vị trí và tìm không dấu, loại rỗng/thêm điền sẵn loại/cập nhật số lượng, focus Đổi người/vị trí, mobile toàn chiều rộng/Quay lại/sáng tối, giữ bộ lọc/trang/chế độ/cuộn khi quay lại. Đã sửa việc Enter tìm kiếm bị bỏ qua khi nhóm đang tải; chạy lại ca tương ứng đạt.
-- [x] 12 E2E hồi quy đạt: 6 tài sản, 3 bố cục gọn và 3 ô chọn; gồm phân quyền, khác công ty, chống ghi đè, lịch sử, lỗi mạng, validation và chữ dài. Cộng 4 ca mới là 16 ca duy nhất đạt trên DB riêng. Lượt đầu gián đoạn bởi server dev khởi động lại; các ca ảnh hưởng bởi cập nhật bản thử được chạy lại khi ổn định và đạt.
-- [x] TypeScript/lint và build production Webpack đạt trên app riêng; build chạy lại sau nhắc bảo mật Next.js hiện có, không đổi dependency. Kiểm tra chỉ đọc tại cổng 4000: 91 hồ sơ/11 card loại, tìm người không dấu, tìm toàn cục, hồ sơ và mobile sáng/tối đúng; không tràn ngang/lỗi JavaScript, không gửi form lên DB chính. Đã xem ảnh thực tế và làm rõ trạng thái nút chọn cách nhóm.
-- [x] Đã dừng server thử và xóa đúng DB tạm. Đối chiếu 17 bảng local: 15 bảng không đổi; tài sản `TS-000050` và audit tương ứng có một cập nhật vận hành đồng thời, được giữ nguyên. Các lần chạy thử ghi dữ liệu chỉ vào DB riêng, kiểm tra cổng 4000 chỉ đọc. 101 liên kết/anchor và `git diff --check` đạt. Bằng chứng tại `outputs/assets-groups/`; lưu ngữ cảnh trong phiên trang, tải lại trang bắt đầu ở tổng quan theo loại.
+| Ưu tiên đề xuất | Nội dung | Cần chốt trước triển khai |
+| --- | --- | --- |
+| 1 | Ticket báo hỏng/sửa chữa gắn tài sản; kết quả, chi phí và vật tư sử dụng | Bước xác nhận, người xử lý và liên kết workflow/vật tư hiện có |
+| 2 | Cấp phát, bàn giao, điều chuyển và thu hồi | Người giao/nhận, thời điểm có hiệu lực, xác nhận cần thiết và cách sửa sai |
+| 3 | Kiểm kê theo phòng/loại bằng QR, ghi nhận chênh lệch | Phạm vi đợt, người kiểm kê và xử lý kết quả |
+| Sau các luồng chính | Bảo hành/bảo trì, ghi nhận ngừng sử dụng và báo cáo vận hành | Thiết bị cần theo dõi, lịch nhắc, tài liệu và chỉ tiêu báo cáo |
 
-### Bảng thiết bị và sửa trực tiếp — đã kiểm chứng 12/11/2026
+Mức 2 cần chốt phạm vi và thiết kế trước khi triển khai. Ưu tiên ba nhóm đầu; giữ chỉnh sửa mô tả trực tiếp, chỉ thêm xác nhận/duyệt khi nghiệp vụ cần.
+- Khấu hao kế toán, mua sắm và bản quyền là các hướng mở rộng riêng, chưa tự đưa vào mức 2. Chưa đổi schema, quyền hoặc chức năng theo đề xuất này.
 
-Điều chỉnh theo phản hồi mới: **chỉ tab Theo loại dùng card**. Nhóm người/vị trí chuyển sang các dòng gọn; vào nhóm hoặc tìm kiếm luôn là bảng thiết bị. Bỏ lựa chọn Thẻ/Bảng. Điện thoại dùng bảng cuộn ngang trong vùng riêng, không tràn toàn trang.
+## B. Thiết kế kỹ thuật
 
-- [x] Đổi bố cục nhóm và danh sách; giữ tìm kiếm, bộ lọc, trang, cuộn và mở hồ sơ chi tiết.
-- [x] Nhấp trực tiếp giá trị người sử dụng, vị trí hoặc tình trạng (kể cả Chưa rõ/Chưa xác nhận) mở dòng sửa và đúng bộ chọn; chỉ ASSETS MANAGE. Người dùng cá nhân mở tìm người, các hình thức khác mở chọn hình thức và không tự đổi dữ liệu. Tự lưu thành công hoặc Đóng/Bỏ thay đổi trả focus về ô vừa bấm; khóa dòng khác khi đang sửa.
-- [x] Kiểm chứng bổ sung 16/11: 6/6 E2E sửa dòng đạt trên bản production và DB riêng, gồm 2 ca mới nhấp ô/bàn phím, mở đúng bộ chọn, Lưu/Hủy/trả focus, khóa dòng khác, mobile và thử lại khi tải lỗi; hồi quy kiểm tra VIEW, validation, xung đột, lỗi mạng, audit và trường ẩn. TypeScript/lint/build Webpack đạt (build chạy lại sau nhắc bảo mật Next.js hiện có, không đổi dependency). Kiểm tra trực tiếp cổng 4000: nhấp Chưa rõ mở tìm vị trí, Hủy trả focus, không lỗi JavaScript hoặc lưu dữ liệu. Đã xem ảnh desktop/mobile, dừng server và xóa DB thử; fingerprint 19/19 bảng vận hành không đổi. Bằng chứng ở `outputs/assets-cell-edit/`; `git diff --check` đạt.
-- [x] Nút Sửa trên dòng mở các ô tên, hình thức/người sử dụng, vị trí và tình trạng; Tự lưu tại chỗ theo quy tắc mới, mỗi lần một dòng. Trường còn lại giữ nguyên và sửa qua hồ sơ đầy đủ. Tái sử dụng `saveAsset`/Zod, phiên bản chống ghi đè, ASSETS MANAGE, tham chiếu cùng công ty và audit; không thêm API/schema/quyền.
-- [x] Trong lúc sửa khóa các điều hướng/lọc của danh sách; bản nháp có thay đổi chặn nhấp liên kết rời trang, cảnh báo khi tải lại. Lưu lỗi giữ ô nhập; Bỏ thay đổi chỉ bỏ phần chưa lưu. Tự lưu khi chọn hoặc rời ô/Enter theo mục tự lưu phía trên. Danh mục dài dùng tìm/chọn, người cũ đã nghỉ vẫn hiển thị để bàn giao.
-- [x] 17 E2E đạt trên bản production và DB khôi phục riêng: 4 ca sửa tại dòng, 4 luồng nhóm, 3 bố cục gọn và 6 tài sản. Đã kiểm tra Lưu/Hủy/Enter, tìm người không dấu, trường bắt buộc, lỗi tải/mạng/ghi đè, quyền VIEW và khác công ty, giữ trường ẩn/audit, cập nhật số lượng khi tài sản rời nhóm người, bộ lọc/trang/cuộn/focus và mobile sáng/tối. Đã sửa khôi phục cuộn sau khi bảng render, focus khi quay lại lúc đang tải và cập nhật tổng quan độc lập để không mất số đếm mới khi quay lại sớm sau lưu.
-- [x] TypeScript/lint/build production Webpack đạt; build chạy lại sau nhắc bảo mật Next.js sẵn có, không đổi dependency. Kiểm thử production chạy tuần tự để tách kiểm tra lỗi mạng khỏi reload của dev server. Tại cổng 4000 chỉ đọc, mở sửa rồi Hủy: bảng 91 hồ sơ, card loại, danh sách nhóm người, ô sửa và responsive đúng; không gửi mutation lên DB chính. Bằng chứng/ảnh tại `outputs/assets-inline/`.
-- [x] Đã dừng server thử và xóa đúng DB tạm; fingerprint cả 17 bảng local giữ nguyên so với đầu lượt. Không thay schema, quyền hoặc ba rule kỹ thuật chung. Liên kết/anchor trong 4 tài liệu và `git diff --check` đạt.
+### Kiến trúc và điểm vào
 
-### Đề xuất tên và mã tài sản — chờ chốt
+Dùng Next.js hiện có, Server Actions truy cập Prisma trực tiếp. Trang tổng quan `/asset-management` truy vấn số liệu theo quyền; `/assets` dùng bảng/panel tương tác. Không tạo REST API hoặc repository riêng cho hồ sơ tài sản.
 
-Theo câu hỏi ngày 12/11: phân biệt tên mô tả và mã nhận diện. Đề xuất mã mới theo mã loại (`PC-001`, `PC-002`, `LAPTOP-001`), bộ đếm riêng theo công ty/loại được cấp nguyên tử, không tái sử dụng mã; sau `999` tiếp tục `1000`. Mã đã cấp giữ nguyên khi đổi tên/loại; giữ mã `TS-...` của hồ sơ đã tồn tại. Đề xuất tên không bắt người dùng nhập: mặc định tên loại, cho sửa thành tên mô tả cụ thể. Chưa thay schema, bộ sinh mã hoặc validation hiện hành; tên vẫn bắt buộc theo thiết kế đã triển khai. Việc nhập nguồn được cho phép riêng, dùng cơ chế mã hiện tại.
+```mermaid
+flowchart LR
+  UI["Bảng / panel / thao tác 3D"] --> ACT["asset.ts: phiên, quyền, Zod"]
+  ACT --> TX["Transaction: khóa + phiên bản + tham chiếu"]
+  TX --> DATA["loai_tai_san / tai_san"]
+  TX --> AUDIT["Nhật ký dùng chung"]
+  ACT --> UI
+```
 
-### Nguồn và phần giữ lại
+Nguồn mã: [Server Actions](../../src/actions/asset.ts), [validation](../../src/lib/validations/asset.ts), [tự lưu](../../src/components/assets/use-asset-autosave.tsx), [panel](../../src/components/assets/AssetDetail.tsx), [QR](../../src/components/assets/AssetQrCard.tsx). Hợp đồng action và phân trang tra [đặc tả điểm vào](../THIET-KE-QUAN-LY-TAI-SAN.md#quyền-và-điểm-vào-mã-nguồn).
 
-Ảnh BMHC 0501 chỉ tham khảo: 11 nhóm/90 thiết bị; workbook hiện có 92 dòng/11 nhóm. Theo yêu cầu ngày 12/11 đã nhập 89 dòng độc lập, ba dòng còn chờ đối chiếu như checklist; nhập hồ sơ không đồng nghĩa xác nhận tình trạng hoặc bàn giao thực tế. File được đọc bằng Python theo chấp thuận, giữ nguyên file gốc; SHA256 `1d394d52d942bafe7ca6327856d4a27e7e033d994d9d4e9e9864af60b2bb0023`. Chi tiết bối cảnh cũ ở [phân tích nguồn](../strategy/PHAN-TICH-NHAP-TAI-SAN-VA-VI-TRI-DUNG-CHUNG.md); các mô tả schema cũ không áp dụng cho mức 1 hiện tại.
+### Quyền theo hành động và phạm vi
 
-3D nhân sự đã được chỉnh giao diện và kiểm tra desktop/mobile ngày 09/11; không phụ thuộc bảng tài sản mới. Hướng tương lai ở [đánh giá 3D](../strategy/DANH-GIA-TICH-HOP-TAI-SAN-VA-MO-HINH-3D.md); không suy vị trí thiết bị từ cơ cấu tổ chức.
+| Điểm vào | Kiểm tra server và giới hạn |
+| --- | --- |
+| Tổng quan, danh sách, nhóm, hồ sơ, lịch sử | Phiên hợp lệ + ASSETS VIEW/MANAGE; lọc `company_id` từ phiên trước khi đọc/đếm. Lịch sử giới hạn đúng đối tượng thiết bị. |
+| `saveAsset`, `saveAssetCategory` | ASSETS MANAGE; kiểm tra lại người thao tác trong transaction, phiên bản và FK cùng công ty. Không nhận công ty/mã thiết bị tùy ý từ client. |
+| Danh mục chọn người/phòng/vị trí | Chỉ trả dữ liệu tối thiểu theo quyền tài sản; không mở toàn bộ HR hoặc quyền sửa vị trí. |
+| `assignAssetLocation` | ASSETS MANAGE, vị trí cùng công ty và đang dùng; chuyển/bỏ gán có xác nhận theo hợp đồng 3D. Viewer còn cần quyền LOCATIONS. |
+| Link/QR | Dùng lại quyền đọc hồ sơ; QR không phải token cấp quyền. Quyền INVENTORY không cấp quyền xem tài sản. |
+
+Phòng quản lý không phải bộ lọc quyền hiện hành. Tên ADMIN/chức vụ không thay grant DB; thay đổi phạm vi phòng phải thiết kế cả đọc, đếm, lịch sử, ghi và 3D. Chi tiết tại [đặc tả quyền](../THIET-KE-QUAN-LY-TAI-SAN.md#quyền-và-điểm-vào-mã-nguồn).
+
+### Luồng ghi, trạng thái và xử lý lỗi
+
+| Tình huống | Cơ chế hiện hành |
+| --- | --- |
+| Tạo/sửa thiết bị hoặc loại | Zod strict → khóa công ty rồi khóa phân quyền → kiểm tra lại phiên/quyền, `updated_at` và tham chiếu → ghi bản ghi + audit cùng transaction → trả phiên bản mới, làm mới giao diện. |
+| Hai người sửa hoặc lỗi mạng | Phiên bản cũ bị từ chối; UI giữ bản nháp, cho thử lại và chặn rời khi chưa lưu. Không tự ghi đè. Lỗi audit rollback nghiệp vụ. |
+| Đổi hình thức sử dụng | CA_NHAN khi và chỉ khi có người; lưu cả nhóm hợp lệ. Đổi người không tự đổi phòng/vị trí. Người nghỉ việc cũ giữ liên kết; giao mới chỉ chọn người ACTIVE. |
+| Đổi tình trạng | Hiện là cập nhật enum hiện trạng, chưa có chuỗi duyệt bắt buộc. HONG/DANG_SUA không tự tạo ticket; NGUNG_SU_DUNG giữ mã/lịch sử. Không có action xóa cứng thiết bị. |
+| Ngừng dùng loại | Chặn chọn mới, giữ tham chiếu thiết bị đã có; đổi loại không đổi mã thiết bị. |
+
+Thuật toán khóa, enum/CHECK và audit được giữ duy nhất trong [đặc tả DB](../THIET-KE-QUAN-LY-TAI-SAN.md#thiết-kế-db-cần-giữ); hợp đồng UI ở các mục tự lưu/panel bên dưới.
+
+### Tệp, migration và sao lưu
+
+- **Tải lên:** chưa có chức năng đính kèm tài liệu/ảnh hoặc import Excel qua giao diện. Script nhập nguồn trước đây không phải màn hình import vận hành.
+- **Xem/tải xuống:** QR tạo cục bộ từ URL, xem trong panel, tải PNG và in một tem; không lưu ảnh vào DB. Chưa có xuất Excel hàng loạt.
+- **Chia sẻ:** sao chép link hồ sơ; người nhận vẫn cần đăng nhập và ASSETS cùng công ty. Chưa có chia sẻ tệp hoặc link công khai; thư viện tài liệu thuộc plan riêng.
+- Schema hiện có hai bảng và các cột khấu hao nullable; migration tương lai cần backup, thử DB khôi phục, đối chiếu dữ liệu/ràng buộc và phương án phục hồi. Không reset hoặc khôi phục seed cũ. Nguồn thiết kế tại [đặc tả DB](../THIET-KE-QUAN-LY-TAI-SAN.md#thiết-kế-db-cần-giữ); kết quả các đợt đã thực hiện ở phần bằng chứng bên dưới.
+
+### Thiết kế DB cần giữ
+
+Sở hữu **hai bảng** `loai_tai_san`, `tai_san`; dùng lại vị trí, HR, phòng ban, tài khoản, RBAC và audit. Mã bất biến, FK cùng công ty; Cá nhân khi và chỉ khi có người sử dụng. Thiếu dữ liệu để null/Chưa xác nhận, không tạo dữ liệu giả. Không xóa cứng; kiểm tra phiên bản và lưu thay đổi/audit trong cùng transaction.
+
+Sơ đồ, cột, enum/CHECK, thứ tự khóa và vòng đời tham chiếu nằm tại [đặc tả DB](../THIET-KE-QUAN-LY-TAI-SAN.md#thiết-kế-db-cần-giữ), là nguồn chi tiết duy nhất.
+
+### Tự lưu chỉnh sửa tài sản — 16/11/2026
+
+Đã áp dụng cho bảng, panel/3D, sửa hồ sơ và loại. Chọn để lưu; chữ/số/ngày lưu khi rời ô hoặc Enter. Lỗi giữ nháp, không ghi đè xung đột; Esc chỉ bỏ phần chưa lưu. Tạo mới/bản nháp AI vẫn xác nhận rõ ràng. [Hợp đồng tự lưu](../THIET-KE-QUAN-LY-TAI-SAN.md#tự-lưu-chỉnh-sửa-tài-sản--16112026).
+
+### Sửa trực tiếp trong panel và thông tin khấu hao — 16/11/2026
+
+MANAGE nhấp giá trị để sửa; mã và kết quả tính toán chỉ đọc. Mua sắm/khấu hao/bảo hành tùy chọn; mức mặc định theo loại chỉ áp dụng chủ động, không hồi tố. [Trường dữ liệu, công thức và validation](../THIET-KE-QUAN-LY-TAI-SAN.md#sửa-trực-tiếp-trong-panel-và-thông-tin-khấu-hao--16112026).
+
+### Cập nhật dữ liệu theo xác nhận — 20/11/2026
+
+- [x] Theo yêu cầu trực tiếp, cập nhật toàn bộ 92 hồ sơ của công ty đang sử dụng: ngày mua **01/01/2022**, tình trạng **Bình thường**. Đây là đợt cập nhật được xác nhận riêng, không thay quy tắc tự suy ngày mua/tình trạng cho hồ sơ mới.
+- [x] Áp dụng vào hồ sơ và mặc định loại: 33 PC **60 tháng**; 18 laptop, 10 điện thoại, 13 máy in và 10 Access Point **36 tháng**. 10 điện thoại ghi hãng **Grandstream** tại Hãng/Model; không tự sinh model cụ thể. TEL10 đã được cập nhật về loại Điện thoại bàn trong lúc đối chiếu; giữ thay đổi này.
+- [x] Backup và chạy cùng thao tác trên DB khôi phục trước khi áp local; khóa công ty/tài sản theo thứ tự hiện có, kiểm tra quyền và snapshot, cập nhật nguyên tử cùng 96 audit (92 hồ sơ + 4 loại thay đổi). Xác minh sau ghi, giữ các trường khác; chỉ ba bảng tài sản/loại/audit thay đổi trong 29 bảng đối chiếu. Đã xóa DB thử; kiểm tra chỉ đọc giao diện cổng 4000 thấy đúng ngày mua/tình trạng/khấu hao ở laptop, PC và điện thoại, hãng Grandstream đúng, không lỗi JS. Bằng chứng và bản sao phục hồi cục bộ: `outputs/asset-bulk-20261120/`.
+- [x] Đã chốt và cập nhật **8 hồ sơ** còn lại theo yêu cầu tiếp theo ngày 20/11: máy chủ **60 tháng**; tổng đài, UPS, cân bằng tải, switch và máy scan **36 tháng**, đồng bộ 6 mặc định loại. PC giữ 60 tháng. Tổng hiện tại **34 thiết bị 60 tháng, 58 thiết bị 36 tháng**, không còn hồ sơ thiếu thời gian khấu hao. Đã backup, kiểm tra quyền/khóa công ty, ghi cùng transaction 14 audit, đối chiếu sau commit và giữ các trường khác. Bằng chứng `outputs/asset-depreciation-complete-20261120/`.
+- [ ] Bổ sung dữ liệu thực tế khi có: giá mua 92, serial 92, vị trí 72, phòng quản lý 84, hình thức sử dụng chưa rõ 40; hãng/model còn thiếu 60 và hạn bảo hành chưa nhập 90. Đây là số liệu tại mốc cập nhật, không phải trường bắt buộc mới. Nhóm 36 tháng hết kỳ 01/01/2025, PC/máy chủ 60 tháng kết thúc 01/01/2027; chỉ báo khấu hao không thay trạng thái Bình thường.
+
+### Bố cục panel — 20/11/2026
+
+- [x] Thu gọn phần đầu về tên, mã chỉ đọc và tình trạng có nhãn; gom hình thức/người/vị trí/phòng vào vùng Sử dụng & phụ trách. Ô nhân sự chỉ hiện khi Cá nhân, dùng nhóm dữ liệu hợp lệ hiện có.
+- [x] Sửa trường trong cột hiện tại; bỏ khung form lồng và nhãn lặp, đặt bút cạnh giá trị, trạng thái tự lưu và nút đóng/bỏ thay đổi gọn. Giữ URL, quyền, lịch sử và các mục mở rộng; không đổi DB/action hoặc rule kỹ thuật chung.
+- [x] 6 E2E panel và 5 E2E QR đạt trên DB khôi phục riêng: hình thức/người hợp lệ, tự lưu và giữ URL/lịch sử, giữ vị trí cột khi sửa, lỗi giữ nháp/chặn đóng hoặc Back, VIEW, tài chính/mặc định loại và mobile sáng/tối. Đã chỉnh selector thông báo lỗi và chờ autofocus trong ca thử để tránh thao tác trước khi form nhận focus.
+- [x] TypeScript, ESLint và diff-check đạt; build production đạt sau chạy lại cảnh báo bảo mật Next.js hiện có (không đổi dependency). Kiểm tra chỉ đọc trên cổng 4000, xem ảnh desktop/mobile sáng/tối và form mở; không tràn ngang/lỗi JS. Đã dừng server thử, xóa DB thử; đối chiếu 29 bảng local không đổi. Bằng chứng `outputs/asset-panel-layout/`. Chưa nghiệm thu trực tiếp với người dùng.
+
+### Liên kết hồ sơ và tem QR — 16/11/2026
+
+`/assets?asset=<id>` mở panel, giữ đích qua đăng nhập/đổi mật khẩu. QR tạo cục bộ, không lưu ảnh vào DB hoặc cấp quyền truy cập. [Đặc tả URL và tem](../THIET-KE-QUAN-LY-TAI-SAN.md#liên-kết-hồ-sơ-và-tem-qr--16112026).
 
 ### Liên kết với vị trí và 3D
 
-Đã triển khai và kiểm chứng ngày 12/11: [plan 3D](OFFICE-3D-CHECKLIST.md#gán-tài-sản-tại-vị-trí-3d) sở hữu giao diện tại HCNS; [plan vị trí](LOCATION-MANAGEMENT-CHECKLIST.md) sở hữu cây `vi_tri`. Nhân sự và thiết bị có FK vị trí riêng, không chuyển thiết bị theo người.
+Tài sản chỉ tham chiếu `vi_tri`; không tự chuyển theo người. [Action gán/khóa/lịch sử](../THIET-KE-QUAN-LY-TAI-SAN.md#liên-kết-với-vị-trí-và-3d); cây thuộc [plan vị trí](LOCATION-MANAGEMENT-CHECKLIST.md), tương tác/phòng/bố trí thuộc [plan 3D](OFFICE-3D-CHECKLIST.md). Bảng AI duyệt khấu hao mặc định loại thuộc [plan AI](AI-ASSISTANT-CHECKLIST.md#bảng-công-việc-ai-và-duyệt-thực-hiện--16112026), không đổi khấu hao tài sản cũ.
 
-| Quyền | Phạm vi |
+### Tổng quan khi mở phân hệ — 19/11/2026
+
+- [x] Người dùng yêu cầu trang tổng quan khi bấm phân hệ. Nâng cấp `/asset-management` hiện có: giữ ba card hạng mục, thêm phân bố sáu loại nhiều tài sản nhất, nhóm cần rà soát và năm hồ sơ vừa cập nhật. Mỗi số liệu/liên kết mở đúng bảng lọc hoặc panel hiện có.
+- [x] Truy vấn cùng snapshot RepeatableRead, giới hạn công ty và ASSETS/INVENTORY độc lập; không truy vấn/hiện chi tiết thiết bị khi chỉ có INVENTORY. Tổng tài sản gồm ngừng sử dụng; vật tư/phụ kiện đếm mặt hàng đang dùng, khớp danh sách mặc định, không cộng số lượng khác đơn vị. Các nhóm rà soát có thể trùng nhau, không cộng thành một tổng.
+- [x] Giữ menu và các URL danh sách/QR; không thêm DB, quyền hoặc thư viện. Số liệu rỗng hiển thị đúng 0/chưa có dữ liệu; lỗi tải không giả số 0.
+- [x] 4 integration trên DB khôi phục riêng đạt: phiên/quyền độc lập, phạm vi công ty, tổng số/ranking sáu loại/năm hồ sơ, loại rỗng và số mặt hàng đang dùng. Kiểm tra chỉ đọc port 4000: 92 hồ sơ, 73 chưa rõ vị trí tại thời điểm kiểm tra; bấm loại/nhóm cần rà soát mở đúng bộ lọc, hồ sơ gần nhất mở đúng panel; bàn phím/Back, desktop/mobile sáng/tối không tràn trang hoặc lỗi JS. TypeScript, ESLint và diff-check đạt; đã xem ảnh, dọn DB tạm, không đổi dữ liệu/grant local. Bằng chứng `outputs/asset-overview/`; chưa chạy lại toàn bộ E2E.
+
+### Rà soát tổng quan — 23/11/2026
+
+**Phạm vi:** đọc mã, SELECT trong transaction READ ONLY và xem giao diện local cổng 4000 bằng tài khoản admin hiện có; không sửa chức năng, dữ liệu hoặc quyền. Đã xem ảnh desktop 1440 px và mobile 390 px, đối chiếu tổng và các trang đích. Chưa kiểm thử lại ma trận quyền đa tài khoản hoặc lỗi server bằng fault injection.
+
+Kết quả tại thời điểm rà soát: **92 tài sản/11 loại, 4 mặt hàng tiêu hao, 4 mặt hàng phụ kiện; 66 tài sản thiếu vị trí**, khớp các số hiển thị. Tất cả 92 đang Bình thường theo dữ liệu hiện có. Đích lọc thiếu vị trí trả 66 hồ sơ, lọc Hỏng trả 0, danh sách tất cả trả 92. Không gặp lỗi JS hay tràn ngang mobile trong lượt xem này; không coi các kết quả đó là nghiệm thu toàn bộ UI.
+
+| Mã | Phát hiện và ảnh hưởng | Hướng đề xuất, chưa triển khai |
+| --- | --- | --- |
+| TQ-01 | Trang tổng quan chung chỉ phân tích thiết bị. Danh sách tiêu hao có 1 mặt hàng Sắp hết; phụ kiện có 3 (trong đó một còn 0), nhưng tổng quan chỉ hiện số mặt hàng 4/4, không báo nhu cầu bổ sung. | Giữ ba lối vào; thêm tín hiệu cần xử lý theo từng hạng mục và đúng quyền; không cộng tồn khác đơn vị. |
+| TQ-02 | Biểu đồ ghi 11 loại nhưng chỉ vẽ 6, tổng sáu nhóm là 87/92. Năm nhóm còn lại không được giải thích tại biểu đồ; thanh dài nhất bằng 100% chiều rộng do chuẩn hóa theo loại lớn nhất, không phải tỷ trọng tổng. | Ghi rõ Top 6/theo số lượng hoặc thêm nhóm Khác (5); nếu biểu diễn tỷ trọng thì dùng tổng 92 và nhãn phần trăm. Đây là vấn đề diễn giải, chưa thấy sai số đếm. |
+| TQ-03 | “Xem đủ 11 loại tài sản” dẫn `/assets`, thực tế mở 92 hồ sơ, không mở danh sách 11 loại. Muốn xem đủ loại phải mở thêm bộ chọn. | Đổi nhãn thành Xem tất cả tài sản hoặc mở đúng danh sách/bộ chọn loại. |
+| TQ-04 | Cần rà soát dành ba dòng cho số 0; không cho biết 36 hồ sơ chưa xác định hình thức sử dụng. Ngoài ra 84 hồ sơ chưa có phòng quản lý, là trường tùy chọn nên không mặc định coi là lỗi. | Ưu tiên mục có việc cần xử lý; thông tin thiếu để thành nhóm bổ sung dữ liệu, không bắt nhập mọi trường tùy chọn. |
+| TQ-05 | Mobile xếp ba card lớn rồi sáu dòng biểu đồ; Cần rà soát nằm dưới cả hai khối. Nội dung main cao khoảng 2.236 px ở viewport 390×844, dù không tràn ngang. | Thu gọn card trên mobile; đưa việc cần xử lý lên trước biểu đồ; phần phân bố/lịch sử mở sau khi cần. |
+
+**Điểm cần tái hiện riêng:** `saveAssetCategory` chỉ revalidate `/assets`, chưa chỉ định `/asset-management` dù tổng quan dùng tên loại. Đây là điểm cần kiểm tra làm mới khi đổi tên loại rồi quay lại, chưa kết luận có lỗi cache vì lượt này không thử ghi dữ liệu.
+
+- [x] Hoàn tất rà soát chỉ đọc và đối chiếu ảnh/số liệu; bằng chứng tại `outputs/asset-overview-review-20261123/` (script, JSON, ảnh).
+- [ ] Chốt hướng chỉnh tổng quan và thực hiện khi có yêu cầu; không đánh dấu các đề xuất TQ-01–05 đã được duyệt.
+
+### Checklist triển khai
+
+- [x] Chuẩn hóa A/B ngày 20/11 theo quy chuẩn plan tổng: A có mục tiêu, người dùng, yêu cầu TS-01–08 và nghiệm thu NT-01–08; B có kiến trúc, quyền, luồng ghi/tệp, checklist và đối chiếu bằng chứng. Giữ phạm vi hiện hành, đề xuất chưa duyệt và các mốc dữ liệu; chi tiết DB dài tiếp tục ở đặc tả liên kết.
+- [x] Kiểm tra tài liệu sau chuẩn hóa: 29 liên kết trong plan và 14 tham chiếu có anchor tới plan đều hợp lệ; 8 tiêu chí nghiệm thu có hàng đối chiếu kiểm thử, diff-check đạt. Không chạy lại test ứng dụng; bằng chứng tại `outputs/asset-plan-ab-20261120/`.
+
+- [x] Cập nhật cách gọi 19/11: bỏ nhãn “mức 1” khỏi mô tả hiện trạng tại plan/rule phân hệ, đặc tả và tài liệu tham chiếu; giữ mức 2 ở đề xuất chưa triển khai. Giữ mã migration lịch sử và chức năng/giao diện hiện tại. Nhãn tham chiếu cũ trong DATABASE-RULES thuộc quy trình duyệt ba rule chung, chưa sửa.
+
+- [x] Nền hai bảng, ràng buộc, mã tự sinh, RBAC và audit; migration thử trên DB khôi phục/cài mới, backup trước áp local, giữ dữ liệu cũ.
+- [x] Danh mục, bảng/tìm/lọc, hồ sơ/lịch sử, ô tìm/chọn, sửa tại dòng/panel và tự lưu; kiểm tra quyền/công ty/phiên bản, lỗi mạng giữ nháp.
+- [x] Link/QR, mua sắm/khấu hao tùy chọn và gán vị trí từ 3D; không tự điền số liệu cho hồ sơ cũ.
+- [x] Nhập 89 dòng nguồn đã đối chiếu; chống nhập lại, giữ hai hồ sơ thủ công và ghi audit nguyên tử. Ngoại lệ ở phần A.
+- [x] Điều hướng chung và lọc loại nhỏ đã kiểm chứng theo plan IA; thay thế các mốc card loại lớn/nút Đổi/form sửa trước đây.
+- [x] Rút gọn tài liệu 18/11: tách đặc tả kỹ thuật, gom kết quả kiểm thử, giữ quyết định chưa chốt và liên kết đang dùng. Đã kiểm tra 122 liên kết/anchor và diff; không thay mã ứng dụng, DB hoặc quyền.
+
+### Việc còn lại
+
+- [ ] Đối chiếu **PC01/Lap01/Lap19** với hai hồ sơ tạo thủ công trước khi nhập, tránh trùng hoặc ghi đè.
+- [ ] Xác minh người của **PC26/PC32/Lap12/Lap18**: đã nhập thiết bị nhưng chưa gán vì tên khác cách viết hoặc nhân sự đã nghỉ; không tự đổi HR/thu hồi.
+- [ ] Chọn người phụ trách nghiệp vụ, cấp thêm quyền khi cần và dùng thử; bổ sung dữ liệu theo mục cập nhật ngày 20/11. Nếu cần giới hạn theo phòng, thiết kế scope trước khi cấp quyền.
+- [ ] Dùng địa chỉ ERP ổn định điện thoại truy cập được, nghiệm thu quét QR và máy in thực tế (NT-06).
+- [ ] Chốt riêng các đề xuất mã theo loại, icon, phạm vi phòng hoặc mức 2 trước khi triển khai; chưa mặc định đưa vào phạm vi hiện hành.
+
+**Mốc nguồn:** ngày 12/11 nhập 89 dòng/9 loại, giữ hai hồ sơ thủ công; tổng khi đó 91 hồ sơ/11 loại, không phải số đếm hiện tại. Nguồn/hash/chống trùng tại [đặc tả nguồn nhập](../THIET-KE-QUAN-LY-TAI-SAN.md#nguồn-nhập-và-giới-hạn-dữ-liệu).
+
+**Giới hạn rà soát 20/11:** đã đọc plan, action/component, validation và schema; chưa truy vấn lại DB hoặc chạy lại kiểm thử trong lượt chuẩn hóa này. Số thiếu dữ liệu và kết quả kiểm thử là các mốc ghi nhận, không phải kết quả đo lại.
+
+### Đối chiếu tiêu chí nghiệm thu và kiểm thử
+
+Mã NT được bổ sung để truy vết yêu cầu; bảng này gắn với bằng chứng đã có, không có nghĩa đã chạy bộ test mới.
+
+| Tiêu chí A | Kiểm thử/bằng chứng tương ứng | Trạng thái và phần còn lại |
+| --- | --- | --- |
+| NT-01 | Integration tổng quan, kiểm tra bộ lọc/link, nhóm và điều hướng: `outputs/asset-overview/`, các đợt bố cục | Có kết quả kỹ thuật; chờ dùng thử nghiệp vụ |
+| NT-02 | Integration nền/validation, enum/FK, mã, nhập chống trùng: `outputs/assets-foundation/`, `outputs/assets-ui/`, `outputs/asset-import-20261112/` | Có kết quả kỹ thuật; ngoại lệ nguồn còn đối chiếu |
+| NT-03 | Autosave: chọn/blur/Enter/Esc, lỗi/xung đột, nháp/chặn đóng; `outputs/assets-autosave/`, `outputs/asset-panel-layout/` | Đã kiểm chứng tại các mốc ghi nhận |
+| NT-04 | Quyền/công ty/phiên bản/audit rollback nền; VIEW panel; link qua đăng nhập | Đã kiểm chứng kỹ thuật; quyền vận hành do người phụ trách cấp |
+| NT-05 | Unit tính khấu hao, integration ràng buộc, E2E panel/finance: `outputs/assets-panel/`, `outputs/asset-panel-layout/` | Có kết quả kỹ thuật; dữ liệu mua sắm còn bổ sung |
+| NT-06 | E2E link/đăng nhập/QR, PNG giải mã và tài liệu in: `outputs/assets-qr/`, `outputs/asset-panel-layout/` | Kỹ thuật đã kiểm chứng; camera/máy in thực tế chưa nghiệm thu |
+| NT-07 | Integration/E2E gán/chuyển/bỏ gán theo plan 3D; autosave tại 3D | Có kết quả theo phạm vi phòng đã liên kết; mở rộng phòng theo plan 3D |
+| NT-08 | E2E/ảnh desktop-mobile, sáng-tối, bàn phím, lỗi, cuộn/URL: các đợt tổng quan/panel/bố cục | Có kiểm chứng UI; chưa nghiệm thu trực tiếp với người dùng |
+
+### Bằng chứng kiểm chứng
+
+Các kết quả dưới đây là **mốc đã chạy trước đợt rút gọn tài liệu**, không cộng thành tổng vì nhiều ca hồi quy lặp lại. Chưa đồng nghĩa nghiệm thu vận hành.
+
+| Phạm vi | Kết quả và nơi tra cứu cục bộ |
 | --- | --- |
-| LOCATIONS VIEW/MANAGE | Vào viewer và chọn vị trí; không tự xem tài sản |
-| Thêm ASSETS VIEW | Đọc danh sách thiết bị và hình đại diện tại điểm liên kết hợp lệ |
-| Thêm ASSETS MANAGE | Gán/chuyển/bỏ gán; không sửa cây vị trí hoặc hồ sơ HR |
+| Nền và UI | 10 integration/6 unit/13 E2E nền; đợt UI 11 integration/6 E2E. Migration, quyền, công ty, phiên bản, audit, tham chiếu: `outputs/assets-foundation/`, `outputs/assets-ui/`. |
+| Nhập dữ liệu | 89 nguồn → 89 hồ sơ, 9 loại, 98 audit; retry/đồng thời không trùng, lỗi audit rollback: `outputs/asset-import-20261112/`. |
+| Tự lưu | 30 E2E tài sản và 1 ca 3D đạt qua các lượt; chọn/blur/Enter/Esc, quyền, lỗi/xung đột, giữ nháp, mobile: `outputs/assets-autosave/`. |
+| Panel/khấu hao | 27 E2E, 3 integration, 5 unit; 5 probe DB từ chối dữ liệu sai, 18 bảng cũ giữ dữ liệu khi thêm cột nullable: `outputs/assets-panel/`. |
+| QR | 22 E2E gồm 5 QR; 2 unit ID/redirect. PNG giải mã đúng URL, kiểm tra tài liệu in; chưa thử máy in/camera vật lý: `outputs/assets-qr/`. |
+| Gán 3D | 7 integration + 4 E2E đợt gán; kết quả UI/phạm vi mở rộng theo plan 3D. |
+| Bố cục | Bằng chứng các đợt: `outputs/assets-compact/`, `assets-groups/`, `assets-inline/`, `assets-cell-edit/`; hiện trạng điều hướng và kiểm chứng mới nhất theo plan IA. |
 
-- `assignAssetLocation` chỉ đổi `tai_san.vi_tri_id` và `updated_at`; dùng ASSETS MANAGE, cùng khóa hàng công ty → advisory `(260126, company_id)` → kiểm tra lại phiên/quyền. Không có schema/migration mới.
-- Payload strict gồm thiết bị, vị trí đích nullable, phiên bản đã đọc và xác nhận. Vị trí phải cùng công ty, đang dùng và mọi tổ tiên còn dùng; điểm đặt thiết bị dùng được, không giới hạn theo loại chỗ ngồi HR.
-- Thiết bị đã có vị trí phải xác nhận khi chuyển/bỏ gán. Cùng vị trí không tạo trùng hoặc audit thừa. Phiên bản cũ bị từ chối, không tự ghi đè; thay đổi và nhật ký ASSETS `tai_san:id` cùng transaction, trước–sau có đường dẫn vị trí. Lỗi audit rollback toàn bộ.
-- Giữ nguyên mã, người sử dụng, phòng quản lý, tình trạng và các trường còn lại. Thiết bị ngừng dùng vẫn có thể ghi nhận/chuyển nơi đặt hoặc bỏ gán, không bị mất lịch sử.
-- `getAssetLocationCandidates` chỉ trả trường chọn tối thiểu, 20 hồ sơ/trang; lấy dữ liệu theo công ty phiên, không có HR hoặc ghi chú/serial trong kết quả. `saveAsset` cũng làm mới viewer khi đổi vị trí từ `/assets`.
-- Hình PC/máy in trong HCNS nay đại diện hồ sơ đã gán, không dựng từ ghi chú khảo sát. Giới hạn mẫu hình và tương tác thuộc plan 3D.
-- [x] Hoàn thiện action gán riêng, validation, danh sách chọn tối thiểu, cập nhật cache và liên kết với panel 3D.
-- [x] 7 kiểm thử tích hợp action/quyền/đồng thời/audit và 4 E2E Chrome đạt trên DB riêng; không thay PC vận hành hoặc tự cấp quyền. Kết quả UI, kiểm tra cổng 4000 chỉ đọc và dọn môi trường thử tại [plan 3D](OFFICE-3D-CHECKLIST.md#gán-tài-sản-tại-vị-trí-3d).
+Các đợt mã nguồn trên đã kiểm tra TypeScript/lint/build theo phạm vi, ảnh desktop/mobile sáng/tối và dọn DB/server thử; cập nhật vận hành đồng thời được giữ nguyên. Chi tiết nhật ký cũ lưu trong bản trước rút gọn tại `outputs/asset-plan-condense/ASSET-MANAGEMENT-CHECKLIST.before.md`; đây là bản lưu lịch sử, không dùng làm đặc tả hiện hành.

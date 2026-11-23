@@ -20,7 +20,7 @@ function failure(error: unknown) {
   return { success: false as const, message };
 }
 function refreshDepartments() {
-  for (const path of ["/departments", "/employees", "/accounts", "/office-3d", "/"])
+  for (const path of ["/hr", "/departments", "/employees", "/accounts", "/office-3d", "/"])
     revalidatePath(path);
 }
 

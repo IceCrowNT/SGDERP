@@ -24,6 +24,7 @@ const itemSelect = {
   loai_vat_tu: { select: categorySelect }, phong_quan_ly: { select: { id: true, ten_phong_ban: true } },
 } as const;
 const transactionSelect = {
+  dong_vat_tu: { select: { ho_so: { select: { id: true, ma: true } } } },
   id: true, mat_hang_vat_tu_id: true, loai_giao_dich: true, so_luong: true, vi_tri_xuat_id: true, vi_tri_nhap_id: true,
   nhan_su_nhan_id: true, phong_ban_nhan_id: true, cap_phat_goc_id: true, dao_giao_dich_id: true, don_gia: true, ly_do: true, ghi_chu: true, created_at: true,
   vi_tri_xuat: { select: { ten_vi_tri: true } }, vi_tri_nhap: { select: { ten_vi_tri: true } },
@@ -52,7 +53,7 @@ async function snapshot(tx: Prisma.TransactionClient, item: { id: number; update
   return `${item.updated_at.toISOString()}:${last?.id ?? 0}`;
 }
 async function balances(tx: Prisma.TransactionClient, itemId: number) {
-  const stock = await tx.$queryRaw<{ vi_tri_id: number; so_luong: bigint }[]>`SELECT * FROM ton_vat_tu(${itemId}::int)`;
+  const stock = await tx.$queryRaw<{ vi_tri_id: number | null; so_luong: bigint }[]>`SELECT * FROM ton_vat_tu(${itemId}::int)`;
   const issued = await tx.$queryRaw<{ cap_phat_id: number; so_luong: bigint }[]>`SELECT * FROM dang_cap_vat_tu(${itemId}::int)`;
   return { stock: stock.map(r => ({ locationId: r.vi_tri_id, quantity: Number(r.so_luong) })), issued: issued.map(r => ({ issueId: r.cap_phat_id, quantity: Number(r.so_luong) })) };
 }
@@ -71,6 +72,7 @@ export async function getInventory(input: unknown) {
   const s = await getSession(); if (!s || !hasPermission(s, "INVENTORY")) return denied();
   const parsed = InventoryQuerySchema.safeParse(input); if (!parsed.success) return { success: false as const, message: "Bộ lọc không hợp lệ." };
   const v = parsed.data;
+  if (v.kind === "TIEU_HAO") v.locationId = undefined;
   const words = normalizeSearchText(v.search).split(/\s+/).filter(Boolean);
   const where = Prisma.sql`m.company_id=${s.companyId} AND l.hang_muc=${v.kind}::"HangMucVatTu"
     ${v.showInactive ? Prisma.empty : Prisma.sql`AND m.dang_su_dung`}
@@ -108,7 +110,7 @@ export async function getInventoryDetail(id: number, historyPage = 1) {
     const history = await tx.giao_dich_vat_tu.findMany({ where: { company_id: s.companyId, mat_hang_vat_tu_id: id }, select: transactionSelect, orderBy: { id: "desc" }, skip: (page - 1) * 20, take: 20 });
     const issues = await tx.giao_dich_vat_tu.findMany({ where: { id: { in: b.issued.filter(r => r.quantity > 0).map(r => r.issueId) }, company_id: s.companyId }, select: transactionSelect, orderBy: { id: "desc" } });
     const serialize = (r: typeof history[number]) => ({ ...r, don_gia: r.don_gia?.toFixed(0) ?? null });
-    return { success: true as const, row, expected: await snapshot(tx, row), stock: b.stock.map(r => ({ ...r, path: locationPath(r.locationId, locations) })), issues: issues.map(r => ({ ...serialize(r), remaining: b.issued.find(q => q.issueId === r.id)!.quantity })), history: history.map(serialize), page, pages, recorded: count > 0 };
+    return { success: true as const, row, expected: await snapshot(tx, row), stock: b.stock.map(r => ({ ...r, path: r.locationId === null ? "Còn lại" : locationPath(r.locationId, locations) })), issues: issues.map(r => ({ ...serialize(r), remaining: b.issued.find(q => q.issueId === r.id)!.quantity })), history: history.map(serialize), page, pages, recorded: count > 0 };
   }, { isolationLevel: "RepeatableRead" });
 }
 export async function saveInventoryCategory(input: unknown) {
@@ -124,7 +126,7 @@ export async function saveInventoryCategory(input: unknown) {
       const row = before ? await tx.loai_vat_tu.update({ where: { id: before.id }, data, select: categorySelect }) : await tx.loai_vat_tu.create({ data: { ...data, company_id: s.companyId }, select: categorySelect });
       await audit(tx, s, "loai_vat_tu", row.id, row.ten_loai, before, row); return row;
     });
-    revalidatePath("/inventory"); return { success: true as const, row };
+    revalidatePath("/inventory"); revalidatePath("/asset-management"); return { success: true as const, row };
   } catch (e) { return failure(e); }
 }
 export async function saveInventoryItem(input: unknown) {
@@ -138,10 +140,24 @@ export async function saveInventoryItem(input: unknown) {
       assertVersion(before, v.id, v.version);
       if (!await tx.loai_vat_tu.count({ where: { id: v.categoryId, company_id: s.companyId } }) || (v.departmentId && !await tx.phong_ban.count({ where: { id: v.departmentId, company_id: s.companyId } }))) throw new InventoryError("Loại hoặc phòng quản lý không hợp lệ.");
       const data = { ten_mat_hang: v.name, loai_vat_tu_id: v.categoryId, don_vi_tinh: v.unit, muc_ton_toi_thieu: v.minimum, phong_quan_ly_id: v.departmentId, ghi_chu: v.notes || null, dang_su_dung: v.active, updated_at: new Date(Math.max(Date.now(), (before?.updated_at.getTime() ?? 0) + 1)) };
+      if (v.initialQuantity != null) {
+        const category = await tx.loai_vat_tu.findFirst({ where: { id: v.categoryId, company_id: s.companyId } });
+        if (category?.hang_muc !== "TIEU_HAO") throw new InventoryError("Số lượng ban đầu tại đây chỉ áp dụng cho tiêu hao tồn chung.");
+        const prior = await tx.giao_dich_vat_tu.findUnique({ where: { company_id_request_id: { company_id: s.companyId, request_id: v.initialRequestId! } }, include: { mat_hang_vat_tu: { select: itemSelect } } });
+        if (prior) {
+          if (prior.account_id !== s.userId || prior.loai_giao_dich !== "TON_DAU" || prior.so_luong !== v.initialQuantity || Object.entries(data).filter(([k]) => k !== "updated_at").some(([k, value]) => prior.mat_hang_vat_tu[k as keyof typeof prior.mat_hang_vat_tu] !== value)) throw new InventoryError("Yêu cầu đã được ghi nhận với nội dung khác. Mở hồ sơ để kiểm tra.");
+          return prior.mat_hang_vat_tu;
+        }
+      }
       const row = before ? await tx.mat_hang_vat_tu.update({ where: { id: before.id }, data, select: itemSelect }) : await tx.mat_hang_vat_tu.create({ data: { ...data, company_id: s.companyId }, select: itemSelect });
-      await audit(tx, s, "mat_hang_vat_tu", row.id, row.ten_mat_hang, before, row); return row;
+      await audit(tx, s, "mat_hang_vat_tu", row.id, row.ten_mat_hang, before, row);
+      if (v.initialQuantity != null) {
+        const opening = await tx.giao_dich_vat_tu.create({ data: { company_id: s.companyId, mat_hang_vat_tu_id: row.id, loai_giao_dich: "TON_DAU", so_luong: v.initialQuantity, request_id: v.initialRequestId!, account_id: s.userId, ly_do: "Ghi nhận số lượng ban đầu khi tạo mặt hàng" } });
+        await audit(tx, s, "giao_dich_vat_tu", opening.id, row.ten_mat_hang, null, opening);
+      }
+      return row;
     });
-    revalidatePath("/inventory"); return { success: true as const, row };
+    revalidatePath("/inventory"); revalidatePath("/asset-management"); return { success: true as const, row };
   } catch (e) { return failure(e); }
 }
 export async function recordInventoryTransaction(input: unknown) {
@@ -153,6 +169,11 @@ export async function recordInventoryTransaction(input: unknown) {
       await lock(tx, s, v.itemId);
       const item = await tx.mat_hang_vat_tu.findFirst({ where: { id: v.itemId, company_id: s.companyId }, select: itemSelect });
       if (!item) throw new InventoryError("Không tìm thấy mặt hàng trong công ty.");
+      if (v.operation !== "DAO_GIAO_DICH") {
+        if (item.loai_vat_tu.hang_muc === "TIEU_HAO") {
+          if (v.fromId || v.toId || ["CHUYEN_NOI_GIU", "THU_HOI", "GIAM_DANG_CAP"].includes(v.operation)) throw new InventoryError("Tiêu hao dùng tồn chung, không chọn nơi giữ hoặc thu hồi.");
+        } else if ((["TON_DAU", "NHAP", "THU_HOI", "CHUYEN_NOI_GIU", "DIEU_CHINH_TANG"].includes(v.operation) && !v.toId) || (["CAP_PHAT", "CHUYEN_NOI_GIU", "DIEU_CHINH_GIAM"].includes(v.operation) && !v.fromId)) throw new InventoryError("Chọn nơi nhập hoặc nơi xuất cho phụ kiện.");
+      }
       let effect = { so_luong: v.quantity, vi_tri_xuat_id: v.fromId, vi_tri_nhap_id: v.toId, nhan_su_nhan_id: v.employeeId, phong_ban_nhan_id: v.departmentId, cap_phat_goc_id: v.issueId, don_gia: v.price ? BigInt(v.price).toString() : null };
       if (v.reversalId || v.issueId) {
         const original = await tx.giao_dich_vat_tu.findFirst({ where: { id: (v.reversalId ?? v.issueId)!, mat_hang_vat_tu_id: v.itemId, company_id: s.companyId } });

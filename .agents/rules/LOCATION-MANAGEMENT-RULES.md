@@ -11,4 +11,4 @@ Bản đầu đã triển khai và kiểm thử kỹ thuật đạt. DB, quyền
 - Chi tiết vị trí có danh sách người theo HR VIEW; HR MANAGE tìm/gán/chuyển/bỏ gán ngay tại đây, không chuyển trang. Chọn người ở vị trí khác phải xác nhận; cùng vị trí không tạo trùng. Dùng cùng FK và quy tắc chuyển với form HR.
 - Nơi giữ có lịch sử vật tư không được xóa; chỉ ngừng khi không còn tồn tại nó/nhánh, theo [rule vật tư](INVENTORY-MANAGEMENT-RULES.md). Không tự cấp INVENTORY từ quyền vị trí.
 - Chưa xác minh vị trí thì để trống. Người chuyển chỗ không tự chuyển thiết bị; chuyển phòng ban không đồng nghĩa đổi chỗ ngồi.
-- 3D hiển thị và chọn vị trí bằng ID ổn định; bảng chi tiết HCNS dùng lại luồng gán người của trang Vị trí khi có HR MANAGE theo [rule 3D](OFFICE-3D-RULES.md). Không suy chỗ ngồi từ chức vụ/phòng ban hoặc tự nhập cấu hình hình học thành dữ liệu vận hành.
+- 3D hiển thị và chọn vị trí bằng ID ổn định; bảng chi tiết phòng đã liên kết dùng lại luồng gán người của trang Vị trí khi có HR MANAGE theo [rule 3D](OFFICE-3D-RULES.md). Không suy chỗ ngồi từ chức vụ/phòng ban hoặc tự nhập cấu hình hình học thành dữ liệu vận hành.

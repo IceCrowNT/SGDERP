@@ -37,7 +37,7 @@ test("compact toolbar fits one wide row, wraps without overlapping canvas, and r
       return model.y>=toolbar.y+toolbar.height && model.height>180;
     }).toBe(true);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-    for(const name of ['Hiển thị nhân sự','Hiển thị tài sản','Lọc loại tài sản','Thao tác không gian']) {
+    for(const name of ['Hiển thị nhân sự','Hiển thị tài sản','Tùy chọn hiển thị','Thao tác không gian']) {
       const button=page.getByRole('button',{name,exact:true});
       const box=(await button.boundingBox())!;
       expect(box.width).toBeGreaterThanOrEqual(40);

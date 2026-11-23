@@ -1,3 +1,4 @@
+import { HCNS_LAYOUT } from "../../prisma/data/hcns-survey";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -7,7 +8,7 @@ import {
   HCNS_URL,
 } from "../../src/lib/office-3d/building-navigation";
 import {
-  HCNS_LAYOUT,
+
   HCNS_PARTITION_Z,
   HCNS_CONNECTING_DOOR,
   personRoomPosition,
@@ -50,7 +51,7 @@ test("unknown rooms, invalid points and unsupported detail modes cannot create p
     { floor: "all", room: null, detail: false, point: null },
   );
   assert.equal(
-    readBuildingNavigation(new URLSearchParams("room=t1_kd&mode=room")).detail,
+    readBuildingNavigation(new URLSearchParams("room=t1_kd&mode=unsupported")).detail,
     false,
   );
   assert.equal(

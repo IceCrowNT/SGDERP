@@ -123,7 +123,7 @@ export async function saveAccount(input: AccountInput) {
         employee_id: v.employeeId,
         cho_phep_dang_nhap: v.isActive,
         ...(password
-          ? { mat_khau_bam: password, bat_buoc_doi_mat_khau: Boolean(previous) }
+          ? { mat_khau_bam: password, bat_buoc_doi_mat_khau: true }
           : {}),
       };
       const account = previous

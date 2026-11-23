@@ -1,14 +1,31 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { BUILDING_ROOMS, roomWallSegments } from "../../src/lib/office-3d/building-layout";
 import {
   ARCHITECTURAL_ATRIUM,
   ARCHITECTURAL_BOUNDS,
   architecturalFloorOutline,
+  architecturalFloorSurface,
   ARCHITECTURAL_REGIONS,
   type ArchitecturalPoint,
 } from "../../src/lib/office-3d/architectural-layout";
 
 // Independent ray-casting checks exercise concave room footprints as well as boxes.
+test("VietinBank is one selectable region spanning both former areas, excluding the side entrance", () => {
+  const region = ARCHITECTURAL_REGIONS.find(r => r.key === "plan_t1_phai_truoc")!;
+  assert.equal(ARCHITECTURAL_REGIONS.some(r => r.key === "plan_t1_phai_sau"), false);
+  for (const [x, z] of [[25, 3], [25, 9.4], [25, 18]]) {
+    assert.ok(inside([x - 14.81, z - 15.575], region.points));
+  }
+  assert.equal(inside([28 - 14.81, 12 - 15.575], region.points), false);
+  const bank = BUILDING_ROOMS.find(r => r.key === region.key)!;
+  const boundaryZ = 9.4 - 15.575 - bank.z;
+  const openingX = 25 - 14.81 - bank.x;
+  assert.equal(roomWallSegments(bank).some(([a, b]) =>
+    Math.abs(a[1] - boundaryZ) < 1e-6 && Math.abs(b[1] - boundaryZ) < 1e-6 &&
+    openingX >= Math.min(a[0], b[0]) && openingX <= Math.max(a[0], b[0])), false);
+});
+
 function inside([x, z]: ArchitecturalPoint, polygon: ArchitecturalPoint[]) {
   let contained = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -57,7 +74,7 @@ test("the crossed-out front projection is removed only from floor 2", () => {
   assert.ok(inside(projection, architecturalFloorOutline(1)));
   assert.equal(inside(projection, architecturalFloorOutline(2)), false);
   assert.ok(inside(projection, architecturalFloorOutline(3)));
-  // The corridor in front of the atrium remains connected to both wings.
+  // Spatial envelope includes the void; actual slab must leave the front open.
   assert.ok(inside([-1, 7], architecturalFloorOutline(2)));
 });
 
@@ -80,4 +97,18 @@ test("relative room proportions use the shared source axes, not the old equal ro
   assert.equal(sharedStairs.length, 3);
   assert.deepEqual(sharedStairs[0].points, sharedStairs[1].points);
   assert.deepEqual(sharedStairs[1].points, sharedStairs[2].points);
+});
+
+
+test("floor-2 slab opens to the front while retaining both side corridors", () => {
+  const surface = architecturalFloorSurface(2);
+  assert.equal(inside([-1, 7], surface), false);
+  assert.equal(inside([-1, 0], surface), false);
+  assert.ok(inside([-5, 7], surface));
+  assert.ok(inside([3, 7], surface));
+  assert.ok(inside([-1, -5], surface));
+  assert.ok(inside([-1, 7], architecturalFloorSurface(1)));
+  assert.ok(inside([-1, 7], architecturalFloorSurface(3)));
+  assert.ok(inside([-1, 7], ARCHITECTURAL_ATRIUM));
+  assert.equal(ARCHITECTURAL_REGIONS.some(r => r.key === "plan_t2_hanh_lang_truoc"), false);
 });

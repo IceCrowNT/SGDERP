@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { getSession, hasPermission } from "@/lib/auth";
-import { ManagementTabs } from "@/components/inventory/ManagementTabs";
+import { getSession } from "@/lib/auth";
+import { ManagementBreadcrumb } from "@/components/inventory/ManagementBreadcrumb";
 import { assetPath, parseAssetId } from "@/lib/asset-link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAssetOverview, getAssetCategories, getAssetFilterOptions } from "@/actions/asset";
@@ -19,5 +19,5 @@ export default async function AssetsPage({ searchParams }: { searchParams: Promi
   const [list, categories, filters] = await Promise.all([getAssetOverview(), getAssetCategories(), getAssetFilterOptions()]);
   if (!list.success || !categories.success || !filters.success)
     return <EmptyPanel title="Không thể truy cập tài sản" description={!list.success ? list.message : !categories.success ? categories.message : !filters.success ? filters.message : "Vui lòng thử lại."} />;
-  return <><ManagementTabs active="assets" assets inventory={hasPermission(session, "INVENTORY")} /><Suspense fallback={<Skeleton className="h-72 w-full" />}><AssetManager initial={list} initialCategories={categories.rows} initialFilters={filters} /></Suspense></>;
+  return <><ManagementBreadcrumb current="Tài sản" /><Suspense fallback={<Skeleton className="h-72 w-full" />}><AssetManager initial={list} initialCategories={categories.rows} initialFilters={filters} /></Suspense></>;
 }

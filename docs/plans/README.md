@@ -8,17 +8,20 @@ Giao diện nhân sự, tài khoản, phòng ban, profile, workflow, nhật ký 
 
 | Mảng | Hiện tại | Việc tiếp theo |
 | --- | --- | --- |
-| [Nhân sự/phòng ban](HR-CHECKLIST.md) | Đã có CRUD, tài khoản riêng, head kiêm nhiệm, tự khóa khi nghỉ việc; danh bạ theo phòng, hồ sơ bên phải, bảng phân trang và gán vị trí làm việc | Chọn head thực tế, chốt phạm vi xem dữ liệu |
-| [Báo cáo công việc tuần](WEEKLY-REPORT-CHECKLIST.md) | Đã lập plan 11/11, chưa triển khai: bảng giống Excel, sao chép kỳ cũ giữ hạn năm, nội dung JSONB, lịch sử và bản chốt | Xác nhận kỳ/quyền/mẫu in; sau yêu cầu triển khai mới thử grid/export và migration |
+| [Kiến trúc thông tin & điều hướng](INFORMATION-ARCHITECTURE-CHECKLIST.md) | Đã triển khai/kiểm chứng menu chung, ba card hạng mục và lọc loại gọn; giữ shadcn/ui, tham chiếu Carbon/Fiori | Đã áp dụng khung/menu chung 18/11; dùng thử và rà mẫu trang riêng theo tác vụ |
+| [Nhân sự/phòng ban](HR-CHECKLIST.md) | Có tổng quan `/hr` với tình trạng/phân bố nhân sự; đã có CRUD, tài khoản riêng, head kiêm nhiệm, tự khóa khi nghỉ việc; danh bạ theo phòng, hồ sơ bên phải, bảng phân trang và gán vị trí làm việc | Chọn head thực tế, chốt phạm vi xem dữ liệu |
+| [Công việc & ticket hỗ trợ](TASK-MANAGEMENT-CHECKLIST.md) | Bản thử 23/11: form gọn, AI soạn ticket rồi người dùng gửi; quản lý phân công việc gửi phòng, nhận/từ chối, bằng chứng và nghiệm thu; bốn bảng và quyền riêng | 14/14 tích hợp, 4/4 E2E và build đạt; đã thử khôi phục/4 luồng local. AI dùng provider giả lập, chờ API thật/pilot; tài khoản thử local đã khóa, báo cáo làm sau |
+| [Báo cáo công việc tuần](WEEKLY-REPORT-CHECKLIST.md) | Đã lập plan 11/11, chưa triển khai: bảng giống Excel, sao chép kỳ cũ giữ hạn năm, nội dung JSONB, lịch sử và bản chốt | Làm sau công việc theo yêu cầu hiện tại; khi tiếp tục cần chốt kỳ/quyền/mẫu in |
 | [Vai trò/phân quyền](ROLE-MANAGEMENT-CHECKLIST.md) | Đã có `/roles`, ma trận, gán/gỡ; seed có 3 vai trò mẫu, vận hành được thêm role tùy chỉnh | Rà người dùng/quyền thực tế; sửa mô tả HR còn gộp quyền vào 3D |
-| [Workflow](WORKFLOW-CHECKLIST.md) | Đã có `/workflows`, 5 bảng, mẫu có phiên bản và xử lý tuần tự; đã thiết kế kéo thả, biểu mẫu, giao việc và thông báo | Cấu hình pilot thực tế; sau đó làm bản mẫu kỹ thuật vùng kéo thả và migration an toàn |
-| [Tài khoản mặc định/Profile/Dashboard](PROFILE-DASHBOARD-CHECKLIST.md) | Đã có DEFAULT/tên tự sinh, profile và dashboard cá nhân; đã thiết kế ưu tiên việc đến lượt | Dùng thử thực tế; bổ sung thông báo trong ứng dụng cùng workflow mở rộng |
-| [Cài đặt hệ thống](SYSTEM-SETTINGS-CHECKLIST.md) | Đã có khu cài đặt, nhiều key OpenAI, kết nối/model theo tác vụ và quản trị mức sử dụng | Quyền kết nối tại /roles; các nhóm cấu hình khác làm khi có nghiệp vụ |
-| [Trợ lý AI](AI-ASSISTANT-CHECKLIST.md) | Pilot 16/11: dashboard chat cho account cấu hình, bản nháp thêm/sửa tài sản/vị trí dùng form hiện có; quản lý nhiều key/model, bảng duyệt khấu hao loại, lịch sử/bối cảnh và cá nhân hóa profile | Thử yêu cầu khấu hao loại trên dashboard, kiểm tra bảng trước khi duyệt; Hạn mức nullable trên tài khoản và usage nội bộ đã có; để trống không giới hạn; đối soát OpenAI làm sau |
+| [Workflow](WORKFLOW-CHECKLIST.md) | **0% theo xác nhận 20/11**: người phụ trách chưa đánh giá plan, chưa thử nghiệm/nghiệm thu; mã/schema hiện có chỉ là bản nháp. 5 bảng lõi và dòng vật tư liên quan đều rỗng | Giữ plan, chờ người phụ trách đánh giá yêu cầu/thiết kế trước khi triển khai hoặc cấu hình pilot |
+| [Tài khoản mặc định/Profile/Dashboard](PROFILE-DASHBOARD-CHECKLIST.md) | Đã có DEFAULT/tên tự sinh, profile; dashboard Bàn làm việc tách AI và Việc của tôi, giữ workflow theo quyền | Dùng thử thực tế; bổ sung thông báo trong ứng dụng cùng workflow mở rộng |
+| [Cài đặt hệ thống](SYSTEM-SETTINGS-CHECKLIST.md) | Có `/system` tổng quan quản trị theo quyền và khu cài đặt, nhiều key OpenAI, kết nối/model theo tác vụ và quản trị mức sử dụng | Quyền kết nối tại /roles; các nhóm cấu hình khác làm khi có nghiệp vụ |
+| [Trợ lý AI](AI-ASSISTANT-CHECKLIST.md) | Pilot 16/11: dashboard chat cho account cấu hình, bản nháp thêm/sửa tài sản/vị trí dùng form hiện có; quản lý nhiều key/model, bảng duyệt khấu hao loại, lịch sử/bối cảnh, cá nhân hóa profile và tệp riêng theo chat; công cụ tạo/sửa Word/Excel, PDF form/trang và xuất PDF bằng LibreOffice (18/11) | Dùng thử công cụ tài liệu với model thật; bố cục Bàn làm việc đã kiểm chứng 17/11 (chat chính, panel bảng, lịch sử bên cạnh/Sheet); hạn mức nullable và usage nội bộ đã có; công cụ nhóm hồ sơ và đối soát OpenAI làm sau |
 | [Vị trí & không gian](LOCATION-MANAGEMENT-CHECKLIST.md) | Đã có cây `vi_tri`, quyền LOCATIONS, gán/chuyển/bỏ gán người hai chiều và xóa có xác nhận tự bỏ gán | Dùng thử nghiệp vụ; đã bổ sung chặn xóa/ngừng dùng vị trí còn tài sản |
-| [Tài sản](ASSET-MANAGEMENT-CHECKLIST.md) | Đã có `/assets`: card loại, danh sách nhóm người/vị trí, bảng và panel sửa trực tiếp/tự lưu, hồ sơ có liên kết/tem QR, mua sắm/khấu hao tùy chọn; tìm toàn cục, thêm/đổi theo ngữ cảnh. Đã nhập 89 hồ sơ, tổng 91; admin có ASSETS MANAGE, tích hợp 3D HCNS đã kiểm chứng | Đối chiếu 3 dòng nguồn còn giữ lại, xác minh hồ sơ và chọn người phụ trách để dùng thử |
-| [Vật tư tiêu hao/Phụ kiện](INVENTORY-MANAGEMENT-CHECKLIST.md) | Đã triển khai 17/11: /inventory, 3 bảng `loai_vat_tu`, `mat_hang_vat_tu`, `giao_dich_vat_tu`; tồn theo giao dịch, phụ kiện theo dõi cấp/thu hồi, quyền INVENTORY riêng | Người dùng tự cấp quyền tại /roles; chọn nơi giữ, nhập tồn đã kiểm kê và dùng thử; license làm sau |
-| [3D tòa nhà & HCNS](OFFICE-3D-CHECKLIST.md) | Mặt bằng 3 tầng, nội thất HCNS/10 vị trí và khung điều khiển mở rộng dùng cùng Canvas. Gán người theo HR, tài sản theo ASSETS. Bảng phòng rút gọn thành hai tab; tìm người/tài sản sau khi nhập để tới vị trí, bật/tắt lớp bằng icon riêng và giữ sàn/tường/bàn. Menu chuột phải sửa hồ sơ theo đối tượng/quyền. Bản thử thêm/chỉnh bàn hoặc điểm thiết bị trong phòng đã liên kết; lưu riêng bố trí, gán tài sản ngay tại điểm mới | Xác nhận phòng còn lại ở tầng 1/3 và chỗ đặt Lễ tân; nhận bản phác dựng nội thất cố định và dùng thử bổ sung vị trí trên mô hình |
+| [Tài sản](ASSET-MANAGEMENT-CHECKLIST.md) | Đã có `/asset-management` với ba card hạng mục; `/assets` có lọc loại gọn, danh sách nhóm người/vị trí, bảng và panel sửa trực tiếp/tự lưu, hồ sơ có liên kết/tem QR, mua sắm/khấu hao tùy chọn; tìm theo phạm vi hoặc toàn cục, thêm/đổi theo ngữ cảnh. Đã nhập 89 hồ sơ, tổng 91; admin có ASSETS MANAGE, tích hợp 3D HCNS đã kiểm chứng | Đối chiếu 3 dòng nguồn còn giữ lại, xác minh hồ sơ và chọn người phụ trách để dùng thử |
+| [Tài liệu](DOCUMENT-MANAGEMENT-CHECKLIST.md) | Đã rút gọn MVP 20/11: đặc tả và kỹ thuật chung một file; ba khu vực, một bảng, tải lên/tìm/tải xuống/xóa; chưa có mã/DB | Chốt quyền gộp tại A.3, tài khoản pilot và nơi sao lưu; sau đó triển khai theo B.5 |
+| [Vật tư tiêu hao/Phụ kiện](INVENTORY-MANAGEMENT-CHECKLIST.md) | Đã kiểm chứng 18/11: tiêu hao tồn chung, nhập ban đầu/nhập thêm/sử dụng/lịch sử; dòng vật tư trên workflow và xuất nguyên tử khi hoàn thành. Phụ kiện giữ cấp/thu hồi theo nơi giữ | Tự cấp quyền, cấu hình mẫu hỗ trợ IT và dùng thử; VPP theo định mức lưu plan, license làm sau |
+| [3D tòa nhà & các phòng](OFFICE-3D-CHECKLIST.md) | Mặt bằng 3 tầng; chi tiết dùng chung cho phòng đã liên kết. HCNS giữ 10 bàn gốc, KHĐT có 12 bàn lưu DB và giữ liên kết hai bàn cũ. Khung điều khiển dùng cùng Canvas. Gán người theo HR, tài sản theo ASSETS. Bảng phòng rút gọn thành hai tab; tìm người/tài sản sau khi nhập để tới vị trí, bật/tắt lớp bằng icon riêng và giữ sàn/tường/bàn. Menu chuột phải sửa hồ sơ theo đối tượng/quyền. Bản thử thêm/chỉnh bàn hoặc điểm thiết bị trong phòng đã liên kết; lưu riêng bố trí, gán tài sản ngay tại điểm mới. Quầy lễ tân dùng vị trí có sẵn trực thuộc tầng, chọn mẫu hình độc lập | Xác nhận phòng còn lại ở tầng 1/3; nhận bản phác nhập bố trí DB và dùng thử bổ sung vị trí trên mô hình |
 | [Số hóa/báo cáo](DIGITAL-TRANSFORMATION-CHECKLIST.md) | Đã khảo sát và chuẩn bị báo cáo | Chốt KPI, đầu mối, lịch và tiêu chí nghiệm thu |
 
 ## Đối chiếu plan với code và DB
@@ -56,7 +59,7 @@ Các đề xuất tách/chuyển tài liệu trên chưa được thực hiện 
 
 Đây là nguồn chính về cấu trúc và cách viết plan của dự án; `AGENTS.md` chỉ dẫn tới mục này. Áp dụng cho plan mới; khi cập nhật plan cũ, chuẩn hóa phần thuộc phạm vi yêu cầu, không tự viết lại toàn bộ các phân hệ khác. Quy chuẩn không thay đổi phạm vi đã duyệt hoặc các điều kiện duyệt tại [AGENTS.md](../../AGENTS.md).
 
-### 1. Hai mức đọc trong cùng một plan
+### 1. Hai phần trong cùng một plan
 
 Mỗi plan tính năng có một phạm vi sở hữu rõ. Chức năng dùng chung được dẫn tới plan sở hữu, không duy trì đặc tả song song. Lộ trình điều phối nhiều tính năng phải được nhận diện riêng, không tính là một tính năng đã có code/DB.
 
@@ -64,12 +67,15 @@ Mỗi plan tính năng có một phạm vi sở hữu rõ. Chức năng dùng ch
 
 | Phần | Nội dung cần có | Cách trình bày |
 | --- | --- | --- |
-| **A. Tổng quan để duyệt** | Vấn đề/mục tiêu, phạm vi bản đầu, người dùng thao tác gì | Đoạn ngắn + bảng chức năng |
-| | Luồng sử dụng, mô hình dữ liệu rút gọn nếu có thay đổi dữ liệu | Sơ đồ luồng/ERD và chú giải |
-| | Phương án đã thống nhất, điểm chờ xác nhận, mốc tiến độ và điều kiện nghiệm thu | Bảng quyết định, trạng thái và liên kết xuống B |
-| **B. Chi tiết triển khai** | Trường dữ liệu, quan hệ, ràng buộc; quyền, trạng thái và hành vi cụ thể | Bảng thiết kế DB, ma trận quyền, bảng chuyển trạng thái |
-| | Đồng thời, lịch sử, lỗi, migration và bảo toàn dữ liệu khi có liên quan | Quy tắc ngắn, nêu điều kiện và cách xử lý |
-| | Các bước thực hiện, kiểm thử, kết quả và việc còn lại | Checklist có tiêu chí xác minh |
+| **A. Đặc tả yêu cầu** | Mục tiêu, phạm vi, người dùng được làm gì | Đoạn ngắn + bảng vai trò/thao tác |
+| | Giao diện, tình huống sử dụng và luồng nghiệp vụ | Bảng màn hình/thao tác, sơ đồ luồng khi hữu ích |
+| | Tiêu chí nghiệm thu, quyết định đã chốt/chờ xác nhận và trạng thái | Tiêu chí có mã để đối chiếu kiểm thử ở B |
+| **B. Thiết kế kỹ thuật** | Kiến trúc; sơ đồ DB, trường, quan hệ và ràng buộc | Sơ đồ và mục `Thiết kế DB cần giữ` |
+| | Cách tính quyền theo hành động và phạm vi dữ liệu; luồng tải lên/xem/tải xuống/chia sẻ tệp | Ma trận quyền, điều kiện kiểm tra phía server; ghi rõ không áp dụng nếu không có tệp |
+| | Chuyển trạng thái, đồng thời, lịch sử, xử lý lỗi, migration và sao lưu/khôi phục | Bảng điều kiện và cách xử lý; nêu phần dùng lại hạ tầng chung |
+| | Kiểm thử, bước triển khai, kết quả và việc còn lại | Checklist; mỗi tiêu chí nghiệm thu ở A có ca xác minh tương ứng |
+
+Dùng đúng hai tiêu đề chính `## A. Đặc tả yêu cầu` và `## B. Thiết kế kỹ thuật`. Phần A mô tả điều người dùng cần và hành vi quan sát được; phần B giải thích cách hệ thống đáp ứng. Sơ đồ DB và thuật toán tính quyền đặt ở B; A chỉ mô tả ai được làm gì bằng ngôn ngữ nghiệp vụ. Luồng tệp phải phân biệt tải lên, xem, tải xuống và chia sẻ; không tự thêm chia sẻ công khai khi yêu cầu chưa có.
 
 Phần A hướng tới đọc trong 3–5 phút, không chép lại bảng cột và thuật toán ở B. Phần B phải đủ để triển khai mà không đoán các quyết định quan trọng. Tính năng nhỏ được rút gọn hoặc ghi rõ mục không áp dụng, không thêm mục/sơ đồ cho đủ hình thức. Khi B quá dài, chuyển chi tiết sang tài liệu thiết kế được plan liên kết; không duy trì hai bản đặc tả giống nhau.
 
@@ -87,7 +93,7 @@ Phần A hướng tới đọc trong 3–5 phút, không chép lại bảng cộ
 - `[x]` chỉ đánh dấu công việc có bằng chứng đã hoàn thành; `[ ]` là còn lại. Hoàn thành thiết kế hoặc kiểm thử kỹ thuật không đồng nghĩa được duyệt triển khai hoặc nghiệm thu vận hành.
 - A tóm tắt các mốc, B sở hữu checklist thực hiện chi tiết; liên kết giữa hai phần, không sao chép từng checkbox ở cả hai.
 - Tiêu chí hoàn thành phải kiểm tra được, bao gồm hành vi chính và tình huống lỗi/quyền/đồng thời phù hợp tính năng. Ghi kết quả thực tế và giới hạn kiểm chứng; không ghi đạt khi chưa chạy.
-- Với tính năng có giao diện, phần A nêu tác vụ chính và điểm vướng của người dùng; phần B ghi luồng thao tác, tiêu chí và kết quả kiểm chứng UX theo mục [Nguyên tắc UX ưu tiên](../../.agents/rules/FRONTEND-RULES.md#8-nguyên-tắc-ux-ưu-tiên) của rule Frontend.
+- Với tính năng có giao diện, phần A nêu tác vụ chính, điểm vướng, luồng thao tác và tiêu chí nghiệm thu UX; phần B ghi cách triển khai, ca kiểm thử và kết quả kiểm chứng theo mục [Nguyên tắc UX ưu tiên](../../.agents/rules/FRONTEND-RULES.md#8-nguyên-tắc-ux-ưu-tiên) của rule Frontend.
 
 ### 4. Một nơi quản lý và cập nhật hiện trạng
 
@@ -128,6 +134,7 @@ Nội dung đề xuất thêm nguyên văn:
 
 ## Rà soát tài liệu
 
+- [x] Ngày 20/11: chuẩn hóa quy chuẩn thành **A. Đặc tả yêu cầu / B. Thiết kế kỹ thuật** theo yêu cầu; tạo [plan công việc](TASK-MANAGEMENT-CHECKLIST.md) và rule phân hệ, đăng ký router. DB ở B, tiêu chí nghiệm thu A đối chiếu kiểm thử B; không tự viết lại toàn bộ plan cũ hoặc sửa ba rule kỹ thuật chung. Kết quả kiểm tra tài liệu theo B.7 của plan công việc.
 - [x] Bổ sung 9 [nguyên tắc UX ưu tiên](../../.agents/rules/FRONTEND-RULES.md#8-nguyên-tắc-ux-ưu-tiên) vào rule Frontend theo đề xuất đã duyệt; quy chuẩn lập plan yêu cầu nêu tác vụ, điểm vướng và kiểm chứng UX tại A/B. Giữ nguyên các chuẩn kỹ thuật hiện có; cập nhật tài liệu chưa đồng nghĩa toàn bộ giao diện đã đáp ứng. Đã kiểm tra 52 liên kết/anchor và `git diff --check`; rule Frontend có 9.079 ký tự, dưới giới hạn 12.000. Không đổi mã nguồn/DB, không chạy lại kiểm thử ứng dụng cho thay đổi tài liệu này.
 - [x] Đối chiếu toàn bộ plan với code và DB local ngày 11/11: ghi phạm vi sở hữu, phần chưa triển khai và các chỗ chưa tương ứng một tính năng tại bảng trên; sửa những mô tả hiện trạng lỗi thời đã xác minh. Không chạy lại bộ E2E toàn hệ thống hoặc thay DB/quyền trong lần đọc.
 - [x] Gỡ công cụ hồ sơ thanh toán AI theo yêu cầu: xóa trang tạm hoãn, test và plan riêng; bỏ định tuyến tài liệu, tham chiếu và hướng khôi phục. Route dự phòng chỉ giữ các trang chờ đã khai báo, URL không biết hiển thị không tìm thấy. Không có bảng/dependency riêng cần xóa; giữ nguồn nghiệp vụ và lịch sử Git.

@@ -26,7 +26,7 @@ test("connection policy and job dropdown save exact source/model with versioned 
   await dialog.getByRole("button", { name: "Lưu ngân sách kết nối" }).click(); await expect(dialog).toHaveCount(0);
   expect((await db.ket_noi_ai.findUniqueOrThrow({ where: { id: fixture.connectionIds[0] } })).han_muc_chi_phi_thang).toBeNull();
   await page.getByRole("tab", { name: "Theo tác vụ" }).click();
-  await page.locator("article").filter({ has: page.getByRole("heading", { name: "Tra cứu tài sản / vị trí", exact: true }) }).getByRole("button", { name: "Cấu hình tác vụ" }).click();
+  await page.locator("article").filter({ has: page.getByRole("heading", { name: "Tra cứu dữ liệu", exact: true }) }).getByRole("button", { name: "Cấu hình tác vụ" }).click();
   await dialog.getByRole("combobox", { name: "Kết nối tác vụ", exact: true }).click(); await page.getByRole("option", { name: "Kết nối tra cứu", exact: true }).click();
   await dialog.getByRole("button", { name: "Tải model của kết nối" }).click();
   await expect(dialog.getByRole("button", { name: "Lưu cấu hình tác vụ" })).toBeEnabled();
@@ -47,7 +47,7 @@ test("account limit blank is persisted as unlimited; chat routes job, restores h
   await dialog.getByRole("button", { name: "Lưu hạn mức", exact: true }).click(); await expect(dialog).toHaveCount(0);
   expect((await db.tai_khoan.findUniqueOrThrow({ where: { id: manager.id } })).han_muc_ai_thang).toBeNull();
   await page.goto("/?aiChat=new"); await expect(area(page)).toContainText("Không giới hạn");
-  await area(page).getByRole("combobox", { name: "Tác vụ AI", exact: true }).click(); await page.getByRole("option", { name: "Tra cứu tài sản / vị trí", exact: true }).click();
+  await area(page).getByRole("combobox", { name: "Tác vụ AI", exact: true }).click(); await page.getByRole("option", { name: "Tra cứu dữ liệu", exact: true }).click();
   await send(page, "Tra cứu thử kết nối theo công việc");
   await expect(area(page).getByRole("log")).toContainText("lookup-model");
   await page.reload(); await expect(area(page).getByRole("log")).toContainText("lookup-model");

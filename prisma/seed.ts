@@ -335,6 +335,7 @@ async function main() {
     create: {
       ten_dang_nhap: "admin",
       mat_khau_bam: defaultPassword,
+      bat_buoc_doi_mat_khau: true,
       ten_hien_thi: "Quản Trị Viên Hệ Thống",
       cho_phep_dang_nhap: true,
       company_id: company.id,

@@ -197,7 +197,7 @@ function AccountForm({
     employees.find((e) => e.id === employeeId)?.tinh_trang_lam_viec ===
     "LEFT";
   if (credentials)
-    return <AccountCredentials credentials={credentials} requirePasswordChange={Boolean(account)} done={done} />;
+    return <AccountCredentials credentials={credentials} done={done} />;
   return (
     <Form {...form}>
       <form

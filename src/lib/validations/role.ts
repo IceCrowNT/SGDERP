@@ -1,3 +1,4 @@
+import { TASK_ACTIONS } from "@/lib/support-task";
 import { z } from "zod";
 import { AI_ACTIONS } from "@/lib/role-catalog";
 const level = z.enum(["NONE", "VIEW", "MANAGE"], {
@@ -23,6 +24,7 @@ export const RoleSchema = z
       .min(1, "Nhập tên vai trò")
       .max(255, "Tối đa 255 ký tự"),
     description: z.string().trim().max(2000, "Tối đa 2.000 ký tự"),
+    taskActions: z.array(z.enum(TASK_ACTIONS)).max(TASK_ACTIONS.length).optional(),
     workflowActions: z
       .array(z.enum(["VIEW", "CREATE", "APPROVE", "EXECUTE", "MANAGE"]))
       .max(5)

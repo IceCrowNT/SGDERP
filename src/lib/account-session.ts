@@ -1,3 +1,4 @@
+import { taskActions } from "@/lib/support-task";
 import { db } from "@/lib/db";
 import { permissionLevels, workflowActions, aiActions } from "@/lib/role-catalog";
 import type { SessionUser } from "@/lib/auth";
@@ -48,6 +49,7 @@ export async function readAccountSession(
         .filter(r => r.vai_tro.company_id === user.company_id)
         .flatMap(r => r.vai_tro.danh_sach_quyen.map(p => p.quyen)),
     ),
+    taskActions: taskActions(user.danh_sach_vai_tro.filter(r => r.vai_tro.company_id === user.company_id).flatMap(r => r.vai_tro.danh_sach_quyen.map(p => p.quyen))),
     workflowActions: workflowActions(
       user.danh_sach_vai_tro
         .filter((r) => r.vai_tro.company_id === user.company_id)
