@@ -4,7 +4,7 @@ Cập nhật **17/11/2026**. **Đã có kết nối, định tuyến tác vụ, 
 
 ## Hiện trạng quản trị nội bộ — 17/11/2026
 
-Theo yêu cầu mới, **chưa áp hạn mức**: cột `tai_khoan.han_muc_ai_thang` nullable, NULL/ô trống là không giới hạn; 0 chặn; số dương là trần USD/tháng. Không tạo bảng hạn mức hoặc tự gán ngân sách. Kết nối áp dụng cùng quy ước. Giá chưa cấu hình vẫn cho gọi khi không có trần; token được ghi, chi phí NULL. Khi bật trần phải có đơn giá đúng model cho lần gọi mới. Theo yêu cầu 18/11, khoản đã kết thúc chưa xác định chi phí tạm không tính vào hạn mức, vẫn giữ NULL để đối soát; không chặn chat chỉ vì có khoản này.
+Hạn mức tháng do quản trị viên đặt trên tài khoản hoặc kết nối. NULL là không giới hạn, 0 chặn gọi, mức dương áp dụng trên tổng chi phí đã đối chiếu trong tháng. Đơn giá model chỉ dùng để ước tính cho báo cáo. Chi phí thiếu căn cứ ước tính giữ NULL và token vẫn ghi theo usage.
 
 Trang AI có kết nối & model, theo tác vụ, hạn mức tài khoản và mức sử dụng theo quyền độc lập. Người dùng chọn tác vụ trước chat; model/key lỗi không tự chuyển nguồn chi. Từ 20/11, chat và tài liệu riêng là khả năng nền của mọi tài khoản hợp lệ, gồm DEFAULT; không thêm quyền AI USE. Không gỡ key môi trường hoặc tự cấp grant trong đợt này. Quản trị không đọc nội dung chat/cá nhân hóa.
 
@@ -155,15 +155,15 @@ Không thêm bảng tổng hợp chỉ để cộng số dùng trong pilot. Inde
 
 ## 4. Giữ hạn mức và tính phần còn lại
 
-**Còn khả dụng trong ERP = mức cấp − mức đã ghi nhận − phần giữ cho các lần gọi DANG_GOI**, chặn ở 0 khi hiển thị. Dùng Decimal cho tiền; nhãn là ngân sách ERP ước tính, không gọi là số dư OpenAI.
+**Ngân sách còn lại = mức cấp trừ tổng chi phí đã đối chiếu trong kỳ**, hiển thị tối thiểu bằng 0. Sổ gọi phân biệt khoản xác nhận bằng trạng thái DOI_SOAT.
 
 1. Trước mỗi lần gọi, đọc quyền, `tai_khoan.han_muc_ai_thang` và kết nối mặc định hiện hành. Khóa theo cùng thứ tự của hệ thống: công ty → phân quyền → kết nối → tài khoản → hội thoại/log khi cần. Các luồng đổi hạn mức/khóa kết nối dùng cùng thứ tự; đọc và chọn mặc định trong khóa để không đổi nguồn giữa kiểm tra và nhận xử lý.
-2. Trong transaction ngắn, cộng mức đã dùng + dự phòng ở cả user và kết nối, kiểm tra model/tốc độ/đồng thời theo cấu hình chung, giữ ngân sách đủ cho giới hạn lần gọi. Tính ngân sách theo cả đầu vào, đầu ra tối đa, reasoning được tính phí và các khoản công cụ đã bật; không đủ thì không gửi request.
-3. Gọi API ngoài transaction. Mỗi bước công cụ có thể dẫn đến lần gọi mới và phải kiểm tra/giữ ngân sách mới, kể cả khi vẫn cùng một câu hỏi.
-4. Khi có usage, giải phóng phần dự phòng và ghi mức thực tế/ước tính nguyên tử. Timeout chưa rõ giữ dữ liệu dự phòng lịch sử và đưa vào danh sách cần đối chiếu, nhưng tạm không trừ hạn mức sau khi lượt gọi chuyển khỏi DANG_GOI. Chi phí giữ NULL, không ghi thành 0. Khi đối soát xong, chi phí được tính vào kỳ phát sinh của lượt gọi. Đóng tab không tự chuyển trạng thái lượt gọi.
+2. Trong transaction ngắn, kiểm tra hạn mức tài khoản và kết nối theo số đã đối chiếu trong kỳ và ghi lần gọi. Giá chỉ được lưu làm căn cứ thống kê.
+3. Gọi API ngoài transaction. Mỗi lần gọi tiếp theo kiểm tra lại quyền và hạn mức.
+4. Khi có usage, ghi token và chi phí ước tính nếu tính được. Đối chiếu thủ công ghi căn cứ, chi phí xác nhận và audit cho kỳ phát sinh của lượt gọi.
 5. Mỗi lần gọi ghi kỳ tại lúc nhận xử lý; sang tháng không sửa kỳ cũ. Thay khóa hoặc hạn mức giữa lượt chỉ áp cho lần gọi tiếp theo sau khi kiểm tra lại; log lần đang chạy vẫn giữ nguồn/phiên bản ban đầu. Tạm dừng không cam kết thu hồi được chi phí của request đã gửi.
 
-Giới hạn nội bộ chỉ ngăn ERP nhận thêm yêu cầu theo số liệu/giá đã biết. Không hứa hóa đơn tuyệt đối không vượt 1 đồng khi usage/giá chưa xác định, nhiều dịch vụ dùng chung project hoặc chi phí nhà cung cấp cập nhật trễ; mọi chênh lệch phải hiện để xử lý. Cảnh báo ngưỡng và chặn hết hạn mức là hai hành vi khác nhau.
+Việc đối chiếu có thể diễn ra sau khi phát sinh chi phí. Trong thời gian đó số tiền nhà cung cấp ghi nhận có thể vượt hạn mức ERP.
 
 ## 5. Quản lý khóa và đối soát
 

@@ -123,7 +123,7 @@ test("DB allocates unique codes concurrently, protects updates and never reuses 
   );
   const columns = await db.$queryRaw<
     { column_name: string }[]
-  >`SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='tai_khoan'`;
+  >`SELECT column_name FROM information_schema.columns WHERE table_schema='chung' AND table_name='tai_khoan'`;
   expect(columns.map((c) => c.column_name)).not.toEqual(
     expect.arrayContaining(["ma_nhan_su"]),
   );

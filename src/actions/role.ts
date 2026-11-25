@@ -84,7 +84,7 @@ function message(error: unknown) {
   return error instanceof Error ? error.message : "Không thể lưu thay đổi.";
 }
 async function lock(tx: Prisma.TransactionClient, session: SessionUser) {
-  await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+  await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
   await currentActor(tx, session, "ROLES");
 }

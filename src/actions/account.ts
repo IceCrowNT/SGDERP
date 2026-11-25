@@ -67,7 +67,7 @@ export async function saveAccount(input: AccountInput) {
   try {
     await db.$transaction(async (tx) => {
       // Serialize account changes per company, including last-administrator checks.
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       const previous = v.id
         ? await tx.tai_khoan.findFirst({

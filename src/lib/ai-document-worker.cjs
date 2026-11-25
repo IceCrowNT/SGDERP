@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- Node worker entry point is CommonJS. */
 const { parentPort, workerData } = require('node:worker_threads');
+// Cấu hình duy nhất từ ai-config.ts, được backend truyền vào khi tạo worker.
+const AI_LIMITS = workerData.limits;
 const { Document, Packer, Paragraph, HeadingLevel, Table, TableRow, TableCell, WidthType, TextRun, patchDocument, PatchType } = require('docx');
 const ExcelJS = require('exceljs');
 const { PDFDocument, PDFTextField, PDFCheckBox, PDFDropdown, PDFOptionList, PDFRadioGroup } = require('pdf-lib');
@@ -28,7 +30,7 @@ const cellValue = c => {
     parentPort.postMessage({ pdfPage }); return;
   } else if (name === 'convert_pdf_to_word') {
     const source = await PDFDocument.load(sources[0].bytes), count = source.getPageCount();
-    if (count > 20) fail('Chuyển Word tối đa 20 trang; hãy tách phần cần chuyển.');
+    if (count > AI_LIMITS.pdf.wordPages) fail(`Chuyển Word tối đa ${AI_LIMITS.pdf.wordPages} trang; hãy tách phần cần chuyển.`);
     const pages = v.pages ?? await require('./ai-pdf-worker.cjs').pdfTextPages(sources[0].bytes);
     if (pages.length !== count || pages.some((p,i) => p.page !== i+1)) fail('Nội dung phải có đủ trang PDF, theo thứ tự 1 đến trang cuối.');
     const sections = pages.map(p => {
@@ -63,7 +65,7 @@ const cellValue = c => {
       let cells=0; const names=new Set();
       for (const s of v.sheets) {
         if (/[\\/*?:\[\]]/.test(s.name) || names.has(s.name.toLowerCase())) fail('Tên sheet không hợp lệ hoặc trùng.'); names.add(s.name.toLowerCase());
-        cells += s.rows.reduce((n,r)=>n+r.length,0); if (cells>20000) fail('Tệp mới tối đa 20.000 ô.');
+        cells += s.rows.reduce((n,r)=>n+r.length,0); if (cells>AI_LIMITS.documents.cells) fail(`Tệp mới tối đa ${AI_LIMITS.documents.cells.toLocaleString("vi-VN")} ô.`);
         const sheet=book.addWorksheet(s.name); sheet.addRows(s.rows); sheet.getRow(1).font={bold:true}; sheet.views=[{state:'frozen',ySplit:1}];
         for(const col of sheet.columns) col.width=22;
         sheet.pageSetup={paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0};
@@ -74,7 +76,7 @@ const cellValue = c => {
       const addresses=new Set();
       for (const change of v.changes) {
         if(addresses.has(change.cell)) fail('Một ô được yêu cầu sửa nhiều lần.'); addresses.add(change.cell);
-        const c=sheet.getCell(change.cell); if(c.row>100000||c.col>256) fail('Ô vượt giới hạn 100.000 dòng/256 cột.');
+        const c=sheet.getCell(change.cell); if(c.row>AI_LIMITS.sheets.maxRows||c.col>AI_LIMITS.sheets.maxColumns) fail(`Ô vượt giới hạn ${AI_LIMITS.sheets.maxRows.toLocaleString("vi-VN")} dòng/${AI_LIMITS.sheets.maxColumns} cột.`);
         if(c.isMerged) fail('Chưa hỗ trợ sửa ô gộp; hãy chọn ô thường.');
         if(!Object.is(cellValue(c),change.expected)) fail(`Giá trị hiện tại của ô ${change.cell} không khớp; đọc lại trước khi sửa.`);
         if(change.formula!==null) {if(!formulaSafe(change.formula)) fail('Công thức có hàm hoặc tham chiếu chưa được hỗ trợ.'); c.value={formula:change.formula.replace(/^=/,'')};}
@@ -84,10 +86,10 @@ const cellValue = c => {
     }
     bytes=Buffer.from(await book.xlsx.writeBuffer()); extension='xlsx';
   } else if (name === 'inspect_pdf' || name === 'fill_pdf_form') {
-    const doc=await PDFDocument.load(sources[0].bytes); if(doc.getPageCount()>200) fail('PDF tối đa 200 trang.'); const form=doc.getForm();
+    const doc=await PDFDocument.load(sources[0].bytes); if(doc.getPageCount()>AI_LIMITS.pdf.maxPages) fail(`PDF tối đa ${AI_LIMITS.pdf.maxPages} trang.`); const form=doc.getForm();
     if(name==='inspect_pdf') {
       const fields=form.getFields().map(f=>({name:f.getName(),type:f.constructor.name,...(f instanceof PDFTextField?{value:f.getText()??''}:f instanceof PDFCheckBox?{value:f.isChecked()}:f instanceof PDFDropdown||f instanceof PDFOptionList||f instanceof PDFRadioGroup?{options:f.getOptions(),value:f.getSelected()}: {})}));
-      if(JSON.stringify(fields).length>50000) fail('PDF có quá nhiều dữ liệu biểu mẫu.');
+      if(JSON.stringify(fields).length>AI_LIMITS.pdf.formChars) fail('PDF có quá nhiều dữ liệu biểu mẫu.');
       parentPort.postMessage({pdf:{pages:doc.getPageCount(),fields}});return;
     }
     let font;
@@ -103,9 +105,9 @@ const cellValue = c => {
     if(v.flatten)form.flatten(); bytes=Buffer.from(await doc.save());extension='pdf';note=`Đã điền ${v.fields.length} trường PDF${v.flatten?' và chốt biểu mẫu':''}; giữ bản gốc.`;
   } else if(name==='assemble_pdf') {
     const doc=await PDFDocument.create();let count=0;
-    for(let i=0;i<sources.length;i++) {const src=await PDFDocument.load(sources[i].bytes),pages=v.sources[i].pages;count+=pages.length;if(count>200||pages.some(p=>p>src.getPageCount()))fail('Số trang PDF không hợp lệ hoặc vượt 200 trang.');for(const p of await doc.copyPages(src,pages.map(p=>p-1)))doc.addPage(p);}
+    for(let i=0;i<sources.length;i++) {const src=await PDFDocument.load(sources[i].bytes),pages=v.sources[i].pages;count+=pages.length;if(count>AI_LIMITS.pdf.maxPages||pages.some(p=>p>src.getPageCount()))fail(`Số trang PDF không hợp lệ hoặc vượt ${AI_LIMITS.pdf.maxPages} trang.`);for(const p of await doc.copyPages(src,pages.map(p=>p-1)))doc.addPage(p);}
     bytes=Buffer.from(await doc.save());extension='pdf';note=`Đã tạo PDF ${count} trang từ các trang được chọn; không giữ trường biểu mẫu tương tác.`;
   } else fail('Công cụ tài liệu chưa được hỗ trợ.');
-  if(bytes.length>10485760)fail('Tệp kết quả vượt 10 MiB. Hãy chia yêu cầu.');
+  if(bytes.length>AI_LIMITS.files.maxBytes)fail(`Tệp kết quả vượt ${AI_LIMITS.files.maxBytes / 1024 / 1024} MiB. Hãy chia yêu cầu.`);
   parentPort.postMessage({bytes,extension,note});
 })().catch(e=>parentPort.postMessage({error:e.message?.startsWith('USER:')?e.message.slice(5):'Không xử lý được tài liệu. Kiểm tra định dạng, trường biểu mẫu hoặc chia nhỏ yêu cầu.'}));

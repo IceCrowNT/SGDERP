@@ -257,13 +257,13 @@ test('receipt validates tenant, owner, duplicate lines, unit, inactive place and
 test('receipt rolls back category, item, transactions and all audit rows on audit failure', async () => {
   const place = await receiptPlace(), work = ok(await prepareReceipt([receiptLine({ locationId: place.id })])).work;
   await db.$executeRawUnsafe(`CREATE FUNCTION test_receipt_audit_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.company_id = ${manager.company_id} AND NEW.doi_tuong_id LIKE 'giao_dich_vat_tu:%' THEN RAISE EXCEPTION 'test rollback'; END IF; RETURN NEW; END $$`);
-  await db.$executeRawUnsafe('CREATE TRIGGER test_receipt_audit_fail BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_receipt_audit_fail()');
+  await db.$executeRawUnsafe('CREATE TRIGGER test_receipt_audit_fail BEFORE INSERT ON he_thong.nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_receipt_audit_fail()');
   try {
     assert.equal((await approveReceipt(work)).success, false);
     for (const table of ['loai_vat_tu', 'mat_hang_vat_tu', 'giao_dich_vat_tu']) assert.equal(await db[table].count({ where: { company_id: manager.company_id } }), 0);
     assert.equal(ok(await as(manager, () => workActions.getAiWork({ id: work.id }))).work.status, 'CHO_DUYET');
   } finally {
-    await db.$executeRawUnsafe('DROP TRIGGER test_receipt_audit_fail ON nhat_ky_hoat_dong');
+    await db.$executeRawUnsafe('DROP TRIGGER test_receipt_audit_fail ON he_thong.nhat_ky_hoat_dong');
     await db.$executeRawUnsafe('DROP FUNCTION test_receipt_audit_fail()');
   }
   assert.equal(ok(await approveReceipt(work)).work.status, 'HOAN_TAT');

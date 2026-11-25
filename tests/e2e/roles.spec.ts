@@ -537,7 +537,7 @@ test("audit write failure rolls back the role and its grants", async ({
   );
   try {
     await db.$executeRawUnsafe(
-      `CREATE TRIGGER ${trigger} BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION ${trigger}()`,
+      `CREATE TRIGGER ${trigger} BEFORE INSERT ON he_thong.nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION ${trigger}()`,
     );
     const before = await db.vai_tro_quyen.count({
       where: { vai_tro: { company_id: company } },
@@ -561,7 +561,7 @@ test("audit write failure rolls back the role and its grants", async ({
     ).toBe(before);
   } finally {
     await db.$executeRawUnsafe(
-      `DROP TRIGGER IF EXISTS ${trigger} ON nhat_ky_hoat_dong`,
+      `DROP TRIGGER IF EXISTS ${trigger} ON he_thong.nhat_ky_hoat_dong`,
     );
     await db.$executeRawUnsafe(`DROP FUNCTION ${trigger}()`);
   }

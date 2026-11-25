@@ -1,5 +1,9 @@
 # Từ điển dữ liệu — PostgreSQL và Prisma Studio
 
+## Nhóm bảng theo namespace — 25/11/2026
+
+Đã chuyển 34 bảng vào 9 schema PostgreSQL; giữ nguyên tên model/bảng/cột, dữ liệu và FK. Danh sách nhóm, cách truy vấn và kiểm chứng tại [plan namespace](plans/DATABASE-NAMESPACE-CHECKLIST.md). Các số lượng trong mục lịch sử bên dưới thuộc thời điểm cũ.
+
 ## Quy ước tên hiện hành — 06/11/2026
 
 Prisma và PostgreSQL dùng cùng tên. Khóa chính là `id`; khóa ngoại phổ biến là `company_id`, `department_id`, `employee_id`, `account_id`, `role_id`, `permission_id`; thời gian kỹ thuật là `created_at`, `updated_at`. Quan hệ nghiệp vụ phức tạp dùng tiếng Việt không dấu kèm `_id`, như `mau_quy_trinh_id` và `nguoi_duoc_giao_id`. Tên bảng vẫn bằng tiếng Việt không dấu. Migration `20261106113000_quy_uoc_ten_lai` chỉ đổi tên cột, giữ nguyên dữ liệu và tên constraint/index lịch sử.

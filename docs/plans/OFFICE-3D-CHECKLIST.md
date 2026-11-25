@@ -1,8 +1,10 @@
 # Mô hình không gian 3D — tòa nhà và các phòng
 
-Cập nhật: **19/11/2026**. Đã triển khai và kiểm chứng mặt bằng ba tầng theo PDF, chuyển cảnh HCNS, gán người/tài sản, khung điều khiển mở rộng, bảng phòng rút gọn và thêm/sửa thông tin vị trí trực tiếp trên mô hình; vẫn là bản thử nghiệm. Rule: [OFFICE-3D-RULES](../../.agents/rules/OFFICE-3D-RULES.md).
+Cập nhật: **25/11/2026**. Đã triển khai và kiểm chứng mặt bằng ba tầng theo PDF, chuyển cảnh HCNS, gán người/tài sản, khung điều khiển mở rộng, bảng phòng rút gọn và thêm/sửa thông tin vị trí trực tiếp trên mô hình; vẫn là bản thử nghiệm. Rule: [OFFICE-3D-RULES](../../.agents/rules/OFFICE-3D-RULES.md).
 
 ## A. Tổng quan
+
+**Bản thử tại bàn bác Khoa, tầng 3.** Chọn bàn để thấy tên bàn và danh sách tài sản trong bảng bên. Bấm vào PC hoặc tên thiết bị trong danh sách để xem hồ sơ ngay trên bản đồ. Người có quyền quản lý tài sản có thể sửa trực tiếp. Chờ đánh giá trải nghiệm tại bàn này trước khi mở rộng.
 
 **Mở rộng KHĐT — đã triển khai:** các phòng vật lý đã liên kết dùng chung vào phòng, camera, bảng vị trí và gán người/tài sản. KHĐT có 12 vị trí lưu DB; giữ Bàn Huy ở số 11, Bàn Tuân ở số 12 cùng toàn bộ liên kết cũ. Bàn chung và sofa chỉ là bối cảnh. Không thêm bảng DB. [Thiết kế và kiểm chứng](#phòng-chi-tiết-dùng-chung-và-bố-trí-khđt).
 
@@ -489,6 +491,9 @@ Mô hình và bảng chi tiết dùng dữ liệu hiện có; không tự tạo 
 - [x] Dựng mô hình người cách điệu ít đa giác, đầu tròn/thân bo đơn giản, dùng chung hình học và vật liệu với phong cách hiện tại; đặt ở phía làm việc của bàn theo bố cục. Không dựng thêm ghế, không cần khuôn mặt, chuyển động đi lại hoặc hoạt ảnh liên tục.
 - [x] Chỉ dựng người ACTIVE thực sự được gán vào vị trí qua HR và trong quyền xem. Chọn hình người hoặc tên mở thông tin người tương ứng tại bảng bên; chọn bàn mở thông tin vị trí và các thao tác được phép. Gán/chuyển/bỏ gán vẫn dùng luồng hiện có, xác nhận khi chuyển người đã có chỗ và giữ camera sau lưu.
 - [x] Tên nhân sự gắn gần mô hình người khi xem gần; ưu tiên nhãn đang chọn/rê chuột/focus, tránh chồng nhãn và thu gọn khi nhìn xa. Vị trí có nhiều người phải phản ánh đủ dữ liệu bằng tối đa 3 hình người và nhãn +N mở danh sách đầy đủ, không chỉ lấy người đầu tiên hoặc tự suy thêm chỗ ngồi.
+- [x] Bản thử chọn PC tại bàn bác Khoa dùng liên kết phòng `plan_t3_phai` và vị trí `VT-000104`. Tên bàn nằm trong bảng bên, viền bàn báo lựa chọn. Màn hình và thùng PC có vùng bấm rộng hơn và đổi màu khi rê chuột. Chọn hình hoặc tên máy mở hồ sơ theo ID tài sản gắn tại vị trí, dùng lại trình sửa và quyền ASSETS. Không lưu cấu hình thử vào DB.
+- [x] Chrome mở đúng PC33 (TS-000034) từ phối cảnh, sau khi xoay và từ mặt bằng. Đã mở ô sửa tên, đóng lại và kiểm tra cùng Canvas. Trên màn hình cảm ứng giả lập đã chạm tên máy trong bảng bên. Kiểm tra chỉ đọc dữ liệu. TypeScript và lint phạm vi sửa đạt. Kiểm thử bố trí/lọc đạt 17/18, ca điều hướng lễ tân `t1_letan` cũng lỗi trên HEAD trước bản thử.
+- [ ] Người phụ trách thử thao tác thực tế, xác nhận trước khi nhân rộng. Chưa thử trên điện thoại thật hoặc với tài khoản chỉ có ASSETS VIEW trong phòng này.
 - [x] Nhãn nhân sự trùng nhau (19/11): cùng dịch trái/phải một nửa khoảng thiếu, cách nhau 8px; nhãn gần mép nhường phần dịch cho nhãn còn lại. Giới hạn lệch ngang 80px, cụm đông chuyển lệch một hàng khi cần; nhãn chọn/rê/focus ưu tiên nếu vẫn không đủ chỗ. Đường nối mảnh xuất hiện khi lệch trên 12px. Thứ tự theo điểm neo trên màn hình, không đổi bên chỉ vì hover; số vòng giải quyết có giới hạn, chạy cùng khung hình camera hiện có, không thêm hoạt ảnh/vòng vẽ lúc nghỉ. Dùng chung mọi phòng; không sửa DB/bàn/người, nhãn phòng/tầng giữ cách bố trí cũ.
 - [x] Dàn nhãn: 6 unit đạt (dịch đôi, mép, cụm ba, tính ổn định/không sửa đầu vào, ưu tiên, vật cản); lint phạm vi sửa đạt. Chrome 1366×768 KHĐT hiện đủ 5 tên ở phối cảnh/mặt bằng, nhãn người cạnh Tuân bấm ra đúng hồ sơ; xoay/zoom không chồng các nhãn đang hiện, HCNS đủ 4 tên. Đã xem ảnh `outputs/room-labels/paired-*`, không lỗi JS ở lượt hoàn tất. Mobile giả lập 390×844 không tràn trang; góc tổng quan vẫn ẩn tên theo ngưỡng zoom cũ, chưa nghiệm thu dàn nhãn khi xem gần trên điện thoại. Thử zoom bổ sung chạm giới hạn nút hiện có, không đổi camera trong phạm vi này. TypeScript toàn repo còn lỗi ở `ai-work.ts`/`AiWorkCard.tsx` ngoài phạm vi 3D; chưa coi toàn dự án đạt. Không ghi DB khi kiểm chứng.
 

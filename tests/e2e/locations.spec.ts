@@ -185,7 +185,7 @@ test("locations: tree CRUD, move confirmation, history, concurrent guards, permi
   );
   try {
     await db.$executeRawUnsafe(
-      `CREATE TRIGGER ${trigger} BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION ${trigger}()`,
+      `CREATE TRIGGER ${trigger} BEFORE INSERT ON he_thong.nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION ${trigger}()`,
     );
     const before = await input(root.id);
     expect(
@@ -194,7 +194,7 @@ test("locations: tree CRUD, move confirmation, history, concurrent guards, permi
     expect(await input(root.id)).toEqual(before);
   } finally {
     await db.$executeRawUnsafe(
-      `DROP TRIGGER IF EXISTS ${trigger} ON nhat_ky_hoat_dong`,
+      `DROP TRIGGER IF EXISTS ${trigger} ON he_thong.nhat_ky_hoat_dong`,
     );
     await db.$executeRawUnsafe(`DROP FUNCTION ${trigger}()`);
   }

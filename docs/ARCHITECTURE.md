@@ -469,6 +469,8 @@ Vật tư IT 18/11: migration `20261118090000_ton_chung_tieu_hao` sửa CHECK/h�
 
 ### Điều hướng Tài sản & vật tư — 17/11/2026
 
+`AssetOverviewSearch.tsx` tại tổng quan dùng `src/actions/asset-overview-search.ts` để tìm liên phân mục tài sản/vật tư theo quyền và công ty; giới hạn gợi ý, giữ từ khóa trên URL, mở panel hồ sơ hiện có. [Đặc tả tìm kiếm](plans/ASSET-MANAGEMENT-CHECKLIST.md#tìm-kiếm-tổng-quan-phân-hệ).
+
 `/asset-management` là trang tổng quan server: đếm hồ sơ/mặt hàng đang dùng, phân bố loại, nhóm cần rà soát và năm tài sản vừa cập nhật trong cùng snapshot RepeatableRead sau kiểm tra quyền ASSETS/INVENTORY độc lập. Bấm số liệu mở bộ lọc/panel hiện có; thiết kế và kiểm chứng tại [plan tài sản](plans/ASSET-MANAGEMENT-CHECKLIST.md#tổng-quan-khi-mở-phân-hệ--19112026). Sidebar dùng một liên kết cho cả khu vực; `ManagementBreadcrumb.tsx` thay `ManagementTabs.tsx` trên `/assets` và `/inventory`. `AssetCategoryFilters.tsx` cung cấp lựa chọn loại gọn và tìm kiếm; `asset-list-navigation.ts` đọc/ghi truy vấn danh sách vào URL bằng History API tích hợp Next. Giữ URL QR/hồ sơ hiện có, Tailwind/shadcn, không thêm dependency/env/schema. Trạng thái triển khai và kiểm chứng theo [plan IA](plans/INFORMATION-ARCHITECTURE-CHECKLIST.md).
 
 ### Đính kèm AI — 18/11/2026
@@ -503,6 +505,10 @@ Ghi nhận hàng mua qua AI: `src/actions/ai-inventory-receipt.ts` xử lý đ�
 
 `src/actions/support-task.ts` truy cập Prisma trực tiếp; `src/lib/support-task*.ts` giữ validation, phạm vi quyền và lưu tệp; `src/components/tasks/` phục vụ `/tasks`, `/tasks/department`, `/tasks/[id]` và điểm tạo yêu cầu/thông báo ở dashboard. Bốn bảng nghiệp vụ, quan hệ quản lý trực tiếp trên HR và quyền `SUPPORT_TASK` theo [plan Công việc](plans/TASK-MANAGEMENT-CHECKLIST.md). Tệp ở `var/task-attachments/` ngoài Git/public, có thể dùng `TASK_ATTACHMENT_STORAGE_DIR` trỏ volume bền vững; chưa thêm biến vào `.env`. Tải từng tệp qua Server Action (giới hạn body hiện có 12 MiB), xem/tải qua `/media/task-files/[id]` kiểm tra quyền. Dùng lại Zod, sharp, pdf-lib và kiểm tra ZIP Office hiện có; không thêm dependency. Sao lưu DB cùng kho tệp; migration/restore và kiểm thử ghi tại plan.
 
+Đợt hoàn thiện 25/11 dùng `src/lib/employee-manager-resolution.ts` chung cho HR/Công việc để xác định quản lý theo phòng hoặc chỉ định riêng và kiểm tra chu trình hiệu lực. `src/lib/task-navigation.ts` chuẩn hóa bộ lọc/trang/đường quay lại trên URL; `TaskEditForm.tsx` dùng RHF/Zod cho chỉnh sửa có kiểm tra. Bàn giao dùng sự kiện `CHUYEN_DICH` hiện có với cờ JSON trong lịch sử. Không thêm bảng/cột/migration/dependency; quy tắc và kết quả kiểm chứng ở B.10 plan Công việc. Bố cục danh sách/chi tiết và hợp đồng phục hồi lỗi được cập nhật tại [B.11](plans/TASK-MANAGEMENT-CHECKLIST.md#b11-lỗi-báo-xong-và-giản-lược-giao-diện--25112026), tiếp tục dùng các component/action hiện có.
+
+`TaskDraftProvider.tsx` bọc nội dung trong `AppLayout`, khóa theo công ty/tài khoản/phiên/quyền Công việc. Nháp tạo, sửa và hành động chỉ giữ trong bộ nhớ phiên giao diện; Back/chuyển trang/đóng panel rồi mở lại phục hồi giá trị cùng version/mã chống gửi trùng. Không lưu byte tệp hoặc browser storage; tải lại toàn trang có cảnh báo và chỉ nháp AI gốc trong chat được phục hồi từ DB. Nháp xóa sau gửi thành công hoặc bỏ chỉnh sửa rõ ràng.
+
 
 Sao lưu công việc: chạy `node scripts/backup-support-tasks.cjs outputs/<thu-muc-moi>` với `DATABASE_URL` và `TASK_ATTACHMENT_STORAGE_DIR` của môi trường; `PG_DUMP_BIN` tùy chọn trỏ `pg_dump` tương thích phiên bản server. Script dùng snapshot PostgreSQL chung cho dump và manifest, sao chép byte bất biến, đối chiếu SHA-256; đầu ra gồm `database.dump`, `manifest.json`, `files/`. Thư mục sao lưu riêng, không ghi đè bản cũ. Phục hồi bằng `pg_restore` vào DB riêng và trỏ kho tệp tới `files/`, kiểm tra quyền và hash trước chuyển môi trường. `node scripts/check-support-task-files.cjs` chỉ đối chiếu tệp/DB và báo tệp mồ côi trên 24 giờ, không tự xóa. Đây là công cụ thủ công, chưa lập lịch/đồng bộ ra nơi lưu dự phòng. Không ghi URL/khoá vào log hoặc source.
 
@@ -521,3 +527,15 @@ Máy phát triển Mac Intel macOS 13.7.8: dùng Lima 2.3.0/VZ thay Docker Deskt
 Cấu hình VPS mẫu ở `deploy/office/env.vps.example`; Compose dùng chung Mac/Linux. Script local tự tìm Docker CLI và context Lima, giữ cấu hình có sẵn; `.env.office`/`.env.local` đã được tạo ngoài Git bằng khóa ngẫu nhiên riêng, mode 600. Trên Lima `OFFICE_APP_URL` dùng `host.lima.internal:4000`. Hướng dẫn VPS trong README Office gồm HTTPS/WebSocket, mạng hai chiều, DB/kho tệp/khóa và cài lại dependency theo OS; chưa triển khai VPS.
 
 Kiểm chứng local Office thật đã đạt mở/sửa/lưu Word và Excel, công thức và xuất PDF; không gọi OpenAI. Image amd64 `onlyoffice/documentserver:10.0.0.1`, digest `sha256:ca17889f10b11141cc6441836aebdd2835cf3e1b49681b2fd6e155c94b7850b3`. Container tạo font/theme/cache rồi restart dịch vụ khi khởi động; chờ hoàn tất trước mở tài liệu. Sau reboot Mac, khởi động lại Lima rồi chạy script local; Office trong VM dùng restart policy `unless-stopped`. Chưa cấu hình tự mở VM lúc đăng nhập.
+
+Phản hồi chat dài (23/11): migration `20261123220000_ai_long_answers` chỉ nới CHECK độ dài câu trả lời trong `tin_nhan_ai`, giữ bảng/cột và dữ liệu. Không thêm dependency/env. Giới hạn xử lý, migration và kiểm chứng tại [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#sửa-giới-hạn-chờ-phản-hồi-dài--23112026).
+
+Phản hồi lỗi chat (25/11): `src/lib/ai-chat-feedback.ts` dùng chung để diễn giải lỗi và hướng xử lý; `src/components/ai/AiChatFailure.tsx` trình bày trong hội thoại. Dùng text/trạng thái tin nhắn hiện có, không thêm schema, migration, dependency hoặc env. Phạm vi và kiểm chứng tại [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#giải-thích-lỗi-ngay-trong-chat--25112026).
+
+Cấu hình giới hạn vận hành trợ lý AI dùng chung tại `src/lib/ai-config.ts` (comment tiếng Việt): backend và giao diện import trực tiếp, worker CommonJS nhận qua `workerData.limits`. Không chứa key hoặc ngân sách cá nhân. Logic nghiệp vụ vẫn ở các module hiện có; trạng thái kiểm chứng tại [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#cấu-hình-giới-hạn-ai-tập-trung--25112026).
+
+Bối cảnh AI dài (25/11): dùng checkpoint tóm tắt trong JSONB tin nhắn hiện có, công cụ tra lại lịch sử trong cùng chat; không thêm thư viện/biến môi trường/bảng. Migration `20261125030000_ai_user_message_limit` chỉ nới CHECK câu hỏi lên 8.000 ký tự. Cấu hình thời gian vẫn ở `ai-config.ts`; máy chủ/proxy cần cho phép request ít nhất 660 giây. Thiết kế, giới hạn và kiểm chứng tại [plan AI](plans/AI-ASSISTANT-CHECKLIST.md#hội-thoại-dài-và-giới-hạn-nhớ).
+
+## Namespace PostgreSQL — 25/11/2026
+
+34 bảng được tổ chức thành 9 schema nghiệp vụ bằng Prisma v6 multi-schema; API Prisma và tên bảng giữ nguyên. `public` giữ lịch sử migration, hàm SQL/trigger và sequence mã độc lập. Dùng một kết nối DB hiện có; không thêm dependency/env hay phân quyền theo schema. Backup toàn DB gồm mọi schema. Mapping, SQL và kiểm chứng tại [plan namespace](plans/DATABASE-NAMESPACE-CHECKLIST.md).

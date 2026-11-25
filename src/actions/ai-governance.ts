@@ -9,7 +9,6 @@ import { canAi, canAdministerAi, type AiAction } from "@/lib/role-catalog";
 import { canUseAiChat } from "@/lib/ai-pilot";
 import { AiConnectionError } from "@/lib/validations/ai-settings";
 import { AiPricesSchema, SaveAiPolicySchema, SaveAiJobSchema, SaveAiLimitSchema, AiUsageFilterSchema, ReconcileAiCallSchema, aiMonth, aiMonthBounds } from "@/lib/validations/ai-governance";
-import { usageAmounts } from "@/lib/ai-cost";
 
 async function actor(action?: AiAction) {
   const session = await getSession();
@@ -17,7 +16,7 @@ async function actor(action?: AiAction) {
   return session;
 }
 async function lock(tx: Prisma.TransactionClient, session: SessionUser, action: AiAction) {
-  await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+  await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
   await currentActor(tx, session, "AI", action);
 }
@@ -103,12 +102,14 @@ export async function getMyAiUsage() {
     if (!session || !canUseAiChat(session)) throw new AiConnectionError("Chưa có quyền xem mức sử dụng AI.");
     const month = aiMonth(), row = await db.tai_khoan.findFirstOrThrow({ where: { id: session.userId, company_id: session.companyId }, select: { han_muc_ai_thang: true } });
     const where = { company_id: session.companyId, account_id: session.userId, created_at: aiMonthBounds(month) };
-    const [totals, held, unknown] = await Promise.all([
-      db.nhat_ky_goi_ai.aggregate({ where, _sum: { chi_phi_uoc_tinh: true } }),
-      db.nhat_ky_goi_ai.aggregate({ where: { ...where, trang_thai: "DANG_GOI" }, _sum: { du_phong: true } }),
+    const [confirmed, unknown] = await Promise.all([
+      db.nhat_ky_goi_ai.aggregate({ where: { ...where, trang_thai: "DOI_SOAT" }, _sum: { chi_phi_uoc_tinh: true } }),
       db.nhat_ky_goi_ai.count({ where: { ...where, chi_phi_uoc_tinh: null, trang_thai: { not: "DANG_GOI" } } }),
     ]);
-    return { success: true as const, month, canCall: canUseAiChat(session), ...usageAmounts({ ...totals._sum, ...held._sum }, row.han_muc_ai_thang, unknown > 0) };
+    const used = confirmed._sum.chi_phi_uoc_tinh ?? new Prisma.Decimal(0);
+    const limit = row.han_muc_ai_thang;
+    return { success: true as const, month, canCall: canUseAiChat(session), limit: limit?.toFixed(6) ?? null,
+      used: used.toFixed(6), remaining: limit && Prisma.Decimal.max(0, limit.sub(used)).toFixed(6), unknown: unknown > 0 };
   } catch (error) { return failure(error); }
 }
 
@@ -117,21 +118,22 @@ export async function getAiUsage(input: unknown) {
     const session = await actor("VIEW_USAGE"), parsed = AiUsageFilterSchema.safeParse(input);
     if (!parsed.success) throw new AiConnectionError("Bộ lọc sử dụng AI chưa hợp lệ.");
     const v = parsed.data, where = { company_id: session.companyId, account_id: v.accountId, ket_noi_ai_id: v.connectionId, model: v.model, created_at: aiMonthBounds(v.month) };
-    const [totals, count, groups, rows, unresolved, held] = await Promise.all([
+    const [totals, count, groups, rows, unresolved, confirmed] = await Promise.all([
       db.nhat_ky_goi_ai.aggregate({ where, _sum: { token_dau_vao: true, token_cache: true, token_dau_ra: true, chi_phi_uoc_tinh: true } }),
       db.nhat_ky_goi_ai.count({ where }),
       db.nhat_ky_goi_ai.groupBy({ by: ["ma_yeu_cau"], where }),
       db.nhat_ky_goi_ai.findMany({ where, take: 25, skip: (v.page - 1) * 25, orderBy: { id: "desc" }, include: { tai_khoan: { select: { ten_hien_thi: true, ten_dang_nhap: true } }, ket_noi: { select: { ten_ket_noi: true } } } }),
       db.nhat_ky_goi_ai.count({ where: { ...where, chi_phi_uoc_tinh: null } }),
-      db.nhat_ky_goi_ai.aggregate({ where: { ...where, trang_thai: "DANG_GOI" }, _sum: { du_phong: true } }),
+      db.nhat_ky_goi_ai.aggregate({ where: { ...where, trang_thai: "DOI_SOAT" }, _sum: { chi_phi_uoc_tinh: true } }),
     ]);
     const sum = totals._sum;
+    const reconciled = confirmed._sum.chi_phi_uoc_tinh ?? new Prisma.Decimal(0);
     return { success: true as const, month: v.month, page: v.page, total: count, requests: groups.length, unresolved,
       input: sum.token_dau_vao ?? 0, cached: sum.token_cache ?? 0, output: sum.token_dau_ra ?? 0,
-      cost: sum.chi_phi_uoc_tinh?.toFixed(6) ?? "0.000000", reserved: held._sum.du_phong?.toFixed(6) ?? "0.000000",
+      cost: (sum.chi_phi_uoc_tinh ?? new Prisma.Decimal(0)).toFixed(6), confirmed: reconciled.toFixed(6),
       rows: rows.map(row => ({ id: row.id, account: row.tai_khoan.ten_hien_thi, username: row.tai_khoan.ten_dang_nhap, connection: row.ket_noi.ten_ket_noi, model: row.model, job: row.ma_tac_vu,
         status: row.trang_thai, input: row.token_dau_vao, cached: row.token_cache, output: row.token_dau_ra, cost: row.chi_phi_uoc_tinh?.toFixed(6) ?? null,
-        reserved: row.trang_thai === "DANG_GOI" ? row.du_phong?.toFixed(6) ?? null : "0.000000", at: row.created_at.toISOString(), canReconcile: row.chi_phi_uoc_tinh === null && row.created_at.getTime() < Date.now() - 180000 })) };
+        at: row.created_at.toISOString(), canReconcile: row.trang_thai !== "DOI_SOAT" && row.created_at.getTime() < Date.now() - 180000 })) };
   } catch (error) { return failure(error); }
 }
 
@@ -144,11 +146,11 @@ export async function reconcileAiCall(input: unknown) {
     await db.$transaction(async tx => {
       await lock(tx, session, "MANAGE_LIMITS"); await currentActor(tx, session, "AI", "VIEW_USAGE");
       const row = await tx.nhat_ky_goi_ai.findFirst({ where: { id: v.id, company_id: session.companyId } });
-      if (!row || row.chi_phi_uoc_tinh !== null || row.created_at.getTime() >= Date.now() - 180000) throw new AiConnectionError("Khoản này chưa thể đối chiếu hoặc đã được xử lý. Hãy tải lại.");
+      if (!row || row.trang_thai === "DOI_SOAT" || row.created_at.getTime() >= Date.now() - 180000) throw new AiConnectionError("Khoản này chưa thể đối chiếu hoặc đã được xử lý. Hãy tải lại.");
       if (await tx.tin_nhan_ai.count({ where: { company_id: session.companyId, ma_yeu_cau: row.ma_yeu_cau, trang_thai: "DANG_XU_LY", het_han_xu_ly: { gt: new Date() } } })) throw new AiConnectionError("Lượt chat còn đang xử lý. Hãy chờ hoàn tất.");
       await tx.nhat_ky_goi_ai.update({ where: { id: row.id }, data: { trang_thai: "DOI_SOAT", chi_phi_uoc_tinh: v.cost, du_phong: 0, hoan_tat_at: new Date() } });
-      await tx.nhat_ky_hoat_dong.create({ data: audit(session, "AI_RECONCILE", `nhat_ky_goi_ai:${row.id}`, { reserved: row.du_phong?.toFixed(6) ?? null, status: row.trang_thai }, { cost: v.cost, reason: v.reason }) });
+      await tx.nhat_ky_hoat_dong.create({ data: audit(session, "AI_RECONCILE", `nhat_ky_goi_ai:${row.id}`, { estimate: row.chi_phi_uoc_tinh?.toFixed(6) ?? null, status: row.trang_thai }, { cost: v.cost, reason: v.reason }) });
     });
-    refresh(); return { success: true as const, message: "Đã ghi nhận chi phí đối chiếu và giải phóng dự phòng." };
+    refresh(); return { success: true as const, message: "Đã ghi nhận chi phí đối chiếu." };
   } catch (error) { return failure(error); }
 }

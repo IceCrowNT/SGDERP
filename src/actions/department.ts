@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { currentActor } from "@/lib/rbac-server";
+import { loadManagerGraph, assertNoNewManagerCycles } from "@/lib/employee-manager-resolution";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import {
@@ -22,6 +23,7 @@ function failure(error: unknown) {
 function refreshDepartments() {
   for (const path of ["/hr", "/departments", "/employees", "/accounts", "/office-3d", "/"])
     revalidatePath(path);
+  revalidatePath("/tasks", "layout");
 }
 
 export async function getDepartments() {
@@ -62,7 +64,7 @@ async function saveDepartment(input: unknown, updating: boolean) {
   try {
     const saved = await db.$transaction(async (tx) => {
       // Serialize hierarchy changes so simultaneous moves cannot create a cycle.
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       await currentActor(tx, session, "HR");
       const previous = id ? await tx.phong_ban.findFirst({ where: { id: id, company_id: session.companyId } }) : null;
@@ -86,6 +88,10 @@ async function saveDepartment(input: unknown, updating: boolean) {
         const head = await tx.nhan_su.findFirst({ where: { id: headId, company_id: session.companyId } });
         if (!head || (head.tinh_trang_lam_viec !== "ACTIVE" && headId !== previous?.nguoi_phu_trach_id))
           throw Error("Chọn người phụ trách đang làm việc trong cùng công ty.");
+      }
+      if (previous && (previous.nguoi_phu_trach_id !== headId || previous.parent_id !== parentId)) {
+        const graph = await loadManagerGraph(tx, session.companyId);
+        assertNoNewManagerCycles(graph, {...graph, departments: graph.departments.map(d => d.id === previous.id ? {...d, nguoi_phu_trach_id: headId, parent_id: parentId} : d)});
       }
       const data = { nguoi_phu_trach_id: headId, ten_phong_ban: values.name, ma_phong_ban: values.code, mo_ta: values.description || null, parent_id: parentId };
       const department = id
@@ -114,11 +120,11 @@ export async function deleteDepartment(id: number) {
   if (!z.number().int().positive().safeParse(id).success) return { success: false as const, message: "Phòng ban không hợp lệ." };
   try {
     await db.$transaction(async tx => {
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       await currentActor(tx, session, "HR");
       // Block new FK references until the emptiness check and deletion commit.
-      await tx.$queryRaw`SELECT id FROM phong_ban WHERE id = ${id} AND company_id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.phong_ban WHERE id = ${id} AND company_id = ${session.companyId} FOR UPDATE`;
       const department = await tx.phong_ban.findFirst({ where: { id: id, company_id: session.companyId }, include: { _count: { select: { danh_sach_nhan_su: true, phong_ban_con: true } } } });
       if (!department) throw Error("Phòng ban không tồn tại.");
       if (await tx.mat_hang_vat_tu.count({ where: { company_id: session.companyId, phong_quan_ly_id: id } }) || await tx.giao_dich_vat_tu.count({ where: { company_id: session.companyId, phong_ban_nhan_id: id } })) throw Error("Phòng ban có mặt hàng hoặc lịch sử nhận vật tư; cần giữ liên kết, không thể xóa.");

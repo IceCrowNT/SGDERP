@@ -151,6 +151,7 @@ test("lookup returns only scoped minimal directory and readiness", async () => {
 });
 test("IT resolves job title, aliases and codes; missing department falls back to people without inventing a team", async () => {
   const worker = await db.nhan_su.findUniqueOrThrow({where:{id:f.people.worker.id}});
+  const department = await db.phong_ban.findUniqueOrThrow({where:{id:f.supportDept.id}});
   try {
     await db.nhan_su.update({where:{id:worker.id},data:{chuc_vu:"Nhân viên IT"}});
     for (const search of ["IT", "CNTT", "Công nghệ thông tin", worker.ma_nhan_su]) {
@@ -163,10 +164,16 @@ test("IT resolves job title, aliases and codes; missing department falls back to
     assert.equal(fallback.output.fallbackToPeople,true);
     assert(fallback.output.rows.some(x=>x.id===worker.id && x.kind==="people"));
     await db.nhan_su.update({where:{id:worker.id},data:{quan_ly_truc_tiep_id:null}});
+    const inherited = await run("lookup_support_targets", {kind:"people",search:worker.ma_nhan_su});
+    assert.equal(inherited.output.rows[0].canReceive,true);
+    await db.phong_ban.update({where:{id:department.id},data:{nguoi_phu_trach_id:null}});
     const blocked = await run("lookup_support_targets", {kind:"people",search:worker.ma_nhan_su});
     assert.equal(blocked.output.rows[0].canReceive,false);
-    assert.match(blocked.output.rows[0].unavailableReason,/quản lý trực tiếp/);
-  } finally { await db.nhan_su.update({where:{id:worker.id},data:{chuc_vu:worker.chuc_vu,quan_ly_truc_tiep_id:worker.quan_ly_truc_tiep_id}}); }
+    assert.match(blocked.output.rows[0].unavailableReason,/quản lý|phụ trách/);
+  } finally {
+    await db.phong_ban.update({where:{id:department.id},data:{nguoi_phu_trach_id:department.nguoi_phu_trach_id}});
+    await db.nhan_su.update({where:{id:worker.id},data:{chuc_vu:worker.chuc_vu,quan_ly_truc_tiep_id:worker.quan_ly_truc_tiep_id}});
+  }
 });
 test("directory supports empty query and stable paging, with department abbreviations and no foreign results", async () => {
   const created=[];
@@ -325,13 +332,16 @@ test("department preview, bad target, spoofed requester, missing manager and inv
   const row = await db.nhan_su.findUniqueOrThrow({
     where: { id: f.people.requester.id },
   });
+  const department = await db.phong_ban.findUniqueOrThrow({where:{id:row.department_id}});
   try {
+    await db.phong_ban.update({where:{id:department.id},data:{nguoi_phu_trach_id:null}});
     await db.nhan_su.update({
       where: { id: row.id },
       data: { quan_ly_truc_tiep_id: null },
     });
     assert((await run("prepare_support_ticket", args())).output.error);
   } finally {
+    await db.phong_ban.update({where:{id:department.id},data:{nguoi_phu_trach_id:department.nguoi_phu_trach_id}});
     await db.nhan_su.update({
       where: { id: row.id },
       data: { quan_ly_truc_tiep_id: row.quan_ly_truc_tiep_id },

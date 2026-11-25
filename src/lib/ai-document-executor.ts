@@ -1,3 +1,4 @@
+import { AI_LIMITS } from "@/lib/ai-config";
 import type { SessionUser } from "./auth";
 import { db } from "./db";
 import { AttachmentError, safeAttachmentName } from "./ai-attachment-parser";
@@ -7,7 +8,7 @@ import { convertOfficeToPdf, runDocumentWorker, validateEditableOffice } from ".
 export type DocumentResult = { bytes: Buffer; filename: string; note: string; sourceIds: number[] };
 export async function executeDocumentTool(session: SessionUser, conversationId: number, name: DocumentToolName, raw: unknown): Promise<DocumentResult> {
   const input = DocumentSchemas[name].parse(raw);
-  if(JSON.stringify(input).length>100000)throw new AttachmentError("Nội dung tạo tài liệu quá dài; hãy chia nhỏ yêu cầu.");
+  if(JSON.stringify(input).length>AI_LIMITS.documents.inputChars)throw new AttachmentError("Nội dung tạo tài liệu quá dài; hãy chia nhỏ yêu cầu.");
   const sourceIds = "sources" in input ? input.sources.map(x=>x.fileId) : "fileId" in input ? [input.fileId] : [];
   const sources = [];
   for(const id of sourceIds) {

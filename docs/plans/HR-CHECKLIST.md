@@ -1,6 +1,6 @@
 # Kế hoạch nhân sự, phòng ban và tài khoản
 
-Cập nhật: **20/11/2026**. Nền chức năng đã triển khai, đang ở mức thử nghiệm. Đã đối chiếu `/employees`, `/departments`, actions HR và DB: hồ sơ/cơ cấu, người phụ trách và FK vị trí đều có; số liệu hiện tại tại [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db). Các con số backup/reset trong biên bản bên dưới là lịch sử, không phải trạng thái vận hành cố định.
+Cập nhật: **25/11/2026**. Nền chức năng đã triển khai, đang ở mức thử nghiệm. Đã đối chiếu `/employees`, `/departments`, actions HR và DB: hồ sơ/cơ cấu, người phụ trách và FK vị trí đều có; số liệu hiện tại tại [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db). Các con số backup/reset trong biên bản bên dưới là lịch sử, không phải trạng thái vận hành cố định.
 
 Rule nghiệp vụ: [HR-RULES](../../.agents/rules/HR-RULES.md).
 
@@ -145,6 +145,22 @@ Tra cứu: [Từ điển DB](../DATABASE-DICTIONARY.md) · [Rule DB](../../.agen
 - [x] Bổ sung FK tự tham chiếu `nhan_su.quan_ly_truc_tiep_id` nullable/cùng công ty, chặn tự quản lý và chu trình đồng thời; không tự backfill từ người phụ trách phòng.
 - [x] Hồ sơ nhân sự có **Quản lý trực tiếp → Xem / thay đổi → Lưu quản lý trực tiếp**; quyền HR MANAGE, kiểm tra phiên bản và audit trong transaction. Lưu độc lập với các trường hồ sơ khác.
 - [x] Kiểm thử tích hợp gán/cycle đồng thời đạt trên DB riêng. E2E thay quản lý, lưu độc lập và đối chiếu DB đạt. Giao diện và migration theo [plan Công việc](TASK-MANAGEMENT-CHECKLIST.md#b7-checklist-triển-khai).
-- [ ] Người phụ trách khai báo quan hệ thực tế trước pilot. Người phụ trách phòng vẫn là đầu mối hàng đợi, không thay thế quan hệ này.
+**Điều chỉnh được yêu cầu triển khai ngày 25/11/2026:** mặc định theo phòng, chỉ gán riêng ngoại lệ. Không thêm bảng/cột hoặc backfill; ticket đang có giữ quan hệ đã lưu, thay đổi cơ cấu áp dụng khi xác định quản lý cho yêu cầu/thao tác mới theo plan Công việc.
+
+| Trường hợp | Nguồn quản lý |
+| --- | --- |
+| Có `quan_ly_truc_tiep_id` | Dùng chỉ định riêng; sai/nghỉ việc thì báo lỗi, không tự thay bằng head |
+| Nhân viên thường, không chỉ định riêng | Người phụ trách phòng công tác; thiếu head thì báo cấu hình phòng |
+| Chính người phụ trách phòng | Tìm head khác mình tại nhánh phòng cấp trên; không tìm thấy thì yêu cầu cấu hình |
+| Là head của chính phòng công tác ở gốc cây | Hợp lệ không có quản lý cấp trên; nghiệm thu bởi quản lý vẫn cần người thật theo plan Công việc |
+| Chu trình hoặc nguồn khác công ty/người đã nghỉ | Không sử dụng quan hệ lỗi cho nghiệp vụ |
+
+`src/lib/employee-manager-resolution.ts` đọc hai tập cạnh cùng công ty và giải quyết theo lô, lưu kết quả trong lượt đọc; nhận diện vòng lặp bằng duyệt lặp, không đệ quy theo số cấp. Giao diện chọn **Theo phòng ban** hoặc người **Chỉ định riêng**, hiển thị người quản lý áp dụng/nguồn/lý do chưa xác định. Đổi head/phòng cha/phòng công tác hoặc override kiểm tra đồ thị trước–sau trong khóa công ty hiện có: chặn vòng lặp mới và đường dẫn mới vào vòng cũ; không chặn cập nhật không liên quan bởi dữ liệu cũ có lỗi.
+
+- [x] Helper dùng chung kế thừa/ngoại lệ/cấp cao nhất; kiểm tra chu trình hiệu lực trong action HR/phòng ban/chuyển phòng; giữ audit và khóa giao dịch hiện có.
+- [x] Giao diện phân biệt Theo phòng ban/Chỉ định riêng, giữ lựa chọn khi lỗi, có Bỏ chỉnh sửa; không tải lại ghi đè lựa chọn chưa lưu.
+- [x] 10/10 unit đạt: ưu tiên nguồn, head/cha/gốc, thiếu head, quản lý nghỉ/khác công ty, chu trình hỗn hợp, đổi phòng/head, chặn chuyển đường dẫn lỗi sang chu trình cũ khác và cho sửa dữ liệu lỗi không liên quan; chuỗi 15.000 người không tràn ngăn xếp. ESLint phần HR thay đổi và TypeScript đạt.
+- [x] Kiểm chứng trên DB riêng: gán riêng/kế thừa, đổi head/phòng cha/chuyển phòng gây chu trình đều bị chặn, hàng dữ liệu và audit không đổi khi bị từ chối. E2E thay quản lý và đối chiếu DB đạt. Kết quả hiện hành tại [B.10 plan Công việc](TASK-MANAGEMENT-CHECKLIST.md#b10-hoàn-thiện-luồng-sử-dụng-và-vận-hành--25112026); chưa nghiệm thu vận hành.
+- [ ] Người phụ trách khai báo head thực tế cho phòng và ngoại lệ trước pilot; không tự gán từ chức danh hoặc dữ liệu lịch sử.
 
 - [x] Thử Công việc trên local 20/11 theo yêu cầu: hai phòng/năm nhân sự-tài khoản/bốn role có nhãn TEST, tạo/gán qua action có audit; tài khoản thử đã khóa sau kiểm chứng. Dữ liệu thật của `namdh` giữ nguyên. Phạm vi và kết quả tại [plan Công việc B.8](TASK-MANAGEMENT-CHECKLIST.md#b8-thử-luồng-trên-web-local-bằng-tài-khoản-riêng--20112026).

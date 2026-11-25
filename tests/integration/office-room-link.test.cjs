@@ -72,9 +72,9 @@ test('room binding from selection to shared management',async t=>{
  await t.test('audit failure rolls back binding',async()=>{
   const mapping=await readBuildingMapping(companyId,db),key=keys.find(k=>!mapping.rooms.some(r=>r.key===k));assert(key);
   await db.$executeRawUnsafe(`CREATE FUNCTION test_link_audit_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.doi_tuong_id LIKE 'lien_ket_phong_3d:%' THEN RAISE EXCEPTION 'test audit failure'; END IF; RETURN NEW; END $$`);
-  await db.$executeRawUnsafe(`CREATE TRIGGER test_link_audit_fail BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_link_audit_fail()`);
+  await db.$executeRawUnsafe(`CREATE TRIGGER test_link_audit_fail BEFORE INSERT ON he_thong.nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_link_audit_fail()`);
   try{assert.equal((await as(manager,()=>A.linkOfficeRoom({roomKey:key,locationId:rollback.id}))).success,false);assert.equal(await db.lien_ket_phong_3d.count({where:{khoa_phong:key}}),0);}
-  finally{await db.$executeRawUnsafe('DROP TRIGGER test_link_audit_fail ON nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION test_link_audit_fail()');}
+  finally{await db.$executeRawUnsafe('DROP TRIGGER test_link_audit_fail ON he_thong.nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION test_link_audit_fail()');}
  });
  await t.test('foreign tenant rejected; FK uniqueness and dependent deletion preserved',async()=>{
   const foreignCompany=await db.cong_ty.create({data:{ten_cong_ty:'Room link foreign test'}});

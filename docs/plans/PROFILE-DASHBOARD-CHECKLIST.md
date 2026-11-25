@@ -86,7 +86,7 @@ Dùng cột và cơ chế phiên hiện có theo [Thiết kế DB cần giữ](#
 
 ## Hướng mở rộng cùng trình tạo quy trình
 
-- [x] Bố cục dashboard được thay bằng Bàn làm việc ngày 17/11: Trợ lý AI và Việc của tôi; ưu tiên việc đến lượt trong khu workflow. Thông báo còn kế hoạch, lối tắt dùng menu chung.
+- [x] Bố cục dashboard được thay bằng Bàn làm việc ngày 17/11: Trợ lý AI và Việc của tôi; ưu tiên việc đến lượt trong khu workflow. Thanh yêu cầu hỗ trợ, số việc và thông báo theo quyền nằm trong Việc của tôi. Thông báo còn kế hoạch, lối tắt dùng menu chung.
 - [x] Chốt số “đang đến lượt tôi” lấy từ bước PENDING và quyền hiện tại, không lấy từ thông báo.
 - [ ] Bổ sung trung tâm thông báo trong ứng dụng và số chưa đọc sau khi workflow kéo thả có cơ chế kích hoạt bước ổn định.
 - [ ] Kiểm thử thông báo trùng, chuyển giao, thu hồi quyền, nhiều tài khoản cùng nhân sự và liên kết mở đúng hồ sơ.

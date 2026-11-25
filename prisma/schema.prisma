@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas = ["public", "chung", "phan_quyen", "he_thong", "ai", "cong_viec", "quy_trinh", "tai_san", "vat_tu", "khong_gian_3d"]
 }
 
 // -----------------------------------------------------------------------------
@@ -47,6 +48,8 @@ model cong_ty {
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+
+  @@schema("chung")
 }
 
 // -----------------------------------------------------------------------------
@@ -72,6 +75,8 @@ model ket_noi_ai {
 
   @@index([company_id])
   @@unique([id, company_id])
+
+  @@schema("ai")
 }
 
 model cau_hinh_tac_vu_ai {
@@ -87,6 +92,8 @@ model cau_hinh_tac_vu_ai {
   updated_at DateTime @updatedAt
   @@unique([company_id, ma_tac_vu])
   @@index([ket_noi_ai_id, company_id])
+
+  @@schema("ai")
 }
 
 model nhat_ky_goi_ai {
@@ -115,6 +122,8 @@ model nhat_ky_goi_ai {
   @@unique([company_id, account_id, ma_yeu_cau, buoc])
   @@index([company_id, account_id, created_at])
   @@index([company_id, ket_noi_ai_id, created_at])
+
+  @@schema("ai")
 }
 
 // -----------------------------------------------------------------------------
@@ -165,6 +174,8 @@ model phong_ban {
   @@index([nguoi_phu_trach_id, company_id], map: "phong_ban_dinh_danh_nguoi_phu_trach_dinh_danh_cong_ty_idx")
   @@index([company_id, he_thong_nguon], map: "Department_companyId_externalSystem_idx")
   @@index([dinh_danh_cap_tren_nguon], map: "Department_externalParentId_idx")
+
+  @@schema("chung")
 }
 
 // -----------------------------------------------------------------------------
@@ -224,12 +235,16 @@ model nhan_su {
   @@index([company_id, department_id], map: "nhan_su_dinh_danh_cong_ty_dinh_danh_phong_ban_idx")
   @@index([company_id, vi_tri_lam_viec_id])
   @@index([company_id, tinh_trang_lam_viec], map: "nhan_su_dinh_danh_cong_ty_tinh_trang_lam_viec_idx")
+
+  @@schema("chung")
 }
 
 enum EmploymentStatus {
   ACTIVE
   LEFT
   UNKNOWN
+
+  @@schema("chung")
 }
 
 model tai_khoan {
@@ -267,6 +282,8 @@ model tai_khoan {
   @@unique([id, company_id], map: "tai_khoan_dinh_danh_dinh_danh_cong_ty_key")
   @@index([cho_phep_dang_nhap], map: "User_isActive_idx")
   @@index([employee_id, company_id], map: "nguoi_dung_dinh_danh_nhan_su_dinh_danh_cong_ty_idx")
+
+  @@schema("chung")
 }
 
 // -----------------------------------------------------------------------------
@@ -289,6 +306,8 @@ model vai_tro {
   updated_at DateTime @updatedAt
 
   @@unique([company_id, ma_vai_tro], map: "Role_companyId_code_key")
+
+  @@schema("phan_quyen")
 }
 
 // -----------------------------------------------------------------------------
@@ -309,6 +328,8 @@ model quyen {
 
   @@unique([phan_he, hanh_dong], map: "Permission_module_action_key")
   @@index([phan_he], map: "Permission_module_idx")
+
+  @@schema("phan_quyen")
 }
 
 // -----------------------------------------------------------------------------
@@ -324,6 +345,8 @@ model vai_tro_quyen {
   thoi_diem_gan DateTime @default(now())
 
   @@id([role_id, permission_id], map: "RolePermission_pkey")
+
+  @@schema("phan_quyen")
 }
 
 // -----------------------------------------------------------------------------
@@ -340,6 +363,8 @@ model tai_khoan_vai_tro {
   thoi_diem_gan    DateTime @default(now())
 
   @@id([account_id, role_id], map: "UserRole_pkey")
+
+  @@schema("phan_quyen")
 }
 
 // -----------------------------------------------------------------------------
@@ -377,6 +402,8 @@ model nhat_ky_hoat_dong {
 
   @@index([company_id, phan_he, created_at], map: "AuditLog_companyId_module_createdAt_idx")
   @@index([account_id], map: "AuditLog_userId_idx")
+
+  @@schema("he_thong")
 }
 
 model mau_quy_trinh {
@@ -399,6 +426,8 @@ model mau_quy_trinh {
 
   @@unique([id, company_id], map: "mau_quy_trinh_dinh_danh_dinh_danh_cong_ty_key")
   @@unique([company_id, ma, phien_ban], map: "mau_quy_trinh_dinh_danh_cong_ty_ma_phien_ban_key")
+
+  @@schema("quy_trinh")
 }
 
 model buoc_mau_quy_trinh {
@@ -422,6 +451,8 @@ model buoc_mau_quy_trinh {
   @@unique([id, company_id], map: "buoc_mau_quy_trinh_dinh_danh_dinh_danh_cong_ty_key")
   @@unique([mau_quy_trinh_id, thu_tu], map: "buoc_mau_quy_trinh_dinh_danh_mau_thu_tu_key")
   @@unique([id, mau_quy_trinh_id, company_id], map: "buoc_mau_mau_cong_ty_key")
+
+  @@schema("quy_trinh")
 }
 
 model ho_so_quy_trinh {
@@ -456,6 +487,8 @@ model ho_so_quy_trinh {
   @@unique([company_id, ma], map: "ho_so_quy_trinh_dinh_danh_cong_ty_ma_key")
   @@unique([id, mau_quy_trinh_id, company_id], map: "ho_so_mau_cong_ty_key")
   @@index([company_id, nguoi_gui_id, trang_thai], map: "ho_so_quy_trinh_dinh_danh_cong_ty_dinh_danh_nguoi_gui_trang_idx")
+
+  @@schema("quy_trinh")
 }
 
 model buoc_xu_ly_quy_trinh {
@@ -482,6 +515,8 @@ model buoc_xu_ly_quy_trinh {
   @@unique([ho_so_quy_trinh_id, buoc_mau_quy_trinh_id], map: "buoc_xu_ly_ho_so_buoc_key")
   @@unique([id, ho_so_quy_trinh_id, company_id], map: "buoc_xu_ly_ho_so_cong_ty_key")
   @@index([company_id, nguoi_duoc_giao_id, trang_thai], map: "buoc_xu_ly_hop_viec_idx")
+
+  @@schema("quy_trinh")
 }
 
 model lich_su_quy_trinh {
@@ -506,22 +541,30 @@ model lich_su_quy_trinh {
 
   @@unique([id, company_id], map: "lich_su_quy_trinh_dinh_danh_dinh_danh_cong_ty_key")
   @@index([ho_so_quy_trinh_id, created_at, id], map: "lich_su_ho_so_thoi_diem_idx")
+
+  @@schema("quy_trinh")
 }
 
 enum TrangThaiMauQuyTrinh {
   DRAFT
   PUBLISHED
   RETIRED
+
+  @@schema("quy_trinh")
 }
 
 enum LoaiBuocQuyTrinh {
   APPROVAL
   TASK
+
+  @@schema("quy_trinh")
 }
 
 enum CachChonNguoiQuyTrinh {
   SPECIFIC_EMPLOYEE
   REQUESTER_DEPARTMENT_HEAD
+
+  @@schema("quy_trinh")
 }
 
 enum TrangThaiHoSoQuyTrinh {
@@ -530,6 +573,8 @@ enum TrangThaiHoSoQuyTrinh {
   COMPLETED
   REJECTED
   CANCELLED
+
+  @@schema("quy_trinh")
 }
 
 enum TrangThaiBuocQuyTrinh {
@@ -540,6 +585,8 @@ enum TrangThaiBuocQuyTrinh {
   REJECTED
   COMPLETED
   CANCELLED
+
+  @@schema("quy_trinh")
 }
 
 // Danh mục không gian vật lý dùng chung; nhân sự có một vị trí làm việc chính.
@@ -568,6 +615,8 @@ model vi_tri {
   @@unique([id, company_id])
   @@unique([company_id, ma_vi_tri])
   @@index([company_id, parent_id])
+
+  @@schema("chung")
 }
 
 // Bố trí bổ sung qua UI; vị trí nghiệp vụ vẫn thuộc vi_tri.
@@ -583,6 +632,8 @@ model lien_ket_phong_3d {
 
   @@unique([company_id, khoa_phong])
   @@unique([vi_tri_id, company_id])
+
+  @@schema("khong_gian_3d")
 }
 
 model vat_the_3d {
@@ -607,6 +658,8 @@ model vat_the_3d {
   @@index([company_id, phong_id])
   @@unique([vi_tri_id, company_id])
   @@unique([company_id, khoa_cu])
+
+  @@schema("khong_gian_3d")
 }
 
 enum TinhTrangTaiSan {
@@ -615,6 +668,8 @@ enum TinhTrangTaiSan {
   HONG
   DANG_SUA
   NGUNG_SU_DUNG
+
+  @@schema("tai_san")
 }
 
 enum HinhThucSuDungTaiSan {
@@ -622,6 +677,8 @@ enum HinhThucSuDungTaiSan {
   CA_NHAN
   DUNG_CHUNG
   CHUA_PHAN_BO
+
+  @@schema("tai_san")
 }
 
 model loai_tai_san {
@@ -639,6 +696,8 @@ model loai_tai_san {
 
   @@unique([id, company_id])
   @@unique([company_id, ma_loai])
+
+  @@schema("tai_san")
 }
 
 model tai_san {
@@ -674,6 +733,8 @@ model tai_san {
   @@index([company_id, nguoi_su_dung_id])
   @@index([company_id, vi_tri_id])
   @@index([company_id, tinh_trang])
+
+  @@schema("tai_san")
 }
 
 // Công việc AI được lưu để người dùng duyệt đúng snapshot, độc lập lịch sử chat.
@@ -695,6 +756,8 @@ model cong_viec_ai {
 
   @@unique([company_id, account_id, ma_yeu_cau])
   @@index([company_id, account_id, id])
+
+  @@schema("ai")
 }
 
 model hoi_thoai_ai {
@@ -711,6 +774,8 @@ model hoi_thoai_ai {
   danh_sach_tin_nhan tin_nhan_ai[]
   @@unique([id, company_id])
   @@index([company_id, account_id, updated_at, id])
+
+  @@schema("ai")
 }
 model tin_nhan_ai {
   danh_sach_tep tep_dinh_kem_ai[]
@@ -732,6 +797,8 @@ model tin_nhan_ai {
   @@unique([company_id, ma_yeu_cau, vai_tro])
   @@index([company_id, hoi_thoai_id, id])
   @@unique([id, hoi_thoai_id, company_id])
+
+  @@schema("ai")
 }
 
 
@@ -739,6 +806,8 @@ model tin_nhan_ai {
 enum HangMucVatTu {
   TIEU_HAO
   PHU_KIEN
+
+  @@schema("vat_tu")
 }
 enum LoaiGiaoDichVatTu {
   TON_DAU
@@ -750,6 +819,8 @@ enum LoaiGiaoDichVatTu {
   DIEU_CHINH_GIAM
   GIAM_DANG_CAP
   DAO_GIAO_DICH
+
+  @@schema("vat_tu")
 }
 model loai_vat_tu {
   id Int @id @default(autoincrement())
@@ -765,6 +836,8 @@ model loai_vat_tu {
   danh_sach_mat_hang mat_hang_vat_tu[]
   @@unique([id, company_id])
   @@unique([company_id, ma_loai])
+
+  @@schema("vat_tu")
 }
 model mat_hang_vat_tu {
   id Int @id @default(autoincrement())
@@ -788,6 +861,8 @@ model mat_hang_vat_tu {
   @@unique([company_id, ma_mat_hang])
   @@index([company_id, loai_vat_tu_id])
   @@index([company_id, phong_quan_ly_id])
+
+  @@schema("vat_tu")
 }
 model giao_dich_vat_tu {
   id Int @id @default(autoincrement())
@@ -828,6 +903,8 @@ model giao_dich_vat_tu {
   @@index([company_id, nhan_su_nhan_id])
   @@index([company_id, phong_ban_nhan_id])
   @@index([cap_phat_goc_id])
+
+  @@schema("vat_tu")
 }
 
 // Private AI attachments: nullable links until the first send claims the file.
@@ -850,6 +927,8 @@ model tep_dinh_kem_ai {
   updated_at DateTime @updatedAt
   @@unique([company_id, account_id, ma_tai_len])
   @@index([company_id, account_id, hoi_thoai_id])
+
+  @@schema("ai")
 }
 
 model dong_vat_tu_quy_trinh {
@@ -867,6 +946,8 @@ model dong_vat_tu_quy_trinh {
   giao_dich giao_dich_vat_tu[]
   @@unique([id, mat_hang_vat_tu_id, company_id])
   @@unique([ho_so_quy_trinh_id, mat_hang_vat_tu_id, phong_ban_nhan_id], map: "dong_vat_tu_quy_trinh_ho_so_quy_trinh_id_mat_hang_vat_tu_id_pho")
+
+  @@schema("vat_tu")
 }
 
 model cong_viec_ho_tro {
@@ -921,6 +1002,8 @@ model cong_viec_ho_tro {
   quan_ly_nguoi_yeu_cau nhan_su? @relation("cv_quan_ly_nguoi_yeu_cau", fields: [quan_ly_nguoi_yeu_cau_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
   quan_ly_ben_ho_tro nhan_su? @relation("cv_quan_ly_ben_ho_tro", fields: [quan_ly_ben_ho_tro_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
   nguoi_nghiem_thu nhan_su? @relation("cv_nguoi_nghiem_thu", fields: [nguoi_nghiem_thu_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@schema("cong_viec")
 }
 
 model lich_su_cong_viec {
@@ -948,6 +1031,8 @@ model lich_su_cong_viec {
   cong_viec cong_viec_ho_tro @relation("lich_su_cong_viec_viec", fields: [cong_viec_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
   tai_khoan_thao_tac tai_khoan @relation("cv_actor", fields: [tai_khoan_thao_tac_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
   nhan_su_thao_tac nhan_su @relation("cv_person", fields: [nhan_su_thao_tac_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@schema("cong_viec")
 }
 
 model tep_cong_viec {
@@ -972,6 +1057,8 @@ model tep_cong_viec {
   cong_viec cong_viec_ho_tro @relation("tep_cong_viec_viec", fields: [cong_viec_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
   tai_khoan_tai tai_khoan @relation("cv_uploader", fields: [tai_khoan_tai_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
   su_kien_bao_xong lich_su_cong_viec? @relation("cv_evidence", fields: [su_kien_bao_xong_id, cong_viec_id, company_id], references: [id, cong_viec_id, company_id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@schema("cong_viec")
 }
 
 model thong_bao_cong_viec {
@@ -990,6 +1077,8 @@ model thong_bao_cong_viec {
   cong_viec cong_viec_ho_tro @relation("thong_bao_cong_viec_viec", fields: [cong_viec_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
   tai_khoan_nhan tai_khoan @relation("cv_recipient", fields: [tai_khoan_nhan_id, company_id], references: [id, company_id], onDelete: Restrict, onUpdate: Restrict)
   su_kien lich_su_cong_viec @relation("cv_notice_event", fields: [cong_viec_id, company_id, version_su_kien], references: [cong_viec_id, company_id, version], onDelete: Restrict, onUpdate: Restrict)
+
+  @@schema("cong_viec")
 }
 
 enum TrangThaiCongViecHoTro {
@@ -1000,17 +1089,23 @@ enum TrangThaiCongViecHoTro {
   HOAN_THANH
   TU_CHOI
   DA_HUY
+
+  @@schema("cong_viec")
 }
 
 enum LoaiDichNhanCongViec {
   CA_NHAN
   PHONG_BAN
+
+  @@schema("cong_viec")
 }
 
 enum CheDoNghiemThuCongViec {
   KHONG_CAN
   NGUOI_YEU_CAU
   QUAN_LY
+
+  @@schema("cong_viec")
 }
 
 enum HanhDongCongViec {
@@ -1027,11 +1122,15 @@ enum HanhDongCongViec {
   YEU_CAU_BO_SUNG
   NGHIEM_THU
   HUY
+
+  @@schema("cong_viec")
 }
 
 enum LoaiTepCongViec {
   MO_TA
   BANG_CHUNG
+
+  @@schema("cong_viec")
 }
 
 enum LoaiThongBaoCongViec {
@@ -1041,4 +1140,6 @@ enum LoaiThongBaoCongViec {
   CAN_BO_SUNG
   HOAN_THANH
   DA_HUY
+
+  @@schema("cong_viec")
 }

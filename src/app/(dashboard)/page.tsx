@@ -187,9 +187,25 @@ export default async function Dashboard({
             <div className="space-y-3 p-5"><p className="text-sm text-muted-foreground">Chưa có nhóm công việc phù hợp với tài khoản của bạn.</p><Button asChild variant="outline"><Link href="/profile">Hồ sơ của tôi</Link></Button></div>
           )}
         </section>;
-  return <div className={cn("flex min-w-0 flex-col gap-3", aiSettings && "h-[calc(100dvh-6rem)] min-h-[34rem] sm:h-[calc(100dvh-7rem)] lg:h-[calc(100dvh-8rem)]")}>
+  const workContent = <>
+    {canTask(session.taskActions) && (
+      <section aria-label="Công việc hỗ trợ" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-card px-4 py-2">
+        <Button asChild variant="ghost"><Link href="/tasks">Công việc của tôi</Link></Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {taskCounts?.success && (["receive", "doing", "accept"] as const).map(key => (
+            <Button key={key} asChild variant="ghost">
+              <Link href={`/tasks?tab=${key}`}>{{ receive: "Cần nhận", doing: "Đang làm", accept: "Chờ nghiệm thu" }[key]} ({taskCounts[key]})</Link>
+            </Button>
+          ))}
+          <TaskNotifications />
+          {canTask(session.taskActions, "CREATE") && <TaskCreate />}
+        </div>
+      </section>
+    )}
+    {workflowContent}
+  </>;
+  return <div className={cn("flex min-w-0 flex-col gap-2", aiSettings && "h-full min-h-0")}>
     {!aiSettings && <header className="flex shrink-0 items-center justify-between gap-3"><h1 className="text-xl font-semibold">Bàn làm việc</h1><Link href="/profile" className="inline-flex min-h-10 items-center text-sm text-muted-foreground underline-offset-4 hover:underline">Hồ sơ của tôi</Link></header>}
-    {canTask(session.taskActions) && <section aria-label="Công việc hỗ trợ" className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border bg-card px-4 py-2"><Button asChild variant="ghost"><Link href="/tasks">Công việc của tôi</Link></Button><div className="flex flex-wrap items-center gap-2">{taskCounts?.success && (["receive", "doing", "accept"] as const).map(key => <Button key={key} asChild variant="ghost"><Link href={`/tasks?tab=${key}`}>{{receive:"Cần nhận",doing:"Đang làm",accept:"Chờ nghiệm thu"}[key]} ({taskCounts[key]})</Link></Button>)}<TaskNotifications />{canTask(session.taskActions,"CREATE") && <TaskCreate />}</div></section>}
-    {aiSettings ? <AiAssistant settings={{ hasKey: aiSettings.hasKey, model: aiSettings.model, enabled: aiSettings.enabled }} workflow={workflowContent} /> : workflowContent}
+    {aiSettings ? <AiAssistant settings={{ hasKey: aiSettings.hasKey, model: aiSettings.model, enabled: aiSettings.enabled }} workflow={workContent} /> : workContent}
   </div>;
 }

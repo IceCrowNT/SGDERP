@@ -1,5 +1,5 @@
 "use server";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   Prisma,
   type cong_viec_ho_tro,
@@ -14,6 +14,10 @@ import {
   CreateTaskSchema,
   TaskMutationSchema,
   TaskListSchema,
+  TASK_EVENTS,
+  canTask,
+  type TaskFailure,
+  type TaskFailureCode,
 } from "@/lib/support-task";
 import {
   taskActor,
@@ -23,16 +27,81 @@ import {
   resolveTaskTarget,
   validateTaskCreation,
   accountTaskWhere,
+  resolveTaskManager,
   TaskError,
   type TaskActor,
 } from "@/lib/support-task-access";
-function failure(e: unknown) {
+import {
+  loadManagerGraph,
+  createManagerResolver,
+} from "@/lib/employee-manager-resolution";
+function failure(
+  e: unknown,
+  operation: "load" | "save",
+  action: string,
+  knownCode?: TaskFailureCode,
+): TaskFailure {
+  if (e instanceof TaskError) {
+    // Keep existing business messages intact. Only classify known actor/version failures.
+    const code =
+      knownCode ??
+      (e.message === "Vui lòng đăng nhập."
+        ? "UNAUTHENTICATED"
+        : e.message.startsWith("Công việc vừa thay đổi.")
+          ? "CONFLICT"
+          : [
+                "Bạn chưa có quyền thực hiện thao tác này.",
+                "Phiên hoặc quyền truy cập đã thay đổi. Vui lòng tải lại trang.",
+                "Không tìm thấy công việc hoặc không còn quyền.",
+                "Không tìm thấy công việc hoặc bạn không còn quyền xem.",
+                "Không có quyền tải tệp.",
+              ].includes(e.message)
+            ? "FORBIDDEN"
+            : "BUSINESS_RULE");
+    return {
+      success: false,
+      message: e.message,
+      code,
+      reference: null,
+      recovery:
+        code === "UNAUTHENTICATED"
+          ? "sign_in"
+          : code === "CONFLICT" || code === "FORBIDDEN"
+            ? "reload"
+            : "none",
+    };
+  }
+  const reference = `CV-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+  const error =
+    e && typeof e === "object"
+      ? (e as { code?: unknown; meta?: { code?: unknown } })
+      : null;
+  const prismaCode =
+    typeof error?.code === "string" && /^P\d{4}$/.test(error.code)
+      ? error.code
+      : null;
+  const sqlState =
+    typeof error?.meta?.code === "string" &&
+    /^[0-9A-Z]{5}$/.test(error.meta.code)
+      ? error.meta.code
+      : null;
+  // Never log the Error object/message: Prisma may include SQL, row values or connection details.
+  console.error("support_task_failure", {
+    reference,
+    action,
+    operation,
+    prismaCode,
+    sqlState,
+  });
   return {
-    success: false as const,
+    success: false,
     message:
-      e instanceof TaskError
-        ? e.message
-        : "Không thể lưu công việc. Hãy tải lại trạng thái và thử lại.",
+      operation === "load"
+        ? "Chưa tải được dữ liệu công việc. Hãy thử tải lại."
+        : "Chưa xác nhận được việc lưu công việc. Hãy giữ nội dung đang nhập và thử lại thao tác này.",
+    code: operation === "load" ? "LOAD_FAILED" : "SAVE_FAILED",
+    reference,
+    recovery: "retry",
   };
 }
 function hash(v: unknown) {
@@ -59,8 +128,10 @@ const taskInclude = {
 } as const;
 // All writes use the same company/RBAC lock before the task row and event.
 export async function getTaskOptions() {
+  const fail = (e: unknown, code?: TaskFailureCode) =>
+    failure(e, "load", "getTaskOptions", code);
   const s = await getSession();
-  if (!s) return failure(new TaskError("Vui lòng đăng nhập."));
+  if (!s) return fail(new TaskError("Vui lòng đăng nhập."));
   try {
     return await db.$transaction(async (tx) => {
       const a = await taskActor(tx, s);
@@ -80,7 +151,12 @@ export async function getTaskOptions() {
         }),
         tx.phong_ban.findMany({
           where: { company_id: s.companyId },
-          select: { id: true, ma_phong_ban: true, ten_phong_ban: true, nguoi_phu_trach_id: true },
+          select: {
+            id: true,
+            ma_phong_ban: true,
+            ten_phong_ban: true,
+            nguoi_phu_trach_id: true,
+          },
           orderBy: { ten_phong_ban: "asc" },
         }),
       ]);
@@ -88,7 +164,7 @@ export async function getTaskOptions() {
         where: accountTaskWhere(s.companyId),
         select: { employee_id: true },
       });
-      const [receivers, coordinators] = await Promise.all([
+      const [receivers, coordinators, reviewers, graph] = await Promise.all([
         tx.tai_khoan.findMany({
           where: accountTaskWhere(s.companyId, "EXECUTE"),
           select: { employee_id: true },
@@ -97,43 +173,72 @@ export async function getTaskOptions() {
           where: accountTaskWhere(s.companyId, "MANAGE"),
           select: { employee_id: true },
         }),
+        tx.tai_khoan.findMany({
+          where: accountTaskWhere(s.companyId, "ACCEPT"),
+          select: { employee_id: true },
+        }),
+        loadManagerGraph(tx, s.companyId),
       ]);
       const canReceive = new Set(receivers.map((x) => x.employee_id));
       const canCoordinate = new Set(coordinators.map((x) => x.employee_id));
       const visible = new Set(accounts.map((x) => x.employee_id));
+      const canAccept = new Set(reviewers.map((x) => x.employee_id));
+      const resolver = createManagerResolver(graph);
+      const managerInfo = (id: number) => {
+        const r = resolver.resolve(id);
+        return {
+          managerId: r.managerId,
+          managerSource: r.source,
+          managerError:
+            r.error ||
+            (r.managerId && !visible.has(r.managerId)
+              ? "Quản lý chưa có tài khoản hoạt động với quyền xem công việc."
+              : null),
+        };
+      };
       return {
         success: true as const,
         me: {
           id: a.person.id,
           name: a.person.ho_ten,
-          managerId: a.person.quan_ly_truc_tiep_id,
+          ...managerInfo(a.person.id),
         },
         actions: a.actions,
-        people: people.map((p) => ({
-          id: p.id,
-          name: p.ho_ten,
-          code: p.ma_nhan_su,
-          position: p.chuc_vu ?? "",
-          departmentCode: p.phong_ban?.ma_phong_ban ?? "",
-          departmentId: p.department_id,
-          department: p.phong_ban?.ten_phong_ban ?? "",
-          managerId: p.quan_ly_truc_tiep_id,
-          unavailableReason: !canReceive.has(p.id) ? "Chưa có tài khoản hoạt động với quyền nhận việc."
-            : !p.department_id ? "Chưa được gắn phòng ban."
-            : !p.quan_ly_truc_tiep_id ? "Chưa khai báo quản lý trực tiếp."
-            : !visible.has(p.quan_ly_truc_tiep_id) ? "Quản lý trực tiếp chưa có tài khoản hoạt động với quyền xem công việc." : null,
-          canReceive:
-            canReceive.has(p.id) &&
-            Boolean(p.department_id) &&
-            visible.has(p.quan_ly_truc_tiep_id),
-        })),
+        people: people.map((p) => {
+          const manager = managerInfo(p.id);
+          const unavailableReason = !canReceive.has(p.id)
+            ? "Chưa có tài khoản hoạt động với quyền nhận việc."
+            : !p.department_id
+              ? "Chưa được gắn phòng ban."
+              : manager.managerError;
+          return {
+            id: p.id,
+            name: p.ho_ten,
+            code: p.ma_nhan_su,
+            position: p.chuc_vu ?? "",
+            departmentCode: p.phong_ban?.ma_phong_ban ?? "",
+            departmentId: p.department_id,
+            department: p.phong_ban?.ten_phong_ban ?? "",
+            ...manager,
+            canAccept: canAccept.has(p.id),
+            canView: visible.has(p.id),
+            unavailableReason,
+            canReceive: !unavailableReason,
+          };
+        }),
         departments: departments.map((d) => ({
           id: d.id,
           name: d.ten_phong_ban,
           code: d.ma_phong_ban,
-          unavailableReason: !d.nguoi_phu_trach_id ? "Chưa khai báo người phụ trách phòng."
-            : !canCoordinate.has(d.nguoi_phu_trach_id) ? "Người phụ trách phòng chưa có tài khoản hoạt động với quyền phân công."
-            : !people.some(p => p.department_id === d.id && visible.has(p.id)) ? "Phòng chưa có thành viên đủ điều kiện nhận thông báo công việc." : null,
+          unavailableReason: !d.nguoi_phu_trach_id
+            ? "Chưa khai báo người phụ trách phòng."
+            : !canCoordinate.has(d.nguoi_phu_trach_id)
+              ? "Người phụ trách phòng chưa có tài khoản hoạt động với quyền phân công."
+              : !people.some(
+                    (p) => p.department_id === d.id && visible.has(p.id),
+                  )
+                ? "Phòng chưa có thành viên đủ điều kiện nhận thông báo công việc."
+                : null,
           managerId: d.nguoi_phu_trach_id,
           canReceive:
             canCoordinate.has(d.nguoi_phu_trach_id) &&
@@ -145,49 +250,70 @@ export async function getTaskOptions() {
       };
     });
   } catch (e) {
-    return failure(e);
+    return fail(e);
   }
 }
 export async function getSupportTasks(input: unknown = {}) {
+  const fail = (e: unknown, code?: TaskFailureCode) =>
+    failure(e, "load", "getSupportTasks", code);
   const parsed = TaskListSchema.safeParse(input);
-  if (!parsed.success) return failure(new TaskError("Bộ lọc không hợp lệ."));
+  if (!parsed.success)
+    return fail(new TaskError("Bộ lọc không hợp lệ."), "VALIDATION");
   const s = await getSession();
-  if (!s) return failure(new TaskError("Vui lòng đăng nhập."));
+  if (!s) return fail(new TaskError("Vui lòng đăng nhập."));
   try {
     return await db.$transaction(async (tx) => {
       const a = await taskActor(tx, s),
         f = parsed.data,
         id = a.person.id;
+      const actionable: Prisma.cong_viec_ho_troWhereInput[] = [];
+      if (canTask(a.actions, "EXECUTE"))
+        actionable.push(
+          { trang_thai: "CHO_NHAN", nguoi_duoc_yeu_cau_id: id },
+          {
+            trang_thai: { in: ["DANG_THUC_HIEN", "CAN_BO_SUNG"] },
+            nguoi_thuc_hien_id: id,
+          },
+        );
+      if (canTask(a.actions, "ACCEPT"))
+        actionable.push({
+          trang_thai: "CHO_NGHIEM_THU",
+          nguoi_nghiem_thu_id: id,
+        });
       const tab: Prisma.cong_viec_ho_troWhereInput =
-        f.tab === "receive"
-          ? { trang_thai: "CHO_NHAN", nguoi_duoc_yeu_cau_id: id }
-          : f.tab === "doing"
-            ? {
-                nguoi_thuc_hien_id: id,
-                trang_thai: {
-                  in: ["DANG_THUC_HIEN", "CAN_BO_SUNG", "CHO_NGHIEM_THU"],
-                },
-              }
-            : f.tab === "accept"
-              ? { nguoi_nghiem_thu_id: id, trang_thai: "CHO_NGHIEM_THU" }
-              : f.tab === "requested"
-                ? { nguoi_yeu_cau_id: id }
-                : f.tab === "closed"
-                  ? { trang_thai: { in: ["HOAN_THANH", "DA_HUY"] } }
-                  : f.tab === "department"
-                    ? {
-                        phong_ho_tro_id: {
-                          in: [
-                            ...new Set([
-                              ...a.managed,
-                              ...(a.person.department_id
-                                ? [a.person.department_id]
-                                : []),
-                            ]),
-                          ],
-                        },
-                      }
-                    : {};
+        f.tab === "actionable"
+          ? actionable.length ? { OR: actionable } : { id: { in: [] } }
+          : f.tab === "receive"
+            ? { trang_thai: "CHO_NHAN", nguoi_duoc_yeu_cau_id: id }
+            : f.tab === "doing"
+              ? {
+                  nguoi_thuc_hien_id: id,
+                  trang_thai: {
+                    in: ["DANG_THUC_HIEN", "CAN_BO_SUNG"],
+                  },
+                }
+              : f.tab === "waiting"
+                ? { nguoi_thuc_hien_id: id, trang_thai: "CHO_NGHIEM_THU" }
+                : f.tab === "accept"
+                  ? { nguoi_nghiem_thu_id: id, trang_thai: "CHO_NGHIEM_THU" }
+                  : f.tab === "requested"
+                    ? { nguoi_yeu_cau_id: id }
+                    : f.tab === "closed"
+                      ? { trang_thai: { in: ["HOAN_THANH", "DA_HUY"] } }
+                      : f.tab === "department"
+                        ? {
+                            phong_ho_tro_id: {
+                              in: [
+                                ...new Set([
+                                  ...a.managed,
+                                  ...(a.person.department_id
+                                    ? [a.person.department_id]
+                                    : []),
+                                ]),
+                              ],
+                            },
+                          }
+                        : {};
       const where: Prisma.cong_viec_ho_troWhereInput = {
         AND: [
           taskScope(a),
@@ -211,9 +337,7 @@ export async function getSupportTasks(input: unknown = {}) {
                       "DANG_THUC_HIEN",
                       "CAN_BO_SUNG",
                     ] as const as (
-                      | "CHO_NHAN"
-                      | "DANG_THUC_HIEN"
-                      | "CAN_BO_SUNG"
+                      "CHO_NHAN" | "DANG_THUC_HIEN" | "CAN_BO_SUNG"
                     )[],
                   },
                 },
@@ -240,17 +364,19 @@ export async function getSupportTasks(input: unknown = {}) {
       };
     });
   } catch (e) {
-    return failure(e);
+    return fail(e);
   }
 }
 export async function getSupportTask(id: number, historyPage = 1) {
+  const fail = (e: unknown, code?: TaskFailureCode) =>
+    failure(e, "load", "getSupportTask", code);
   if (
     !z.number().int().positive().safeParse(id).success ||
     !z.number().int().min(1).max(100000).safeParse(historyPage).success
   )
-    return failure(new TaskError("Công việc không hợp lệ."));
+    return fail(new TaskError("Công việc không hợp lệ."), "VALIDATION");
   const s = await getSession();
-  if (!s) return failure(new TaskError("Vui lòng đăng nhập."));
+  if (!s) return fail(new TaskError("Vui lòng đăng nhập."));
   try {
     return await db.$transaction(async (tx) => {
       const a = await taskActor(tx, s),
@@ -262,7 +388,7 @@ export async function getSupportTask(id: number, historyPage = 1) {
         throw new TaskError(
           "Không tìm thấy công việc hoặc bạn không còn quyền xem.",
         );
-      const [history, count, files] = await Promise.all([
+      const [history, count, files, latestSupplement] = await Promise.all([
         tx.lich_su_cong_viec.findMany({
           where: { cong_viec_id: id, company_id: s.companyId },
           select: {
@@ -297,12 +423,28 @@ export async function getSupportTask(id: number, historyPage = 1) {
           },
           orderBy: { id: "asc" },
         }),
+        task.trang_thai === "CAN_BO_SUNG"
+          ? tx.lich_su_cong_viec.findFirst({
+              where: {
+                cong_viec_id: id,
+                company_id: s.companyId,
+                hanh_dong: "YEU_CAU_BO_SUNG",
+              },
+              select: {
+                ly_do: true,
+                created_at: true,
+                nhan_su_thao_tac: names,
+              },
+              orderBy: { version: "desc" },
+            })
+          : null,
       ]);
       return {
         success: true as const,
         task,
         buttons: taskButtons(task, a),
         history,
+        latestSupplement,
         historyPages: Math.max(1, Math.ceil(count / 30)),
         files: files.map((f) => ({
           ...f,
@@ -313,14 +455,17 @@ export async function getSupportTask(id: number, historyPage = 1) {
       };
     });
   } catch (e) {
-    return failure(e);
+    return fail(e);
   }
 }
 async function notify(
   tx: Prisma.TransactionClient,
   t: cong_viec_ho_tro,
   action: HanhDongCongViec,
+  actorId: number,
+  previousRecipients: number[] = [],
 ) {
+  if (action === "THEM_TEP") return;
   const ids = [
     t.nguoi_yeu_cau_id,
     t.nguoi_duoc_yeu_cau_id,
@@ -328,6 +473,7 @@ async function notify(
     t.quan_ly_nguoi_yeu_cau_id,
     t.quan_ly_ben_ho_tro_id,
     t.nguoi_nghiem_thu_id,
+    ...previousRecipients,
   ].filter((id): id is number => id !== null);
   const members: Prisma.tai_khoanWhereInput[] = [{ employee_id: { in: ids } }];
   if (t.loai_dich_nhan === "PHONG_BAN" && t.trang_thai === "CHO_NHAN")
@@ -338,7 +484,13 @@ async function notify(
       },
     });
   const recipients = await tx.tai_khoan.findMany({
-    where: { AND: [accountTaskWhere(t.company_id), { OR: members }] },
+    where: {
+      AND: [
+        accountTaskWhere(t.company_id),
+        { OR: members },
+        { employee_id: { not: actorId } },
+      ],
+    },
     select: { id: true, employee_id: true },
   });
   await tx.thong_bao_cong_viec.createMany({
@@ -419,19 +571,29 @@ async function event(
       du_lieu_moi: { id: t.id, version: t.version },
     },
   });
-  await notify(tx, t, action);
+  const previousRecipients =
+    "ban_giao" in extra && extra.ban_giao === true
+      ? [previous.nguoi_thuc_hien_id, previous.quan_ly_ben_ho_tro_id].filter(
+          (id): id is number => typeof id === "number",
+        )
+      : [];
+  await notify(tx, t, action, a.person.id, previousRecipients);
   return e;
 }
 export async function createSupportTask(input: unknown) {
+  const fail = (e: unknown, code?: TaskFailureCode) =>
+    failure(e, "save", "createSupportTask", code);
   const p = CreateTaskSchema.safeParse(input);
   if (!p.success)
     return {
-      success: false as const,
-      message: "Kiểm tra các trường được đánh dấu.",
+      ...fail(
+        new TaskError("Kiểm tra các trường được đánh dấu."),
+        "VALIDATION",
+      ),
       fieldErrors: p.error.flatten().fieldErrors,
     };
   const s = await getSession();
-  if (!s) return failure(new TaskError("Vui lòng đăng nhập."));
+  if (!s) return fail(new TaskError("Vui lòng đăng nhập."));
   try {
     const result = await db.$transaction(
       async (tx) => {
@@ -467,7 +629,7 @@ export async function createSupportTask(input: unknown) {
             nguoi_yeu_cau_id: a.person.id,
             tai_khoan_tao_id: s.userId,
             phong_nguoi_yeu_cau_id: a.person.department_id,
-            quan_ly_nguoi_yeu_cau_id: manager.id,
+            quan_ly_nguoi_yeu_cau_id: manager?.id ?? null,
             ...target,
             che_do_nghiem_thu: v.acceptance,
             nghiem_thu_bat_buoc: v.acceptance !== "KHONG_CAN",
@@ -487,19 +649,20 @@ export async function createSupportTask(input: unknown) {
     refresh(result.id);
     return { success: true as const, ...result };
   } catch (e) {
-    return failure(e);
+    return fail(e);
   }
 }
 export async function mutateSupportTask(input: unknown) {
+  const fail = (e: unknown, code?: TaskFailureCode) =>
+    failure(e, "save", p.success ? p.data.action : "mutateSupportTask", code);
   const p = TaskMutationSchema.safeParse(input);
   if (!p.success)
     return {
-      success: false as const,
-      message: "Nội dung thao tác chưa hợp lệ.",
+      ...fail(new TaskError("Nội dung thao tác chưa hợp lệ."), "VALIDATION"),
       fieldErrors: p.error.flatten().fieldErrors,
     };
   const s = await getSession();
-  if (!s) return failure(new TaskError("Vui lòng đăng nhập."));
+  if (!s) return fail(new TaskError("Vui lòng đăng nhập."));
   try {
     const result = await db.$transaction(
       async (tx) => {
@@ -512,7 +675,7 @@ export async function mutateSupportTask(input: unknown) {
                 ? "CREATE"
                 : "VIEW";
         const a = await taskActor(tx, s, required, true);
-        await tx.$queryRaw`SELECT id FROM cong_viec_ho_tro WHERE id=${v.id} AND company_id=${s.companyId} FOR UPDATE`;
+        await tx.$queryRaw`SELECT id FROM cong_viec.cong_viec_ho_tro WHERE id=${v.id} AND company_id=${s.companyId} FOR UPDATE`;
         const t = await tx.cong_viec_ho_tro.findFirst({
           where: { AND: [taskScope(a), { id: v.id }] },
         });
@@ -547,6 +710,7 @@ export async function mutateSupportTask(input: unknown) {
           "YEU_CAU_BO_SUNG",
           "HUY",
           "CHUYEN_DICH",
+          "BAN_GIAO",
           "DOI_NGUOI_NGHIEM_THU",
           "DOI_QUAN_LY",
         ].includes(v.action);
@@ -560,10 +724,10 @@ export async function mutateSupportTask(input: unknown) {
         };
         if (v.action === "NHAN") {
           requireAllowed(b.receive);
-          const manager = await eligiblePerson(
+          const manager = await resolveTaskManager(
             tx,
             s.companyId,
-            a.person.quan_ly_truc_tiep_id,
+            a.person.id,
           );
           if (t.nguoi_nghiem_thu_id === a.person.id)
             throw new TaskError(
@@ -572,7 +736,7 @@ export async function mutateSupportTask(input: unknown) {
           Object.assign(data, {
             nguoi_thuc_hien_id: a.person.id,
             nhan_luc: now,
-            quan_ly_ben_ho_tro_id: manager.id,
+            quan_ly_ben_ho_tro_id: manager?.id ?? null,
             trang_thai: "DANG_THUC_HIEN",
           });
         }
@@ -625,6 +789,31 @@ export async function mutateSupportTask(input: unknown) {
             );
           Object.assign(data, target, { trang_thai: "CHO_NHAN" });
         }
+        if (v.action === "BAN_GIAO") {
+          requireAllowed(b.handoff);
+          if (!v.personId || v.personId === t.nguoi_thuc_hien_id)
+            throw new TaskError(
+              "Chọn người tiếp nhận khác người đang thực hiện.",
+            );
+          const target = await resolveTaskTarget(
+            tx,
+            s.companyId,
+            "CA_NHAN",
+            v.personId,
+          );
+          if (target.phong_ho_tro_id !== t.phong_ho_tro_id)
+            throw new TaskError("Chọn người tiếp nhận thuộc phòng đang xử lý.");
+          if (target.nguoi_duoc_yeu_cau_id === t.nguoi_nghiem_thu_id)
+            throw new TaskError(
+              "Người nghiệm thu không được tự thực hiện công việc.",
+            );
+          Object.assign(data, target, {
+            trang_thai: "CHO_NHAN",
+            nguoi_thuc_hien_id: null,
+            nhan_luc: null,
+            bao_xong_luc: null,
+          });
+        }
         if (v.action === "DOI_NGUOI_NGHIEM_THU") {
           requireAllowed(b.manage);
           const person = await eligiblePerson(
@@ -633,6 +822,17 @@ export async function mutateSupportTask(input: unknown) {
             v.personId,
             "ACCEPT",
           );
+          if (person.id !== t.nguoi_yeu_cau_id) {
+            const manager = await resolveTaskManager(
+              tx,
+              s.companyId,
+              t.nguoi_yeu_cau_id,
+            );
+            if (person.id !== manager?.id)
+              throw new TaskError(
+                "Chỉ chọn người yêu cầu hoặc quản lý hiện tại của người yêu cầu để nghiệm thu.",
+              );
+          }
           if (
             person.id === t.nguoi_thuc_hien_id ||
             person.id === t.nguoi_duoc_yeu_cau_id
@@ -741,12 +941,15 @@ export async function mutateSupportTask(input: unknown) {
           tx,
           a,
           updated,
-          v.action,
+          v.action === "BAN_GIAO" ? "CHUYEN_DICH" : v.action,
           v.operationId,
           h,
           before,
           v.reason,
-          { evidenceIds: v.evidenceIds },
+          {
+            evidenceIds: v.evidenceIds,
+            ...(v.action === "BAN_GIAO" ? { ban_giao: true } : {}),
+          },
         );
         if (v.action === "BAO_XONG" && v.evidenceIds.length)
           await tx.tep_cong_viec.updateMany({
@@ -764,14 +967,16 @@ export async function mutateSupportTask(input: unknown) {
     refresh(result.id);
     return { success: true as const, ...result };
   } catch (e) {
-    return failure(e);
+    return fail(e);
   }
 }
 export async function getTaskNotifications(page = 1) {
+  const fail = (e: unknown, code?: TaskFailureCode) =>
+    failure(e, "load", "getTaskNotifications", code);
   if (!z.number().int().min(1).max(100000).safeParse(page).success)
-    return failure(new TaskError("Trang không hợp lệ."));
+    return fail(new TaskError("Trang không hợp lệ."), "VALIDATION");
   const s = await getSession();
-  if (!s) return failure(new TaskError("Vui lòng đăng nhập."));
+  if (!s) return fail(new TaskError("Vui lòng đăng nhập."));
   try {
     return await db.$transaction(async (tx) => {
       const a = await taskActor(tx, s);
@@ -788,6 +993,13 @@ export async function getTaskNotifications(page = 1) {
             loai: true,
             da_doc_luc: true,
             created_at: true,
+            su_kien: {
+              select: {
+                hanh_dong: true,
+                du_lieu_sau: true,
+                nhan_su_thao_tac: names,
+              },
+            },
           },
         }),
         tx.thong_bao_cong_viec.count({ where: { ...where, da_doc_luc: null } }),
@@ -797,26 +1009,51 @@ export async function getTaskNotifications(page = 1) {
         where: {
           AND: [taskScope(a), { id: { in: rows.map((r) => r.cong_viec_id) } }],
         },
-        select: { id: true, tieu_de: true },
+        select: {
+          id: true,
+          tieu_de: true,
+          trang_thai: true,
+          nguoi_nghiem_thu_id: true,
+        },
       });
       return {
         success: true as const,
         unread,
         total,
-        rows: rows.map((r) => ({
-          ...r,
-          title: tasks.find((t) => t.id === r.cong_viec_id)?.tieu_de ?? null,
-        })),
+        rows: rows.map(({ su_kien, ...r }) => {
+          const currentTask = tasks.find((t) => t.id === r.cong_viec_id);
+          const title = currentTask?.tieu_de ?? null;
+          const handed =
+            su_kien.du_lieu_sau &&
+            typeof su_kien.du_lieu_sau === "object" &&
+            !Array.isArray(su_kien.du_lieu_sau) &&
+            su_kien.du_lieu_sau.ban_giao === true;
+          return {
+            ...r,
+            title,
+            needsReview: Boolean(
+              currentTask?.trang_thai === "CHO_NGHIEM_THU" &&
+              currentTask.nguoi_nghiem_thu_id === a.person.id &&
+              a.actions.includes("ACCEPT"),
+            ),
+            summary: title
+              ? `${su_kien.nhan_su_thao_tac.ho_ten} · ${handed ? "Bàn giao công việc" : TASK_EVENTS[su_kien.hanh_dong]}`
+              : null,
+          };
+        }),
       };
     });
   } catch (e) {
-    return failure(e);
+    return fail(e);
   }
 }
 export async function readTaskNotification(id: number) {
+  const fail = (e: unknown, code?: TaskFailureCode) =>
+    failure(e, "save", "readTaskNotification", code);
   const s = await getSession();
-  if (!s || !z.number().int().positive().safeParse(id).success)
-    return failure(new TaskError("Thông báo không hợp lệ."));
+  if (!s) return fail(new TaskError("Vui lòng đăng nhập."));
+  if (!z.number().int().positive().safeParse(id).success)
+    return fail(new TaskError("Thông báo không hợp lệ."), "VALIDATION");
   try {
     await db.$transaction(async (tx) => {
       await taskActor(tx, s, "VIEW", true);
@@ -832,13 +1069,15 @@ export async function readTaskNotification(id: number) {
     });
     return { success: true as const };
   } catch (e) {
-    return failure(e);
+    return fail(e);
   }
 }
 
 export async function uploadTaskFile(form: FormData) {
+  const fail = (e: unknown, code?: TaskFailureCode) =>
+    failure(e, "save", "uploadTaskFile", code);
   const s = await getSession();
-  if (!s) return failure(new TaskError("Vui lòng đăng nhập."));
+  if (!s) return fail(new TaskError("Vui lòng đăng nhập."));
   const parsed = z
     .object({
       id: z.coerce.number().int().positive(),
@@ -859,7 +1098,10 @@ export async function uploadTaskFile(form: FormData) {
       (k) => !["id", "version", "uploadId", "file"].includes(k),
     )
   )
-    return failure(new TaskError("Tệp hoặc công việc không hợp lệ."));
+    return fail(
+      new TaskError("Tệp hoặc công việc không hợp lệ."),
+      "VALIDATION",
+    );
   try {
     // Authenticate and authorize before parsing bytes; repeat after upload under the write lock.
     await db.$transaction(async (tx) => {
@@ -872,9 +1114,8 @@ export async function uploadTaskFile(form: FormData) {
       if (!b.work && !b.edit)
         throw new TaskError("Không thể thêm tệp ở trạng thái hiện tại.");
     });
-    const { validateTaskFile, storeTaskBytes } = await import(
-      "@/lib/support-task-storage"
-    );
+    const { validateTaskFile, storeTaskBytes } =
+      await import("@/lib/support-task-storage");
     const data = await validateTaskFile(file);
     // Bytes remain private if commit fails; do not delete blindly after a network timeout.
     const key = await storeTaskBytes(data.bytes);
@@ -882,7 +1123,7 @@ export async function uploadTaskFile(form: FormData) {
       async (tx) => {
         const a = await taskActor(tx, s, "VIEW", true),
           v = parsed.data;
-        await tx.$queryRaw`SELECT id FROM cong_viec_ho_tro WHERE id=${v.id} AND company_id=${s.companyId} FOR UPDATE`;
+        await tx.$queryRaw`SELECT id FROM cong_viec.cong_viec_ho_tro WHERE id=${v.id} AND company_id=${s.companyId} FOR UPDATE`;
         const t = await tx.cong_viec_ho_tro.findFirst({
           where: { AND: [taskScope(a), { id: v.id }] },
         });
@@ -957,13 +1198,15 @@ export async function uploadTaskFile(form: FormData) {
     refresh(result.id);
     return { success: true as const, ...result };
   } catch (e) {
-    return failure(e);
+    return fail(e);
   }
 }
 
 export async function getSupportTaskCounts() {
+  const fail = (e: unknown, code?: TaskFailureCode) =>
+    failure(e, "load", "getSupportTaskCounts", code);
   const s = await getSession();
-  if (!s) return failure(new TaskError("Vui lòng đăng nhập."));
+  if (!s) return fail(new TaskError("Vui lòng đăng nhập."));
   try {
     return await db.$transaction(async (tx) => {
       const a = await taskActor(tx, s),
@@ -983,7 +1226,7 @@ export async function getSupportTaskCounts() {
               scope,
               {
                 trang_thai: {
-                  in: ["DANG_THUC_HIEN", "CAN_BO_SUNG", "CHO_NGHIEM_THU"],
+                  in: ["DANG_THUC_HIEN", "CAN_BO_SUNG"],
                 },
                 nguoi_thuc_hien_id: a.person.id,
               },
@@ -1005,14 +1248,17 @@ export async function getSupportTaskCounts() {
       return { success: true as const, receive, doing, accept };
     });
   } catch (e) {
-    return failure(e);
+    return fail(e);
   }
 }
 
 export async function getCreatedTaskByRequest(requestId: string) {
+  const fail = (e: unknown, code?: TaskFailureCode) =>
+    failure(e, "load", "getCreatedTaskByRequest", code);
   const s = await getSession();
-  if (!s || !z.string().uuid().safeParse(requestId).success)
-    return failure(new TaskError("Yêu cầu không hợp lệ."));
+  if (!s) return fail(new TaskError("Vui lòng đăng nhập."));
+  if (!z.string().uuid().safeParse(requestId).success)
+    return fail(new TaskError("Yêu cầu không hợp lệ."), "VALIDATION");
   try {
     return await db.$transaction(async (tx) => {
       const a = await taskActor(tx, s, "CREATE");
@@ -1032,6 +1278,6 @@ export async function getCreatedTaskByRequest(requestId: string) {
       return { success: true as const, task };
     });
   } catch (e) {
-    return failure(e);
+    return fail(e);
   }
 }

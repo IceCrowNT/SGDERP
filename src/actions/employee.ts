@@ -1,4 +1,5 @@
 "use server";
+import { loadManagerGraph, assertNoNewManagerCycles } from "@/lib/employee-manager-resolution";
 import { revalidatePath } from "next/cache";
 import { randomBytes } from "node:crypto";
 import { allocateUsername, defaultRole } from "@/lib/account-defaults";
@@ -154,7 +155,7 @@ async function saveEmployee(input: unknown, updating: boolean) {
   try {
     await db.$transaction(async (tx) => {
       // Same ordering as department edits; account operations share the advisory lock.
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       const roleIds = [...new Set(v.accountRoleIds ?? [])];
       await currentActor(tx, session, "HR");
@@ -204,6 +205,10 @@ async function saveEmployee(input: unknown, updating: boolean) {
           throw Error(
             "Chọn phòng, khu vực hoặc chỗ ngồi còn sử dụng trong công ty.",
           );
+      }
+      if (previous && previous.department_id !== v.departmentId) {
+        const graph = await loadManagerGraph(tx, session.companyId);
+        assertNoNewManagerCycles(graph, {...graph, people: graph.people.map(p => p.id === previous.id ? {...p, department_id: v.departmentId} : p)});
       }
       const data = {
         ...(v.workLocationId !== undefined
@@ -350,6 +355,7 @@ async function saveEmployee(input: unknown, updating: boolean) {
       "/",
     ])
       revalidatePath(path);
+    revalidatePath("/tasks", "layout");
     return {
       success: true,
       credentials,
@@ -394,7 +400,7 @@ export async function assignEmployeeLocation(input: unknown) {
   const v = parsed.data;
   try {
     await db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       await currentActor(tx, session, "HR");
       const person = await tx.nhan_su.findFirst({

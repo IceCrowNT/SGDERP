@@ -2,6 +2,17 @@
 
 Cập nhật: **20/11/2026**. **Tiến độ ghi nhận của Quy trình: 0%. Người phụ trách xác nhận chưa đánh giá phân hệ ở bước plan, chưa thử nghiệm và nghiệm thu.** Giữ file plan để xem xét; mã nguồn/schema hiện có và kết quả kiểm thử trước đây chỉ là bản nháp kỹ thuật, không coi là thiết kế đã được người phụ trách chấp thuận hoặc kết quả hoàn thành. Hướng kéo thả, biểu mẫu, thông báo và dashboard dưới đây là đề xuất chờ đánh giá. Xem [bảng đối chiếu](README.md#đối-chiếu-plan-với-code-và-db) và [Thiết kế quy trình](../THIET-KE-QUY-TRINH.md).
 
+## Làm gọn hệ thống, giữ hướng phát triển Quy trình — 25/11/2026
+
+Người phụ trách làm rõ vẫn muốn dùng Quy trình về sau; mục tiêu hiện tại là giảm phức tạp và tránh bản nháp chưa kiểm duyệt ảnh hưởng các phân hệ đang phát triển. Phương án xóa toàn bộ ở lượt trước chưa được duyệt và được đưa lại vào diện xem xét. Đã rà phạm vi, chưa gỡ/tắt mã, đổi schema hoặc ghi DB. Công việc/ticket SUPPORT_TASK độc lập.
+
+- [x] Đối chiếu route/component/action, dashboard/AI, session/quyền, seed và tests: 12 file runtime riêng; phần dùng chung cần tách riêng tham chiếu WORKFLOW. Tài liệu riêng gồm plan này, `docs/THIET-KE-QUY-TRINH.md`, `.agents/rules/WORKFLOW-RULES.md`; cần phân biệt bản tham khảo chưa duyệt với tài liệu hướng dẫn hệ thống đang dùng.
+- [x] Kiểm tra DB vận hành bằng transaction READ ONLY/RepeatableRead lúc 11:17 +07: 5 bảng lõi và `dong_vat_tu_quy_trinh` đều 0 hàng; `giao_dich_vat_tu.dong_vat_tu_id` không có giá trị khác null. Có 5 quyền WORKFLOW và 10 gán quyền cần gỡ riêng. Giữ 7 loại/9 mặt hàng/18 giao dịch vật tư, audit chung và 4 bảng Công việc. Catalog/count tại `outputs/workflow-removal-audit-20261125/snapshot.json`.
+- [ ] Chốt phạm vi tạm ngừng: bỏ điểm vào/UI/truy vấn dashboard, ngăn cả truy cập trực tiếp và Server Actions; đưa mã nháp ra khỏi phần ứng dụng đang sử dụng/biên dịch, giữ bản sao đủ cả thay đổi chưa commit. Ngừng sử dụng/cấp mới quyền WORKFLOW trong hệ thống hiện hành.
+- [ ] Tách nhánh vật tư theo workflow khỏi nhập/xuất trực tiếp; rà và tháo liên kết/trigger riêng sau backup và thử trên DB riêng. Không xóa sổ giao dịch, tồn hoặc audit chung.
+- [ ] Giữ plan/thiết kế dưới nhãn chưa duyệt, tạm ngừng; tổng quan hiện hành chỉ có trạng thái và nơi tra cứu. Chưa cần xóa bảng lõi rỗng hoặc viết lại migration cũ; xem xét schema sau khi duyệt yêu cầu Quy trình mới.
+- [ ] Kiểm chứng Công việc, dashboard/AI, phân quyền, vật tư trực tiếp, build và bảo toàn dữ liệu. Chưa coi rà soát này là đã cô lập hoặc loại bỏ phân hệ. Mọi sửa ba rule chung vẫn theo [AGENTS.md](../../AGENTS.md#quy-trình-duyệt-ba-rule-kỹ-thuật-chung).
+
 ## Trạng thái chờ đánh giá plan — 20/11/2026
 
 - [x] Ghi nhận yêu cầu chỉ đưa **Quy trình** về 0%; các phân hệ khác tiếp tục báo cáo tiến độ kỹ thuật theo thực tế. Checkbox kỹ thuật bên dưới là bằng chứng công việc trên bản nháp, không phải xác nhận nghiệm thu hoặc duyệt plan.
@@ -85,6 +96,25 @@ Chưa gồm tệp đính kèm, biểu mẫu động, duyệt song song, điều 
 - [ ] Triển khai cấu hình biểu mẫu, tự điền dữ liệu và chạy một nhánh tại một thời điểm; chưa hỗ trợ vòng lặp hoặc song song ở giai đoạn đầu.
 - [ ] Thiết kế và triển khai thông báo trong ứng dụng khi bước được kích hoạt, chống tạo trùng và liên kết đúng hồ sơ; email/thông báo đẩy để sau.
 - [ ] Kiểm thử phân quyền, cùng công ty, phiên bản mẫu, điều kiện nhánh, dữ liệu tự điền và khả năng khôi phục khi migration lỗi.
+
+## Khảo sát thông báo và phê duyệt qua Zalo OA — 25/11/2026
+
+### A. Đặc tả yêu cầu
+
+**Đang khảo sát, chưa duyệt triển khai; không thay trạng thái 0% của phân hệ.** Người phụ trách muốn nhận thông báo công việc/bước cần duyệt trên Zalo và xử lý ngay, ví dụ nhân sự xin nghỉ, không đăng nhập ERP lại mỗi lần.
+
+Hai phương án: (1) Mẫu phản hồi nhanh nhận lựa chọn trực tiếp trong tin nhắn, phù hợp chấp thuận đơn giản; (2) nút mở trang xử lý hoặc Mini App để xem hồ sơ/nhập lý do rồi xác nhận. Phương án 2 cần thiết kế liên kết và xác thực danh tính để giảm đăng nhập lặp lại; mở link tự nó không cấp quyền duyệt. Từ chối vẫn cần lý do theo rule hiện có, không thay bằng lý do mặc định. Chỉ đề xuất mẫu nội dung; phải xác nhận Zalo chấp thuận mục đích thông báo/phê duyệt nội bộ trước khi cam kết sử dụng.
+
+Tiêu chí dự kiến: đúng người đang được giao mới xử lý được; không xử lý lại hồ sơ đã xong/hủy/chuyển giao hoặc đã đổi nội dung; phản hồi trên Zalo chỉ được báo là duyệt thành công sau khi ERP lưu; giữ lịch sử chung với thao tác trong ERP. Thông báo có tin nhắn mới/việc mới dùng mẫu phù hợp riêng, không mặc định mọi nội dung đều được gửi.
+
+### B. Thiết kế kỹ thuật
+
+- [x] Đối chiếu tài liệu chính thức: [Mẫu phản hồi nhanh](https://zalo.solutions/news/cap-nhat-moi-ra-mat-mau-phan-hoi-nhanh-thu-thap-phan-hoi-nguoi-dung-ngay-trong-tin-nhan/wj4xuakz8b3b36fpzbq7e6cg) hỗ trợ 1–5 nút, chỉ gửi theo số điện thoại, mỗi tin chọn một lần trong 7 ngày; không ghép nút link vào cùng mẫu. [Webhook](https://docs.zaloplatforms.com/docs/ZBS/quan-ly-template/template-webhook/su-kien-nguoi-dung-phan-hoi-template-phan-hoi-nhanh) có chữ ký, `msg_id`, `tracking_id` và nội dung nút; không trả trực tiếp ID tài khoản ERP. [Quy định duyệt mẫu](https://zalo.solutions/business-message/guidelines/quy-dinh-chung-khi-kiem-duyet-mau-zbs-template-message) cần được đối chiếu với mục đích nội bộ.
+- [ ] Chốt phương án, phạm vi pilot, mẫu được duyệt và cách liên kết số Zalo đã xác minh với một tài khoản ERP cụ thể; không gộp quyền của nhiều tài khoản cùng nhân sự.
+- [ ] Thiết kế tiếp nhận webhook xác thực chữ ký; ánh xạ thông báo đã gửi → người nhận → hồ sơ/bước/phiên bản; kiểm tra lại quyền, phân công và trạng thái hiện tại trong transaction; chống gửi lại sự kiện và duyệt đồng thời. Dùng chung quy tắc chuyển trạng thái/lịch sử, không cập nhật trạng thái thẳng từ nhãn nút.
+- [ ] Thiết kế màn hình bổ sung cho từ chối có lý do/xem tệp; phiên xác thực giới hạn đúng người và tác vụ, không duyệt bằng GET hoặc chỉ dựa vào việc sở hữu đường link. Thông báo xác nhận lựa chọn của Zalo không thay xác nhận nghiệp vụ từ ERP.
+- [ ] Thiết kế DB cần giữ: dùng các bảng workflow/lịch sử hiện có; liên kết danh tính, sổ gửi/nhận và chống trùng chưa thiết kế schema/migration. Gửi tin ngoài transaction; ERP là nguồn trạng thái chính, cần xử lý lỗi gửi và thử lại.
+- [ ] Kiểm thử tích hợp thật, giả chữ ký, phản hồi lặp, mất quyền, nghỉ việc, chuyển giao, hủy/đổi hồ sơ và lỗi gửi. Chưa tạo kết nối, gửi tin hoặc sửa code/DB trong lượt khảo sát.
 
 ## Cách bắt đầu dùng thử
 

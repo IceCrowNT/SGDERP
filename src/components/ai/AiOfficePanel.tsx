@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useEffectEvent, useId, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useId, useRef, useState, type ReactNode } from 'react';
 import { Loader2, Save, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { openOfficeEditor, saveOfficeEditor, officeEditorStatus } from '@/actions/office-editor';
@@ -19,7 +19,7 @@ function loadScript(url: string) {
   });
   return scriptPromise;
 }
-export function AiOfficePanel({ file, chatId, onLocked, onSaved }: { file: AiAttachment; chatId: number; onLocked: (value: boolean) => void; onSaved: (file: AiAttachment) => void }) {
+export function AiOfficePanel({ file, chatId, controls, onLocked, onSaved }: { controls: ReactNode; file: AiAttachment; chatId: number; onLocked: (value: boolean) => void; onSaved: (file: AiAttachment) => void }) {
   const mountId = useId().replace(/:/g, ''), editor = useRef<Editor | null>(null), revision = useRef(0), mounted = useRef(true), inFlight = useRef(false), retrySave = useRef<{ revision: number; requestId: string } | null>(null);
   const [loading, setLoading] = useState(file.kind !== 'image'), [error, setError] = useState(''), [token, setToken] = useState(''), [editable, setEditable] = useState(false), [dirty, setDirty] = useState(false), [saving, setSaving] = useState(false), [savedFile, setSavedFile] = useState<AiAttachment | null>(null), [retry, setRetry] = useState(0), [viewReason, setViewReason] = useState('');
   const notifyLocked = useEffectEvent(onLocked);
@@ -71,10 +71,11 @@ export function AiOfficePanel({ file, chatId, onLocked, onSaved }: { file: AiAtt
     finally { inFlight.current = false; if (mounted.current) setSaving(false); }
   }
   return <div className="flex min-h-0 flex-1 flex-col" aria-label="Trình soạn thảo tài liệu">
-    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b p-2">
+    <div className="flex shrink-0 items-center gap-1 border-b px-2 py-1">
       <p className="min-w-0 flex-1 truncate text-sm font-medium" title={file.name}>{file.name}</p>
       <Button asChild variant="ghost" size="icon" className="size-10"><a href={`/media/ai-attachments/${savedFile?.id ?? file.id}`} aria-label="Tải bản đã lưu"><Download className="size-4" /></a></Button>
-      {editable && <Button className="min-h-10" onClick={save} disabled={loading || saving || !dirty}>{saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}Lưu bản mới</Button>}
+      {editable && <Button aria-label="Lưu bản mới" className="min-h-10" onClick={save} disabled={loading || saving || !dirty}>{saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}<span className="hidden sm:inline">Lưu bản mới</span></Button>}
+      {controls}
     </div>
     {(dirty || saving || savedFile) && <p role="status" className="shrink-0 px-3 py-2 text-xs text-muted-foreground">{saving ? 'Đang chờ ERP xác nhận bản lưu…' : dirty ? 'Có thay đổi chưa lưu vào chat. Lưu bản mới trước khi đóng hoặc đổi tài liệu.' : 'Đã lưu bản mới vào cuộc chat.'}</p>}
     {viewReason && <p className="shrink-0 px-3 py-2 text-xs text-muted-foreground">{viewReason}</p>}
@@ -83,6 +84,6 @@ export function AiOfficePanel({ file, chatId, onLocked, onSaved }: { file: AiAtt
     {file.kind === 'image' ? <div className="min-h-0 flex-1 overflow-auto p-3">
       {/* Private image bypasses shared optimizer cache. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={`/media/ai-attachments/${file.id}?preview=1`} alt={file.name} className="mx-auto max-w-full" /></div> : <div className="min-h-0 flex-1"><div id={mountId} className="h-full min-h-80" /></div>}
+      <img src={`/media/ai-attachments/${file.id}?preview=1`} alt={file.name} className="mx-auto max-w-full" /></div> : <div className="min-h-0 flex-1"><div id={mountId} className="h-full w-full" /></div>}
   </div>;
 }

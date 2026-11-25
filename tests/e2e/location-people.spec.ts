@@ -143,13 +143,13 @@ test("audit failure rolls back deletion and person changes; concurrent assignmen
   await db.nhan_su.update({ where: { id: personId }, data: { vi_tri_lam_viec_id: one } });
   const dialog = await openDelete(page, "Bàn thử 01"); await expect(dialog).toContainText("1 nhân sự");
   await db.$executeRawUnsafe(`CREATE FUNCTION test_location_audit_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.company_id = ${company} AND NEW.phan_he = 'HR' THEN RAISE EXCEPTION 'test audit rollback'; END IF; RETURN NEW; END $$`);
-  await db.$executeRawUnsafe(`CREATE TRIGGER test_location_audit_failure BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_location_audit_failure()`);
+  await db.$executeRawUnsafe(`CREATE TRIGGER test_location_audit_failure BEFORE INSERT ON he_thong.nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_location_audit_failure()`);
   try {
     await dialog.getByRole("button", { name: "Xác nhận xóa" }).click(); await expect(dialog.getByRole("alert")).toBeVisible();
     expect((await person()).vi_tri_lam_viec_id).toBe(one); expect(await db.vi_tri.findUnique({ where: { id: one } })).not.toBeNull();
     expect(await replay(page, assignmentRequest, await payload(three, true))).toContain("Không thể cập nhật");
     expect((await person()).vi_tri_lam_viec_id).toBe(one);
-  } finally { await db.$executeRawUnsafe("DROP TRIGGER test_location_audit_failure ON nhat_ky_hoat_dong"); await db.$executeRawUnsafe("DROP FUNCTION test_location_audit_failure()"); }
+  } finally { await db.$executeRawUnsafe("DROP TRIGGER test_location_audit_failure ON he_thong.nhat_ky_hoat_dong"); await db.$executeRawUnsafe("DROP FUNCTION test_location_audit_failure()"); }
   await dialog.getByRole("button", { name: "Hủy", exact: true }).click();
   const target = await db.vi_tri.findUniqueOrThrow({ where: { id: three } });
   const emptyVersion = (await import("node:crypto")).createHash("sha256").update("[]").digest("hex");

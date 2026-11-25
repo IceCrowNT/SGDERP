@@ -45,8 +45,9 @@ export async function readAiConnection(companyId: number, job: AiJob = "GENERAL"
     if (!row.dang_su_dung) throw new AiConnectionError("Kết nối AI đang tạm dừng. Người quản trị có thể bật lại tại Cài đặt chung → Quản trị AI.");
     const model = routing?.model ?? row.model_mac_dinh;
     const price = AiPricesSchema.safeParse(routing?.model ? routing.cau_hinh_gia : row.cau_hinh_gia);
+    // A price or display-name edit does not change the credentials or model used by this turn.
     return { apiKey: await readAiSecret(companyId, row.tham_chieu_bi_mat), model,
-      stamp: `db:${row.id}:${row.updated_at.toISOString()}:${routing?.updated_at.toISOString() ?? "none"}`, source: "managed", connectionId: row.id, keyVersion: row.phien_ban_khoa,
+      stamp: `db:${row.id}:${row.phien_ban_khoa}:${model}`, source: "managed", connectionId: row.id, keyVersion: row.phien_ban_khoa,
       limit: row.han_muc_chi_phi_thang, prices: price.success && price.data.model === model ? price.data : null };
   }
   if (rows.length) throw new AiConnectionError("Chưa chọn kết nối AI mặc định. Hãy chọn tại Cài đặt chung → Quản trị AI.");

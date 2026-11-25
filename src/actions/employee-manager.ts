@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { getSession, hasPermission } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { currentActor } from "@/lib/rbac-server";
+import {
+  loadManagerGraph,
+  createManagerResolver,
+  assertNoNewManagerCycles,
+} from "@/lib/employee-manager-resolution";
 export async function getDirectManagerOptions(id: number) {
   const s = await getSession();
   if (
@@ -34,11 +39,33 @@ export async function getDirectManagerOptions(id: number) {
       id: true,
       ho_ten: true,
       ma_nhan_su: true,
+      tinh_trang_lam_viec: true,
       phong_ban: { select: { ten_phong_ban: true } },
     },
     orderBy: { ho_ten: "asc" },
   });
-  return { success: true as const, person, people };
+  const graph = await loadManagerGraph(db, s.companyId);
+  const effective = createManagerResolver(graph).resolve(id);
+  const inherited = createManagerResolver({
+    ...graph,
+    people: graph.people.map((p) =>
+      p.id === id ? { ...p, quan_ly_truc_tiep_id: null } : p,
+    ),
+  }).resolve(id);
+  const display = (r: typeof effective) => ({
+    ...r,
+    name: people.find((p) => p.id === r.managerId)?.ho_ten ?? null,
+    department:
+      graph.departments.find((d) => d.id === r.departmentId)?.ten_phong_ban ??
+      null,
+  });
+  return {
+    success: true as const,
+    person,
+    people,
+    effective: display(effective),
+    inherited: display(inherited),
+  };
 }
 export async function saveDirectManager(input: unknown) {
   const p = z
@@ -60,7 +87,7 @@ export async function saveDirectManager(input: unknown) {
     };
   try {
     await db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id=${s.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id=${s.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126,${s.companyId}::int)`;
       await currentActor(tx, s, "HR");
       const v = p.data,
@@ -69,29 +96,19 @@ export async function saveDirectManager(input: unknown) {
         });
       if (!person || person.updated_at.toISOString() !== v.version)
         throw Error("Hồ sơ đã thay đổi. Mở lại phần quản lý trực tiếp.");
-      if (v.managerId) {
-        const people = await tx.nhan_su.findMany({
-          where: { company_id: s.companyId },
-          select: {
-            id: true,
-            quan_ly_truc_tiep_id: true,
-            tinh_trang_lam_viec: true,
-          },
-        });
-        const target = people.find((x) => x.id === v.managerId);
+      if (person.quan_ly_truc_tiep_id === v.managerId) return;
+      const graph = await loadManagerGraph(tx, s.companyId);
+      if (v.managerId !== null) {
+        const target = graph.people.find((x) => x.id === v.managerId);
         if (!target || target.tinh_trang_lam_viec !== "ACTIVE")
           throw Error("Chọn quản lý đang làm việc trong công ty.");
-        const visited = new Set([person.id]);
-        let next: number | null = v.managerId;
-        while (next) {
-          if (visited.has(next))
-            throw Error("Quan hệ quản lý không được tạo vòng lặp.");
-          visited.add(next);
-          next =
-            people.find((x) => x.id === next)?.quan_ly_truc_tiep_id ?? null;
-        }
       }
-      if (person.quan_ly_truc_tiep_id === v.managerId) return;
+      assertNoNewManagerCycles(graph, {
+        ...graph,
+        people: graph.people.map((p) =>
+          p.id === person.id ? { ...p, quan_ly_truc_tiep_id: v.managerId } : p,
+        ),
+      });
       await tx.nhan_su.update({
         where: { id: person.id },
         data: { quan_ly_truc_tiep_id: v.managerId },
@@ -106,14 +123,18 @@ export async function saveDirectManager(input: unknown) {
           hanh_dong: "UPDATE",
           doi_tuong_id: String(person.id),
           ten_doi_tuong: person.ho_ten,
-          mo_ta: "Thay đổi quản lý trực tiếp",
+          mo_ta:
+            v.managerId === null
+              ? "Dùng quản lý theo cơ cấu phòng ban"
+              : "Chỉ định quản lý trực tiếp riêng",
           du_lieu_cu: { quan_ly_truc_tiep_id: person.quan_ly_truc_tiep_id },
           du_lieu_moi: { quan_ly_truc_tiep_id: v.managerId },
         },
       });
     });
     revalidatePath("/employees");
-    revalidatePath("/tasks");
+    revalidatePath("/tasks", "layout");
+    revalidatePath("/");
     return { success: true as const };
   } catch (e) {
     return {

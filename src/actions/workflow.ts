@@ -45,7 +45,7 @@ function invalid(e: z.ZodError) {
 }
 async function lock(tx: Tx, s: SessionUser) {
   // Same order as HR/head mutations; serializes role revocation and workflow decisions.
-  await tx.$queryRaw`SELECT id FROM cong_ty WHERE id=${s.companyId} FOR UPDATE`;
+  await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id=${s.companyId} FOR UPDATE`;
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${s.companyId}::int)`;
 }
 function version(date: Date, expected?: string) {
@@ -632,7 +632,7 @@ export async function actOnWorkflow(input: unknown) {
     await db.$transaction(
       async (tx) => {
         await lock(tx, s);
-        await tx.$queryRaw`SELECT id FROM ho_so_quy_trinh WHERE id=${v.id} AND company_id=${s.companyId} FOR UPDATE`;
+        await tx.$queryRaw`SELECT id FROM quy_trinh.ho_so_quy_trinh WHERE id=${v.id} AND company_id=${s.companyId} FOR UPDATE`;
         const actor = await workflowActor(tx, s, "VIEW");
         const person = actor.account.nhan_su;
         const current = {
@@ -859,7 +859,7 @@ export async function saveWorkflowMaterials(input: unknown) {
       await lock(tx, s);
       const actor = await workflowActor(tx, s, "EXECUTE");
       await currentActor(tx, s, "INVENTORY");
-      await tx.$queryRaw`SELECT id FROM ho_so_quy_trinh WHERE id=${v.id} AND company_id=${s.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM quy_trinh.ho_so_quy_trinh WHERE id=${v.id} AND company_id=${s.companyId} FOR UPDATE`;
       const r = await tx.ho_so_quy_trinh.findFirst({ where: { id: v.id, company_id: s.companyId }, include: recordInclude });
       const active = r?.danh_sach_buoc.find(b => b.trang_thai === "PENDING");
       if (!r || r.trang_thai !== "IN_PROGRESS" || !active || active.buoc_mau.loai_buoc !== "TASK" || active.nguoi_duoc_giao_id !== actor.account.employee_id || actor.account.nhan_su?.tinh_trang_lam_viec !== "ACTIVE") throw Error("Chỉ người đang được giao bước thực hiện mới sửa vật tư.");

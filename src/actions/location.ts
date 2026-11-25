@@ -159,7 +159,7 @@ export async function saveLocation(input: unknown) {
   const v = parsed.data;
   try {
     const id = await db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       await currentActor(tx, session, "LOCATIONS");
       const before = v.id
@@ -320,10 +320,10 @@ export async function deleteLocation(input: unknown) {
     };
   try {
     await db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       await currentActor(tx, session, "LOCATIONS");
-      await tx.$queryRaw`SELECT id FROM vi_tri WHERE id = ${parsed.data.id} AND company_id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.vi_tri WHERE id = ${parsed.data.id} AND company_id = ${session.companyId} FOR UPDATE`;
       const before = await tx.vi_tri.findFirst({
         where: { id: parsed.data.id, company_id: session.companyId },
         select: selection,

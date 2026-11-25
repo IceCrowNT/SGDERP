@@ -40,8 +40,8 @@ export function DashboardWorkspace({ assistant, aiWorks, children }: { assistant
     url.searchParams.set("desk", value);
     window.history.pushState(null, "", url.pathname + url.search);
     window.dispatchEvent(new Event("sdg:desk-change"));
-  }} className="min-h-0 flex-1 gap-3">
-    <header className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2"><h1 className="text-xl font-semibold">Bàn làm việc</h1><TabsList aria-label="Bàn làm việc" className="h-auto min-h-11 w-full shrink-0 sm:w-auto">
+  }} className="min-h-0 flex-1 gap-2">
+    <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1"><h1 className="text-xl font-semibold">Bàn làm việc</h1><TabsList aria-label="Bàn làm việc" className="h-auto min-h-10 w-auto shrink-0">
       {assistant && <TabsTrigger value="ai" className="min-h-10 px-2 text-xs sm:px-4 sm:text-sm"><Bot aria-hidden="true" className="hidden sm:block" />Trợ lý AI</TabsTrigger>}
       <TabsTrigger value="work" className="min-h-10 px-2 text-xs sm:px-4 sm:text-sm"><ListTodo aria-hidden="true" className="hidden sm:block" />Việc của tôi</TabsTrigger>
     </TabsList><Link href="/profile" className="ml-auto hidden min-h-10 items-center text-sm text-muted-foreground underline-offset-4 hover:underline md:inline-flex">Hồ sơ của tôi</Link></header>

@@ -78,6 +78,16 @@ MVP đạt khi người HCNS dùng được ba khu vực đúng phạm vi; ngư�
 
 Trước pilot, người phụ trách chọn tài khoản được cấp quyền Quản lý và nơi lưu/sao lưu file. Không cần nhập danh mục, tạo kho hoặc cấu hình từng thư mục để bắt đầu. Phạm vi MVP đã được yêu cầu; các lựa chọn kỹ thuật/quyền ở đây là đề xuất, chưa đồng nghĩa đã duyệt viết mã.
 
+### A.6. Hướng bước 1 theo trao đổi 25/11 — đang phân tích
+
+Người phụ trách muốn bắt đầu bằng **tài liệu và biểu mẫu Dùng chung**, giữ hai mức người quản lý/người xem; Phòng của tôi và Cá nhân trong thư viện để giai đoạn sau. Thêm nhu cầu nhờ AI tìm mẫu phù hợp, điền thông tin và xuất tệp; nếu chưa có mẫu thì tạo bản mới. Đây là phạm vi đang phân tích, chưa duyệt triển khai; thiết kế B hiện vẫn là bản MVP ba khu vực trước trao đổi này, cần cập nhật trước khi viết mã.
+
+- Đề xuất một danh sách, phân biệt Tài liệu tham khảo/Biểu mẫu; tên, từ khóa như DNTT/Đề nghị thanh toán và mẫu đang dùng giúp chọn đúng nguồn. Chưa cần thư mục hoặc quy trình duyệt mới.
+- Người xem được tải/dùng mẫu để tạo bản kết quả riêng trong chat; không sửa mẫu gốc hoặc tự đăng vào thư viện. Người quản lý được đăng/ngừng dùng mẫu chung. File đã điền chứa dữ liệu cá nhân/nghiệp vụ không tự trở thành tài liệu công khai.
+- Có mẫu: dùng bản sao của mẫu đang dùng, hỏi phần bắt buộc còn thiếu, điền và xuất; giữ nguồn. Chưa có mẫu thật sự: AI tạo bản dự thảo, ghi rõ không phải mẫu công ty đã ban hành. Chỉ người quản lý chủ động đưa vào thư viện mới trở thành mẫu dùng chung; không coi thiếu quyền/lỗi đọc là không có mẫu.
+- Ưu điểm: giảm phạm vi thư viện và thao tác tải mẫu lặp lại, dùng chung biểu mẫu thống nhất, tận dụng công cụ Word/Excel/PDF hiện có. Đánh đổi: phải chuẩn bị vùng điền và kiểm chứng bố cục; cần tránh chọn nhầm mẫu, tự bịa dữ liệu hoặc công khai kết quả đã điền. Nhiều mẫu phù hợp thì làm rõ lựa chọn; không tự suy mẫu chính thức.
+- Đối chiếu mã 25/11: đã có công cụ điền placeholder DOCX, sửa ô Excel và xuất PDF; executor hiện chỉ nhận tệp thuộc tài khoản/cuộc chat. Chưa có kết nối tới thư viện mẫu chung. Cần bổ sung tra mẫu theo quyền và bản sao nguồn có truy nguyên, không nới quyền đọc mọi tệp chat. Công cụ/kiểm chứng kỹ thuật thuộc [plan AI](AI-ASSISTANT-CHECKLIST.md#tạo-sửa-và-xuất-tài-liệu--18112026).
+
 ## B. Thiết kế kỹ thuật
 
 ### B.1. Kiến trúc và phần dùng lại
@@ -171,4 +181,4 @@ Khi triển khai, đọc hướng dẫn Next.js cục bộ, kiểm tra upload 10
 - [ ] KT-03 / TL-02,04,05: file hợp lệ/sai loại/quá cỡ, gửi lặp đồng thời, lỗi disk/DB/audit, mất phản hồi; không file trùng hay báo thành công sai; xóa lặp và tải file đã xóa.
 - [ ] KT-04 / TL-01–05: dùng bàn phím/điện thoại/sáng tối, tên dài, trống/lỗi; người chỉ có DOCUMENTS vào được card; kiểm chứng backup/restore và đối soát file.
 
-**Kết quả hiện tại:** mới rà tài liệu và phạm vi; các kiểm thử ứng dụng, migration và nghiệm thu ở trên chưa chạy. Không coi hoàn thành plan là đã có tính năng.
+**Kết quả hiện tại — đối chiếu 25/11/2026:** plan vẫn là đề xuất MVP, chưa triển khai. Mã nguồn chưa có trang `/documents` hoặc card Tài liệu tại tổng quan; Prisma schema chưa có `tai_lieu`, catalog chưa có quyền `DOCUMENTS`. Công cụ tài liệu/tệp AI hiện có thuộc chat, không phải thư viện này. Lần đối chiếu chỉ đọc tài liệu/mã nguồn/migration, không truy vấn DB thực tế, không chạy kiểm thử ứng dụng hoặc thay đổi quyền. Các bước triển khai và nghiệm thu bên trên vẫn chưa hoàn thành.

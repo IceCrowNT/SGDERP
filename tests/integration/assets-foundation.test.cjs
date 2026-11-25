@@ -128,7 +128,7 @@ test('history is atomic, names are snapshots, no cross-object or cross-module re
   await db.nhat_ky_hoat_dong.createMany({ data: ['HR', 'LOCATIONS'].map(phan_he => ({ company_id: company.id, ten_dang_nhap: 'fixture', ho_ten: 'fixture', hanh_dong: 'UPDATE', phan_he, doi_tuong_id: `tai_san:${row.id}`, mo_ta: 'PRIVATE' })) });
   assert.equal((await as(viewer, () => assets.getAssetHistory(row.id))).rows.length, 1);
   await db.$executeRawUnsafe(`CREATE FUNCTION test_asset_audit_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.company_id = ${company.id} AND NEW.phan_he = 'ASSETS' THEN RAISE EXCEPTION 'test rollback'; END IF; RETURN NEW; END $$`);
-  await db.$executeRawUnsafe('CREATE TRIGGER test_asset_audit_failure BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_asset_audit_failure()');
+  await db.$executeRawUnsafe('CREATE TRIGGER test_asset_audit_failure BEFORE INSERT ON he_thong.nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_asset_audit_failure()');
   try {
     assert.equal((await as(manager, () => assets.saveAsset({ ...input(row), notes: 'Must rollback' }))).success, false);
     assert.deepEqual(await db.tai_san.findUnique({ where: { id: row.id } }), row);
@@ -136,7 +136,7 @@ test('history is atomic, names are snapshots, no cross-object or cross-module re
     assert.equal((await as(manager, () => assets.saveAssetCategory({ code: 'ROLLBACK', name: 'Rollback' }))).success, false);
     assert.equal(await db.loai_tai_san.count(), count);
   } finally {
-    await db.$executeRawUnsafe('DROP TRIGGER test_asset_audit_failure ON nhat_ky_hoat_dong');
+    await db.$executeRawUnsafe('DROP TRIGGER test_asset_audit_failure ON he_thong.nhat_ky_hoat_dong');
     await db.$executeRawUnsafe('DROP FUNCTION test_asset_audit_failure()');
   }
 });

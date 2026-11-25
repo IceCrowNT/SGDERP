@@ -32,10 +32,10 @@ const transactionSelect = {
   tai_khoan: { select: { ten_hien_thi: true } }, danh_sach_dao: { select: { id: true } },
 } as const;
 async function lock(tx: Prisma.TransactionClient, session: SessionUser, itemId?: number) {
-  await tx.$queryRaw`SELECT id FROM cong_ty WHERE id=${session.companyId} FOR UPDATE`;
+  await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id=${session.companyId} FOR UPDATE`;
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126,${session.companyId}::int)`;
   await currentActor(tx, session, "INVENTORY");
-  if (itemId) await tx.$queryRaw`SELECT id FROM mat_hang_vat_tu WHERE id=${itemId} AND company_id=${session.companyId} FOR UPDATE`;
+  if (itemId) await tx.$queryRaw`SELECT id FROM vat_tu.mat_hang_vat_tu WHERE id=${itemId} AND company_id=${session.companyId} FOR UPDATE`;
 }
 function assertVersion(before: { updated_at: Date } | null, id?: number, version?: string) {
   if (id && !before) throw new InventoryError("Không tìm thấy thông tin trong công ty.");
@@ -74,18 +74,18 @@ export async function getInventory(input: unknown) {
   const v = parsed.data;
   if (v.kind === "TIEU_HAO") v.locationId = undefined;
   const words = normalizeSearchText(v.search).split(/\s+/).filter(Boolean);
-  const where = Prisma.sql`m.company_id=${s.companyId} AND l.hang_muc=${v.kind}::"HangMucVatTu"
+  const where = Prisma.sql`m.company_id=${s.companyId} AND l.hang_muc=${v.kind}::vat_tu."HangMucVatTu"
     ${v.showInactive ? Prisma.empty : Prisma.sql`AND m.dang_su_dung`}
     ${v.categoryId ? Prisma.sql`AND m.loai_vat_tu_id=${v.categoryId}` : Prisma.empty}
     ${v.departmentId ? Prisma.sql`AND m.phong_quan_ly_id=${v.departmentId}` : Prisma.empty}
     ${words.length ? Prisma.sql`AND ${Prisma.join(words.map(w => Prisma.sql`strpos(regexp_replace(normalize(lower(replace(replace(m.ten_mat_hang || ' ' || m.ma_mat_hang,'đ','d'),'Đ','D')),NFD), U&'[\\0300-\\036f]', '', 'g'), ${w})>0`), " AND ")}` : Prisma.empty}
-    ${v.locationId ? Prisma.sql`AND EXISTS(SELECT 1 FROM giao_dich_vat_tu g WHERE g.mat_hang_vat_tu_id=m.id AND (g.vi_tri_nhap_id=${v.locationId} OR g.vi_tri_xuat_id=${v.locationId}))` : Prisma.empty}
-    ${v.low ? Prisma.sql`AND m.muc_ton_toi_thieu IS NOT NULL AND EXISTS(SELECT 1 FROM giao_dich_vat_tu g WHERE g.mat_hang_vat_tu_id=m.id) AND coalesce((SELECT sum(so_luong) FROM ton_vat_tu(m.id)),0)<=m.muc_ton_toi_thieu` : Prisma.empty}`;
+    ${v.locationId ? Prisma.sql`AND EXISTS(SELECT 1 FROM vat_tu.giao_dich_vat_tu g WHERE g.mat_hang_vat_tu_id=m.id AND (g.vi_tri_nhap_id=${v.locationId} OR g.vi_tri_xuat_id=${v.locationId}))` : Prisma.empty}
+    ${v.low ? Prisma.sql`AND m.muc_ton_toi_thieu IS NOT NULL AND EXISTS(SELECT 1 FROM vat_tu.giao_dich_vat_tu g WHERE g.mat_hang_vat_tu_id=m.id) AND coalesce((SELECT sum(so_luong) FROM ton_vat_tu(m.id)),0)<=m.muc_ton_toi_thieu` : Prisma.empty}`;
   try {
     const result = await db.$transaction(async tx => {
-      const [count] = await tx.$queryRaw<{ n: bigint }[]>`SELECT count(*) n FROM mat_hang_vat_tu m JOIN loai_vat_tu l ON l.id=m.loai_vat_tu_id WHERE ${where}`;
+      const [count] = await tx.$queryRaw<{ n: bigint }[]>`SELECT count(*) n FROM vat_tu.mat_hang_vat_tu m JOIN vat_tu.loai_vat_tu l ON l.id=m.loai_vat_tu_id WHERE ${where}`;
       const total = Number(count.n), pages = Math.max(1, Math.ceil(total / 20)), page = Math.min(v.page, pages);
-      const ids = await tx.$queryRaw<{ id: number }[]>`SELECT m.id FROM mat_hang_vat_tu m JOIN loai_vat_tu l ON l.id=m.loai_vat_tu_id WHERE ${where} ORDER BY m.updated_at DESC,m.id DESC LIMIT 20 OFFSET ${(page - 1) * 20}`;
+      const ids = await tx.$queryRaw<{ id: number }[]>`SELECT m.id FROM vat_tu.mat_hang_vat_tu m JOIN vat_tu.loai_vat_tu l ON l.id=m.loai_vat_tu_id WHERE ${where} ORDER BY m.updated_at DESC,m.id DESC LIMIT 20 OFFSET ${(page - 1) * 20}`;
       const rows = await tx.mat_hang_vat_tu.findMany({ where: { id: { in: ids.map(r => r.id) }, company_id: s.companyId }, select: itemSelect, orderBy: [{ updated_at: "desc" }, { id: "desc" }] });
       const items = await Promise.all(rows.map(async row => {
         const b = await balances(tx, row.id), totalStock = b.stock.reduce((n, r) => n + r.quantity, 0);

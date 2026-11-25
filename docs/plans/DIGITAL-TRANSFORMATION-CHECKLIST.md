@@ -30,6 +30,9 @@ Thông tin cập nhật trong báo cáo: 1Office phục vụ các quy trình c�
 
 ## Việc cần chốt và chuẩn bị
 
+- [x] Rà soát sơ bộ chuẩn bị VPS ngày 25/11 qua mã cấu hình và tài liệu: đã có [hướng dẫn Office trên VPS](../../deploy/office/README.md#chuyển-từ-mac-sang-vps-linux), chưa có bộ triển khai toàn ERP trong các file đã kiểm tra. Cần chuyển DB đủ namespace cùng kho tệp/khóa theo [kiến trúc](../ARCHITECTURE.md); working tree còn nhiều thay đổi và migration chưa commit. Lần rà soát này chưa chạy build production, thử khôi phục hoặc truy cập VPS.
+- [x] Phạm vi test deploy ngày 25/11 là 2–3 nhân sự dùng không thường xuyên, ưu tiên độ phản hồi và sau này chuyển VPS. Đề xuất Vultr Singapore 2 vCPU/4 GB, đĩa đi kèm, Ubuntu 24.04 LTS x86-64. Bộ lệnh cục bộ ở `outputs/vultr-test/README.md`: đóng gói commit và bản sao DB/tệp từ Mac, khôi phục PostgreSQL 17 trên VPS mới, build ứng dụng Linux, chạy qua SSH tunnel hoặc HTTPS có tên miền. Đã đối chiếu phiên bản PostgreSQL nguồn và pg_dump (17.9), kiểm tra cú pháp shell và cấu hình Compose. Chưa chạy bộ lệnh trên VPS.
+- [ ] Sau khi commit, chạy bộ lệnh, kiểm tra đăng nhập/phân quyền, mở tệp cũ và tạo ticket trên bản sao, rồi cho nhóm thử qua HTTPS. ONLYOFFICE và worker xuất PDF Linux có yêu cầu triển khai riêng theo tài liệu kiến trúc.
 - [ ] Xác định người bảo trợ/quản lý trực tiếp, đầu mối các phòng và 3 KPI đánh giá công việc.
 - [ ] Xác nhận quy trình thực sự đang dùng, phiên bản hiệu lực, hệ thống/file ngoài 1Office và vấn đề người dùng gặp; không kết luận module trống là không cần.
 - [ ] Phân loại từng nhu cầu: tối ưu 1Office, tích hợp hoặc xây ERP; không nhập/duyệt chính thức hai nơi cho cùng hồ sơ.

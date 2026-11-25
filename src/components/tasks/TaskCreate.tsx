@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { toast } from "sonner";
 import { createSupportTask, getTaskOptions } from "@/actions/support-task";
+import { useTaskDraft } from "./TaskDraftProvider";
 import { TaskFields, TASK_CATEGORIES, canTask } from "@/lib/support-task";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +58,7 @@ export function Choice({
         <SelectTrigger aria-label={label} className="min-h-10 w-full">
           <SelectValue placeholder="Chọn…" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="[&_[data-slot=select-item]]:min-h-10 [&_[data-slot=select-scroll-up-button]]:min-h-10 [&_[data-slot=select-scroll-down-button]]:min-h-10">
           {Object.entries(options).map(([v, l]) => (
             <SelectItem key={v} value={v}>
               {l}
@@ -100,16 +101,59 @@ export function TaskCreate({
   onCreated?: (id: number) => void;
   onBusy?: (busy: boolean) => void;
 }) {
+  const [cached, cache] = useTaskDraft<{
+    values: TaskValues;
+    requestId: string;
+  }>(`create:${initialRequestId ?? "manual"}`);
   const [open, setOpen] = useState(false),
     [options, setOptions] = useState<Options | null>(null),
     [pending, start] = useTransition(),
     [error, setError] = useState(""),
-    [requestId, setRequestId] = useState(initialRequestId ?? "");
+    [requestId, setRequestId] = useState(
+      initialRequestId ?? cached?.requestId ?? "",
+    );
   const router = useRouter();
   const form = useForm<TaskValues>({
     resolver: zodResolver(TaskFields),
-    defaultValues: initialValues ?? defaults,
+    defaultValues: cached?.values ?? initialValues ?? defaults,
   });
+  const watched = useWatch({ control: form.control });
+  useEffect(() => {
+    if (form.formState.isDirty) {
+      const values = form.getValues();
+      cache({ values, requestId });
+    }
+  }, [watched, form, cache, requestId]);
+  const dirty = form.formState.isDirty;
+  useEffect(() => {
+    if (!dirty && !pending) return;
+    const leave = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    const navigate = (event: MouseEvent) => {
+      if (embedded) return;
+      const anchor = (event.target as Element)?.closest?.("a[href]");
+      if (
+        !(anchor instanceof HTMLAnchorElement) ||
+        anchor.target === "_blank" ||
+        anchor.hasAttribute("download") ||
+        anchor.pathname.startsWith("/media/") ||
+        anchor.href === location.href
+      )
+        return;
+      if (pending) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    window.addEventListener("beforeunload", leave);
+    document.addEventListener("click", navigate, true);
+    return () => {
+      window.removeEventListener("beforeunload", leave);
+      document.removeEventListener("click", navigate, true);
+    };
+  }, [dirty, pending, embedded]);
   const [type, target, category] = useWatch({
     control: form.control,
     name: ["targetType", "targetId", "category"],
@@ -177,7 +221,7 @@ export function TaskCreate({
                 <SelectValue />
               </SelectTrigger>
             </FormControl>
-            <SelectContent>
+            <SelectContent className="[&_[data-slot=select-item]]:min-h-10 [&_[data-slot=select-scroll-up-button]]:min-h-10 [&_[data-slot=select-scroll-down-button]]:min-h-10">
               {Object.entries(choices).map(([v, l]) => (
                 <SelectItem key={v} value={v}>
                   {l}
@@ -222,7 +266,7 @@ export function TaskCreate({
     <Form {...form}>
       <form
         noValidate
-        className="space-y-4"
+        className="space-y-4 [&_[data-slot=button]]:min-h-10 [&_[data-slot=button]]:min-w-10"
         onSubmit={form.handleSubmit((v) => {
           const key = requestId || crypto.randomUUID();
           setRequestId(key);
@@ -246,6 +290,8 @@ export function TaskCreate({
                 }
                 return;
               }
+              form.reset(v);
+              cache(undefined);
               toast.success("Đã gửi yêu cầu");
               if (onCreated) {
                 onCreated(r.id);
@@ -371,9 +417,9 @@ export function TaskCreate({
               động hoặc quyền Xem Công việc nên chưa nhận được thông báo.
             </p>
           )}
-          {options && !options.me.managerId && (
+          {options?.me.managerError && (
             <p className="text-sm text-destructive">
-              Chưa khai báo quản lý trực tiếp của bạn tại Nhân sự.
+              {options.me.managerError}
             </p>
           )}
           {selector("acceptance", "Nghiệm thu", {
@@ -402,7 +448,16 @@ export function TaskCreate({
               {dateField("startAt", "Bắt đầu (trống: thời điểm gửi)")}
               <div className="space-y-1 text-sm text-muted-foreground">
                 <p>
-                  Quản lý người yêu cầu: {managerName(options?.me.managerId)}
+                  Quản lý người yêu cầu:{" "}
+                  {options?.me.managerSource === "TOP_LEVEL"
+                    ? "Không có cấp quản lý phía trên"
+                    : managerName(options?.me.managerId)}
+                  {options?.me.managerSource === "DEPARTMENT" ||
+                  options?.me.managerSource === "ANCESTOR"
+                    ? " · Theo cơ cấu phòng ban"
+                    : options?.me.managerSource === "EXPLICIT"
+                      ? " · Chỉ định riêng"
+                      : ""}
                 </p>
                 <p>
                   {type === "PHONG_BAN"
@@ -419,7 +474,8 @@ export function TaskCreate({
             </div>
           </details>
           <p className="text-xs text-muted-foreground">
-            Sau khi tạo, có thể thêm ảnh/tài liệu mô tả tại chi tiết công việc.
+            Phần đang nhập được giữ khi chuyển trang trong phiên này. Sau khi
+            tạo, có thể thêm ảnh/tài liệu mô tả tại chi tiết công việc.
           </p>
           <Button
             type="submit"
@@ -437,6 +493,7 @@ export function TaskCreate({
   return (
     <>
       <Button
+        className="min-h-10 min-w-10"
         onClick={() => {
           setError("");
           setOpen(true);
@@ -450,8 +507,8 @@ export function TaskCreate({
           if (!pending) setOpen(v);
         }}
       >
-        <DialogContent className="max-h-[85vh] w-[95vw] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-h-[85vh] w-[95vw] overflow-y-auto sm:max-w-2xl [&_[data-slot=dialog-close]]:grid [&_[data-slot=dialog-close]]:min-h-10 [&_[data-slot=dialog-close]]:min-w-10 [&_[data-slot=dialog-close]]:place-items-center">
+          <DialogHeader className="pr-10">
             <DialogTitle>Tạo yêu cầu hỗ trợ</DialogTitle>
             <DialogDescription>
               Gửi người hoặc phòng hỗ trợ. Hạn hoàn thành có thể để trống.

@@ -23,6 +23,7 @@ export function RoomPointPanel({
   assetId,
   equipmentKind,
   onAsset,
+  selectionPilot,
 }: {
   room: RoomDetailData;
   selected: string | null;
@@ -30,6 +31,7 @@ export function RoomPointPanel({
   personId?: number | null;
   assetId?: number | null;
   equipmentKind?: EquipmentKind;
+  selectionPilot?: boolean;
   onAsset?: (id:number)=>void;
 }) {
   const [assignmentData, setAssignmentData] = useState<{
@@ -87,6 +89,7 @@ export function RoomPointPanel({
   const assetsPanel = room.canViewAssets && point?.locationId !== undefined ? <LocationAssets
     key={`assets-${point.key}`} location={{ id: point.locationId,
       name: `${room.path} / ${point.name}`, active: point.state === "active" }}
+    onOpenAsset={selectionPilot && !assetContext ? onAsset : undefined}
     assets={asset ? [asset] : point.assets ?? []} selectedAssetId={asset?.id} allowAssign={!assetContext} showHeading={!assetContext}
     canManage={room.canManageAssets && point.state === "active"} /> : null;
   return (
@@ -159,7 +162,8 @@ export function RoomPointPanel({
               <>
                 {asset && <>
                   {assetsPanel}
-                  <Button asChild variant="outline" className="min-h-10"><Link href={`/assets?asset=${asset.id}`}>Mở hồ sơ tài sản</Link></Button>
+                  {selectionPilot ? <Button variant="outline" onClick={() => onAsset?.(asset.id)}>Mở hồ sơ tài sản</Button>
+                    : <Button asChild variant="outline" className="min-h-10"><Link href={`/assets?asset=${asset.id}`}>Mở hồ sơ tài sản</Link></Button>}
                 </>}
                 {assetContext && !asset && <section aria-label="Chọn tài sản tại hình đại diện" className="space-y-2">
                   <p className="text-sm text-muted-foreground">{groupAssets.length ? "Hình này đại diện cho các tài sản sau tại vị trí này:" : "Tài sản không còn tại vị trí này hoặc bạn không có quyền xem."}</p>

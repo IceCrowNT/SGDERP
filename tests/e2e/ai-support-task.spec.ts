@@ -76,13 +76,29 @@ test("AI ticket: recover draft, edit, confirm, reopen saved ticket without dupli
     ),
   ).toBe(true);
   await page.screenshot({
-    path: "outputs/task-ai-20261120/ai-draft-mobile.png",
+    path: "outputs/task-review-20261125/ai-draft-mobile.png",
     fullPage: true,
     caret: "initial",
   });
   await panel
     .getByLabel("Tiêu đề", { exact: true })
     .fill("Máy in: đã kiểm tra nguồn điện");
+  await panel.getByRole("button",{name:"Đóng bảng công việc",exact:true}).click();
+  await chat.getByRole("button",{name:"Yêu cầu hỗ trợ đang mở",exact:true}).click();
+  await expect(panel.getByLabel("Tiêu đề",{exact:true})).toHaveValue("Máy in: đã kiểm tra nguồn điện");
+  // Keyboard activation avoids the development-only Next Insight badge covering this mobile button.
+  await panel.getByRole("button",{name:"Quay lại trao đổi",exact:true}).press("Enter");
+  await chat.getByRole("button",{name:"Mở yêu cầu hỗ trợ",exact:true}).click();
+  await expect(panel.getByLabel("Tiêu đề",{exact:true})).toHaveValue("Máy in: đã kiểm tra nguồn điện");
+  await panel.getByRole("button",{name:"Đóng bảng công việc",exact:true}).click();
+  await page.setViewportSize({width:1440,height:1000});
+  await page.getByRole("button",{name:"Công việc",exact:true}).click();
+  await page.getByRole("link",{name:"Công việc của tôi",exact:true}).click();
+  await expect(page).toHaveURL(/\/tasks$/);
+  await page.goBack();
+  await chat.getByRole("button",{name:"Mở yêu cầu hỗ trợ",exact:true}).click();
+  await expect(panel.getByLabel("Tiêu đề",{exact:true})).toHaveValue("Máy in: đã kiểm tra nguồn điện");
+  await page.setViewportSize({width:390,height:844});
   await panel.getByRole("button", { name: "Gửi yêu cầu", exact: true }).click();
   await expect(
     page.getByText("Đã gửi yêu cầu hỗ trợ.", { exact: true }),
@@ -113,7 +129,7 @@ test("AI ticket: recover draft, edit, confirm, reopen saved ticket without dupli
     await db.cong_viec_ho_tro.count({ where: { company_id: f.companyId } }),
   ).toBe(count + 1);
   await page.screenshot({
-    path: "outputs/task-ai-20261120/ai-created-desktop.png",
+    path: "outputs/task-review-20261125/ai-created-desktop.png",
     fullPage: true,
     caret: "initial",
   });
@@ -146,11 +162,11 @@ test('IT lookup offers real people, distinguishes duplicate names, preserves tex
     await expect(input).toHaveValue(/Ưu tiên xử lý buổi chiều\.[\s\S]*Chọn người tiếp nhận:/);
     expect(await db.tin_nhan_ai.count({where:{hoi_thoai_id:conversationId}})).toBe(messages);
     await input.fill('');
-    await page.screenshot({path:'outputs/ai-targets-20261123/choices-desktop.png'});
+    await page.screenshot({path:'outputs/task-review-20261125/choices-desktop.png'});
     await page.setViewportSize({width:390,height:844});
     await page.evaluate(()=>document.documentElement.classList.add('dark'));
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-    await page.screenshot({path:'outputs/ai-targets-20261123/choices-mobile.png'});
+    await page.screenshot({path:'outputs/task-review-20261125/choices-mobile.png'});
     await choose.click();
     const panel=page.getByRole('complementary',{name:'Chi tiết công việc AI',exact:true});
     await expect(panel.getByLabel('Tiêu đề',{exact:true})).toHaveValue('Đổ mực máy in phòng HCNS',{timeout:45000});

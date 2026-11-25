@@ -11,7 +11,7 @@ export async function bootstrapHrFinal(db: PrismaClient, companyId: number) {
     async (tx) => {
       // Serialize bootstrap for this company, including concurrent seed processes.
       const company = await tx.$queryRaw<{ id: number }[]>`
-      SELECT id FROM cong_ty WHERE id = ${companyId} FOR UPDATE`;
+      SELECT id FROM chung.cong_ty WHERE id = ${companyId} FOR UPDATE`;
       if (!company.length) throw Error("Không tìm thấy công ty.");
       if (
         (await tx.nhan_su.count({ where: { company_id: companyId } })) ||

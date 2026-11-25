@@ -19,7 +19,7 @@ const emptyPrices = (model: string): AiPrices => ({ version: 1, model, input: ""
 function Prices() {
   const form = useFormContext<{ prices: AiPrices | null }>();
   return <fieldset className="space-y-3 rounded-xl border p-4"><legend className="px-1 text-sm font-medium">Đơn giá USD / 1 triệu token</legend>
-    <p className="text-sm text-muted-foreground">Nhập đơn giá theo hợp đồng hoặc bảng giá OpenAI. Dùng để ước tính ngân sách ERP.</p>
+    <p className="text-sm text-muted-foreground">Nhập đơn giá theo hợp đồng hoặc bảng giá OpenAI. Đơn giá chỉ dùng để hiển thị chi phí tham khảo.</p>
     <div className="grid gap-3 sm:grid-cols-3">{([ ["input", "Đầu vào"], ["cached", "Đầu vào cache"], ["output", "Đầu ra"] ] as const).map(([key, label]) => <FormField key={key} control={form.control} name={`prices.${key}`} render={({ field }) => <FormItem><FormLabel required>{label}</FormLabel><FormControl><Input {...field} value={field.value ?? ""} inputMode="decimal" aria-required="true" className="text-base" /></FormControl><FormMessage /></FormItem>} />)}</div>
     <a className="text-sm text-primary underline" href="https://developers.openai.com/api/docs/pricing" target="_blank" rel="noreferrer">Xem bảng giá OpenAI</a>
   </fieldset>;

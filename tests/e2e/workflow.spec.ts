@@ -648,7 +648,7 @@ test("lỗi ghi lịch sử rollback toàn bộ quyết định", async ({ page 
     `CREATE FUNCTION ${fn}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.company_id=${company} AND NEW.hanh_dong='APPROVED' THEN RAISE EXCEPTION 'Test history failure'; END IF; RETURN NEW; END $$`,
   );
   await db.$executeRawUnsafe(
-    `CREATE TRIGGER ${fn} BEFORE INSERT ON lich_su_quy_trinh FOR EACH ROW EXECUTE FUNCTION ${fn}()`,
+    `CREATE TRIGGER ${fn} BEFORE INSERT ON quy_trinh.lich_su_quy_trinh FOR EACH ROW EXECUTE FUNCTION ${fn}()`,
   );
   try {
     expect(await command(page, r.id, "APPROVE")).toContain(
@@ -667,7 +667,7 @@ test("lỗi ghi lịch sử rollback toàn bộ quyết định", async ({ page 
       }),
     ).toBe(0);
   } finally {
-    await db.$executeRawUnsafe(`DROP TRIGGER ${fn} ON lich_su_quy_trinh`);
+    await db.$executeRawUnsafe(`DROP TRIGGER ${fn} ON quy_trinh.lich_su_quy_trinh`);
     await db.$executeRawUnsafe(`DROP FUNCTION ${fn}()`);
   }
   expect(await command(page, r.id, "APPROVE")).toContain(

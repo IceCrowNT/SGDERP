@@ -1,10 +1,11 @@
 "use client";
+import { AI_LIMITS } from "@/lib/ai-config";
 import { useEffect, useImperativeHandle, useRef, useState, type Ref, type ReactNode } from "react";
 import { Paperclip, Loader2, X, FileText, Download, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { AI_FILE_ACCEPT, AI_FILE_MAX_BYTES, type AiAttachment, type AttachmentTable } from "@/lib/ai-attachments";
+import { AI_FILE_ACCEPT, type AiAttachment, type AttachmentTable } from "@/lib/ai-attachments";
 import { listPendingAiAttachments, removeAiAttachment, uploadAiAttachment } from "@/actions/ai-attachments";
 
 export function AiFileLinks({ files, onOpen }: { files: AiAttachment[]; onOpen?: (file: AiAttachment) => void }) {
@@ -34,8 +35,8 @@ export function AiAttachmentPicker({ ref, files, onChange, disabled, onBusy, too
   useEffect(() => { let mounted = true; listPendingAiAttachments().then(r => { if (mounted && r.success) setPending(r.files); }).catch(() => {}); return () => { mounted = false; }; }, []);
   async function addFiles(incoming: File[]) {
     if (disabled || busyRef.current || !incoming.length) return;
-    if (incoming.length + files.length > 3) { setError("Tối đa 3 tệp trong một lượt gửi."); return; }
-    if (incoming.some(f => f.size > AI_FILE_MAX_BYTES)) { setError("Mỗi tệp tối đa 10 MiB."); return; }
+    if (incoming.length + files.length > AI_LIMITS.files.perMessage) { setError(`Tối đa ${AI_LIMITS.files.perMessage} tệp trong một lượt gửi.`); return; }
+    if (incoming.some(f => f.size > AI_LIMITS.files.maxBytes)) { setError(`Mỗi tệp tối đa ${AI_LIMITS.files.maxBytes / 1024 / 1024} MiB.`); return; }
     busyRef.current = true; setBusy(true); onBusy(true); setError("");
     const selected = [...files];
     try {
@@ -62,14 +63,14 @@ export function AiAttachmentPicker({ ref, files, onChange, disabled, onBusy, too
   }
   const available = pending.filter(p => !files.some(f => f.id === p.id));
   return <div className="min-w-0 space-y-2" aria-label="Tệp đính kèm">
-    <div className="flex min-w-0 items-center gap-1"><Button type="button" variant="ghost" className="min-h-10 shrink-0 px-2" aria-label="Đính kèm tệp" disabled={disabled || busy || files.length >= 3} onClick={() => input.current?.click()}>{busy ? <Loader2 className="size-4 animate-spin" /> : <Paperclip className="size-4" />}<span className="hidden sm:inline">Đính kèm</span></Button>
-      <Popover><PopoverTrigger asChild><Button type="button" variant="ghost" size="icon" className="size-10 shrink-0 text-muted-foreground" aria-label="Định dạng và giới hạn tệp"><Info aria-hidden="true" className="size-4" /></Button></PopoverTrigger><PopoverContent className="w-64 text-sm">Ảnh, Word, Excel, CSV, PDF. Tối đa 10 MiB/tệp, 3 tệp mỗi lượt gửi.</PopoverContent></Popover>
+    <div className="flex min-w-0 items-center gap-1"><Button type="button" variant="ghost" className="min-h-10 shrink-0 px-2" aria-label="Đính kèm tệp" disabled={disabled || busy || files.length >= AI_LIMITS.files.perMessage} onClick={() => input.current?.click()}>{busy ? <Loader2 className="size-4 animate-spin" /> : <Paperclip className="size-4" />}<span className="hidden sm:inline">Đính kèm</span></Button>
+      <Popover><PopoverTrigger asChild><Button type="button" variant="ghost" size="icon" className="size-10 shrink-0 text-muted-foreground" aria-label="Định dạng và giới hạn tệp"><Info aria-hidden="true" className="size-4" /></Button></PopoverTrigger><PopoverContent className="w-64 text-sm">Ảnh, Word, Excel, CSV, PDF. Tối đa {AI_LIMITS.files.maxBytes / 1024 / 1024} MiB/tệp, {AI_LIMITS.files.perMessage} tệp mỗi lượt gửi.</PopoverContent></Popover>
       {toolbar}
     </div>
-    <Input ref={input} type="file" accept={AI_FILE_ACCEPT} multiple className="sr-only" tabIndex={-1} aria-label="Chọn tệp đính kèm" disabled={disabled || busy} onChange={e => { const selected = Array.from(e.target.files ?? []); e.target.value = ""; void addFiles(selected); }} />
+    <Input ref={input} type="file" accept={AI_FILE_ACCEPT} multiple className="sr-only h-px w-px p-0" tabIndex={-1} aria-label="Chọn tệp đính kèm" disabled={disabled || busy} onChange={e => { const selected = Array.from(e.target.files ?? []); e.target.value = ""; void addFiles(selected); }} />
     {busy && <p role="status" className="text-xs text-muted-foreground">Đang xử lý tệp…</p>}
     {files.length > 0 && <div className="flex flex-wrap gap-2">{files.map(file => <div key={file.id} className="flex min-w-0 max-w-full items-center gap-1 rounded-lg border bg-muted/30 pl-2"><span className="max-w-64 truncate text-sm" title={file.name}>{file.name}</span><Button type="button" variant="ghost" size="icon" className="size-10 shrink-0" aria-label={`Bỏ tệp ${file.name}`} disabled={disabled || busy} onClick={() => remove(file)}><X className="size-4" /></Button></div>)}</div>}
     {error && <p role="alert" className="text-sm text-destructive">{error}<Button type="button" variant="ghost" disabled={disabled || busy} onClick={() => { const retry = retryUpload.current; if (retry) void addFiles([retry.file]); else setError(""); }}>{error.startsWith("Mất kết nối") ? "Thử tải lại" : "Đóng"}</Button></p>}
-    {available.length > 0 && <details><summary className="min-h-10 cursor-pointer text-xs text-muted-foreground">Tệp chưa gửi ({available.length})</summary>{available.map(file => <div key={file.id} className="flex items-center gap-2 text-sm"><span className="min-w-0 flex-1 truncate">{file.name}</span><Button type="button" variant="ghost" disabled={disabled || busy || files.length >= 3} onClick={() => { onChange([...files, file]); setPending(old => old.filter(f => f.id !== file.id)); }}>Đính kèm</Button><Button type="button" variant="ghost" disabled={disabled || busy} onClick={() => remove(file)}>Bỏ</Button></div>)}</details>}
+    {available.length > 0 && <details><summary className="min-h-10 cursor-pointer text-xs text-muted-foreground">Tệp chưa gửi ({available.length})</summary>{available.map(file => <div key={file.id} className="flex items-center gap-2 text-sm"><span className="min-w-0 flex-1 truncate">{file.name}</span><Button type="button" variant="ghost" disabled={disabled || busy || files.length >= AI_LIMITS.files.perMessage} onClick={() => { onChange([...files, file]); setPending(old => old.filter(f => f.id !== file.id)); }}>Đính kèm</Button><Button type="button" variant="ghost" disabled={disabled || busy} onClick={() => remove(file)}>Bỏ</Button></div>)}</details>}
   </div>;
 }

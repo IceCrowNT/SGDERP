@@ -6,7 +6,7 @@ test("Prisma Studio model and scalar names match the PostgreSQL schema", async (
   try {
     const columns = await db.$queryRaw<{ table_name: string; column_name: string }[]>`
       SELECT table_name, column_name FROM information_schema.columns
-      WHERE table_schema = 'public' AND table_name <> '_prisma_migrations'
+      WHERE table_schema IN ('chung', 'phan_quyen', 'he_thong', 'ai', 'cong_viec', 'quy_trinh', 'tai_san', 'vat_tu', 'khong_gian_3d') AND table_name <> '_prisma_migrations'
       ORDER BY table_name, ordinal_position`;
     const tables = [...new Set(columns.map((column) => column.table_name))].sort();
     const models = Prisma.dmmf.datamodel.models;

@@ -1,3 +1,4 @@
+import { AI_LIMITS } from "@/lib/ai-config";
 import { runDocumentWorker, type PdfInfo } from "./ai-document-runtime";
 import sharp from "sharp";
 import path from "node:path";
@@ -5,7 +6,7 @@ import { Worker } from "node:worker_threads";
 import mammoth from "mammoth";
 import * as XLSX from "xlsx";
 import yauzl from "yauzl";
-import { AI_FILE_MAX_BYTES, FileAnalyzeSchema, FileReadSchema, type AttachmentTable } from "./ai-attachments";
+import { FileAnalyzeSchema, FileReadSchema, type AttachmentTable } from "./ai-attachments";
 
 export class AttachmentError extends Error {}
 type Cell = string | number | null;
@@ -20,14 +21,14 @@ export async function validateOfficeZip(buffer: Buffer, kind: "docx" | "xlsx") {
     yauzl.fromBuffer(buffer, { lazyEntries: true, validateEntrySizes: true }, (error, zip) => {
       if (error || !zip) return reject(new AttachmentError("Tệp Office không hợp lệ hoặc đã mã hóa."));
       let total = 0, entries = 0, ended = false;
-      const fail = () => { if (!ended) { ended = true; zip.close(); reject(new AttachmentError("Tệp Office bị lỗi, có macro hoặc vượt giới hạn giải nén 30 MiB/2.000 mục.")); } };
+      const fail = () => { if (!ended) { ended = true; zip.close(); reject(new AttachmentError(`Tệp Office bị lỗi, có macro hoặc vượt giới hạn giải nén ${AI_LIMITS.files.zipExpandedBytes / 1024 / 1024} MiB/${AI_LIMITS.files.zipEntries.toLocaleString("vi-VN")} mục.`)); } };
       zip.on("error", fail); zip.on("end", () => { if (!ended) { ended = true; resolve(); } });
       zip.on("entry", entry => {
-        if (++entries > 2000 || entry.uncompressedSize > 30 * 1024 * 1024 || /vbaProject|\.bin$|(^|\/)\.\./i.test(entry.fileName) || names.has(entry.fileName)) return fail();
+        if (++entries > AI_LIMITS.files.zipEntries || entry.uncompressedSize > AI_LIMITS.files.zipExpandedBytes || /vbaProject|\.bin$|(^|\/)\.\./i.test(entry.fileName) || names.has(entry.fileName)) return fail();
         names.add(entry.fileName);
         zip.openReadStream(entry, (err, stream) => {
           if (err || !stream) return fail();
-          stream.on("error", fail); stream.on("data", chunk => { total += chunk.length; if (total > 30 * 1024 * 1024) { stream.destroy(); fail(); } });
+          stream.on("error", fail); stream.on("data", chunk => { total += chunk.length; if (total > AI_LIMITS.files.zipExpandedBytes) { stream.destroy(); fail(); } });
           stream.on("end", () => { if (!ended) zip.readEntry(); });
         });
       }); zip.readEntry();
@@ -36,15 +37,15 @@ export async function validateOfficeZip(buffer: Buffer, kind: "docx" | "xlsx") {
   if (!names.has(kind === "docx" ? "word/document.xml" : "xl/workbook.xml")) throw new AttachmentError("Nội dung tệp không đúng định dạng đã chọn.");
 }
 export async function parseAttachment(buffer: Buffer, filename: string): Promise<{ data: ParsedFile; preview?: Buffer }> {
-  if (!buffer.length || buffer.length > AI_FILE_MAX_BYTES) throw new AttachmentError("Mỗi tệp phải từ 1 byte đến 10 MiB.");
+  if (!buffer.length || buffer.length > AI_LIMITS.files.maxBytes) throw new AttachmentError(`Mỗi tệp phải từ 1 byte đến ${AI_LIMITS.files.maxBytes / 1024 / 1024} MiB.`);
   const ext = filename.split(".").pop()?.toLowerCase();
   if (["png", "jpg", "jpeg", "webp"].includes(ext ?? "")) {
     try {
-      const image = sharp(buffer, { limitInputPixels: 25_000_000 }); const meta = await image.metadata();
+      const image = sharp(buffer, { limitInputPixels: AI_LIMITS.files.imagePixels }); const meta = await image.metadata();
       if (!["png", "jpeg", "webp"].includes(meta.format ?? "") || (meta.pages ?? 1) > 1) throw Error();
-      const preview = await image.rotate().resize({ width: 2048, height: 2048, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 88 }).toBuffer();
-      return { data: { kind: "image", note: "Ảnh được tối ưu tối đa 2.048px để phân tích; chữ quá nhỏ có thể cần ảnh cận cảnh." }, preview };
-    } catch { throw new AttachmentError("Ảnh không hợp lệ, ảnh động hoặc vượt 25 triệu pixel. Dùng PNG, JPEG, WebP tĩnh."); }
+      const preview = await image.rotate().resize({ width: AI_LIMITS.files.previewSide, height: AI_LIMITS.files.previewSide, fit: "inside", withoutEnlargement: true }).jpeg({ quality: AI_LIMITS.files.jpegQuality }).toBuffer();
+      return { data: { kind: "image", note: `Ảnh được tối ưu tối đa ${AI_LIMITS.files.previewSide.toLocaleString("vi-VN")}px để phân tích; chữ quá nhỏ có thể cần ảnh cận cảnh.` }, preview };
+    } catch { throw new AttachmentError(`Ảnh không hợp lệ, ảnh động hoặc vượt ${AI_LIMITS.files.imagePixels.toLocaleString("vi-VN")} pixel. Dùng PNG, JPEG, WebP tĩnh.`); }
   }
   if (ext === "pdf") {
     if (buffer.subarray(0,5).toString() !== "%PDF-") throw new AttachmentError("Tệp PDF không hợp lệ.");
@@ -57,15 +58,15 @@ export async function parseAttachment(buffer: Buffer, filename: string): Promise
   if (ext === "docx") {
     let text: string;
     try { text = (await mammoth.extractRawText({ buffer })).value; } catch { throw new AttachmentError("Không đọc được nội dung Word. Hãy lưu lại dưới dạng DOCX không có mật khẩu."); }
-    if (text.length > 300_000) throw new AttachmentError("Word vượt 300.000 ký tự. Hãy chia tài liệu.");
+    if (text.length > AI_LIMITS.files.wordChars) throw new AttachmentError(`Word vượt ${AI_LIMITS.files.wordChars.toLocaleString("vi-VN")} ký tự. Hãy chia tài liệu.`);
     const paragraphs = text.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
-    if (paragraphs.some(p => p.length > 15000)) throw new AttachmentError("Một đoạn Word vượt 15.000 ký tự. Hãy tách đoạn trước khi tải.");
+    if (paragraphs.some(p => p.length > AI_LIMITS.files.paragraphChars)) throw new AttachmentError(`Một đoạn Word vượt ${AI_LIMITS.files.paragraphChars.toLocaleString("vi-VN")} ký tự. Hãy tách đoạn trước khi tải.`);
     if (!paragraphs.length) throw new AttachmentError("Word không có văn bản đọc được; tài liệu chỉ chứa ảnh cần gửi ảnh riêng.");
     return { data: { kind: "docx", paragraphs, note: "Đọc văn bản theo đoạn; chưa đọc ảnh/biểu đồ nhúng, không giữ bố cục trang Word." } };
   }
   const sheets = await new Promise<SheetData[]>((resolve, reject) => {
-    const worker = new Worker(path.join(process.cwd(), "src/lib/ai-sheet-worker.cjs"), { workerData: { buffer, kind: ext }, resourceLimits: { maxOldGenerationSizeMb: 128 } });
-    const timer = setTimeout(() => { void worker.terminate(); reject(new AttachmentError("Đọc bảng tính quá 15 giây. Hãy chia tệp.")); }, 15000);
+    const worker = new Worker(path.join(process.cwd(), "src/lib/ai-sheet-worker.cjs"), { workerData: { buffer, kind: ext, limits: AI_LIMITS }, resourceLimits: { maxOldGenerationSizeMb: AI_LIMITS.workers.sheetMemoryMb } });
+    const timer = setTimeout(() => { void worker.terminate(); reject(new AttachmentError(`Đọc bảng tính quá ${AI_LIMITS.workers.sheetTimeoutMs / 1000} giây. Hãy chia tệp.`)); }, AI_LIMITS.workers.sheetTimeoutMs);
     worker.once("message", (result: { sheets?: SheetData[]; error?: string }) => { clearTimeout(timer); void worker.terminate(); if (result.sheets) resolve(result.sheets); else reject(new AttachmentError(result.error ?? "Không đọc được bảng tính.")); });
     worker.once("error", () => { clearTimeout(timer); reject(new AttachmentError("Không đọc được bảng tính trong giới hạn bộ nhớ. Hãy chia tệp.")); });
     worker.once("exit", code => { clearTimeout(timer); if (code !== 0) reject(new AttachmentError("Tiến trình đọc bảng tính đã dừng. Hãy chia tệp hoặc thử lại.")); });
@@ -81,13 +82,13 @@ export function readFileData(data: ParsedFile, name: string, raw: unknown): { ta
   if (data.kind === "pdf") return { output: { file: name, pages: data.pdf.pages, fields: data.pdf.fields.slice(v.start - 1, v.start - 1 + v.limit), totalFields: data.pdf.fields.length, next: v.start + v.limit <= data.pdf.fields.length ? v.start + v.limit : null, note: data.note } };
   if (data.kind === "docx") {
     const paragraphs = data.paragraphs.slice(v.start - 1, v.start - 1 + v.limit).map((text, i) => ({ paragraph: v.start + i, text }));
-    if (JSON.stringify(paragraphs).length > 16000) throw new AttachmentError("Phần văn bản quá dài; giảm số đoạn mỗi lần đọc.");
+    if (JSON.stringify(paragraphs).length > AI_LIMITS.files.readChars) throw new AttachmentError("Phần văn bản quá dài; giảm số đoạn mỗi lần đọc.");
     return { output: { file: name, paragraphs, totalParagraphs: data.paragraphs.length, next: v.start + v.limit <= data.paragraphs.length ? v.start + v.limit : null, note: data.note } };
   }
   const sheet = data.sheets.find(s => s.name === v.sheet) ?? (v.sheet === null && data.sheets.length === 1 ? data.sheets[0] : undefined);
   if (!sheet) throw new AttachmentError("Chọn đúng tên sheet từ danh sách tệp.");
   const rows = sheet.rows.slice(v.start - 1, v.start - 1 + v.limit).map((r, i) => [v.start + i, ...r]);
-  if (JSON.stringify(rows).length > 16000) throw new AttachmentError("Vùng dữ liệu quá dài; giảm số dòng mỗi lần đọc.");
+  if (JSON.stringify(rows).length > AI_LIMITS.files.readChars) throw new AttachmentError("Vùng dữ liệu quá dài; giảm số dòng mỗi lần đọc.");
   const table = { source: `${name} · ${sheet.name} · dòng ${v.start}–${v.start + rows.length - 1}`, columns: ["Dòng", ...Array.from({ length: sheet.rows[0]?.length ?? 0 }, (_, c) => XLSX.utils.encode_col(c))], rows, note: `${data.note} Ô công thức thiếu kết quả: ${sheet.missingFormulaValues}.` };
   return { table, output: { ...table, totalRows: sheet.rows.length, next: v.start + v.limit <= sheet.rows.length ? v.start + v.limit : null } };
 }
@@ -110,7 +111,7 @@ export function analyzeSheet(data: ParsedFile, name: string, raw: unknown): { ta
     const g = groups.get(key) ?? { count: 0, numbers: 0, skipped: 0, sum: 0, min: Infinity, max: -Infinity };
     g.count++;
     if (value !== null) { const n = numberValue(row[value]); if (n !== null && Number.isFinite(n)) { g.numbers++; g.sum += n; g.min = Math.min(g.min, n); g.max = Math.max(g.max, n); } else g.skipped++; }
-    groups.set(key, g); if (groups.size > 100) throw new AttachmentError("Kết quả quá 100 nhóm; hãy thêm điều kiện lọc.");
+    groups.set(key, g); if (groups.size > AI_LIMITS.files.groups) throw new AttachmentError(`Kết quả quá ${AI_LIMITS.files.groups} nhóm; hãy thêm điều kiện lọc.`);
   }
   const rows: Cell[][] = [...groups].map(([key, g]) => [key, g.count, v.operation === "count" ? g.count : !g.numbers ? null : v.operation === "sum" ? g.sum : v.operation === "average" ? g.sum / g.numbers : v.operation === "min" ? g.min : g.max, g.skipped]);
   if (rows.some(r => r.some(c => typeof c === "number" && !Number.isFinite(c)))) throw new AttachmentError("Kết quả số vượt phạm vi tính toán.");

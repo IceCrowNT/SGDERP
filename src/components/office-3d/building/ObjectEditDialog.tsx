@@ -14,10 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export type ObjectEditTarget = { kind: "location"; id: number } | { kind: "person"; id: number } | { kind: "asset"; ids: number[] };
+export type ObjectEditTarget = { kind: "location"; id: number } | { kind: "person"; id: number } | { kind: "asset"; ids: number[]; detail?: boolean };
 export function ObjectEditDialog({ target, onClose }: { target: ObjectEditTarget; onClose: () => void }) {
   const [editing, setEditing] = useState(false);
-  const title = target.kind === "location" ? "Sửa thông tin vị trí" : target.kind === "person" ? "Sửa nhân sự" : "Sửa tài sản";
+  const title = target.kind === "location" ? "Sửa thông tin vị trí" : target.kind === "person" ? "Sửa nhân sự" : target.detail ? "Hồ sơ tài sản" : "Sửa tài sản";
   useEffect(() => {
     const unload = (event: BeforeUnloadEvent) => { if (editing) event.preventDefault(); };
     window.addEventListener("beforeunload", unload);
@@ -28,11 +28,11 @@ export function ObjectEditDialog({ target, onClose }: { target: ObjectEditTarget
       onInteractOutside={event => event.preventDefault()}
       onEscapeKeyDown={event => { if (editing) { event.preventDefault(); toast.info("Hãy lưu hoặc hủy nội dung đang sửa."); } }}>
       <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>
-        {target.kind === "asset" ? "Bấm vào thông tin cần sửa trong hồ sơ." : target.kind === "person" ? "Cập nhật hồ sơ nhân sự. Ghi nhận nghỉ việc sẽ khóa tài khoản liên kết." : "Cập nhật tên và mô tả của vị trí đang chọn."}
+        {target.kind === "asset" && target.detail ? "Thông tin thiết bị tại vị trí đang chọn." : target.kind === "asset" ? "Bấm vào thông tin cần sửa trong hồ sơ." : target.kind === "person" ? "Cập nhật hồ sơ nhân sự. Ghi nhận nghỉ việc sẽ khóa tài khoản liên kết." : "Cập nhật tên và mô tả của vị trí đang chọn."}
       </DialogDescription></DialogHeader>
       {target.kind === "location" ? <LocationEditor locationId={target.id} onBusy={setEditing} onClose={onClose} />
         : target.kind === "person" ? <PersonEditor id={target.id} onEditingChange={setEditing} onClose={onClose} />
-          : <AssetEditor ids={target.ids} onEditingChange={setEditing} />}
+          : <AssetEditor ids={target.ids} detail={target.detail} onEditingChange={setEditing} />}
     </DialogContent>
   </Dialog>;
 }
@@ -52,9 +52,10 @@ function PersonEditor({ id, onEditingChange, onClose }: { id: number; onEditingC
   return <EmployeeForm employee={result.employee} departments={result.departments} workLocations={result.workLocations}
     accountAccess={false} roles={[]} accounts={[]} done={onClose} onEditingChange={onEditingChange} />;
 }
-function AssetEditor({ ids, onEditingChange }: { ids: number[]; onEditingChange: (value: boolean) => void }) {
+function AssetEditor({ ids, detail, onEditingChange }: { ids: number[]; detail?: boolean; onEditingChange: (value: boolean) => void }) {
   const router = useRouter();
   const [rows, setRows] = useState<AssetRow[] | null>(null);
+  const [canManage, setCanManage] = useState(false);
   const [categories, setCategories] = useState<AssetCategory[]>([]);
   const [selected, setSelected] = useState<number | null>(ids.length === 1 ? ids[0] : null);
   const [search, setSearch] = useState("");
@@ -64,14 +65,25 @@ function AssetEditor({ ids, onEditingChange }: { ids: number[]; onEditingChange:
     let cancelled = false;
     async function load() {
       const [catalog, results] = await Promise.all([getAssetCategories(), Promise.all(ids.map(id => getAsset(id)))]);
-      if (!catalog.success || !catalog.canManage) throw Error("Không có quyền sửa tài sản.");
+      if (!catalog.success) throw Error("Không thể tải danh mục tài sản.");
+      if (!detail && !catalog.canManage) throw Error("Không có quyền sửa tài sản.");
       const records: AssetRow[] = [];
-      for (const r of results) { if (!r.success || !r.canManage) throw Error("Không thể tải tài sản hoặc quyền sửa đã thay đổi."); records.push(r.row); }
-      if (!cancelled) { setCategories(catalog.rows); setRows(records); }
+      let editable = catalog.canManage;
+      for (const result of results) {
+        if (!result.success) throw Error("Không thể tải hồ sơ tài sản.");
+        if (!detail && !result.canManage) throw Error("Không có quyền sửa tài sản.");
+        editable = editable && result.canManage;
+        records.push(result.row);
+      }
+      if (!cancelled) {
+        setCanManage(editable);
+        setCategories(catalog.rows);
+        setRows(records);
+      }
     }
     load().catch(e => { if (!cancelled) setError(e instanceof Error && e.message.startsWith("Không") ? e.message : "Không tải được hồ sơ tài sản."); });
     return () => { cancelled = true; };
-  }, [ids, attempt]);
+  }, [ids, detail, attempt]);
   if (error) return <LoadError message={error} retry={() => { setError(""); setAttempt(a => a + 1); }} />;
   if (!rows) return <Skeleton className="h-48" aria-label="Đang tải hồ sơ tài sản" />;
   const row = rows.find(r => r.id === selected);
@@ -79,6 +91,6 @@ function AssetEditor({ ids, onEditingChange }: { ids: number[]; onEditingChange:
     <Input aria-label="Tìm tài sản cần sửa" placeholder="Tìm tên, mã tài sản…" value={search} onChange={e => setSearch(e.target.value)} />
     <div className="max-h-72 space-y-2 overflow-y-auto">{rows.filter(r => `${r.ten_tai_san} ${r.ma_tai_san}`.toLocaleLowerCase("vi").includes(search.toLocaleLowerCase("vi"))).map(r => <Button key={r.id} variant="outline" className="h-auto min-h-12 w-full justify-start whitespace-normal text-left" onClick={() => setSelected(r.id)}>{r.ten_tai_san} · {r.ma_tai_san}</Button>)}</div>
   </div>;
-  return <AssetDetail key={row.id} row={row} categories={categories} canManage onEditingChange={onEditingChange}
+  return <AssetDetail key={row.id} row={row} categories={categories} canManage={canManage} onEditingChange={onEditingChange}
     onSaved={updated => { setRows(old => old!.map(r => r.id === updated.id ? updated : r)); router.refresh(); }} />;
 }

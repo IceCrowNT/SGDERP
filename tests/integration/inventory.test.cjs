@@ -142,8 +142,8 @@ test('catalog versioning, editable unit and frozen kind/code, stop lifecycle and
 test('audit failure rolls back ledger and stock, not just log',async()=>{
  const item=await newItem();
  await db.$executeRawUnsafe(`CREATE FUNCTION test_inventory_audit_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.phan_he='INVENTORY' AND NEW.doi_tuong_id LIKE 'giao_dich_vat_tu:%' THEN RAISE EXCEPTION 'test audit failure'; END IF; RETURN NEW; END $$`);
- await db.$executeRawUnsafe('CREATE TRIGGER test_inventory_audit_failure BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_inventory_audit_failure()');
- try{assert.equal((await record(item.id,'NHAP',{quantity:5,toId:place.id})).success,false);assert.equal(await stock(item.id),0);assert.equal((await detail(item.id)).recorded,false);}finally{await db.$executeRawUnsafe('DROP TRIGGER test_inventory_audit_failure ON nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION test_inventory_audit_failure()');}
+ await db.$executeRawUnsafe('CREATE TRIGGER test_inventory_audit_failure BEFORE INSERT ON he_thong.nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_inventory_audit_failure()');
+ try{assert.equal((await record(item.id,'NHAP',{quantity:5,toId:place.id})).success,false);assert.equal(await stock(item.id),0);assert.equal((await detail(item.id)).recorded,false);}finally{await db.$executeRawUnsafe('DROP TRIGGER test_inventory_audit_failure ON he_thong.nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION test_inventory_audit_failure()');}
 });
 
 test('unaccented server search, low stock uses company total even when filtering one place',async()=>{
@@ -295,6 +295,8 @@ test('legacy located consumables retain rows and total after pooled function upg
  const fn=(source,name)=>source.match(new RegExp('CREATE (?:OR REPLACE )?FUNCTION '+name+'[\\s\\S]*?\\$\\$;'))[0].replace('CREATE FUNCTION','CREATE OR REPLACE FUNCTION');
  const stop=new Error('rollback fixture');
  try{await db.$transaction(async tx=>{
+   // Historical function bodies predate namespaces; resolve their tables on this test connection.
+   await tx.$executeRawUnsafe('SET LOCAL search_path TO public, vat_tu, chung, quy_trinh');
    await tx.$executeRawUnsafe(fn(old,'ton_vat_tu'));await tx.$executeRawUnsafe(fn(old,'bao_ve_giao_dich_vat_tu'));
    const item=await tx.mat_hang_vat_tu.create({data:{company_id:company.id,loai_vat_tu_id:consumable.id,ten_mat_hang:'Legacy mực',don_vi_tinh:'lọ'}});
    const common={company_id:company.id,mat_hang_vat_tu_id:item.id,account_id:manager.id};

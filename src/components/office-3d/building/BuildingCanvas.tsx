@@ -32,7 +32,7 @@ import { layoutEquipment } from "@/lib/office-3d/equipment-layout";
 import { materials } from "../hcns/RoomFurniture";
 import { ARCHITECTURAL_BOUNDS } from "@/lib/office-3d/architectural-layout";
 import { PlacedObjects } from "./PlacedObjects";
-import type { PlacementDraft } from "@/lib/office-3d/placement";
+import { isDeskSelectionPilot, type PlacementDraft } from "@/lib/office-3d/placement";
 
 function isVisibleInScene(object: Object3D) {
   for (let node: Object3D | null = object; node; node = node.parent) {
@@ -555,7 +555,7 @@ export default function BuildingCanvas(props: Props) {
       ...p,
       priority: p.id === props.person ? 3 : p.point === hovered ? 2 : p.point === props.point ? 1 : 0,
     })) : [];
-    if (placed && !people.some(p => p.point === props.point && p.id === props.person)) {
+    if (placed && !(props.detail && isDeskSelectionPilot(placed)) && !people.some(p => p.point === props.point && p.id === props.person)) {
       const r=BUILDING_ROOMS.find(r=>r.key===placed.roomKey)!;
       return [{key:placed.point.key,at:[r.x+placed.x,floorElevation(r.floor)+1.3,r.z+placed.z] as [number,number,number],priority:4}, ...personAnchors];
     }
@@ -678,7 +678,7 @@ export default function BuildingCanvas(props: Props) {
               {props.detail && people.map(p => <line key={p.key} ref={line => registerLeader(p.key, line)}
                 className="invisible" stroke="currentColor" strokeWidth="1" />)}
             </svg>
-            {scene.objects?.filter(o => o.point.key === props.point && !o.point.occupants?.some(p => p.id === props.person)).map(o=><Button key={o.id} ref={el=>register(o.point.key,el)} variant="outline"
+            {scene.objects?.filter(o => o.point.key === props.point && !(props.detail && isDeskSelectionPilot(o)) && !o.point.occupants?.some(p => p.id === props.person)).map(o=><Button key={o.id} ref={el=>register(o.point.key,el)} variant="outline"
               aria-label={`Xem vị trí ${o.point.name}`} onClick={()=>props.onPoint(o.point.key)}
               onDoubleClick={()=>props.onFocusPoint(o.point.key)}
               onContextMenu={()=>contextTarget({kind:"point",key:o.point.key})}

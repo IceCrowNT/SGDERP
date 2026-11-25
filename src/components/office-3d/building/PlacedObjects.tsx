@@ -5,7 +5,7 @@ import { useCursor } from "@react-three/drei";
 import { Shape } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import { BUILDING_ROOMS, floorElevation, type FloorSelection } from "@/lib/office-3d/building-layout";
-import { placementSize, placementError, type PlacementDraft } from "@/lib/office-3d/placement";
+import { isDeskSelectionPilot, placementSize, placementError, type PlacementDraft } from "@/lib/office-3d/placement";
 import type { PlacedObject } from "@/lib/office-3d/building-mapping";
 import { OfficePerson } from "../hcns/OfficePerson";
 import { Desk, EquipmentDisplay } from "../hcns/RoomFurniture";
@@ -40,7 +40,7 @@ export function PlacedObjects({ objects,floor,detail,roomKey,selected,person,onP
         onPointerOver={e=>{if(!draft){e.stopPropagation();setHovered(o.point.key);}}} onPointerOut={()=>setHovered(null)}
         onDoubleClick={e=>{e.stopPropagation();if(!draft && e.button===0 && e.delta<5)onFocusPoint(o.point.key);}}
         onClick={e=>{e.stopPropagation();if(!draft && e.button===0 && e.delta<5)onSelect(o.point.key);}}>
-        {o.kind === "BAN" ? <Desk model={o.model} width={width} depth={depth} equipment={o.point.equipment} assets={o.point.assets} layoutAssets={o.point.layoutAssets} selected={active} activeEquipment={selected===o.point.key ? activeEquipment : undefined} activeAsset={selected===o.point.key ? activeAsset : undefined} onEquipment={!draft ? (kind,focus,assetId)=>onEquipment(o.point.key,kind,focus,assetId) : undefined}/> : <>
+        {o.kind === "BAN" ? <Desk selectionPilot={detail && isDeskSelectionPilot(o)} model={o.model} width={width} depth={depth} equipment={o.point.equipment} assets={o.point.assets} layoutAssets={o.point.layoutAssets} selected={active} activeEquipment={selected===o.point.key ? activeEquipment : undefined} activeAsset={selected===o.point.key ? activeAsset : undefined} onEquipment={!draft ? (kind,focus,assetId)=>onEquipment(o.point.key,kind,focus,assetId) : undefined}/> : <>
           <mesh position={[0,.06,0]}><cylinderGeometry args={[.35,.35,.12,20]}/><meshStandardMaterial color={active ? "#c44c37":"#789cae"}/></mesh>
           <EquipmentDisplay equipment={o.point.equipment} assets={o.point.assets} layoutAssets={o.point.layoutAssets} width={width} depth={depth} height={.12} activeEquipment={selected===o.point.key ? activeEquipment : undefined} activeAsset={selected===o.point.key ? activeAsset : undefined} onEquipment={!draft ? (kind,focus,assetId)=>onEquipment(o.point.key,kind,focus,assetId) : undefined} />
         </>}

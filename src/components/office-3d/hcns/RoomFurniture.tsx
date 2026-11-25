@@ -1,5 +1,5 @@
 "use client";
-import { RoundedBox } from "@react-three/drei";
+import { Edges, RoundedBox } from "@react-three/drei";
 import { useMemo, useState } from "react";
 import { layoutEquipment } from "@/lib/office-3d/equipment-layout";
 import type { LocationAsset } from "@/lib/asset-location";
@@ -69,7 +69,7 @@ function Cylinder({
     </mesh>
   );
 }
-function Monitor() {
+function Monitor({ highlighted = false }: { highlighted?: boolean }) {
   return (
     <group>
       <Block
@@ -90,7 +90,7 @@ function Monitor() {
       <Block
         at={[0, 0.44, -0.006]}
         size={[0.66, 0.39, 0.01]}
-        color={materials.screen}
+        color={highlighted ? materials.accent : materials.screen}
         shadow={false}
       />
       <Block
@@ -237,13 +237,14 @@ export function EquipmentModel({ kind }: { kind: EquipmentKind }) {
 }
 
 export type EquipmentInteraction = {
+  selectionPilot?: boolean;
   activeEquipment?: EquipmentKind;
   activeAsset?: number;
   assets?: LocationAsset[];
   layoutAssets?: LocationAsset[];
   onEquipment?: (kind: EquipmentKind, focus: boolean, assetId?: number) => void;
 };
-export function EquipmentDisplay({ equipment, assets, layoutAssets, width, depth, height = 0, desk = false, activeEquipment, activeAsset, onEquipment }: {
+export function EquipmentDisplay({ equipment, assets, layoutAssets, width, depth, height = 0, desk = false, selectionPilot, activeEquipment, activeAsset, onEquipment }: {
   equipment: EquipmentKind[]; width: number; depth: number; height?: number; desk?: boolean;
 } & EquipmentInteraction) {
   const [hovered, setHovered] = useState<string | null>(null);
@@ -256,7 +257,14 @@ export function EquipmentDisplay({ equipment, assets, layoutAssets, width, depth
       onClick={onEquipment ? e => {e.stopPropagation(); if(e.button === 0 && e.delta < 5) onEquipment(kind, false, assetId);} : undefined}
       onDoubleClick={onEquipment ? e => {e.stopPropagation(); if(e.button === 0 && e.delta < 5) onEquipment(kind, true, assetId);} : undefined}
       position={position} scale={scale}>
-      {part === "pc-tower" ? <Block at={[0,.25,0]} size={[.22,.5,.4]} color={materials.device}/> : <EquipmentModel kind={kind} />}
+      {selectionPilot && kind === "pc" && assetId !== undefined && onEquipment && (
+        <mesh position={part === "pc-tower" ? [0, .25, 0] : [0, .35, -.04]}>
+          <boxGeometry args={part === "pc-tower" ? [.28, .54, .44] : [.8, .7, .18]} />
+          <meshBasicMaterial visible={false} />
+        </mesh>
+      )}
+      {part === "pc-tower" ? <Block at={[0,.25,0]} size={[.22,.5,.4]} color={selectionPilot && hovered === key ? materials.accent : materials.device}/>
+        : selectionPilot && kind === "pc" ? <Monitor highlighted={hovered === key} /> : <EquipmentModel kind={kind} />}
       {((activeAsset ? activeAsset === assetId : activeEquipment === kind) || hovered === key) && onEquipment && <mesh rotation={[-Math.PI/2,0,0]} position={[(footprint.x-position[0])/scale,.008,(footprint.z-position[2])/scale]} raycast={() => {}}>
         <planeGeometry args={[footprint.width/scale,footprint.depth/scale]}/><meshBasicMaterial color={materials.accent} transparent opacity={.2} depthWrite={false}/>
       </mesh>}
@@ -270,6 +278,7 @@ export function Desk({
   depth,
   equipment,
   selected,
+  selectionPilot,
   activeEquipment,
   activeAsset,
   assets,
@@ -292,6 +301,7 @@ export function Desk({
         castShadow
         receiveShadow
       >
+        {selectionPilot && selected && <Edges color={materials.accent} threshold={30} raycast={() => {}} />}
         <meshStandardMaterial
           color={selected ? materials.selected : materials.wood}
           roughness={0.72}
@@ -340,7 +350,7 @@ export function Desk({
         <Block at={[width*.34,.846,0]} size={[width*.26,.002,depth-.08]} color={materials.woodEdge}/>
         <Block at={[0,.847,depth*.15]} size={[width*.43,.003,depth*.48]} color={materials.metal}/>
       </group>}
-      <EquipmentDisplay equipment={equipment} assets={assets} layoutAssets={layoutAssets} width={width} depth={depth} height={.85} desk
+      <EquipmentDisplay selectionPilot={selectionPilot} equipment={equipment} assets={assets} layoutAssets={layoutAssets} width={width} depth={depth} height={.85} desk
         activeEquipment={activeEquipment} activeAsset={activeAsset} onEquipment={onEquipment} />
 
     </group>

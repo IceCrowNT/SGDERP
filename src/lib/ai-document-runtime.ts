@@ -1,3 +1,4 @@
+import { AI_LIMITS } from "@/lib/ai-config";
 // Explicit external imports let Next trace the worker packages and their dependencies.
 import "docx";
 import "exceljs";
@@ -24,10 +25,10 @@ export async function runDocumentWorker(name: string, input: unknown, sources: {
     for(const file of candidates) {try {fontBytes=await readFile(file);break;}catch{/* try next */}}
   }
   return new Promise((resolve, reject) => {
-    const worker = new Worker(path.join(process.cwd(), "src/lib/ai-document-worker.cjs"), { workerData: { name, input, sources, fontBytes }, resourceLimits: { maxOldGenerationSizeMb: 256 } });
+    const worker = new Worker(path.join(process.cwd(), "src/lib/ai-document-worker.cjs"), { workerData: { name, input, sources, fontBytes, limits: AI_LIMITS }, resourceLimits: { maxOldGenerationSizeMb: AI_LIMITS.workers.documentMemoryMb } });
     let settled = false;
     const end = (result?: DocumentWorkerResult) => { if(settled)return;settled=true;clearTimeout(timer);void worker.terminate(); if(!result||result.error)reject(new AttachmentError(result?.error??"Đọc/ghi tài liệu vượt giới hạn thời gian hoặc bộ nhớ. Hãy chia nhỏ yêu cầu."));else resolve(result); };
-    const timer = setTimeout(() => end(), 30000);
+    const timer = setTimeout(() => end(), AI_LIMITS.workers.documentTimeoutMs);
     worker.once("message", end);worker.once("error", () => end());worker.once("exit", () => { if(!settled)end(); });
   });
 }
@@ -72,10 +73,10 @@ export async function convertOfficeToPdf(bytes: Buffer, kind: "docx"|"xlsx") {
     const args=[`-env:UserInstallation=${pathToFileURL(profile).href}`,"--headless","--nologo","--nodefault","--norestore","--convert-to",kind==="docx"?"pdf:writer_pdf_Export":"pdf:calc_pdf_Export","--outdir",out,source];
     // Never inherit ERP credentials into the office process. macOS also blocks network access.
     const env={NODE_ENV: process.env.NODE_ENV ?? "production",PATH:"/usr/bin:/bin",HOME:folder,TMPDIR:folder,LANG:"en_US.UTF-8"};
-    if(process.platform==="darwin")await exec("/usr/bin/sandbox-exec",["-p","(version 1)(allow default)(deny network-outbound (remote ip \"*:*\"))",executable,...args],{env,timeout:45000,killSignal:"SIGKILL",maxBuffer:32768});
-    else await exec(executable,args,{env,timeout:45000,killSignal:"SIGKILL",maxBuffer:32768});
-    const output=path.join(out,"source.pdf");if((await stat(output)).size>10485760)throw new AttachmentError("PDF kết quả vượt 10 MiB.");
+    if(process.platform==="darwin")await exec("/usr/bin/sandbox-exec",["-p","(version 1)(allow default)(deny network-outbound (remote ip \"*:*\"))",executable,...args],{env,timeout:AI_LIMITS.workers.officeTimeoutMs,killSignal:"SIGKILL",maxBuffer:AI_LIMITS.workers.officeBufferBytes});
+    else await exec(executable,args,{env,timeout:AI_LIMITS.workers.officeTimeoutMs,killSignal:"SIGKILL",maxBuffer:AI_LIMITS.workers.officeBufferBytes});
+    const output=path.join(out,"source.pdf");if((await stat(output)).size>AI_LIMITS.files.maxBytes)throw new AttachmentError(`PDF kết quả vượt ${AI_LIMITS.files.maxBytes / 1024 / 1024} MiB.`);
     return await readFile(output);
-  } catch(error) {if(error instanceof AttachmentError)throw error;throw new AttachmentError("Không xuất được PDF. Kiểm tra LibreOffice hoặc chia nhỏ tài liệu; thời gian xử lý tối đa 45 giây.");}
+  } catch(error) {if(error instanceof AttachmentError)throw error;throw new AttachmentError(`Không xuất được PDF. Kiểm tra LibreOffice hoặc chia nhỏ tài liệu; thời gian xử lý tối đa ${AI_LIMITS.workers.officeTimeoutMs / 1000} giây.`);}
   finally {await rm(folder,{recursive:true,force:true});}
 }

@@ -188,7 +188,7 @@ test("Support tasks: real persistence, rights, concurrency, files and acceptance
           }),
         ),
       );
-      bad(
+      ok(
         await as(accounts.requestManager, () =>
           A.createSupportTask({ ...fields, requestId: randomUUID() }),
         ),
@@ -226,7 +226,7 @@ test("Support tasks: real persistence, rights, concurrency, files and acceptance
         await db.thong_bao_cong_viec.count({
           where: { cong_viec_id: task.id },
         }),
-        4,
+        3,
       );
     },
   );
@@ -533,7 +533,7 @@ test("Support tasks: real persistence, rights, concurrency, files and acceptance
         `CREATE FUNCTION test_task_audit_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.phan_he='SUPPORT_TASK' THEN RAISE EXCEPTION 'test audit fail'; END IF; RETURN NEW; END $$`,
       );
       await db.$executeRawUnsafe(
-        `CREATE TRIGGER test_task_audit_fail BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_task_audit_fail()`,
+        `CREATE TRIGGER test_task_audit_fail BEFORE INSERT ON he_thong.nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_task_audit_fail()`,
       );
       try {
         bad(await mutation("worker", r.id, "NHAN"));
@@ -548,7 +548,7 @@ test("Support tasks: real persistence, rights, concurrency, files and acceptance
         );
       } finally {
         await db.$executeRawUnsafe(
-          "DROP TRIGGER test_task_audit_fail ON nhat_ky_hoat_dong",
+          "DROP TRIGGER test_task_audit_fail ON he_thong.nhat_ky_hoat_dong",
         );
         await db.$executeRawUnsafe("DROP FUNCTION test_task_audit_fail()");
       }

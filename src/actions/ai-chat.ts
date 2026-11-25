@@ -15,7 +15,7 @@ export async function listAiChats(input: unknown = {}) {
     const v = z.object({ archived: z.boolean().default(false), cursor: ChatListCursorSchema.optional() }).strict().safeParse(input);
     if (!v.success) return denied();
     return await db.$transaction(async tx => {
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       const current = await currentAccountActor(tx, session);
       if (!canUseAiChat({ ...session, permissions: current.permissions })) return denied();
@@ -50,7 +50,7 @@ export async function getAiChat(input: unknown) {
     const v = z.object({ id: z.number().int().positive(), beforeId: z.number().int().positive().optional() }).strict().safeParse(input);
     if (!v.success) return denied();
     const result = await db.$transaction(async tx => {
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       const current = await currentAccountActor(tx, session); if (!canUseAiChat({ ...session, permissions: current.permissions })) throw Error();
       const chat = await tx.hoi_thoai_ai.findFirst({ where: { id: v.data.id, company_id: session.companyId, account_id: session.userId } });
@@ -75,7 +75,7 @@ export async function archiveAiChat(input: unknown) {
     const session = await getSession(); if (!session || !canUseAiChat(session)) return denied();
     const v = z.object({ id: z.number().int().positive(), archived: z.boolean() }).strict().safeParse(input); if (!v.success) return denied();
     await db.$transaction(async tx => {
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       const current = await currentAccountActor(tx, session); if (!canUseAiChat({ ...session, permissions: current.permissions })) throw Error();
       const row = await tx.hoi_thoai_ai.findFirst({ where: { id: v.data.id, company_id: session.companyId, account_id: session.userId } }); if (!row) throw Error();
@@ -94,7 +94,7 @@ export async function renameAiChat(input: unknown) {
   try {
     const session = await getSession(); if (!session || !canUseAiChat(session)) return denied();
     return await db.$transaction(async tx => {
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       const current = await currentAccountActor(tx, session);
       if (!canUseAiChat({ ...session, permissions: current.permissions })) return denied();

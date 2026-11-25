@@ -26,7 +26,7 @@ Quyền hiện hành áp dụng toàn công ty, chưa giới hạn theo phòng. 
 
 | Mã | Nơi thao tác | Yêu cầu và hành vi quan sát được |
 | --- | --- | --- |
-| TS-01 | Tổng quan Tài sản & vật tư | Ba card hạng mục theo quyền; phân bố loại, thiết bị cần rà soát và vừa cập nhật. Bấm số liệu mở đúng danh sách/hồ sơ. |
+| TS-01 | Tổng quan Tài sản & vật tư | Một ô tìm kiếm chung ngay trên ba card: nhập mã/tên, chọn gợi ý mở thẳng tài sản, vật tư tiêu hao hoặc phụ kiện theo quyền. Để trống không hiện gợi ý. Giữ phân bố loại, thiết bị cần rà soát và vừa cập nhật. |
 | TS-02 | Danh sách tài sản | Bảng và bộ lọc loại nhỏ, tìm tên/mã/serial/model, xem nhóm người/vị trí. Giữ tìm/lọc và trang khi mở rồi đóng hồ sơ. |
 | TS-03 | Thêm hồ sơ, quản lý loại | Nhập tên, chọn loại; mã thiết bị tự sinh và không sửa. Cá nhân phải chọn người; Dùng chung/Chưa phân bổ/Chưa xác định không gắn người. Ngừng dùng giữ hồ sơ và lịch sử. |
 | TS-04 | Sửa trong bảng/panel | Người có quyền bấm trực tiếp giá trị, kể cả Chưa rõ. Chọn để tự lưu; chữ/số/ngày lưu khi rời ô hoặc Enter. Lỗi giữ nội dung và cho thử lại, không âm thầm mất thay đổi. Tạo mới vẫn bấm xác nhận. |
@@ -77,6 +77,8 @@ Chức năng hiện hành ở bảng yêu cầu đã có. Việc gần nhất l�
 | Card Tài liệu | Đã rút gọn [đặc tả và kỹ thuật MVP](DOCUMENT-MANAGEMENT-CHECKLIST.md), chưa triển khai. Thư viện ba khu vực, quyền độc lập ASSETS; liên kết hồ sơ tài sản để sau. Quyền đề xuất tại A.3 của plan Tài liệu. |
 | Tên và mã theo loại | Mã mới như `PC-001`, bộ đếm nguyên tử theo công ty/loại, không tái sử dụng; vượt 999 tiếp tục 1000. Giữ mã cũ và mã đã cấp khi đổi loại; tên mặc định từ loại, cho sửa. **Chưa chốt**; hiện tên vẫn bắt buộc, mã tự sinh `TS-...`. |
 | Chọn icon loại | Tùy chọn trong phần Hiển thị thu gọn của loại; chưa có trường lưu/bộ chọn. Hiện icon Lucide ánh xạ theo mã loại, có icon mặc định. |
+| Nhận diện máy khi gán vào bàn | Hiện ô chọn tìm theo tên máy/mã/serial và thiếu tên người sử dụng. Đề xuất cho tìm theo người, hiện tên người + vị trí hiện tại, ưu tiên máy giao cho người tại bàn khi được phép. Người thao tác chọn từng thiết bị và đối chiếu tem nếu còn trùng. |
+| Chọn và sửa từ bàn 3D | Đã [thử tại bàn bác Khoa](OFFICE-3D-CHECKLIST.md) việc bấm PC hoặc tên thiết bị tại bàn để mở hồ sơ theo quyền ngay trên bản đồ. Mở rộng sang các bàn khác chờ đánh giá. Phân biệt danh sách máy đang đặt với máy gợi ý theo người. Sửa người sử dụng thuộc tài sản, sửa hồ sơ nhân sự và quản trị tài khoản dùng quyền riêng. |
 | Phạm vi phòng | Thiết kế tại [plan phân quyền](ROLE-MANAGEMENT-CHECKLIST.md); không suy từ tên loại, người tạo, người sử dụng hoặc IT hỗ trợ. Phải bảo vệ cả đọc/đếm/lịch sử/ghi/3D tại server. |
 
 Ô chọn vị trí giữ nguyên theo yêu cầu; chưa áp dụng phương án duyệt theo tầng/phòng. Các hướng mở rộng không được coi là đã duyệt triển khai.
@@ -246,6 +248,13 @@ Mã NT được bổ sung để truy vết yêu cầu; bảng này gắn với b
 | NT-06 | E2E link/đăng nhập/QR, PNG giải mã và tài liệu in: `outputs/assets-qr/`, `outputs/asset-panel-layout/` | Kỹ thuật đã kiểm chứng; camera/máy in thực tế chưa nghiệm thu |
 | NT-07 | Integration/E2E gán/chuyển/bỏ gán theo plan 3D; autosave tại 3D | Có kết quả theo phạm vi phòng đã liên kết; mở rộng phòng theo plan 3D |
 | NT-08 | E2E/ảnh desktop-mobile, sáng-tối, bàn phím, lỗi, cuộn/URL: các đợt tổng quan/panel/bố cục | Có kiểm chứng UI; chưa nghiệm thu trực tiếp với người dùng |
+
+### Tìm kiếm tổng quan phân hệ
+
+- [x] `/asset-management` có một ô tìm kiếm chung; dùng DB, không gọi AI. Tìm không dấu, không phân biệt hoa/thường; tài sản hỗ trợ thêm serial/model. Mã khớp chính xác ưu tiên trước, tối đa 8 gợi ý; nhiều hơn thì yêu cầu thu hẹp từ khóa. Tài sản gồm hồ sơ ngừng dùng; vật tư/phụ kiện chỉ mặt hàng đang dùng như danh sách mặc định.
+- [x] `searchAssetOverview` kiểm tra phiên, quyền ASSETS/INVENTORY riêng và công ty trên server; chỉ trả mã/tên/loại/link cần dùng. Truy vấn tham số hóa, không tải toàn bộ danh sách sang trình duyệt. Không thêm bảng, migration, thư viện hoặc phân quyền mới.
+- [x] `AssetOverviewSearch` chờ ngừng gõ 300 ms, bỏ kết quả cũ khi đổi từ khóa, có đang tìm/rỗng/lỗi/thử lại. Tab/mũi tên chọn kết quả, Enter mở link, Escape đóng gợi ý. Từ khóa giữ qua `q` trên URL; hồ sơ mở bằng `/assets?asset=…` hoặc `/inventory?kind=…&item=…` hiện có.
+- [x] TS-01/NT-01/NT-04/NT-08: 5 integration trên DB thử riêng đạt (phiên/quyền độc lập, công ty, không dấu, mã/serial/model, giới hạn và payload sai); Chrome desktop 1440×900/mobile 390×844 đạt tìm/mở tài sản, bàn phím, Back giữ từ khóa, Escape, xóa và không có kết quả; không tràn ngang hay lỗi trình duyệt. TypeScript và lint phần sửa đạt. Bằng chứng cục bộ: `outputs/asset-overview-search/`; chưa nghiệm thu trên điện thoại vật lý.
 
 ### Bằng chứng kiểm chứng
 

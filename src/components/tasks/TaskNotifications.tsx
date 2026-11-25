@@ -16,11 +16,19 @@ type Data = Extract<
   Awaited<ReturnType<typeof getTaskNotifications>>,
   { success: true }
 >;
+const time = (value: Date | string) =>
+  new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "Asia/Ho_Chi_Minh",
+  }).format(new Date(value));
 export function TaskNotifications() {
   const [data, setData] = useState<Data | null>(null),
     [page, setPage] = useState(1),
     [error, setError] = useState(""),
-    [pending, start] = useTransition();
+    [pending, start] = useTransition(),
+    [open, setOpen] = useState(false),
+    [refresh, setRefresh] = useState(0);
   useEffect(() => {
     let alive = true,
       busy = false;
@@ -39,7 +47,7 @@ export function TaskNotifications() {
           }
         }
       } catch {
-        if (alive) setError("Chưa tải được thông báo.");
+        if (alive) setError("Chưa tải được thông báo. Hãy thử lại.");
       } finally {
         busy = false;
       }
@@ -52,12 +60,34 @@ export function TaskNotifications() {
       clearInterval(timer);
       window.removeEventListener("focus", load);
     };
-  }, [page]);
+  }, [page, refresh]);
+  function markRead(id: number) {
+    start(async () => {
+      try {
+        const r = await readTaskNotification(id);
+        if (!r.success) {
+          setError(r.message);
+          return;
+        }
+        setError("");
+        setRefresh((n) => n + 1);
+      } catch {
+        setError("Chưa đánh dấu được thông báo. Hãy thử lại.");
+      }
+    });
+  }
   return (
-    <Popover>
+    <Popover
+      open={open}
+      onOpenChange={(value) => {
+        setOpen(value);
+        if (value) setRefresh((n) => n + 1);
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          className="min-h-10"
           aria-label={`Thông báo công việc${data ? `, ${data.unread} chưa đọc` : ""}`}
         >
           <Bell className="size-4" aria-hidden />
@@ -69,52 +99,62 @@ export function TaskNotifications() {
         className="max-h-[70vh] w-[min(24rem,90vw)] overflow-y-auto"
       >
         <h2 className="mb-3 font-semibold">Thông báo công việc</h2>
-        {error && <p role="alert">{error}</p>}
-        {!data && !error && <p>Đang tải…</p>}
+        {error && (
+          <div role="alert" className="space-y-2 text-sm text-destructive">
+            {error}
+            <Button
+              variant="outline"
+              className="min-h-10"
+              onClick={() => setRefresh((n) => n + 1)}
+            >
+              Thử lại
+            </Button>
+          </div>
+        )}
+        {!data && !error && <p role="status">Đang tải thông báo…</p>}
         {data?.rows.length === 0 && (
-          <p className="text-sm text-muted-foreground">Chưa có thông báo.</p>
+          <p className="text-sm text-muted-foreground">
+            Chưa có thông báo công việc.
+          </p>
         )}
         <ul className="divide-y">
           {data?.rows.map((n) => (
             <li key={n.id} className="space-y-1 py-3">
               {n.title ? (
-                <Link
-                  className="block min-h-10 text-sm font-medium hover:underline"
-                  href={`/tasks/${n.cong_viec_id}`}
-                  onClick={() =>
-                    start(async () => {
-                      const r = await readTaskNotification(n.id);
-                      if (r.success)
-                        setData(
-                          await getTaskNotifications(page).then((x) =>
-                            x.success ? x : null,
-                          ),
-                        );
-                    })
-                  }
-                >
-                  {!n.da_doc_luc ? "● " : ""}
-                  {n.title}
-                </Link>
+                <>
+                  <p className="text-xs text-muted-foreground">{n.summary}</p>
+                  <Link
+                    className="block min-h-10 break-words py-1 text-sm font-medium hover:underline"
+                    href={`/tasks/${n.cong_viec_id}`}
+                    onClick={() => {
+                      if (!n.da_doc_luc) markRead(n.id);
+                      setOpen(false);
+                    }}
+                  >
+                    {n.title}
+                  </Link>
+                  {n.needsReview && (
+                    <p className="text-sm text-primary">Chờ bạn nghiệm thu</p>
+                  )}
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Bạn không còn quyền xem công việc này.
                 </p>
               )}
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <time dateTime={new Date(n.created_at).toISOString()}>
+                  {time(n.created_at)}
+                </time>
+                {!n.da_doc_luc && <span>Chưa đọc</span>}
+              </div>
               {!n.da_doc_luc && (
                 <Button
                   size="sm"
                   variant="ghost"
+                  className="min-h-10"
                   disabled={pending}
-                  onClick={() =>
-                    start(async () => {
-                      const r = await readTaskNotification(n.id);
-                      if (r.success) {
-                        const next = await getTaskNotifications(page);
-                        if (next.success) setData(next);
-                      }
-                    })
-                  }
+                  onClick={() => markRead(n.id)}
                 >
                   Đánh dấu đã đọc
                 </Button>
@@ -123,22 +163,26 @@ export function TaskNotifications() {
           ))}
         </ul>
         {data && data.total > 20 && (
-          <div className="flex justify-between">
+          <nav
+            aria-label="Phân trang thông báo"
+            className="flex items-center justify-between gap-2"
+          >
             <Button
               variant="outline"
-              disabled={page === 1}
+              disabled={pending || page === 1}
               onClick={() => setPage((p) => p - 1)}
             >
-              Trước
+              Mới hơn
             </Button>
+            <span className="text-xs">Trang {page}</span>
             <Button
               variant="outline"
-              disabled={page * 20 >= data.total}
+              disabled={pending || page * 20 >= data.total}
               onClick={() => setPage((p) => p + 1)}
             >
-              Sau
+              Cũ hơn
             </Button>
-          </div>
+          </nav>
         )}
       </PopoverContent>
     </Popover>

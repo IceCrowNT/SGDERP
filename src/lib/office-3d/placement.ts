@@ -23,6 +23,10 @@ export type PlacementInput = z.infer<typeof PlacementSchema>;
 export type PlacementModel = NonNullable<PlacementInput["model"]>;
 export type PlacementShape = Pick<PlacementInput, "kind" | "x" | "z" | "angle" | "width" | "depth" | "model">;
 export type PlacementDraft = Omit<PlacementInput, "x" | "z"> & { point: { x: number; z: number } | null };
+// The desk selection trial is limited to one linked workplace in the live layout.
+export function isDeskSelectionPilot(object?: { roomKey: string; point: { locationId?: number } }) {
+  return object?.roomKey === "plan_t3_phai" && object.point.locationId === 104;
+}
 export const objectKey = (id: number) => `object-${id}`;
 export const isObjectKey = (key: string | null): key is string => Boolean(key && /^object-[1-9]\d*$/.test(key));
 export function placementSize(value: PlacementShape["kind"] | Pick<PlacementShape,"kind"|"width"|"depth"|"model">): readonly [number,number] {

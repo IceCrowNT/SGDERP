@@ -1,6 +1,6 @@
 # Trợ lý AI trên dashboard và cá nhân hóa
 
-Cập nhật: **20/11/2026**. Trạng thái: **đã có bản thử, quản lý nhiều key/model, bảng duyệt công việc, lịch sử/bối cảnh chat, cá nhân hóa profile, định tuyến model theo tác vụ, hạn mức/usage nội bộ và tệp ảnh/Word/Excel trong chat; chưa nghiệm thu API thật; thiết kế đầy đủ bên dưới chưa triển khai**. Phạm vi bản thử và kết quả tại [Bản thử cho tài khoản quản trị](#bản-thử-cho-tài-khoản-quản-trị--16112026) và [bảng công việc chờ duyệt](#bảng-công-việc-ai-và-duyệt-thực-hiện--16112026).
+Cập nhật: **25/11/2026**. Trạng thái: **đã có bản thử, quản lý nhiều key/model, bảng duyệt công việc, lịch sử/bối cảnh chat, cá nhân hóa profile, định tuyến model theo tác vụ, hạn mức/usage nội bộ và tệp ảnh/Word/Excel trong chat; chưa nghiệm thu API thật; thiết kế đầy đủ bên dưới chưa triển khai**. Phạm vi bản thử và kết quả tại [Bản thử cho tài khoản quản trị](#bản-thử-cho-tài-khoản-quản-trị--16112026) và [bảng công việc chờ duyệt](#bảng-công-việc-ai-và-duyệt-thực-hiện--16112026).
 
 Rule phân hệ: [AI-ASSISTANT-RULES](../../.agents/rules/AI-ASSISTANT-RULES.md). Plan này sở hữu thiết kế AI; [plan cá nhân](PROFILE-DASHBOARD-CHECKLIST.md), [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md) và [plan phân quyền](ROLE-MANAGEMENT-CHECKLIST.md) tiếp tục sở hữu nghiệp vụ nền.
 
@@ -49,6 +49,8 @@ Mục lục:
 
 ### Mục tiêu và yêu cầu đã ghi nhận
 
+**25/11 — làm việc dài với AI:** đã duyệt bỏ trần theo ngày/số lượt chat, nới dung lượng câu hỏi và số tệp gửi, tăng thời gian và tự tóm tắt bối cảnh khi dài. Tiêu chí: chat cũ tiếp tục được; giữ nguyên lịch sử gốc và quyết định đã chốt; tra lại chi tiết khi cần; vẫn kiểm tra quyền nguồn và ghi chi phí. Trạng thái kiểm chứng tại [hội thoại dài](#hội-thoại-dài-và-giới-hạn-nhớ).
+
 Đợt 18/11 đã thêm nút đính kèm, kéo thả tệp và dán ảnh vào chat. Người dùng gửi yêu cầu để đọc ảnh, tóm tắt Word hoặc lọc/tổng hợp Excel/CSV; bảng kết quả có nguồn, hỏi tiếp được sau reload. Dùng kết nối/model hiện hành (đọc ảnh cần model hỗ trợ vision), không cần Admin key. Giới hạn và kiểm chứng tại [tệp AI](#đính-kèm-và-phân-tích-tệp--18112026).
 
 Ngày 16/11, người phụ trách yêu cầu gắn API vào tài khoản đầy đủ quyền hiện tại để hỗ trợ thêm/sửa hồ sơ và đã chọn phạm vi **tài sản và vị trí**. Đợt này triển khai khung chat cho một tài khoản được cấu hình rõ, AI tra cứu và điền bản nháp; người dùng kiểm tra và lưu bằng form nghiệp vụ ngay trên dashboard. Đã mở rộng bảng duyệt khấu hao mặc định tất cả loại tài sản: xem trước, duyệt một lần, xem kết quả và khôi phục sau reload. Đã triển khai lịch sử/bối cảnh chat và cá nhân hóa profile theo đợt riêng phía dưới; quản trị hạn mức đầy đủ còn kế hoạch.
@@ -85,7 +87,7 @@ Bố cục đã triển khai và kiểm chứng ngày 17/11: [dashboard làm nơ
 | Lưu trữ cuộc chat | Đưa cuộc chat khỏi danh sách đang mở, mở lại | Giữ nội dung; không đồng nghĩa xóa dữ liệu |
 | Theo dõi API | Hệ thống ghi nhận mỗi lần gọi | Kiểm soát mức sử dụng, lỗi và chi phí ước tính |
 | Quản trị kết nối | Người được cấp quyền thêm/thay khóa, chọn model, tạm dừng | Khóa ở kho bí mật, UI chỉ hiện thông tin che bớt; không tự chuyển nguồn chi |
-| Hạn mức tài khoản | Người quản lý sửa một mức ngân sách tháng trên tài khoản; user xem phần của mình | Mức đã dùng/dự phòng lấy từ log, còn khả dụng được tính; model/tốc độ dùng cấu hình kết nối chung |
+| Hạn mức tài khoản | Người quản lý sửa một mức ngân sách tháng trên tài khoản; user xem phần của mình | Mức đã đối chiếu lấy từ log, còn khả dụng được tính; model/tốc độ dùng cấu hình kết nối chung |
 | Đối soát nhà cung cấp | Xem Usage/Costs khi có credential được cấp | Tách số liệu OpenAI khỏi ERP, có thời điểm cập nhật; không giả số dư |
 
 Thiết kế chat đầy đủ bên dưới giữ phạm vi tra cứu; pilot hiện có thêm form tài sản/vị trí, công cụ vật tư và bảng duyệt khấu hao/ghi nhận hàng mua như mục B. Đính kèm/hỏi đáp tài liệu đã có; công cụ tạo/sửa/xuất tệp theo mục riêng ngày 18/11. Giọng nói, ghi nhớ tự động xuyên cuộc chat, thao tác hàng loạt khác, AI truy cập 1Office và kết nối API riêng từng phòng chưa thuộc phạm vi. Có thể mở màn hình nghiệp vụ sẵn có; thao tác tại màn hình đó theo quyền hiện hành.
@@ -247,7 +249,7 @@ Người phụ trách đã yêu cầu triển khai quản lý API key kèm model
 | Thêm/sửa | Công cụ AI chỉ tra cứu hoặc chuẩn bị bản nháp; form dùng lại `saveAsset`/`saveLocation`, phiên bản gốc, quyền và audit hiện có. Người dùng xem/sửa rồi bấm Lưu; chưa có công cụ xóa, sửa tài khoản/quyền hoặc SQL tự do |
 | Ngữ cảnh | Nội dung cuộc chat đang mở nằm trong bộ nhớ giao diện, không localStorage; giới hạn lịch sử gửi và đọc lại hồ sơ khi chuẩn bị sửa. Reload mất cuộc trao đổi; không coi đây là lịch sử DB của bản đầy đủ |
 | Dữ liệu DB | Một bảng `ket_noi_ai` giữ metadata, nhiều kết nối/công ty và một mặc định; tiến độ mở rộng tại [plan cài đặt](SYSTEM-SETTINGS-CHECKLIST.md#nhiều-api-key-openai--16112026). Dùng nhật ký hoạt động cho thay đổi cấu hình, kiểm tra khóa, metadata yêu cầu và usage từng lần API; không lưu prompt/nội dung hồ sơ/key trong log AI. Nhật ký nghiệp vụ do action phân hệ ghi |
-| Giới hạn | Một lượt/account, tối đa 10 lượt/5 phút và 100 lượt/24 giờ; tối đa 6 lần API/lượt, nâng lên 12 nếu dùng công cụ tài liệu hoặc đọc trang PDF để đủ đọc → chuyển → sửa → xuất → kiểm tra. Lease 180 giây, giới hạn ngữ cảnh và kiểm soát usage giữ nguyên. Đây là giới hạn thử nghiệm, chưa phải hạn mức tiền theo tháng đã thiết kế |
+| Giới hạn | Một lượt/account, chống gửi dồn 10 lượt/5 phút; bỏ trần theo ngày và số lượt/chat. Tối đa 25 lần gọi model/lượt, gồm tóm tắt và trả lời cuối; lease 660 giây. Chi tiết tại [hội thoại dài](#hội-thoại-dài-và-giới-hạn-nhớ); ngân sách quản trị vẫn áp dụng |
 | Cấp quyền AI dài hạn | Allowlist pilot chỉ dùng trong đợt này; không sửa grant dữ liệu cũ. Khi mở nhiều người dùng, triển khai catalog AI và hạn mức theo thiết kế đầy đủ |
 
 - [x] Đối chiếu mã, quyền, form và hướng dẫn Next.js hiện có; tài khoản `admin` có đủ quyền tài sản/vị trí/tài khoản/role. Đã kiểm tra cấu hình server mà không xuất giá trị khóa; chưa thực hiện cuộc gọi model thật trong kiểm thử.
@@ -298,10 +300,10 @@ Người phụ trách đã yêu cầu triển khai quản lý API key kèm model
 
 **Đã triển khai và kiểm chứng trên DB riêng; migration đã áp dụng local.** Thêm `hoi_thoai_ai`, `tin_nhan_ai` và `tai_khoan.huong_dan_ai_ca_nhan`; không thêm bảng bộ nhớ, quota hoặc log chi phí ở đợt này. Giữ điều kiện pilot hiện hành; mọi tài khoản hợp lệ được sửa cá nhân hóa của chính mình, không tự được mở AI. Cấu trúc DB chi tiết theo mục Thiết kế DB cần giữ; trạng thái dùng chuỗi có CHECK để nhất quán công việc AI. FK công ty/chủ và hội thoại cùng công ty; chủ hội thoại bất biến, unique mã lượt/vai trò trong công ty để không tạo lại khi mất kết nối trước lúc nhận ID chat.
 
-- Danh sách chat có tiêu đề từ câu hỏi đầu sau kiểm tra quyền/nguồn, mở lại/lưu trữ/khôi phục, phân trang; tạo khi gửi câu đầu, không tạo chat rỗng khi tải dashboard. Tin nhắn lưu câu hỏi, trả lời và trạng thái; không nhận lịch sử từ client. Một lượt đang xử lý/hội thoại, lease 180 giây; hết lease chuyển gián đoạn, tiến trình cũ không được hoàn tất. Gửi lại cùng mã đọc kết quả đã có, không gọi API lần nữa; lỗi xác định cho người dùng gửi lại bằng lượt mới, không sửa tin cũ.
+- Danh sách chat có tiêu đề từ câu hỏi đầu sau kiểm tra quyền/nguồn, mở lại/lưu trữ/khôi phục, phân trang; tạo khi gửi câu đầu, không tạo chat rỗng khi tải dashboard. Tin nhắn lưu câu hỏi, trả lời và trạng thái; không nhận lịch sử từ client. Một lượt đang xử lý/hội thoại, lease theo cấu hình tập trung; hết lease chuyển gián đoạn, tiến trình cũ không được hoàn tất. Gửi lại cùng mã đọc kết quả đã có, không gọi API lần nữa; lỗi xác định cho người dùng gửi lại bằng lượt mới, không sửa tin cũ.
 - Mỗi lượt đọc cá nhân hóa mới nhất một lần, gửi như chỉ dẫn user. Giới hạn 2.000 ký tự, xóa về mặc định, lưu có kiểm tra phiên bản; audit chỉ tên trường, không nội dung.
-- Bối cảnh lưu JSON có phiên bản: công cụ/điều kiện đã tra, ID và nhãn kết quả theo đúng thứ tự danh sách đánh số giao diện, cùng nguồn. Thông tin tham chiếu không thay kết quả tra lại hiện hành. Chỉ lưu metadata tối thiểu, không raw tool output/reasoning hoặc toàn bộ hồ sơ. Lịch sử và bối cảnh chỉ của chat hiện tại; tối đa 12 lượt hoàn chỉnh/24.000 ký tự và 32.000 byte UTF-8 cho lịch sử kèm metadata, thông báo khi rút gọn. Chat tối đa 200 lượt trước khi chuyển chat mới; danh sách 20 hội thoại/trang, nội dung 40 tin/trang, vẫn đọc lịch sử cũ bằng phân trang.
-- Khi nguồn không còn cùng công ty/tồn tại hoặc cấu trúc phụ thuộc không kiểm chứng được, chặn nội dung và tái sử dụng cả chat, giữ tiêu đề trung tính. Quyền pilot đầy đủ kiểm tra lại trên mọi action/công cụ và trước hoàn tất. Tóm tắt tự động, quyền AI USE mở rộng và quota làm sau.
+- Bối cảnh lưu JSON có phiên bản: công cụ/điều kiện đã tra, ID và nhãn kết quả theo đúng thứ tự danh sách đánh số giao diện, cùng nguồn. Thông tin tham chiếu không thay kết quả tra lại hiện hành. Chỉ lưu metadata tối thiểu, không raw tool output/reasoning hoặc toàn bộ hồ sơ. Lịch sử và bối cảnh chỉ của chat hiện tại; tự tóm tắt phần cũ và tra lại theo [hội thoại dài](#hội-thoại-dài-và-giới-hạn-nhớ), không giới hạn tổng số lượt/chat; danh sách 20 hội thoại/trang, nội dung 40 tin/trang, vẫn đọc lịch sử cũ bằng phân trang.
+- Khi nguồn không còn cùng công ty/tồn tại hoặc cấu trúc phụ thuộc không kiểm chứng được, chặn nội dung và tái sử dụng cả chat, giữ tiêu đề trung tính. Quyền pilot đầy đủ kiểm tra lại trên mọi action/công cụ và trước hoàn tất. Tóm tắt tự động theo mục hội thoại dài; chatbot nền không cần AI USE, hạn mức theo cấu hình quản trị hiện hành.
 - Bản nháp form vẫn trong lượt đang mở; lịch sử ghi rõ chưa lưu và hướng dẫn lập lại khi mở lại, không phục hồi form có thể tạo trùng hồ sơ. Công việc duyệt có ID tham chiếu trong tin nhắn; trạng thái thật vẫn từ `cong_viec_ai`, không từ câu trả lời cũ.
 
 - [x] Đọc plan/rule/code và backup/khôi phục thử 20 bảng hiện có trên DB riêng, fingerprint trùng.
@@ -328,17 +330,17 @@ erDiagram
     ket_noi_ai ||--o{ nhat_ky_goi_ai : "nguồn gọi, cùng công ty"
 ```
 
-- Tác vụ cố định GENERAL/LOOKUP/DRAFT; LOOKUP chỉ có công cụ đọc. Không phân loại bằng từ khóa hoặc nhận model tùy ý từ chat. Giữ cấu hình trong cả lượt, thay cấu hình thì dừng trước cuộc gọi sau; lỗi không tự đổi nguồn chi.
-- Kỳ lịch Asia/Ho_Chi_Minh. Trước từng cuộc gọi giữ dự phòng nguyên tử theo tài khoản và kết nối dưới khóa công ty; tổng gồm chi phí đã xác định trên mọi key và dự phòng của lượt DANG_GOI; khoản đã kết thúc chưa rõ tạm không tính. Giá do quản trị khai báo, không tự đặt giá model. Đây là ngân sách ERP theo chi phí ước tính, không là số dư hoặc trần project OpenAI. Kết nối cùng project có thể chia sẻ nguồn chi; chưa gộp hạn mức project khi chưa có mapping nguồn.
-- Theo trả lời mới của người phụ trách: hiện chưa giới hạn, ô hạn mức nằm trên bảng tài khoản. NULL/để trống = không giới hạn, 0 = chặn gọi có phí, số dương = trần tháng. Không tự đặt hạn mức cho dữ liệu cũ. Khi cả tài khoản và kết nối không giới hạn, thiếu đơn giá vẫn gọi và lưu token; chi phí/dự phòng NULL được hiển thị chưa xác định. Khi đặt trần cần đơn giá đúng model cho lần gọi mới. Theo yêu cầu 18/11, khoản đã kết thúc chưa rõ chi phí không chặn chat và tạm không tính vào hạn mức. Chỉ trừ chi phí đã xác định và dự phòng của lượt DANG_GOI; timeout/phản hồi thiếu usage giữ dữ liệu dự phòng lịch sử nhưng không còn trừ vào hạn mức; đối chiếu thủ công có lý do/audit, chỉ giải quyết khoản không còn đang chạy; không mặc định chi phí 0. Token/cache và chi phí chỉ tính khi có usage hợp lệ; snapshot giá giữ nguyên khi đổi cấu hình.
+- Tác vụ cố định GENERAL/LOOKUP/DRAFT; LOOKUP chỉ có công cụ đọc. Không phân loại bằng từ khóa hoặc nhận model tùy ý từ chat. Giữ kết nối, phiên bản khóa và model trong cả lượt, đổi một trong ba thì dừng trước cuộc gọi sau; lỗi không tự đổi nguồn chi.
+- Kỳ lịch Asia/Ho_Chi_Minh. Trước mỗi lần gọi, ERP kiểm tra tổng tiền đã đối chiếu trong kỳ theo tài khoản và kết nối. Giá model chỉ phục vụ báo cáo.
+- Hạn mức tùy chọn, NULL cho phép dùng không giới hạn, 0 chặn gọi. Mức dương chỉ chặn khi tổng tiền đã đối chiếu đạt mức cấp. Mọi lượt đều ghi token khi nhà cung cấp trả usage. Khoản chưa xác định để NULL.
 - Thêm quyền AI MANAGE_LIMITS/VIEW_USAGE vào catalog và ma trận cùng guard thực tế; phạm vi/quyền dùng chat giữ pilot hiện có, chưa thêm AI USE cho mở rộng nhiều tài khoản. Không tự mở pilot cho tài khoản khác. Quản trị chỉ xem metadata, không đọc nội dung chat.
 
-- [x] 18/11: bỏ chặn do khoản cũ chưa rõ chi phí, chỉ tính dự phòng DANG_GOI trong guard và thống kê; vẫn hiển thị phần còn lại cùng ghi chú khoản chưa tính. Không sửa dữ liệu/log cũ hoặc migration.
-- [x] Kiểm chứng chính sách mới: khoản chưa rõ/thiếu giá cũ không chặn; dự phòng đang gọi, hạn mức 0/không đủ và chi phí sau đối soát vẫn được áp dụng ở tài khoản/kết nối. Thống kê cá nhân/quản trị thống nhất, dữ liệu chi phí NULL và dự phòng lịch sử giữ nguyên. 12 ca tích hợp đạt qua lượt chính và chạy lại ca định tuyến sau cập nhật danh sách công cụ đọc tệp trong fixture cũ; TypeScript, lint phạm vi sửa, `git diff --check` đạt. Dùng PostgreSQL cô lập/OpenAI mô phỏng, đã dọn DB thử, không đổi dữ liệu/ngân sách thật. Báo cáo tại `outputs/ai-budget-unknown/`.
+- [x] Tách đơn giá khỏi hạn mức, lựa chọn model và kiểm tra cấu hình giữa lượt. Sổ gọi lưu đơn giá của từng lần gọi. Dự phòng cũ và chi phí ước tính chỉ là dữ liệu lịch sử/thống kê.
+- [x] Bổ sung ca hồi quy cho giá thiếu, sai model, sai định dạng, bằng 0, quá cao, ước tính vượt độ chính xác DB, sửa giá giữa hai lần gọi của cùng tác vụ, dự phòng cũ và chi phí đối chiếu. 31/31 ca tích hợp quản trị AI trên PostgreSQL riêng với OpenAI mô phỏng và 4/4 ca thông báo chat đạt. TypeScript và ESLint phạm vi sửa đạt.
 
 - [x] Đọc rule/thiết kế/code và hướng dẫn Next.js; xác định phạm vi, nơi kế thừa và ranh giới nguồn chi.
 - [x] Migration thử trên DB khôi phục và áp dụng local: giữ nguyên dữ liệu cũ của 25 bảng, key/model/grant cũ không đổi; thêm hai bảng và hai quyền catalog, hạn mức cũ NULL. Có backup mới và khôi phục thử, schema diff rỗng.
-- [x] Backend định tuyến, giữ/đối soát dự phòng, guard và audit; giao diện quản trị và chọn tác vụ tại chat. Hạn mức không giới hạn/thiếu giá và áp trần sau khi đã có chi phí chưa xác định đều được kiểm chứng.
+- [x] Backend định tuyến, kiểm tra hạn mức, đối chiếu và ghi audit. Giao diện quản trị phân biệt tổng tham khảo và tổng đã đối chiếu.
 - [x] 11 kiểm thử tích hợp đạt: đồng thời/quyền/công ty/giá/đổi key/lỗi chưa rõ; 5 E2E Chrome đạt: lưu cấu hình/tác vụ/hạn mức, định tuyến chat, lịch sử, duyệt công việc cũ, quyền độc lập và mobile sáng/tối. Đã xem ảnh và sửa tab chồng chữ trên điện thoại. TypeScript, lint, build production và `git diff --check` đạt; API được mô phỏng, không gọi model thật. Kiểm tra đọc trên app local bằng tài khoản pilot đạt: trang cài đặt có đúng quyền hiện tại, chat hiển thị không giới hạn, không lỗi JavaScript. 219 đường dẫn tài liệu tồn tại. Đã dừng app kiểm thử và dọn hai DB tạm; app local cổng 4000 tiếp tục chạy. Backup, báo cáo và ảnh giữ cục bộ tại `outputs/ai-governance/`.
 - [x] Đồng bộ rule phân hệ, thiết kế, từ điển DB và kiến trúc. Không đổi ba rule kỹ thuật chung, dependency, `.env`, key/model hay grant thật.
 - [ ] Người phụ trách cấp quyền quản trị bổ sung tại `/roles` khi cần; cấu hình tác vụ/đơn giá thật và nghiệm thu với API thật. Đối soát Usage/Costs OpenAI tự động cần credential/phạm vi riêng; chưa triển khai.
@@ -360,13 +362,13 @@ Bảng mới `tep_dinh_kem_ai`: `id`, `company_id`, `account_id`, `hoi_thoai_id?
 
 Kho riêng `var/ai-attachments` hoặc `AI_ATTACHMENT_STORAGE_DIR`, không public/Git: file gốc, dữ liệu đã trích JSON, ảnh chuẩn hóa JPEG cho model. DB giữ metadata, không giữ base64. GET tải/xem kiểm tra phiên, pilot, chủ/công ty và nguồn hội thoại. Không dùng Files API nên không có file ID/chi phí lưu trên OpenAI; nội dung chỉ gửi khi người dùng gửi yêu cầu. Backup phải gồm DB và kho tệp. Không tự xóa tệp đã gửi khi lưu trữ chat; bỏ tệp chưa gửi xóa bản tải tương ứng. Chưa có cron hoặc chính sách tự hết hạn tệp đã gửi.
 
-Giới hạn bản đầu: 10 MiB/tệp, 3 tệp/lượt, 20 tệp/hội thoại, tổng 200 MiB tệp gốc/tài khoản. ZIP Office kiểm tra kích thước giải nén thực tế (30 MiB), số mục (2.000), từ chối macro; ảnh tối đa 25 triệu pixel, chuẩn hóa tối đa 2.048px. Bảng tính tối đa 20 sheet/100.000 dòng/200.000 ô, Word tối đa 300.000 ký tự và 15.000 ký tự/đoạn; vượt giới hạn báo lỗi, không cắt âm thầm. Word không trích hình/biểu đồ nhúng, Excel không chạy macro hoặc tính lại công thức (đọc kết quả cache, báo ô công thức thiếu kết quả). Công cụ đọc trả phạm vi và phân trang; tổng hợp trả số dòng xét/khớp, dữ liệu không phải số và nguồn sheet/cột. Nội dung tệp là dữ liệu, không phải chỉ dẫn cấp quyền.
+Giới hạn bản đầu: 10 MiB/tệp, 10 tệp/lượt, 20 tệp/hội thoại, tổng 200 MiB tệp gốc/tài khoản. ZIP Office kiểm tra kích thước giải nén thực tế (30 MiB), số mục (2.000), từ chối macro; ảnh tối đa 25 triệu pixel, chuẩn hóa tối đa 2.048px. Bảng tính tối đa 20 sheet/100.000 dòng/200.000 ô, Word tối đa 300.000 ký tự và 15.000 ký tự/đoạn; vượt giới hạn báo lỗi, không cắt âm thầm. Word không trích hình/biểu đồ nhúng, Excel không chạy macro hoặc tính lại công thức (đọc kết quả cache, báo ô công thức thiếu kết quả). Công cụ đọc trả phạm vi và phân trang; tổng hợp trả số dòng xét/khớp, dữ liệu không phải số và nguồn sheet/cột. Nội dung tệp là dữ liệu, không phải chỉ dẫn cấp quyền.
 
 - [x] Đối chiếu luồng Responses, lịch sử, kho riêng và quy tắc; chốt phạm vi triển khai như trên.
 - [x] Migration `20261118090000_tep_dinh_kem_ai` đã áp dụng local; backup mới được phục hồi và thử riêng migration trước áp dụng. Đối chiếu số dòng/hash của 27 bảng cũ không thay đổi; DB thử migration đã dọn. Chỉ triển khai migration AI, không áp dụng hai migration vật tư đang được phát triển song song.
 - [x] Upload/bỏ/tải có quyền, kiểm tra tệp và công cụ đọc/phân tích; lưu tham chiếu để hỏi tiếp.
 - [x] UI đính kèm, tiến trình/lỗi, nguồn tệp, bảng kết quả và responsive.
-- [x] 5 unit và 18 kịch bản E2E (5 tệp + 13 dashboard) đạt trên DB riêng/provider giả lập: tổng hợp đủ 1.500 dòng, Word/ảnh, hỏi tiếp sau reload, tải riêng theo chủ, chặn ID tệp khác tài khoản, gửi lại không gọi lại API, phục hồi tệp chưa gửi, kéo thả/dán ảnh và giới hạn 3 tệp/10 MiB. Lần chạy chung có một lỗi fixture chọn nhầm tệp từ lần test cũ; đã dùng tên duy nhất và chạy lại ca đó đạt, không sửa logic ứng dụng để né lỗi.
+- [x] 5 unit và 18 kịch bản E2E (5 tệp + 13 dashboard) đạt trên DB riêng/provider giả lập: tổng hợp đủ 1.500 dòng, Word/ảnh, hỏi tiếp sau reload, tải riêng theo chủ, chặn ID tệp khác tài khoản, gửi lại không gọi lại API, phục hồi tệp chưa gửi, kéo thả/dán ảnh và giới hạn 3 tệp/10 MiB tại thời điểm kiểm chứng 18/11; nay nâng 10 tệp theo cấu hình tập trung. Lần chạy chung có một lỗi fixture chọn nhầm tệp từ lần test cũ; đã dùng tên duy nhất và chạy lại ca đó đạt, không sửa logic ứng dụng để né lỗi.
 - [x] TypeScript và ESLint phần thay đổi đạt; smoke local desktop/mobile không lỗi JavaScript hoặc tràn ngang, không gọi model thật.
 - [x] Production build webpack đạt; manifest deploy của dashboard chứa worker và XLSX. Máy chủ/DB E2E đã dọn; giữ server local và bản sao lưu trong `outputs/ai-attachments/`.
 - [ ] Nghiệm thu với model/kết nối thật và tệp nghiệp vụ; chưa gửi dữ liệu thật trong kiểm thử. Ảnh/scan cần model hỗ trợ vision. PDF đọc lớp chữ/ảnh trang theo mục mở rộng 23/11 bên dưới. Chưa hỗ trợ DOC/XLS cũ, OCR ảnh nhúng Word hoặc phân tích bằng mã tùy ý. Phân tích Excel dùng cache; LibreOffice tính công thức khi xuất PDF.
@@ -398,7 +400,7 @@ Người phụ trách đã yêu cầu triển khai PDF → Word → sửa → PD
 - [x] `read_pdf_page`: văn bản và ảnh trang có số trang, giới hạn tài nguyên; tệp cũ dùng được không cần tải lại.
 - [x] `convert_pdf_to_word`: trích chữ tự động hoặc dựng lại đoạn/bảng theo từng trang đã đọc; công bố giới hạn bố cục, không bỏ trang scan âm thầm.
 - [x] `update_word_text`: sửa đoạn/ô bảng theo nội dung cũ và số lần khớp, tạo bản mới; giữ cấu trúc và ngăn thay nhầm. Chữ mới lấy định dạng run đầu, chỉ thân tài liệu; chặn tab/ngắt dòng/field/textbox/tracked changes để tránh khớp sai.
-- [x] Nối công cụ, cập nhật chỉ dẫn hành vi và nguồn; Word → PDF dùng LibreOffice hiện có. Lượt tài liệu có tối đa 12 lần gọi thay vì 6, vẫn kiểm tra lease/hạn mức mỗi lần.
+- [x] Nối công cụ, cập nhật chỉ dẫn hành vi và nguồn; Word → PDF dùng LibreOffice hiện có. Lượt tài liệu dùng chung giới hạn 25 lần gọi model với các tác vụ khác, vẫn kiểm tra lease/hạn mức mỗi lần.
 - [x] 6/6 unit mới đạt: PDF chữ/scan/render, trang sai/tệp lỗi, không bỏ trang thiếu chữ, Word nhiều run/bảng/tiếng Việt, số lần khớp/XML escape và PDF → Word → sửa → PDF bằng LibreOffice thật. 5/5 ca tài liệu cũ đạt trong đợt này.
 - [x] 2/2 E2E với provider giả lập trên DB riêng đạt: PDF văn bản và scan → đọc ảnh → dựng Word → đọc Word → sửa → xuất → đọc lại PDF; tệp nguồn không đổi, kết quả phục hồi, sourceIds đúng, đọc/chuyển tệp khác chat và tải bằng tài khoản khác bị chặn. Đã chỉnh bộ kiểm thử chờ ô upload sẵn sàng trước khi chọn file.
 - [x] TypeScript/lint/build Webpack đạt; manifest có helper, PDF.js/worker/font, canvas native và DOM/ZIP/phụ thuộc. Đã xem ảnh PDF kết quả, tiếng Việt và số liệu đúng. Bằng chứng tại `outputs/ai-pdf-20261123/`; không gọi API trả phí hoặc sửa dữ liệu vận hành.
@@ -452,6 +454,8 @@ Trang có lớp chữ tối đa 30.000 ký tự; chuyển tự động tối đa
 | Hội thoại | Tệp mở từ thanh tiêu đề, văn bản có chiều rộng dễ đọc, bảng giữ vùng rộng; mở/đóng tệp không mất nội dung nhập/vị trí đọc |
 | Đổi tên | Dùng cột `hoi_thoai_ai.tieu_de` hiện có; schema chung, kiểm tra chủ/công ty/nguồn, chống ghi đè tên đã đổi, audit cùng transaction; không gọi model hoặc migration |
 
+- [x] Quản lý không gian 25/11. Chat và tài liệu dùng chiều cao còn lại dưới header, cuộn riêng. Khi xem lịch sử cũ, giữ vị trí qua phân trang và có nút về tin mới nhất. Thanh hỗ trợ nằm ở Việc của tôi. Tên tệp và các nút thao tác cùng hàng. Phóng to/thu nhỏ giữ phiên soạn thảo. ONLYOFFICE mở thanh công cụ gọn và DOCX mặc định vừa chiều ngang.
+- [x] Kiểm chứng trên Chrome với DB thử và Office mô phỏng. 4 ca tài liệu/hội thoại đạt, gồm kéo vạch chia, phóng to khi có sửa đổi, lưu, xem trên mobile và giữ vị trí đọc qua 85 tin nhắn. 3 ca công việc hỗ trợ đạt. TypeScript, ESLint và diff-check đạt. Đo tại cửa sổ 1600 × 800, khung tài liệu cao 621 px.
 - [x] Gom tiêu đề/tab, composer, nhóm ngày lịch sử, menu riêng từng chat, nút mở tệp và văn bản tối đa 72ch; thêm đổi tên với kiểm tra nguồn/tên cũ, giữ thứ tự hoạt động.
 - [x] Theo xác nhận 19/11: Enter gửi qua submit hiện có, Shift+Enter xuống dòng; bỏ qua IME đang ghép chữ/keyCode 229 và không gửi lặp khi giữ Enter. Chỉ đổi ô nhập chat, không đổi textarea nghiệp vụ hoặc dữ liệu. TypeScript, lint component và diff-check đạt; chưa kiểm chứng bàn phím/IME trên thiết bị thật, không gọi API trong lượt này.
 - [x] Đo local cùng viewport 1512×982: composer 233→118px, vùng đọc 462→601px (+30%), đầu chat y=196→148px. Smoke chỉ đọc desktop/mobile không tràn ngang hoặc lỗi JS; E2E xác nhận cùng số đo với chat dài/tệp. Đã xem ảnh desktop sáng và mobile 390×844 tối, ảnh/JSON tại `outputs/ai-workspace-compact/`.
@@ -484,7 +488,7 @@ Trang có lớp chữ tối đa 30.000 ký tự; chuyển tự động tối đa
 Tên điểm vào đề xuất là **Bàn làm việc**, giữ URL `/`. Trong trang có Trợ lý AI và Việc của tôi khi tài khoản có chức năng tương ứng; không tạo thêm submenu chỉ lặp tên trang. Không tự đổi nhóm menu khác. Mặc định AI cho tài khoản được dùng; tài khoản chưa được mở AI vẫn có dashboard cá nhân theo quyền, không tự mở rộng pilot.
 
 - **Chat chưa có công việc:** tiêu đề gọn, Hội thoại/Chat mới, vùng trao đổi và ô nhập thấy ngay trong màn hình desktop thông thường. Không hiện câu gợi ý mẫu/hướng dẫn dài; gửi bằng hành động rõ, không tự gọi dịch vụ trả phí. Giữ bộ chọn tác vụ hiện tại ở dạng gọn gần ô nhập; không tự đổi model/job bằng suy đoán.
-- **Chat có kế hoạch:** desktop chia khoảng 40–45% trao đổi và 55–60% bảng, tùy bề rộng khả dụng; có đóng/mở rộng bảng. Nếu không đủ chiều rộng đọc, chuyển sang chế độ một vùng. Không giữ menu hệ thống, danh sách chat, chat và panel thành bốn cột thường trực. Lịch sử hiện thành cột thu gọn trên desktop, tự ẩn khi mở bảng; mobile dùng Sheet. Tiêu đề từ câu hỏi đầu tiên chỉ trả sau kiểm tra quyền/nguồn.
+- **Chat có kế hoạch:** desktop mặc định dành 35% cho chat, phần còn lại cho tài liệu hoặc bản nháp. Kéo vạch chia hoặc dùng phím mũi tên để điều chỉnh. Có thể mở rộng vùng chi tiết ra toàn màn hình. Nếu không đủ chiều rộng đọc, chuyển sang chế độ một vùng. Không giữ menu hệ thống, danh sách chat, chat và panel thành bốn cột thường trực. Lịch sử hiện thành cột thu gọn trên desktop, tự ẩn khi mở bảng; mobile dùng Sheet. Tiêu đề từ câu hỏi đầu tiên chỉ trả sau kiểm tra quyền/nguồn.
 - **Panel công việc:** tiêu đề nghiệp vụ, phạm vi, trạng thái và bảng trước–sau/nguồn. Nút Duyệt và thực hiện, Điều chỉnh, Hủy đặt sát bảng; lỗi xung đột có Làm mới. Sau commit hiển thị kết quả, không suy đã lưu từ lời AI. Cập nhật mặc định loại phải nói rõ không hồi tố tài sản hiện có. Không hiện ID/phiên bản nội bộ như thông tin chính. Bản nháp tài sản/vị trí vẫn dùng form lưu hiện có; không biến thành hành động tự ghi.
 - **Việc của tôi:** danh sách gọn các việc cần xử lý, có nhãn phân biệt Công việc AI và Quy trình; mở công việc AI quay lại đúng bảng, workflow tới hồ sơ `/workflows/[id]`. Các nhóm điều phối công ty chỉ hiện cho MANAGE, giữ nhãn điều phối riêng. Bộ lọc dựa dữ liệu thật; không tạo số đếm giả. Việc AI vẫn tồn tại khi chat mới; gắn từ `tin_nhan_ai`/work ID hiện có khi xác định được, không tự gán công việc tài khoản vào chat khác.
 - **Mobile:** menu thu gọn; hội thoại bằng Sheet; khi có bảng dùng chuyển Trao đổi/Bảng công việc thay cho hai cột nhỏ hoặc xếp bảng dài trên ô nhập. Thao tác duyệt phải tiếp cận được; vùng cuộn riêng cho bảng rộng. Không để bàn phím che ô nhập/nút gửi.
@@ -566,7 +570,7 @@ Trình tự chuyển đổi: (1) triển khai đọc/đối soát Admin API và 
 
 ### Nguồn đơn giá và chi phí — làm rõ 17/11/2026
 
-Đã đối chiếu mã và tài liệu OpenAI: token input/cache/output lấy tự động từ usage phản hồi; đơn giá hiện do quản trị nhập, `aiCost` tự tính `(input - cached) × giá input + cached × giá cache + output × giá output`, chia một triệu và làm tròn lên 6 chữ số USD. Đây là ước tính cho các nhóm token hiện được hỗ trợ, không phải toàn bộ hóa đơn. Thiếu giá vẫn ghi token khi không áp trần, chi phí chưa xác định.
+Đã đối chiếu mã và tài liệu OpenAI: token input/cache/output lấy tự động từ usage phản hồi; đơn giá hiện do quản trị nhập, `aiCost` tự tính `(input - cached) × giá input + cached × giá cache + output × giá output`, chia một triệu và làm tròn lên 6 chữ số USD. Đây là ước tính cho các nhóm token hiện được hỗ trợ, không phải toàn bộ hóa đơn. Thiếu giá vẫn ghi token theo usage trả về, chi phí chưa xác định.
 
 [Models API](https://developers.openai.com/api/reference/resources/models/methods/list) hiện trả danh mục/metadata, không có trường đơn giá. [Bảng giá](https://developers.openai.com/api/docs/pricing) là nguồn cho danh mục giá nếu triển khai tự điền theo model/chế độ/ngày hiệu lực; chưa triển khai đồng bộ. [Costs API](https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/usage/methods/costs) lấy chi phí nhà cung cấp đã ghi nhận theo khoảng thời gian, dùng Admin API key; có lọc/nhóm project hoặc API key. Không đồng nhất credential gọi model với credential đối soát, không suy mỗi người dùng ERP tương ứng một user OpenAI khi dùng chung key. Đồng bộ chi phí nhà cung cấp cần giữ riêng với ước tính từng lượt để tránh cộng hai lần. Lượt này chỉ làm rõ và cập nhật tài liệu, chưa đổi code/DB/quyền hoặc kết nối thật.
 
@@ -583,7 +587,7 @@ Hiện trạng: `AiJobForm` chỉ đổi state khi chọn kết nối, phải b�
 | Đổi kết nối khi đang có model riêng | Kiểm tra model với nguồn mới. Nếu còn hợp lệ và đơn giá phù hợp thì tự lưu nhóm; nếu không, giữ cấu hình đã lưu và yêu cầu chọn model/kiểu kế thừa hợp lệ, không âm thầm reset |
 | Chọn model | Chỉ chọn từ danh sách đã tải theo nguồn; tự lưu nhóm hợp lệ, cập nhật phiên bản trả về và giữ dialog mở. Không tự xóa/áp nhầm đơn giá model cũ |
 | Không tải được danh sách hoặc thiếu quyền Models | Giữ cấu hình cũ; hiển thị lỗi và nút Thử lại. Bỏ nhập model tự do trong cấu hình tác vụ; không để text tùy ý vượt xác minh server |
-| Cần đổi đơn giá hoặc đang áp trần mà thiếu giá | Giữ bản nháp nhóm liên quan và bước Áp dụng khi đã đủ; không lưu cấu hình trung gian khiến lượt chat bị chặn ngoài dự kiến |
+| Đổi đơn giá | Khi bật cấu hình giá, chỉ lưu khi nhóm giá hợp lệ. Có thể để trống toàn bộ nhóm giá để dùng model ngay. |
 | Khóa API, hạn mức, đơn giá và đối chiếu chi phí | Giữ thao tác lưu/xác nhận rõ trong đợt này; không tự lưu khi đang gõ |
 
 Lợi ích: bỏ bước tải model thủ công và bước lưu riêng cho lựa chọn độc lập; giảm quên lưu và lỗi gõ tên model. Đánh đổi: chọn nhầm có hiệu lực sớm, phát sinh thêm request/audit, xung đột khi đổi nhanh/hai tab; cần trạng thái ngay tại trường, phiên bản mới từ server, bỏ kết quả tải cũ, gộp hoặc tuần tự hóa ghi và cho chọn lại giá trị trước. Không gắn tự lưu vào bộ chọn chung làm thay đổi mọi màn hình. Danh sách model chỉ xác minh tên/quyền đọc theo key tại thời điểm tải, không là bằng chứng mọi model chạy được Responses/function calling; cần xử lý lỗi khả năng model riêng và không tự phát sinh cuộc gọi thử có phí.
@@ -695,7 +699,7 @@ Unique `(id, company_id)`; index `(company_id, account_id, updated_at, id)`; dan
 | `company_id`, `hoi_thoai_id` | Int; FK kép tới hội thoại cùng công ty |
 | `ma_yeu_cau` | UUID; cùng giá trị cho câu hỏi và câu trả lời của một lượt |
 | `vai_tro` | String + CHECK `NGUOI_DUNG`, `TRO_LY`; server quyết định vai trò |
-| `noi_dung` | Text; câu trả lời có thể rỗng khi chưa hoàn tất |
+| `noi_dung` | Text; câu trả lời có thể rỗng khi chưa hoàn tất; CHECK tối đa 32.000 ký tự cho TRO_LY, 8.000 cho NGUOI_DUNG (validation gửi mới và CHECK riêng người dùng đều 8.000) |
 | `du_lieu_kem_theo` | JSONB nullable; kết quả/nguồn/phụ thuộc quyền theo cấu trúc có phiên bản |
 | `trang_thai` | String + CHECK `DANG_XU_LY`, `HOAN_TAT`, `LOI`, `GIAN_DOAN` |
 | `ma_xu_ly`, `het_han_xu_ly` | UUID và DateTime nullable; nhận diện tiến trình đang giữ quyền xử lý tạm thời |
@@ -824,19 +828,28 @@ Dùng `tin_nhan_ai.du_lieu_kem_theo.ngu_canh`, với cấu trúc có phiên bả
 
 #### Hội thoại dài và giới hạn nhớ
 
-- Bản hiện hành dùng giới hạn bảo thủ 12 lượt/24.000 ký tự/32.000 byte UTF-8 cho lịch sử và tổng 128.000 byte văn bản cho context trong vòng công cụ (không đếm base64 ảnh vào giới hạn văn bản; ảnh có giới hạn riêng ở mục tệp); chưa tính ngân sách theo tokenizer từng model. Dựng đầu vào gồm: quy tắc ứng dụng, cá nhân hóa hiện tại, câu hỏi, trạng thái tác vụ đã xác minh và các lượt gần đây liên quan. Dành chỗ cho kết quả công cụ và câu trả lời; không chỉ giới hạn theo một số tin nhắn cố định.
-- Chọn các lượt hoàn chỉnh; giữ nguyên chuỗi tool call/output cần thiết của lượt đang chạy. Không cắt giữa một cặp yêu cầu công cụ–kết quả hoặc tái dùng reasoning/output kỹ thuật sau khi thay đổi phần lịch sử mà nó phụ thuộc.
-- Đưa một đoạn cũ ra khỏi đầu vào không xóa đoạn đó khỏi DB. Bản hiện hành giữ metadata tham chiếu trong các lượt còn nằm trong ngân sách; lượt bị loại vẫn lưu trong DB, không tự kéo nguồn cũ vào ngữ cảnh; nếu câu hỏi cần nội dung cũ không còn trong bối cảnh và chưa truy lại được, nêu giới hạn và yêu cầu chỉ rõ thay vì hứa nhớ toàn bộ.
-- Tóm tắt tự động cho cuộc chat dài là hướng mở rộng riêng, chưa đưa thành bước bắt buộc của bản đầu. Nếu bổ sung, phải có phạm vi tin nhắn nguồn, thời điểm/phiên bản và phụ thuộc quyền; chỉ dùng như dữ liệu dẫn xuất, không là quy tắc ứng dụng hoặc hồ sơ nghiệp vụ. Không thêm tóm tắt tự động xuyên cuộc chat vào phạm vi hiện tại.
+**25/11: đã triển khai và kiểm chứng kỹ thuật; chưa nghiệm thu chất lượng tóm tắt qua API thật.**
+
+- Bỏ trần 100 yêu cầu/ngày và 200 lượt/cuộc chat. Giữ chống gửi dồn 10 lượt/5 phút, khóa một lượt đang chạy theo tài khoản, chống gửi trùng và ngân sách do quản trị chủ động đặt.
+- Câu hỏi 8.000 ký tự; tối đa 25 lần gọi model/lượt (gồm tóm tắt); đầu ra 12.000 token/lần; 180 giây/lần, 600 giây/lượt, lease 660 giây. Tệp tối đa 10/tin nhắn; giữ 10 MiB/tệp, 20 tệp/chat và kho 200 MiB/tài khoản. Các giới hạn an toàn đọc/giải nén tài liệu giữ nguyên.
+- Lịch sử vượt 96.000 byte UTF-8 được tóm tắt theo lô 64.000 byte, giữ tối đa 6 lượt gần nhất trong 32.000 byte. Tóm tắt tối đa 12.000 ký tự/24.000 byte; gọi cùng kết nối/model đã chọn và ghi usage/ngân sách như mọi cuộc gọi khác. Đây là ngân sách văn bản của ERP, chưa phải tokenizer/context window được xác nhận cho từng model.
+- **Thiết kế DB cần giữ:** dùng thêm thuộc tính tùy chọn `memory={version:1,throughId,text,createdAt,model}` trong JSONB `tin_nhan_ai.du_lieu_kem_theo` của câu trả lời đang xử lý. Không tạo bảng/cột mới; lịch sử gốc không sửa/xóa. Migration `20261125030000_ai_user_message_limit` nới CHECK riêng `tin_nhan_ai_user_check` từ 2.000 lên 8.000 ký tự, giữ trạng thái HOAN_TAT và yêu cầu không rỗng; không sửa migration đã áp dụng. Checkpoint chỉ ghi sau tóm tắt thành công, kiểm tra lease/actor/nguồn; giữ được khi phần trả lời sau đó lỗi. Chỉ đọc văn bản sau mốc đã thu gọn; kiểm tra metadata nguồn của toàn chat trước tái sử dụng, không biến summary thành quyền hay dữ liệu nghiệp vụ.
+- Công cụ `search_chat_history` chỉ đọc đúng chat/chủ/công ty, phân trang và giới hạn đầu ra; giúp tìm lại nội dung gốc. Tóm tắt giữ mục tiêu, quyết định, tham chiếu và việc chưa xong, không hứa nhớ đầy đủ mọi chi tiết hoặc xuyên hội thoại.
+- Transcript công cụ vượt 192.000 byte được thu gọn sau khi có kết quả công cụ, thay cả chuỗi call/output hoàn chỉnh; không tái sử dụng reasoning cũ hoặc để cặp call/output mồ côi. Tổng context văn bản tối đa 256.000 byte. Ảnh không đếm chuỗi base64 như văn bản; tóm tắt yêu cầu đọc lại tệp nếu cần chi tiết ảnh.
+- Chưa có background queue/checkpoint thực thi công cụ để tiếp tục xuyên lần khởi động máy chủ. VPS/proxy phải cho phép request ít nhất 660 giây; tăng cấu hình ứng dụng không thay được timeout của hosting hoặc giới hạn thật của model/OpenAI. Chính sách dọn tệp sau 30 ngày vẫn để cân nhắc riêng, chưa xóa tệp tự động.
+- [x] Kiểm chứng 28/28 integration trên PostgreSQL riêng với provider mô phỏng (19 ca context/chat và 9 ca quản trị/ngân sách), 7/7 unit: Unicode không mất chữ, giữ hơn 12 lượt, checkpoint khôi phục sau lỗi, tra tin dài theo offset, chặn chat khác/thu hồi quyền, bỏ trần 200 lượt/chat và 100 lượt/ngày, 8.000 ký tự/10 tệp, 25 calls gồm tóm tắt, 8 trace công cụ lưu được, chống gửi dồn và khóa đồng thời. Không gọi OpenAI trả phí.
+- [x] Migration mới đã thử trên bản sao phục hồi backup rồi áp dụng local; số dòng/hash cả 34 bảng không đổi ở cả hai DB. `prisma migrate diff` không lệch schema. Không tạo/xóa bảng/cột, không sửa nội dung chat hoặc tự dọn tệp; backup/log tại `outputs/ai-context-compaction/`.
+- [x] TypeScript, ESLint các file đổi và `git diff --check` đạt; giao diện giữ bố cục cũ, schema/cấu hình dùng chung nhận mức mới. Chưa kiểm chứng thời gian 10 phút qua VPS/proxy hoặc chất lượng tóm tắt của model thật.
+- [ ] Nghiệm thu chất lượng tóm tắt với API/model thật và hạ tầng triển khai.
 
 ### Đồng thời, lỗi và chi phí
 
 1. Trong transaction ngắn, kiểm tra actor/quyền/sở hữu, khóa theo thứ tự tương thích hệ thống, nhận `ma_yeu_cau` và tạo cặp câu hỏi–trả lời đang xử lý. Trùng mã với nội dung khác bị từ chối; trùng mã/nội dung trả trạng thái đã có, không phát sinh cuộc gọi mới.
 2. Chỉ một lượt đang xử lý mỗi hội thoại; nhiều tab cùng gửi được kiểm soát ở DB. Tiến trình nhận `ma_xu_ly` và hạn xử lý; không giữ transaction hoặc khóa DB trong khi gọi OpenAI.
-3. Trước mỗi lần gọi, kiểm tra hạn mức và ghi log/phần ngân sách dự phòng nguyên tử theo tài khoản trong transaction ngắn; tính từ giới hạn đầu vào/đầu ra và đơn giá đã chọn. Hoàn tất thì thay phần dự phòng bằng chi phí đã xác định; lượt DANG_GOI giữ dự phòng để kiểm soát đồng thời, lượt đã kết thúc chưa rõ chi phí không trừ hạn mức cho đến khi đối soát. Thực thi công cụ theo danh sách cho phép và giới hạn vòng gọi; đọc quyền lại mỗi lần truy vấn dữ liệu.
+3. Trước mỗi lần gọi, kiểm tra hạn mức theo chi phí đã đối chiếu và ghi log trong transaction ngắn. Thực thi công cụ theo quyền hiện tại và giới hạn vòng gọi.
 4. Hoàn tất bằng transaction có kiểm tra phiên/quyền và token tiến trình còn hiệu lực. Lưu câu trả lời/kết quả/log và cập nhật hội thoại; tiến trình cũ không ghi đè sau khi đã hết hạn/thử lại.
 5. Mất mạng phía trình duyệt không tự gọi lại API: khi mở lại đọc trạng thái DB. Tiến trình mất hoặc quá hạn chuyển gián đoạn qua luồng phục hồi có khóa. Bản hiện hành giữ bất biến cả lượt lỗi: nút Dùng lại yêu cầu đưa câu hỏi vào ô nhập, khi gửi tạo mã lượt mới; gửi lại cùng mã chỉ đọc trạng thái, không gọi API. Không sửa câu trả lời đã hoàn tất.
-6. Timeout không rõ kết quả cần đối chiếu nếu nhà cung cấp hỗ trợ; nếu vẫn không rõ, người dùng được biết thử lại có thể phát sinh thêm chi phí. Không cam kết gọi API “đúng một lần” xuyên sự cố mạng. Ngân sách giữ phần dự phòng cho lượt DANG_GOI; khoản đã kết thúc chưa rõ chi phí tạm không tính, vẫn lưu riêng để đối soát.
+6. Khi timeout, chi phí có thể chưa xác định. Giữ bằng chứng để đối chiếu và thông báo cho người dùng trước khi gửi lại.
 
 Không ghi audit nghiệp vụ thành công cho việc AI chỉ trả lời. Khi sau này có mutation tài sản, transaction/audit vẫn thuộc action tài sản; lịch sử chat không thay nhật ký nghiệp vụ.
 
@@ -904,6 +917,55 @@ Pilot ghi thời gian tìm máy in bằng cách hiện tại và bằng chat, đ
 - [x] `lookup_support_targets`, `prepare_support_ticket`; lưu nháp theo chat, mở lại bằng form chung, kiểm tra quyền/nguồn và trạng thái đã gửi.
 - [x] Kiểm thử tích hợp DB/auth thật, giả lập phản hồi provider đạt; gồm tìm đích, phân trang, gửi đồng thời, phục hồi, đích sai/thiếu quản lý, mất quyền và LOOKUP. Kết quả hiện hành tại B.9 plan Công việc.
 - [x] Trình duyệt, TypeScript/lint/build đạt; đồng bộ rule/kiến trúc/plan và HTML Công việc. Kết quả/giới hạn chi tiết tại B.9 được liên kết ở trên.
-- [ ] Kiểm chứng với model/API thật và nghiệm thu vận hành; đợt này dùng provider giả lập, không phát sinh API trả phí.
+- [x] Ngày 25/11 kiểm chứng một yêu cầu tiếng Việt qua model thật: tra nhân sự giả lập → lập nháp, không tự tạo ticket/thông báo. Nháp đang sửa giữ qua đóng panel/chuyển trang trong bộ nhớ phiên; reload chỉ khôi phục nháp gốc. Phạm vi, token, cleanup và giới hạn tại [B.10 plan Công việc](TASK-MANAGEMENT-CHECKLIST.md#b10-hoàn-thiện-luồng-sử-dụng-và-vận-hành--25112026).
+- [ ] Nghiệm thu vận hành, nhiều cách diễn đạt và đích trùng tên bằng người dùng thật; một smoke API không thay cho bước này.
 
 - [x] Tra người/phòng hỗ trợ theo chức danh, mã và tên viết tắt; lựa chọn hiện và phục hồi trong chat. Phạm vi/kiểm chứng thuộc [B.9 plan Công việc](TASK-MANAGEMENT-CHECKLIST.md#b9-ticket-hỗ-trợ-qua-ai-và-tinh-gọn-thao-tác--23112026).
+
+
+#### Sửa giới hạn chờ phản hồi dài — 23/11/2026
+
+**Chẩn đoán đọc dữ liệu, giữ nguyên hội thoại:** cuộc “gpt” có 8 lượt lỗi dừng ở 25.025–25.064 giây, không có HTTP status/usage; trùng `AbortSignal.timeout(25000)`. Cùng hội thoại có phản hồi ngắn thành công khoảng 8 giây. Lỗi bắt đầu khi yêu cầu bài phát biểu 10 phút; không có bằng chứng hỏng DB/tệp hoặc lỗi quyền. Log cũ chỉ ghi `unknown`, nên không truy ngược được nguyên nhân mạng chi tiết. Chưa gửi lại yêu cầu tới OpenAI.
+
+- [x] Thời gian chờ mỗi HTTP response đã nâng tiếp ngày 25/11 lên 180 giây, giảm theo thời gian còn lại trong ngân sách lượt 600 giây; lease 660 giây. Bắt cả lỗi đọc JSON sau header, phân biệt timeout/network/invalid JSON; audit chỉ reason, elapsedMs, timeoutMs, HTTP status, không lưu nội dung hoặc secret.
+- [x] Trần output đã nâng tiếp ngày 25/11 lên 12.000 token cho request; không cắt âm thầm câu trả lời ở 8.000 ký tự. Incomplete do max_output_tokens có thông báo riêng; token trả về vẫn ghi usage. Không tự retry, không đổi model/key hoặc bỏ kiểm tra quyền.
+- [x] Bối cảnh lượt lỗi giữ yêu cầu/thông tin người dùng; không gán lỗi kỹ thuật thành yêu cầu cần làm rõ. Giữ nguyên lịch sử lỗi cũ, tệp và usage chưa xác định; không tự sửa phí hoặc đánh dấu thành công.
+- [x] Migration `20261123220000_ai_long_answers` đã áp dụng local sau backup/restore và thử trên DB riêng: nới CHECK câu trả lời lên 32.000 ký tự, giữ giới hạn người dùng; không thêm/xóa cột hoặc sửa dữ liệu. Số dòng/hash 34 bảng không đổi trên DB thử và local. Backup/bằng chứng ở `outputs/ai-chat-diagnosis/`. Nếu cần quay về code cũ, giữ CHECK đã nới; không thu nhỏ CHECK khi đã có câu trả lời dài hoặc cắt dữ liệu để rollback.
+- [x] 7 regression liên quan đạt trên DB riêng với provider mô phỏng: phản hồi 26 giây và dài >8.000 ký tự lưu đầy đủ, timeout cả header/body, lỗi mạng/JSON, chống gửi lặp, incomplete giữ usage, bối cảnh lỗi, dự phòng/đối soát và CHECK 32.000/8.000 theo vai trò.
+- [x] TypeScript, ESLint các file sửa, Prisma validate/generate, schema diff và kiểm tra khoảng trắng đạt. Prisma schema không đổi; migration chỉ thay CHECK SQL nên không cần đổi API client.
+- [ ] Nghiệm thu bài phát biểu qua API thật do người dùng chủ động gửi; chưa gọi API có phí trong đợt sửa. Streaming/job nền là hướng cải tiến sau, phản hồi vượt thời gian/độ dài vẫn được chặn có thông báo.
+
+#### Giải thích lỗi ngay trong chat — 25/11/2026
+
+Người dùng yêu cầu nêu lý do và hướng xử lý tại lượt chat bị lỗi, không gọi chung là lỗi cả hội thoại. Phân biệt nguyên nhân đã xác minh với chưa rõ; không suy timeout/hết tiền từ thông báo cũ. Lịch sử cũ được diễn giải khi hiển thị, không ghi lại DB.
+
+- [x] `ai-chat-feedback.ts` tập trung lý do/cách xử lý cho timeout, mạng, độ dài/ngữ cảnh, số lượt/tệp/bước, hạn mức tài khoản/kết nối, cấu hình, phiên/quyền/nguồn, yêu cầu trùng/đang chạy và lỗi chưa rõ. `AiChatFailure` hiển thị nhãn hệ thống + lý do + cách xử lý trong log chat.
+- [x] Lỗi đã lưu chỉ hiện tại tin nhắn, bỏ lặp dưới composer; lỗi gửi trước khi có lượt DB và mất kết nối trình duyệt hiện tạm trong chat, giữ nội dung nhập và mã yêu cầu khi kết quả chưa rõ. Lỗi mở/lưu trữ hội thoại giữ tại thao tác tương ứng. Chỉnh lại yêu cầu chỉ điền ô nhập, không tự gọi API; lỗi cần quản trị không gợi ý gửi lặp.
+- [x] Giữ giới hạn ERP 10 lượt/5 phút; trần 100 lượt/24 giờ đã bỏ ngày 25/11, lỗi cũ có hướng dẫn tiếp tục; tách HTTP 401/403/404/5xx, 429 chỉ phân biệt tốc độ/ngân sách khi mã lỗi xác nhận. Không trả nội dung lỗi thô của nhà cung cấp. Lỗi nội bộ không tự quy thành thiếu quyền; phản hồi không hợp lệ không khẳng định chưa có tệp nào được tạo.
+Các nhóm nguyên nhân trong luồng hiện hành (không có nghĩa tất cả đã xảy ra ở chat “gpt”):
+
+| Nhóm | Lý do / cách xử lý cho người dùng |
+| --- | --- |
+| Thời gian | Chờ phản hồi quá 180 giây hoặc lượt vượt 600 giây → chia nhỏ yêu cầu; phiên xử lý hết 660 giây → kiểm tra kết quả đã có trước gửi lại |
+| Kết nối | Trình duyệt–ERP chưa nhận kết quả → giữ mã yêu cầu, kiểm tra lượt cũ; ERP–OpenAI gián đoạn → chờ/thử lại, quản trị kiểm tra khi lặp |
+| Độ dài | Đầu ra vượt giới hạn token/ký tự, đầu vào vượt ngữ cảnh → viết từng phần hoặc thu hẹp dữ liệu |
+| Số lượt/bước/tệp | 10 lượt/5 phút, 20 tệp/chat, quá bước công cụ → chờ, mở chat mới hoặc tiếp tục từng phần đúng trường hợp |
+| Ngân sách ERP | Tài khoản/kết nối không đủ mức còn lại → quản trị kiểm tra mức dùng và ngân sách; không suy thành hết tiền OpenAI |
+| OpenAI 429 | Có mã xác nhận mới nói tốc độ hoặc hết quota; thiếu mã → nêu chưa rõ loại giới hạn, kiểm tra cả hai |
+| Key/model/cấu hình | Khóa bị từ chối, không có quyền model, kết nối dừng/chưa đặt mặc định, kho khóa/bảng giá chưa sẵn sàng, đổi cấu hình giữa lượt → quản trị kiểm tra; không gửi secret vào chat |
+| Dịch vụ/phản hồi | OpenAI 5xx, JSON/output không hợp lệ, phản hồi rỗng, công cụ không đúng hợp đồng, incomplete → thử lại có kiểm soát; nguyên nhân thiếu dữ liệu giữ “chưa xác định” |
+| Bộ lọc nội dung | Chỉ khi provider xác nhận → nêu mục đích và thông tin cần thiết; trường hợp bị chặn nhầm liên hệ quản trị |
+| Phiên/quyền/nguồn | Phiên hết hiệu lực, thiếu quyền, dữ liệu nguồn không xác minh được → đăng nhập lại hoặc nhờ kiểm tra quyền/nguồn; không mở quyền bằng việc đổi chat |
+| Hội thoại/yêu cầu | Đã lưu trữ/không còn khả dụng, đang xử lý, gửi lại khác nội dung/tệp → khôi phục hoặc kiểm tra kết quả trước tạo lượt mới |
+| Tệp và nghiệp vụ | Sai định dạng/kích thước/phạm vi dữ liệu, thiếu tệp/quyền, thiếu dữ liệu hoặc xung đột khi lập nháp → dùng lý do kiểm tra nghiệp vụ hiện có, bổ sung/tra lại; công cụ trả lỗi cho AI chưa đồng nghĩa cả chat thất bại |
+| Nội bộ chưa rõ | Không đoán do quyền/mạng → kiểm tra kết quả hiện tại, cung cấp thời điểm lỗi cho quản trị |
+
+- [x] 4 unit test phân loại (gồm lỗi cũ/chưa rõ, quota/rate limit, nội dung lọc, không lộ thông điệp thô), 1 integration với 7 nhóm HTTP lưu/đọc lại và chống gọi lặp, 1 E2E gửi lỗi/khôi phục sau mất kết nối/giới hạn trước khi tạo lượt đạt trên DB riêng, provider giả lập. Đã xem desktop sáng/mobile tối 390 px, không tràn ngang; sửa ô chọn tệp ẩn còn chiếm chiều rộng. TypeScript, ESLint file sửa và diff check đạt. Bằng chứng tại `outputs/ai-chat-feedback/`. Không gọi API trả phí, không thay lịch sử/quyền/ngân sách thực tế.
+
+### Cấu hình giới hạn AI tập trung — 25/11/2026
+
+- [x] Theo yêu cầu người dùng, dùng một `request.maxSteps = 25` cho mọi tác vụ; bỏ mức riêng cho tài liệu và nhánh đổi giới hạn trong vòng chạy. Các giới hạn thời gian/token/ngữ cảnh khác giữ nguyên. Kiểm tra TypeScript, ESLint hai file sửa và diff đạt; không gọi API tính phí.
+
+- [x] Gom giới hạn lượt gọi, thời gian, token, lịch sử, tệp và worker tài liệu tại `src/lib/ai-config.ts`, comment tiếng Việt nêu đơn vị và mục đích. Backend/UI/worker đọc cùng nguồn.
+- [x] Giữ API key/model/ngân sách cá nhân trong cấu hình DB hiện có; không chuyển bí mật sang file dùng chung client. Giới hạn câu trả lời 32.000 có CHECK DB, thay đổi cần migration mới, không sửa migration đã áp dụng.
+- [x] Kiểm chứng: TypeScript, ESLint các file thay đổi và `git diff --check` đạt; 20/20 ca unit (gồm 2 ca LibreOffice chạy riêng), 8/8 ca tích hợp chat/usage trên DB thử riêng với provider giả lập. Kiểm tra đọc/chuyển PDF → Word → sửa → PDF, giữ số và tiếng Việt; không gọi OpenAI trả phí hoặc sửa DB người dùng. Bằng chứng cục bộ tại `outputs/ai-config-refactor/`.

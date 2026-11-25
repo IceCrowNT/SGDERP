@@ -11,8 +11,8 @@ export function AppContent({ children }: { children: ReactNode }) {
   const landing = pathname === "/asset-management" || pathname === "/hr" || pathname === "/system";
 
   return (
-    <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-4 outline-none sm:p-5 lg:p-6">
-      <div className={cn("mx-auto w-full min-w-0", contained ? "max-w-5xl" : landing ? "max-w-7xl" : "max-w-none")}>
+    <main id="main-content" tabIndex={-1} className={cn("min-w-0 flex-1 p-4 outline-none sm:p-5 lg:p-6", pathname === "/" && "h-[calc(100dvh-4rem)] min-h-0 flex-none py-2 sm:py-2 lg:py-2")}>
+      <div className={cn("mx-auto w-full min-w-0", pathname === "/" && "h-full", contained ? "max-w-5xl" : landing ? "max-w-7xl" : "max-w-none")}>
         {children}
       </div>
     </main>

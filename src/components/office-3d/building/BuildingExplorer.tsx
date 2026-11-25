@@ -62,7 +62,7 @@ import { SceneLayerControls } from "./SceneLayerControls";
 import { SpaceDirectory } from "./SpaceDirectory";
 import { filterScene, personDestination, assetDestination, DEFAULT_SCENE_LAYERS, type SceneLayers, type AssetSceneCategory } from "@/lib/office-3d/scene-filter";
 import { PlacementEditor } from "./PlacementEditor";
-import type { PlacementDraft } from "@/lib/office-3d/placement";
+import { isDeskSelectionPilot, type PlacementDraft } from "@/lib/office-3d/placement";
 import { assetsForEquipment, equipmentForAssets, type EquipmentKind } from "@/lib/office-3d/hcns-layout";
 const ObjectEditDialog = dynamic(() => import("./ObjectEditDialog").then(m => m.ObjectEditDialog));
 const DEFAULT_CAMERA: BuildingCamera = {
@@ -360,7 +360,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     if (!equipment) choosePoint(key);
     setCommands(old=>({...old,[nextScope]:{view:"focus",key,equipment,assetId,zoom:1,sequence:(old[nextScope]?.sequence ?? 0)+1}}));
   }
-  function chooseEquipment(key: string, kind: EquipmentKind, focus: boolean, assetId?: number) {
+  function chooseEquipment(key: string, kind: EquipmentKind, focus: boolean, assetId?: number, openRecord = false) {
     if(draft || !building.canViewAssets) return;
     const p = scene.hcns?.points.find(p=>p.key===key) ?? scene.objects?.find(o=>o.point.key===key)?.point;
     const matches = assetsForEquipment(p?.assets ?? [],kind).filter(a=>assetId === undefined || a.id === assetId);
@@ -372,11 +372,15 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
     setSelectedPerson(null);setPanelOpen(true);
     navigate({floor:r.floor,room:r.key,detail:canEnterRoom(building,r.key),point:key,
       equipment:kind,...(matches.length===1 ? {asset:matches[0].id} : {})});
+    if (openRecord && detail && isDeskSelectionPilot(object) && matches.length === 1) {
+      setEditingObject({ kind: "asset", ids: [matches[0].id], detail: true });
+    }
     if(focus) focusPoint(key,kind,matches.length===1 ? matches[0].id : undefined);
   }
   function chooseAsset(id:number) {
     if(!currentPoint?.assets?.some(a=>a.id===id) || !building.canViewAssets) return;
     navigate({...navigation,asset:id});
+    if (detail && isDeskSelectionPilot(selectedObject)) setEditingObject({ kind: "asset", ids: [id], detail: true });
   }
   function beginPlacement(edit=false) {
     if(!room?.locationId || room.state!=="active" || !isManageableSpace(shape) || !building.canManage || modelUnavailable || pending) return;
@@ -559,7 +563,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
               <Model building={building} scene={scene} showRoomLabels={showRoomLabels} floor={floor} selected={selected} command={command}
                 onSelect={choose} onFloor={changeFloor} detail={detail}
                 point={navigation.point} onPoint={choosePoint} onEnter={enterRoom}
-                onFocusPoint={key=>focusPoint(key)} onEquipment={chooseEquipment} activeEquipment={activeEquipment} activeAsset={navigation.asset}
+                onFocusPoint={key=>focusPoint(key)} onEquipment={(key, kind, focus, id) => chooseEquipment(key, kind, focus, id, !focus)} activeEquipment={activeEquipment} activeAsset={navigation.asset}
                 selectionKey={selectionCameraKey(navigation)}
                 key={modelAttempt} person={personId} onPerson={choosePerson} onUnavailable={revealPanel} onRetry={retryModel} onOverview={roomOverview}
                 onContextTarget={contextTarget}
@@ -646,6 +650,7 @@ export function BuildingExplorer({ building }: { building: BuildingData }) {
               selected={navigation.point}
               onSelect={key=>key===navigation.point && (navigation.asset || navigation.equipment) ? backOne() : choosePoint(key)}
               equipmentKind={navigation.equipment}
+              selectionPilot={detail && isDeskSelectionPilot(selectedObject)}
               onAsset={chooseAsset}
               personId={personId}
               assetId={selectedAsset?.point === navigation.point ? selectedAsset.id : null}

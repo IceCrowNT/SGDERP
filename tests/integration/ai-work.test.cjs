@@ -110,9 +110,9 @@ test('audit failure rolls back whole batch and approval status; retry succeeds o
   const before=await db.loai_tai_san.findMany({where:{company_id:manager.company_id},orderBy:{id:'asc'}});
   const beforeAsset=await db.tai_san.findUniqueOrThrow({where:{id:asset.id}});
   await db.$executeRawUnsafe(`CREATE FUNCTION ai_work_test_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.phan_he = 'ASSETS' AND NEW.mo_ta LIKE 'Duyệt công việc AI #${work.id}:%' THEN RAISE EXCEPTION 'test audit rollback'; END IF; RETURN NEW; END $$`);
-  await db.$executeRawUnsafe('CREATE TRIGGER ai_work_test_fail_trigger BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION ai_work_test_fail()');
+  await db.$executeRawUnsafe('CREATE TRIGGER ai_work_test_fail_trigger BEFORE INSERT ON he_thong.nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION ai_work_test_fail()');
   try { assert.equal((await as(manager,()=>approve(ref(work)))).success,false); }
-  finally {await db.$executeRawUnsafe('DROP TRIGGER ai_work_test_fail_trigger ON nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION ai_work_test_fail()');}
+  finally {await db.$executeRawUnsafe('DROP TRIGGER ai_work_test_fail_trigger ON he_thong.nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION ai_work_test_fail()');}
   assert.deepEqual(await db.loai_tai_san.findMany({where:{company_id:manager.company_id},orderBy:{id:'asc'}}),before);
   assert.equal((await db.cong_viec_ai.findUniqueOrThrow({where:{id:work.id}})).trang_thai,'CHO_DUYET');
   const results=await Promise.all([as(manager,()=>approve(ref(work))),as(manager,()=>approve(ref(work)))]);

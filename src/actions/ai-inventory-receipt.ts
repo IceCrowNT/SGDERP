@@ -27,7 +27,7 @@ async function actor() {
   return s;
 }
 async function lock(tx: Prisma.TransactionClient, s: SessionUser) {
-  await tx.$queryRaw`SELECT id FROM cong_ty WHERE id=${s.companyId} FOR UPDATE`;
+  await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id=${s.companyId} FOR UPDATE`;
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126,${s.companyId}::int)`;
   const current = await currentActor(tx, s, "INVENTORY");
   if (!canUseAiChat({ ...s, permissions: current.permissions })) throw new ReceiptError("Quyền trợ lý AI đã thay đổi.");

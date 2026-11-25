@@ -1,3 +1,4 @@
+import { AI_LIMITS } from "@/lib/ai-config";
 import { SupportTargetSchema, type SupportTarget, SavedSupportDraftSchema, type SavedSupportDraft } from "./ai-support-task";
 import { z } from "zod";
 import type { AiAttachment } from "./ai-attachments";
@@ -14,10 +15,18 @@ export const ChatTraceSchema = z.object({
   results: z.array(z.object({ id: z.number().int().positive(), label: z.string().max(160) }).strict()).max(50).optional(),
 }).strict();
 export const AttachmentTableSchema = z.object({ source: z.string().max(500), columns: z.array(z.string().max(200)).max(257), rows: z.array(z.array(z.union([z.string().max(10000), z.number(), z.null()])).max(257)).max(100), note: z.string().max(2000) }).strict();
+// Cache dẫn xuất, ghi bởi server; không nhận từ client và không phải quyền/chứng cứ ERP.
+export const ChatMemorySchema = z.object({
+  version: z.literal(1), throughId: z.number().int().positive(),
+  text: z.string().trim().min(1).max(AI_LIMITS.history.summaryChars),
+  createdAt: z.string().datetime(), model: z.string().min(1).max(200),
+}).strict();
+export type ChatMemory = z.infer<typeof ChatMemorySchema>;
 export const ChatMetadataSchema = z.object({
-  version: z.literal(1), ngu_canh: z.array(ChatTraceSchema).max(6), workId: z.number().int().positive().optional(),
+  version: z.literal(1), ngu_canh: z.array(ChatTraceSchema).max(AI_LIMITS.request.maxSteps), workId: z.number().int().positive().optional(),
   supportTaskDraft: SavedSupportDraftSchema.optional(),
-  tables: z.array(AttachmentTableSchema).max(6).optional(), draft: z.boolean().optional(), contextTruncated: z.boolean().optional(),
+  memory: ChatMemorySchema.optional(),
+  tables: z.array(AttachmentTableSchema).max(AI_LIMITS.request.maxSteps).optional(), draft: z.boolean().optional(), contextTruncated: z.boolean().optional(),
 }).strict();
 export type ChatMetadata = z.infer<typeof ChatMetadataSchema>;
 export type ChatTrace = z.infer<typeof ChatTraceSchema>;

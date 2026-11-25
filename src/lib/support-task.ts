@@ -7,6 +7,21 @@ export const TASK_ACTIONS = [
   "MANAGE",
 ] as const;
 export type TaskAction = (typeof TASK_ACTIONS)[number];
+export type TaskFailureCode =
+  | "VALIDATION"
+  | "UNAUTHENTICATED"
+  | "FORBIDDEN"
+  | "CONFLICT"
+  | "BUSINESS_RULE"
+  | "LOAD_FAILED"
+  | "SAVE_FAILED";
+export type TaskFailure = {
+  success: false;
+  message: string;
+  code: TaskFailureCode;
+  reference: string | null;
+  recovery: "retry" | "reload" | "sign_in" | "none";
+};
 export const TASK_LABELS: Record<TaskAction, string> = {
   VIEW: "Xem công việc liên quan",
   CREATE: "Tạo yêu cầu hỗ trợ",
@@ -62,7 +77,7 @@ export function canTask(
 ) {
   return Boolean(
     actions?.includes("VIEW") &&
-      (action === "VIEW" || actions.includes(action)),
+    (action === "VIEW" || actions.includes(action)),
   );
 }
 const id = z.number().int().positive();
@@ -99,6 +114,7 @@ export const TaskMutationSchema = z
       "HUY",
       "SUA",
       "CHUYEN_DICH",
+      "BAN_GIAO",
       "DOI_NGUOI_NGHIEM_THU",
       "DOI_QUAN_LY",
     ]),
@@ -119,9 +135,11 @@ export const TaskListSchema = z
   .object({
     tab: z
       .enum([
+        "actionable",
         "all",
         "receive",
         "doing",
+        "waiting",
         "accept",
         "requested",
         "closed",

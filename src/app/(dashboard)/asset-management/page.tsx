@@ -9,6 +9,7 @@ import { AssetCategoryIcon } from "@/components/assets/AssetCategoryIcon";
 import { EmptyPanel } from "@/components/ui/feature-overview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AssetOverviewSearch } from "@/components/assets/AssetOverviewSearch";
 
 export const metadata: Metadata = { title: "Tổng quan tài sản & vật tư | SDG ERP" };
 const number = (value: number) => value.toLocaleString("vi-VN");
@@ -58,6 +59,7 @@ export default async function AssetManagementPage() {
   const topTypes = overview.types.slice(0, 6), maxCount = Math.max(1, ...topTypes.map(row => row.count));
   return <section className="space-y-6">
     <header className="flex items-start gap-3"><Package className="mt-1 size-7 shrink-0 text-primary" aria-hidden="true" /><div><h1 className="text-2xl font-semibold tracking-tight">Tổng quan tài sản & vật tư</h1><p className="mt-1 text-sm text-muted-foreground">Theo dõi hiện trạng và mở nhanh hạng mục cần quản lý.</p></div></header>
+    <AssetOverviewSearch />
     <nav aria-label="Hạng mục quản lý" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {categories.filter(c => c.count !== null).map(c => <Link key={c.href} href={c.href} aria-label={c.name} className={`group rounded-xl border bg-card p-5 hover:border-primary/40 ${linkStyle}`}>
         <div className="flex items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><c.icon className="size-5" aria-hidden="true" /></span><h2 className="font-semibold">{c.name}</h2><ChevronRight className="ml-auto size-4 text-muted-foreground group-hover:text-primary" aria-hidden="true" /></div>

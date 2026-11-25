@@ -104,9 +104,9 @@ test('vault rejects wrong tenant, tampering and missing master; never regenerate
 test('audit failure rolls back connection change and keeps previous usable secret',async()=>{
  const before=await current();
  await db.$executeRawUnsafe(`CREATE FUNCTION ai_keys_test_audit_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.phan_he = 'AI' AND NEW.mo_ta = 'Cập nhật kết nối và model AI' THEN RAISE EXCEPTION 'test audit failure'; END IF; RETURN NEW; END $$`);
- await db.$executeRawUnsafe('CREATE TRIGGER ai_keys_test_audit_failure BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION ai_keys_test_audit_failure()');
+ await db.$executeRawUnsafe('CREATE TRIGGER ai_keys_test_audit_failure BEFORE INSERT ON he_thong.nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION ai_keys_test_audit_failure()');
  try{assert.equal((await save({version:before.updated_at.toISOString(),apiKey:key1,model:'must-rollback',enabled:true})).success,false);assert.deepEqual(await current(),before);assert.equal((await readAiConnection(manager.company_id)).apiKey,key2);}
- finally{await db.$executeRawUnsafe('DROP TRIGGER ai_keys_test_audit_failure ON nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION ai_keys_test_audit_failure()');}
+ finally{await db.$executeRawUnsafe('DROP TRIGGER ai_keys_test_audit_failure ON he_thong.nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION ai_keys_test_audit_failure()');}
 });
 
 test('permission loss during key test does not return models; test rate limit denies before HTTP',async()=>{
@@ -192,10 +192,10 @@ test('adding first new key preserves environment key/model and managed connectio
   assert.equal((await as(account,()=>saveAiSettings({target:'environment',name:'Unsafe replacement',version:null,apiKey:key2,model:'environment-model',enabled:true}))).success,false);
   // Audit failure must roll back both the environment import and the new connection.
   await db.$executeRawUnsafe(`CREATE FUNCTION ai_multi_test_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.company_id = ${company.id} AND NEW.mo_ta = 'Cập nhật kết nối và model AI' THEN RAISE EXCEPTION 'test'; END IF; RETURN NEW; END $$`);
-  await db.$executeRawUnsafe('CREATE TRIGGER ai_multi_test_fail BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION ai_multi_test_fail()');
+  await db.$executeRawUnsafe('CREATE TRIGGER ai_multi_test_fail BEFORE INSERT ON he_thong.nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION ai_multi_test_fail()');
   const input={target:'new',name:'New API key',version:null,apiKey:key2,model:'new-model',enabled:true};
   try{assert.equal((await as(account,()=>saveAiSettings(input))).success,false);assert.equal(await db.ket_noi_ai.count({where:{company_id:company.id}}),0);assert.equal((await readAiConnection(company.id)).source,'environment');}
-  finally{await db.$executeRawUnsafe('DROP TRIGGER ai_multi_test_fail ON nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION ai_multi_test_fail()');}
+  finally{await db.$executeRawUnsafe('DROP TRIGGER ai_multi_test_fail ON he_thong.nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION ai_multi_test_fail()');}
   const r=await as(account,()=>saveAiSettings(input));assert(r.success,r.message);
   const rows=await db.ket_noi_ai.findMany({where:{company_id:company.id}});assert.equal(rows.length,2);
   const old=rows.find(r=>r.la_mac_dinh);assert.equal(old.model_mac_dinh,'environment-model');assert.equal(await readAiSecret(company.id,old.tham_chieu_bi_mat),key1);

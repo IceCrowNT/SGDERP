@@ -18,7 +18,7 @@ export async function saveOfficePlacement(input: unknown) {
   const v = parsed.data;
   try {
     const result = await db.$transaction(async tx => {
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${session.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${session.companyId}::int)`;
       await currentActor(tx, session, "LOCATIONS");
       const mapping = await readBuildingMapping(session.companyId, tx);

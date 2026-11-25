@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const parsed = await parseAttachment(bytes, filename);
     key = randomUUID(); await writeAttachment(key, bytes, parsed.data, parsed.preview); const storedKey = key;
     const stored = await db.$transaction(async tx => {
-      await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${data.companyId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${data.companyId} FOR UPDATE`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${data.companyId}::int)`;
       await officeSource(tx, data, actor, true);
       const owner = { company_id: data.companyId, account_id: data.userId };

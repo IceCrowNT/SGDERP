@@ -17,7 +17,7 @@ async function main() {
   const building = BuildingMappingSchema.parse(JSON.parse(await readFile('var/office-3d/building.json','utf8')));
   if (mapping.companyId !== building.companyId) throw Error('Mapping companies differ');
   const result = await db.$transaction(async tx => {
-    await tx.$queryRaw`SELECT id FROM cong_ty WHERE id = ${mapping.companyId} FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id = ${mapping.companyId} FOR UPDATE`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126, ${mapping.companyId}::int)`;
     const rows = await tx.vi_tri.findMany({where:{company_id:mapping.companyId}});
     const room = resolveBuilding(building,rows)?.rooms.find(r=>r.key===HCNS_BUILDING_KEY);

@@ -1,3 +1,7 @@
+import {
+  loadManagerGraph,
+  createManagerResolver,
+} from "./employee-manager-resolution";
 import type { z } from "zod";
 import type { TaskFields } from "./support-task";
 import type { Prisma, cong_viec_ho_tro } from "@prisma/client";
@@ -12,7 +16,7 @@ export async function taskActor(
   lock = false,
 ) {
   if (lock) {
-    await tx.$queryRaw`SELECT id FROM cong_ty WHERE id=${session.companyId} FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM chung.cong_ty WHERE id=${session.companyId} FOR UPDATE`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(260126,${session.companyId}::int)`;
   }
   try {
@@ -39,9 +43,15 @@ export async function taskActor(
     return { session, person, actions, managed: departments.map((d) => d.id) };
   } catch (e) {
     if (e instanceof TaskError) throw e;
-    throw new TaskError(
-      "Phiên hoặc quyền truy cập đã thay đổi. Vui lòng tải lại trang.",
-    );
+    if (
+      e instanceof Error &&
+      e.message === "Quyền truy cập đã thay đổi. Vui lòng tải lại trang."
+    )
+      throw new TaskError(
+        "Phiên hoặc quyền truy cập đã thay đổi. Vui lòng tải lại trang.",
+      );
+    // Database/runtime failures must reach the action's diagnostics, not look like permission loss.
+    throw e;
   }
 }
 export type TaskActor = Awaited<ReturnType<typeof taskActor>>;
@@ -94,6 +104,7 @@ export function taskButtons(t: cong_viec_ho_tro, a: TaskActor) {
       t.nguoi_yeu_cau_id === a.person.id,
     manage: manage && !["HOAN_THANH", "DA_HUY"].includes(t.trang_thai),
     assign: manage && ["CHO_NHAN", "TU_CHOI"].includes(t.trang_thai),
+    handoff: manage && active,
   };
 }
 export function accountTaskWhere(
@@ -144,6 +155,18 @@ export async function eligiblePerson(
     );
   return p;
 }
+export async function resolveTaskManager(
+  tx: Prisma.TransactionClient,
+  companyId: number,
+  personId: number,
+) {
+  const resolution = createManagerResolver(
+    await loadManagerGraph(tx, companyId),
+  ).resolve(personId);
+  if (resolution.error) throw new TaskError(resolution.error);
+  if (resolution.source === "TOP_LEVEL") return null;
+  return eligiblePerson(tx, companyId, resolution.managerId);
+}
 export async function resolveTaskTarget(
   tx: Prisma.TransactionClient,
   companyId: number,
@@ -154,12 +177,12 @@ export async function resolveTaskTarget(
     const p = await eligiblePerson(tx, companyId, targetId, "EXECUTE");
     if (!p.department_id)
       throw new TaskError("Người hỗ trợ chưa được gắn phòng ban.");
-    const manager = await eligiblePerson(tx, companyId, p.quan_ly_truc_tiep_id);
+    const manager = await resolveTaskManager(tx, companyId, p.id);
     return {
       loai_dich_nhan: type,
       phong_ho_tro_id: p.department_id,
       nguoi_duoc_yeu_cau_id: p.id,
-      quan_ly_ben_ho_tro_id: manager.id,
+      quan_ly_ben_ho_tro_id: manager?.id ?? null,
     };
   }
   const department = await tx.phong_ban.findFirst({
@@ -185,7 +208,7 @@ export async function resolveTaskTarget(
     loai_dich_nhan: type,
     phong_ho_tro_id: department.id,
     nguoi_duoc_yeu_cau_id: null,
-    quan_ly_ben_ho_tro_id: manager.id,
+    quan_ly_ben_ho_tro_id: manager?.id ?? null,
   };
 }
 
@@ -194,10 +217,10 @@ export async function validateTaskCreation(
   a: TaskActor,
   v: z.infer<typeof TaskFields>,
 ) {
-  const manager = await eligiblePerson(
+  const manager = await resolveTaskManager(
       tx,
       a.session.companyId,
-      a.person.quan_ly_truc_tiep_id,
+      a.person.id,
     ),
     target = await resolveTaskTarget(
       tx,
@@ -211,7 +234,7 @@ export async function validateTaskCreation(
       : await eligiblePerson(
           tx,
           a.session.companyId,
-          v.acceptance === "NGUOI_YEU_CAU" ? a.person.id : manager.id,
+          v.acceptance === "NGUOI_YEU_CAU" ? a.person.id : manager?.id,
           "ACCEPT",
         );
   if (reviewer && reviewer.id === target.nguoi_duoc_yeu_cau_id)

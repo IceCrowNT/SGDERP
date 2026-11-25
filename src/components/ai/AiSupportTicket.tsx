@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getCreatedTaskByRequest } from "@/actions/support-task";
 import { TaskCreate } from "@/components/tasks/TaskCreate";
 import type { SavedSupportDraft } from "@/lib/ai-support-task";
+import { useTaskDraft } from "@/components/tasks/TaskDraftProvider";
 import { Button } from "@/components/ui/button";
 export function AiSupportTicket({
   draft,
@@ -14,6 +15,7 @@ export function AiSupportTicket({
   onCreated: (id: number) => void;
   onBusy?: (busy: boolean) => void;
 }) {
+  const [, cache] = useTaskDraft(`create:${draft.requestId}`);
   const [state, setState] = useState<{
     loading: boolean;
     error?: string;
@@ -23,6 +25,7 @@ export function AiSupportTicket({
     let active = true;
     getCreatedTaskByRequest(draft.requestId)
       .then((r) => {
+        if (active && r.success && r.task) cache(undefined);
         if (active)
           setState(
             r.success
@@ -40,7 +43,7 @@ export function AiSupportTicket({
     return () => {
       active = false;
     };
-  }, [draft.requestId]);
+  }, [draft.requestId, cache]);
   if (state.loading) return <p role="status">Đang kiểm tra yêu cầu…</p>;
   if (state.error)
     return (

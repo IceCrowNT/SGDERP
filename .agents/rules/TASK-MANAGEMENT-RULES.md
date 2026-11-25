@@ -6,11 +6,13 @@ Phạm vi: yêu cầu hỗ trợ tạo từ dashboard, nhận việc cá nhân/p
 
 - Ưu tiên công việc; báo cáo tuần, Excel và công việc định kỳ tự sinh nằm ngoài bản đầu. Không dùng dữ liệu báo cáo tuần hoặc `cong_viec_ai` thay công việc nhân sự.
 - Gửi tới người thì xác định phòng từ HR phía server; gửi tới phòng phải thể hiện rõ ai được thông báo và ai đã nhận. Hạng mục IT không mặc nhiên là phòng IT.
-- Người yêu cầu và người thao tác phải được xác thực; chưa hỗ trợ gửi thay. Quản lý hai bên nhận thông báo theo nguồn đã xác nhận; không suy quản lý trực tiếp chỉ từ cây phòng ban.
+- Người yêu cầu và người thao tác phải được xác thực; chưa hỗ trợ gửi thay. Quản lý hiệu lực theo [HR](HR-RULES.md): chỉ định riêng trước, sau đó người phụ trách phòng; trưởng phòng tìm người phụ trách khác mình ở cấp trên. Nguồn thiếu/không hợp lệ phải báo rõ; không tự ghi ngược quan hệ vào HR.
 - Hạn hoàn thành tùy chọn, mặc định null. Thời điểm báo xong, nghiệm thu và đóng là các mốc riêng; không lấy ngày nghiệm thu thay ngày hoàn thành.
 - Bằng chứng và lịch sử có cùng phạm vi bảo vệ với đầu việc. Mọi thay đổi đã lưu phải có người làm, thời gian và hành động/nội dung thay đổi; thông báo và đường dẫn tệp không cấp quyền mới.
 - Gửi cả phòng: thông báo mọi thành viên hoạt động có tài khoản và VIEW, cảnh báo phần chưa có tài khoản/quyền. Việc treo tại hàng đợi; người phụ trách phòng có VIEW + MANAGE giao nhân viên rồi nhân viên xác nhận. Không cho cá nhân tự tranh nhận. Chưa bao gồm phân hệ việc phòng ban đầy đủ.
-- Quản lý trực tiếp từ `nhan_su.quan_ly_truc_tiep_id`, không tự backfill từ trưởng phòng. Chính sách nghiệm thu tại A.5; không tự nghiệm thu, không bỏ nghiệm thu bắt buộc. Chưa tự cấp grant pilot.
+- Công việc lưu người quản lý tại lúc tạo/giao/nhận; thay HR không tự cập nhật việc cũ. Khi nhận việc, xác định lại quản lý bên hỗ trợ theo cơ cấu hiện hành và ghi lịch sử. Chỉ head phòng gốc thực sự mới có thể không có cấp trên; chế độ Quản lý nghiệm thu luôn cần người cụ thể có ACCEPT. Không tự nghiệm thu hoặc bỏ nghiệm thu bắt buộc; đổi người nghiệm thu chỉ tới người yêu cầu hoặc quản lý hiệu lực bên yêu cầu. Chi tiết tại A.5/DB.9 của plan; chưa tự cấp grant pilot.
+- Điều phối có MANAGE trong phòng được bàn giao việc đang làm/cần bổ sung cho người đủ điều kiện cùng phòng, có lý do; người mới phải nhận lại. Giữ lịch sử/tệp/vòng báo xong. Chờ nhận lại vẫn cho người yêu cầu sửa nội dung có audit; không bàn giao khi đang chờ nghiệm thu hoặc đã đóng.
+- Thông báo hiện người thao tác, hành động và thời điểm trong phạm vi được xem. Không thông báo cho chính người thao tác; tải từng tệp chỉ ghi audit, báo xong mới thông báo. Bàn giao thông báo cả người thực hiện/quản lý cũ còn tài khoản hợp lệ, nhưng không duy trì quyền xem đã hết.
 
 ## Ticket qua trợ lý AI
 

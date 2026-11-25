@@ -5,6 +5,7 @@ import { signAccount } from "../helpers/account-fixture";
 import { PrismaClient } from "@prisma/client";
 test.setTimeout(90000);
 const db = new PrismaClient();
+const out=process.env.TASK_QA_OUTPUT||"outputs/task-review-20261125";
 const fixture = JSON.parse(
   readFileSync(
     process.env.TASK_TEST_FIXTURES ||
@@ -26,6 +27,8 @@ test("dashboard request, department assignment, evidence and acceptance across a
   page.on("pageerror", (e) => errors.push(e.message));
   await signAccount(context, fixture.accounts.requester);
   await page.goto("/");
+  await expect(page.getByRole("region", { name: "Công việc hỗ trợ" })).toBeHidden();
+  await page.getByRole("tab", { name: "Việc của tôi" }).click();
   await page
     .getByRole("button", { name: "Yêu cầu hỗ trợ", exact: true })
     .click();
@@ -59,35 +62,35 @@ test("dashboard request, department assignment, evidence and acceptance across a
   await signAccount(context, fixture.accounts.worker);
   await page.goto(url);
   await expect(
-    page.getByRole("button", { name: "Xác nhận nhận việc", exact: true }),
+    page.getByRole("button", { name: "Nhận việc", exact: true }),
   ).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Tôi không thể hỗ trợ" }),
-  ).toBeVisible();
+  await page.getByRole("button",{name:"Thao tác khác",exact:true}).click();
+  await expect(page.getByRole("menuitem",{name:"Không thể nhận việc",exact:true})).toBeVisible();
+  await page.keyboard.press("Escape");
   await signAccount(context, fixture.accounts.supportManager);
   await page.goto("/tasks/department");
   await page.getByRole("link").filter({ hasText: title }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page
-    .getByRole("textbox", { name: "Ghi chú / lý do", exact: false })
+    .getByRole("textbox", { name: /Ghi chú giao việc/ })
     .fill("Giao nhân viên phụ trách");
   await page
     .getByRole("combobox", { name: "Nhân viên được giao", exact: true })
     .click();
   await page.getByRole("option", { name: "worker", exact: true }).click();
   await page
-    .getByRole("button", { name: "Giao cho nhân viên", exact: true })
+    .getByRole("button", { name: "Giao việc", exact: true })
     .click();
   await expect(
-    page.getByText("Đã cập nhật công việc", { exact: true }),
+    page.getByText("Đã giao việc cho nhân viên", { exact: true }),
   ).toBeVisible();
   await signAccount(context, fixture.accounts.worker);
   await page.goto(url);
   await page
-    .getByRole("button", { name: "Xác nhận nhận việc", exact: true })
+    .getByRole("button", { name: "Nhận việc", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Báo xong công việc", exact: true }),
+    page.getByRole("button", { name: "Gửi nghiệm thu", exact: true }),
   ).toBeVisible();
   await page.getByLabel(/Thêm bằng chứng/).setInputFiles({
     name: "evidence.png",
@@ -102,13 +105,13 @@ test("dashboard request, department assignment, evidence and acceptance across a
     page.getByRole("link", { name: "evidence.png", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("checkbox", { name: "evidence.png", exact: true }),
+    page.getByRole("checkbox", { name: "Gửi bằng chứng evidence.png", exact: true }),
   ).toBeChecked();
   await page
-    .getByRole("button", { name: "Báo xong công việc", exact: true })
+    .getByRole("button", { name: "Gửi nghiệm thu", exact: true })
     .click();
   await expect(
-    page.getByText("Chờ nghiệm thu · Phòng hỗ trợ", { exact: true }),
+    page.getByText("Chờ nghiệm thu", { exact: true }),
   ).toBeVisible();
   await signAccount(context, fixture.accounts.requester);
   await page.goto(url);
@@ -116,10 +119,10 @@ test("dashboard request, department assignment, evidence and acceptance across a
     .getByRole("button", { name: "Nghiệm thu và đóng", exact: true })
     .click();
   await expect(
-    page.getByText("Hoàn thành · Phòng hỗ trợ", { exact: true }),
+    page.getByText("Hoàn thành", { exact: true }),
   ).toBeVisible();
   await page.screenshot({
-    path: "outputs/task-implementation-20261120/detail-desktop.png",
+    path: `${out}/detail-desktop.png`,
     fullPage: true,
     caret: "initial",
   });
@@ -129,7 +132,7 @@ test("dashboard request, department assignment, evidence and acceptance across a
     page.getByRole("heading", { name: "Công việc của tôi", exact: true }),
   ).toHaveCSS("font-size", "20px");
   await page.screenshot({
-    path: "outputs/task-implementation-20261120/board-desktop.png",
+    path: `${out}/board-desktop.png`,
     fullPage: true,
     caret: "initial",
   });
@@ -148,7 +151,7 @@ test("dashboard request, department assignment, evidence and acceptance across a
     ),
   ).toBe(true);
   await page.screenshot({
-    path: "outputs/task-implementation-20261120/detail-mobile.png",
+    path: `${out}/detail-mobile.png`,
     fullPage: true,
     caret: "initial",
   });
@@ -160,8 +163,9 @@ test("unauthorized account has no task access, form errors preserve content, not
 }) => {
   await signAccount(context, fixture.accounts.noRights);
   await page.goto("/tasks");
-  await expect(page.getByRole("alert")).toContainText(/quyền|Phiên/);
+  await expect(page.getByRole("alert").filter({hasText:/quyền|Phiên/})).toContainText(/quyền|Phiên/);
   await page.goto("/");
+  await page.getByRole("tab", { name: "Việc của tôi" }).click();
   await expect(
     page.getByRole("button", { name: "Yêu cầu hỗ trợ", exact: true }),
   ).toHaveCount(0);
@@ -192,7 +196,7 @@ test("unauthorized account has no task access, form errors preserve content, not
     "Giữ nội dung khi lỗi",
   );
   await page.screenshot({
-    path: "outputs/task-implementation-20261120/form-error.png",
+    path: `${out}/form-error.png`,
     fullPage: true,
     caret: "initial",
   });

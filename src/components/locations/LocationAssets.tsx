@@ -23,10 +23,11 @@ type Picker = { kind: "asset" }
   | { kind: "confirm"; asset: Candidate; target: Destination | null };
 const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase();
 
-export function LocationAssets({ location, assets, canManage, selectedAssetId, allowAssign = true, showHeading = true }: {
+export function LocationAssets({ location, assets, canManage, selectedAssetId, onOpenAsset, allowAssign = true, showHeading = true }: {
   location: Destination & { active: boolean };
   assets: LocationAsset[];
   canManage: boolean;
+  onOpenAsset?: (id: number) => void;
   selectedAssetId?: number | null;
   allowAssign?: boolean;
   showHeading?: boolean;
@@ -111,7 +112,9 @@ export function LocationAssets({ location, assets, canManage, selectedAssetId, a
           <li key={asset.id}
             aria-current={asset.id === selectedAssetId ? "true" : undefined}
             className={cn("space-y-2 rounded-xl border p-3", asset.id === selectedAssetId && "border-primary bg-primary/5")}>
-            <p className="break-words font-medium">{asset.name}</p>
+            {onOpenAsset ? <button type="button" className="block min-h-10 w-full rounded-sm text-left font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-ring"
+              onClick={() => onOpenAsset(asset.id)} aria-label={`Mở hồ sơ ${asset.name} · ${asset.code}`}>{asset.name}</button>
+              : <p className="break-words font-medium">{asset.name}</p>}
             <p className="text-xs text-muted-foreground">{asset.code} · {asset.category}</p>
             <Badge variant="secondary">{ASSET_CONDITIONS[asset.condition]}</Badge>
             {canManage && <div className="flex flex-wrap gap-2">

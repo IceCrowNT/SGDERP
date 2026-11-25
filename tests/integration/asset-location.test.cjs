@@ -88,9 +88,9 @@ test('inactive target is rejected, DB prevents inactive ancestry, and audit fail
  const row=await asset();
  for(const id of [stopped.id])assert.equal((await as(manager,()=>assignAssetLocation(payload(row,id)))).success,false);
  await db.$executeRawUnsafe(`CREATE FUNCTION test_3d_audit_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.company_id=${company.id} AND NEW.phan_he='ASSETS' THEN RAISE EXCEPTION 'rollback test'; END IF; RETURN NEW; END $$`);
- await db.$executeRawUnsafe('CREATE TRIGGER test_3d_audit_failure BEFORE INSERT ON nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_3d_audit_failure()');
+ await db.$executeRawUnsafe('CREATE TRIGGER test_3d_audit_failure BEFORE INSERT ON he_thong.nhat_ky_hoat_dong FOR EACH ROW EXECUTE FUNCTION test_3d_audit_failure()');
  try{assert.equal((await as(manager,()=>assignAssetLocation(payload(row,place.id)))).success,false);assert.deepEqual(await fresh(row),row);}
- finally{await db.$executeRawUnsafe('DROP TRIGGER test_3d_audit_failure ON nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION test_3d_audit_failure()');}
+ finally{await db.$executeRawUnsafe('DROP TRIGGER test_3d_audit_failure ON he_thong.nhat_ky_hoat_dong');await db.$executeRawUnsafe('DROP FUNCTION test_3d_audit_failure()');}
 });
 
 test('paged picker returns minimal fields and no other-company records',async()=>{
@@ -117,7 +117,8 @@ test('3D data requires ASSETS independently of HR; moved links cannot expose ass
  const hidden=await as(locationReader,()=>getHcnsRoom());
  assert(!JSON.stringify(hidden).includes(row.ten_tai_san));assert(hidden.room.points.every(p=>p.assets===undefined&&p.equipment.length===0));
  await db.vi_tri.update({where:{id:target.locationId},data:{parent_id:null}});
- try {const moved=await read();const p=moved.room.points.find(p=>p.key===target.key);assert.equal(p.state,'unlinked');assert.equal(p.assets.length,0);assert.equal(p.equipment.length,0);}
+ try {const moved=await read();const p=moved.room.points.find(p=>p.key===target.key);// DB-backed layouts omit points moved out of this room; legacy layouts may mark them unlinked.
+ if(p){assert.equal(p.state,'unlinked');assert.equal(p.assets.length,0);assert.equal(p.equipment.length,0);}assert(!JSON.stringify(moved.room).includes(row.ten_tai_san));}
  finally{await db.vi_tri.update({where:{id:target.locationId},data:{parent_id:map.roomId}});}
 });
 

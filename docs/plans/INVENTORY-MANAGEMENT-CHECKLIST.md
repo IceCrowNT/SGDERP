@@ -22,7 +22,7 @@ Một sản phẩm có thể được quản lý từng chiếc hoặc theo số
 
 **Luồng hiện hành:** tiêu hao dùng tồn chung; phụ kiện giữ theo nơi giữ. Ticket dùng hồ sơ workflow, xem quyền và thời điểm ghi tiêu hao ở phần B.
 
-1. Vào Tài sản & vật tư → chọn card Tiêu hao hoặc Phụ kiện → tìm/chọn mặt hàng.
+1. Vào Tài sản & vật tư → tìm mã/tên tại ô tìm kiếm chung để mở thẳng mặt hàng, hoặc chọn card Tiêu hao/Phụ kiện để duyệt danh sách. Tìm kiếm tổng quan do [plan tài sản](ASSET-MANAGEMENT-CHECKLIST.md#tìm-kiếm-tổng-quan-phân-hệ) quản lý, áp dụng quyền INVENTORY riêng.
 2. Tạo loại/mặt hàng nếu chưa có; chọn đơn vị tính và phòng quản lý khi xác định được.
 3. Tiêu hao: nhập số ban đầu tùy chọn ngay khi tạo, hoặc nhập thêm sau; không chọn kho/vị trí. Phụ kiện: nhập tại nơi giữ có sẵn. Tồn được tính từ giao dịch, không sửa số tổng tự do.
 4. Cấp số lượng cho một người hoặc một phòng. Phụ kiện được đưa vào danh sách đang cấp; tiêu hao được tính là đã xuất dùng.
